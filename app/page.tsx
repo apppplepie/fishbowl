@@ -2,11 +2,14 @@
 
 import { Button, Typography } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
+import { useState } from 'react';
 import Header from './components/Header';
 
 const { Title, Paragraph } = Typography;
 
 export default function Home() {
+  const [isLocked, setIsLocked] = useState(false);
+
   // 平滑滚动到第二部分
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -15,17 +18,40 @@ export default function Home() {
     }
   };
 
+  // 解锁并返回顶部
+  const unlockAndGoBack = () => {
+    // 先解锁
+    setIsLocked(false);
+    // 等待状态更新后，从当前位置平滑滚动到顶部
+    requestAnimationFrame(() => {
+      scrollToSection('part-1');
+    });
+  };
+
+  // 检测是否完全滚动到 part2
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    const threshold = window.innerHeight * 0.8; // 80vh
+    
+    // 完全滚动到 part2 就锁定
+    if (scrollTop >= threshold && !isLocked) {
+      setIsLocked(true);
+    }
+  };
+
+
+
+
   return (
     <>
-      <Header />
     <div 
       className="snap-container"
+      onScroll={handleScroll}
       style={{
         height: '100vh',
-        overflowY: 'scroll',
-        scrollSnapType: 'y mandatory',
+        overflowY: isLocked ? 'hidden' : 'scroll',
+        scrollSnapType: isLocked ? 'none' : 'y mandatory',
         scrollBehavior: 'smooth',
-        paddingTop: '8vh'
       }}
     >
       {/* 第一部分 - 首屏 */}
@@ -33,6 +59,7 @@ export default function Home() {
         id="part-1" 
         className="flex flex-col items-center justify-center"
         style={{ 
+          display: isLocked ? 'none' : 'flex',
           height: '80vh',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           scrollSnapAlign: 'start',
@@ -73,7 +100,7 @@ export default function Home() {
           scrollSnapAlign: 'start',
           scrollSnapStop: 'always',
           overflowY: 'auto',
-          borderTop: '8vh solid black',
+          borderTop:'8vh solid black',
           borderLeft: '6px solid black',
           borderRight: '6px solid black',
           borderBottom: '6px solid black',
@@ -117,7 +144,7 @@ export default function Home() {
           <Button 
             type="default"
             size="large"
-            onClick={() => scrollToSection('part-1')}
+            onClick={unlockAndGoBack}
             className="mt-12"
             style={{ 
               height: '50px', 
@@ -126,7 +153,7 @@ export default function Home() {
               padding: '0 32px'
             }}
           >
-            返回顶部 ↑
+            🔓 解锁并返回顶部
           </Button>
         </div>
       </div>
