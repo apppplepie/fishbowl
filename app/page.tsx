@@ -19,21 +19,10 @@ export default function Home() {
     }
   };
 
-  // 解锁并返回顶部
-  const unlockAndGoBack = () => {
-    // 先渐隐隐藏header
-    setShowHeader(false);
-    setIsLocked(false);
-    // 立即滚动到顶部
-    requestAnimationFrame(() => {
-      const container = document.querySelector('.snap-container') as HTMLDivElement;
-      if (container) {
-        container.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      }
-    });
+  // 解锁：显示 part1，隐藏 header
+  const startUnlock = () => {
+    setShowHeader(false); // 隐藏 header
+    setIsLocked(false);   // 显示 part1
   };
 
   // 检测是否完全滚动到 part2
@@ -41,13 +30,11 @@ export default function Home() {
     const scrollTop = e.currentTarget.scrollTop;
     const threshold = window.innerHeight * 0.8; // 80vh
     
-    // 完全滚动到 part2 就锁定
+    // 完全滚动到 part2 就隐藏 part1
     if (scrollTop >= threshold && !isLocked) {
-      setIsLocked(true);
+      setIsLocked(true); // 隐藏 part1
       // 锁定后0.5秒渐显显示header
-      setTimeout(() => {
-        setShowHeader(true);
-      }, 500);
+      setShowHeader(true);
     }
   };
 
@@ -159,7 +146,7 @@ export default function Home() {
           <Button 
             type="default"
             size="large"
-            onClick={unlockAndGoBack}
+            onClick={startUnlock}
             className="mt-12"
             style={{ 
               height: '50px', 
