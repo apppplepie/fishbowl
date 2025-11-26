@@ -161,14 +161,11 @@ export default function Header({ isVisible = true }: HeaderProps) {
           right: 0,
           height: '8vh',
           background: 'black',
-          display: 'flex',
+          display: isVisible ? 'flex' : 'none',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 24px',
           zIndex: 1000,
-          opacity: isVisible ? 1 : 0,
-          pointerEvents: isVisible ? 'auto' : 'none',
-          transition: 'opacity 0.5s ease-in-out',
         }}
       >
         {/* 左侧 - 菜单按钮 */}
