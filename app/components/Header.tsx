@@ -150,8 +150,6 @@ export default function Header({ isVisible = true }: HeaderProps) {
     },
   ];
 
-  if (!isVisible) return null;
-
   return (
     <>
       {/* Header 固定在顶部 */}
@@ -162,14 +160,15 @@ export default function Header({ isVisible = true }: HeaderProps) {
           left: 0,
           right: 0,
           height: '8vh',
-          background: 'rgba(0, 0, 0, 0.85)',
-          backdropFilter: 'blur(10px)',
+          background: 'black',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 24px',
           zIndex: 1000,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          opacity: isVisible ? 1 : 0,
+          pointerEvents: isVisible ? 'auto' : 'none',
+          transition: 'opacity 0.5s ease-in-out',
         }}
       >
         {/* 左侧 - 菜单按钮 */}
