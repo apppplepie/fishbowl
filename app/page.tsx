@@ -9,6 +9,7 @@ const { Title, Paragraph } = Typography;
 
 export default function Home() {
   const [isLocked, setIsLocked] = useState(false);
+  const [showHeader, setShowHeader] = useState(false);
 
   // 平滑滚动到第二部分
   const scrollToSection = (id: string) => {
@@ -20,9 +21,10 @@ export default function Home() {
 
   // 解锁并返回顶部
   const unlockAndGoBack = () => {
-    // 先解锁
+    // 先渐隐隐藏header
+    setShowHeader(false);
     setIsLocked(false);
-    // 等待状态更新后，从当前位置平滑滚动到顶部
+    // 立即滚动到顶部
     requestAnimationFrame(() => {
       scrollToSection('part-1');
     });
@@ -36,6 +38,10 @@ export default function Home() {
     // 完全滚动到 part2 就锁定
     if (scrollTop >= threshold && !isLocked) {
       setIsLocked(true);
+      // 锁定后0.5秒渐显显示header
+      setTimeout(() => {
+        setShowHeader(true);
+      }, 500);
     }
   };
 
@@ -44,6 +50,9 @@ export default function Home() {
 
   return (
     <>
+    {/* Header 组件 */}
+    <Header isVisible={showHeader} />
+    
     <div 
       className="snap-container"
       onScroll={handleScroll}
