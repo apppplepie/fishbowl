@@ -26,7 +26,13 @@ export default function Home() {
     setIsLocked(false);
     // 立即滚动到顶部
     requestAnimationFrame(() => {
-      scrollToSection('part-1');
+      const container = document.querySelector('.snap-container') as HTMLDivElement;
+      if (container) {
+        container.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
     });
   };
 
