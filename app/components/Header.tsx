@@ -159,7 +159,7 @@ export default function Header({ isVisible = true }: HeaderProps) {
           top: 0,
           left: 0,
           right: 0,
-          height: '8vh',
+          height: '45px',
           background: 'black',
           display: isVisible ? 'flex' : 'none',
           alignItems: 'center',
@@ -178,7 +178,7 @@ export default function Header({ isVisible = true }: HeaderProps) {
 
         {/* 中间 - Logo/标题（可选） */}
         <div style={{ color: 'white', fontSize: '18px', fontWeight: 'bold' }}>
-          🐠 Fishbowl
+          🐠
         </div>
 
         {/* 右侧 - 用户信息/登录按钮 */}

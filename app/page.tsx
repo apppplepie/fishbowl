@@ -115,7 +115,7 @@ export default function Home() {
           scrollSnapAlign: 'start',
           scrollSnapStop: 'always',
           overflowY: 'auto',
-          borderTop:'8vh solid black',
+          borderTop:'45px solid black',
           borderLeft: '6px solid black',
           borderRight: '6px solid black',
           borderBottom: '6px solid black',
