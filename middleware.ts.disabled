@@ -1,0 +1,55 @@
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+// 这个函数会在每个请求之前执行
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // 模拟检查用户是否登录（实际项目中从 cookie/token 获取）
+  const token = request.cookies.get('auth-token')?.value;
+  const isLoggedIn = !!token;
+  
+  // 定义需要保护的路由
+  const protectedRoutes = ['/dashboard', '/profile', '/settings'];
+  const authRoutes = ['/login', '/register'];
+  
+  // 检查是否访问受保护的路由
+  const isProtectedRoute = protectedRoutes.some(route => 
+    pathname.startsWith(route)
+  );
+  
+  // 检查是否访问认证页面
+  const isAuthRoute = authRoutes.some(route => 
+    pathname.startsWith(route)
+  );
+  
+  // 未登录访问受保护路由 → 重定向到登录页
+  if (isProtectedRoute && !isLoggedIn) {
+    const url = new URL('/login', request.url);
+    url.searchParams.set('redirect', pathname); // 记住原来要去的页面
+    return NextResponse.redirect(url);
+  }
+  
+  // 已登录访问认证页面 → 重定向到首页
+  if (isAuthRoute && isLoggedIn) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+  
+  // 允许请求继续
+  return NextResponse.next();
+}
+
+// 配置哪些路径需要执行 middleware
+export const config = {
+  matcher: [
+    /*
+     * 匹配所有路径，除了：
+     * - api (API routes)
+     * - _next/static (静态文件)
+     * - _next/image (图片优化)
+     * - favicon.ico (网站图标)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
+};
+
