@@ -36,16 +36,10 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
 
       if (response.ok && data.success) {
         // 登录成功
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('username', data.user.username);
-        
-        // 触发自定义事件通知其他组件
-        window.dispatchEvent(new Event('loginStatusChanged'));
-        
         message.success('登录成功！');
         form.resetFields();
-        onLoginSuccess(data.user.username);
-        onClose();
+        // 通知父组件处理登录状态（由 useAuth 统一管理）
+        onLoginSuccess(data.user.displayName || data.user.username);
       } else {
         // 登录失败
         message.error(data.message || '登录失败，请检查用户名和密码');
