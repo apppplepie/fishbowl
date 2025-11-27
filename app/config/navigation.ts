@@ -32,6 +32,12 @@ export const publicNavigationItems: NavigationItem[] = [
     path: '/services',
   },
   {
+    key: 'gallery',
+    label: '图片墙',
+    icon: '📸',
+    path: '/gallery',
+  },
+  {
     key: 'contact',
     label: '联系方式',
     path: '/contact',

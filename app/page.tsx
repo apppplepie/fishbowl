@@ -96,7 +96,7 @@ export default function Home() {
       {/* 第二部分 - 内容展示 */}
       <div 
         id="part-2" 
-        className="h-screen flex flex-col items-center justify-center p-8"
+        className="h-screen flex flex-col items-center"
         style={{ 
           background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
           scrollSnapAlign: 'start',
@@ -106,10 +106,23 @@ export default function Home() {
           borderLeft: '6px solid black',
           borderRight: '6px solid black',
           borderBottom: '6px solid black',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          padding: 0
         }}
       >
-        <div className="max-w-4xl text-center text-white">
+        {/* 盒模型1：60px高的顶部区域 */}
+        <div
+          style={{
+            height: '7vh',
+            background: ' #764ba2 100%',
+            width: '100%',
+            flexShrink: 0,
+            flexGrow: 0,
+          }}
+        >&nbsp;</div>
+
+        {/* 盒模型2：内容区域 */}
+        <div className="max-w-4xl text-center text-white" style={{ padding: '40px 24px' }}>
           <Title level={2} className="!text-white mb-6">
             ✨ 关于我们
           </Title>
