@@ -41,50 +41,62 @@ export default function Header({ isVisible = true }: HeaderProps) {
 
   return (
     <>
-      {/* Header 固定在顶部 */}
-      <header
+      {/* Header容器 - 包含header和drawer */}
+      <div
         style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
-          height: '45px',
-          background: 'black',
-          display: isVisible ? 'flex' : 'none',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 24px',
+          height: '100vh',
+          display: isVisible ? 'block' : 'none',
           zIndex: 1000,
+          pointerEvents: 'none',
         }}
       >
-        {/* 左侧 - 菜单按钮 */}
-        <Button
-          type="text"
-          icon={<MenuOutlined style={{ fontSize: '20px', color: 'white' }} />}
-          onClick={() => setDrawerOpen(true)}
-          style={{ border: 'none' }}
-        />
+        {/* Header 固定在顶部 */}
+        <header
+          style={{
+            position: 'relative',
+            height: '45px',
+            background: 'black',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 24px',
+            zIndex: 1001,
+            pointerEvents: 'auto',
+          }}
+        >
+          {/* 左侧 - 菜单按钮 */}
+          <Button
+            type="text"
+            icon={<MenuOutlined style={{ fontSize: '20px', color: 'white' }} />}
+            onClick={() => setDrawerOpen(true)}
+            style={{ border: 'none' }}
+          />
 
-        {/* 中间 - 时间范围选择器 */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <TimeRangeSelector />
-        </div>
+          {/* 中间 - 时间范围选择器 */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <TimeRangeSelector />
+          </div>
 
-        {/* 右侧 - 用户菜单 */}
-        <UserMenu
+          {/* 右侧 - 用户菜单 */}
+          <UserMenu
+            isLoggedIn={isLoggedIn}
+            username={username}
+            onLogin={() => setLoginModalOpen(true)}
+            onLogout={handleLogout}
+          />
+        </header>
+
+        {/* 导航抽屉 - 在header容器内渲染 */}
+        <NavigationDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
           isLoggedIn={isLoggedIn}
-          username={username}
-          onLogin={() => setLoginModalOpen(true)}
-          onLogout={handleLogout}
         />
-      </header>
-
-      {/* 导航抽屉 */}
-      <NavigationDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        isLoggedIn={isLoggedIn}
-      />
+      </div>
 
       {/* 登录模态框 */}
       <LoginModal
