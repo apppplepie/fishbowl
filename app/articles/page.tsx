@@ -1,18 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Layout, Menu, Drawer, Button, Card } from 'antd';
+import { Layout, Menu, Drawer, Button, Card, Tag, Flex } from 'antd';
 import { 
   MenuOutlined, 
   AppstoreOutlined, 
   FileTextOutlined, 
   TagsOutlined,
-  ClockCircleOutlined 
+  ClockCircleOutlined
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter } from 'next/navigation';
 import Header from '@/app/components/Header';
+import PageLayout from '@/app/components/PageLayout';
 
 const { Sider, Content } = Layout;
 
@@ -46,9 +47,22 @@ const sideMenuItems: MenuProps['items'] = [
   },
 ];
 
+// 标签数据（占位展示）
+const tags = [
+  { id: 1, name: '技术', color: 'blue' },
+  { id: 2, name: '生活', color: 'green' },
+  { id: 3, name: '摄影', color: 'orange' },
+  { id: 4, name: '随笔', color: 'purple' },
+  { id: 5, name: '旅行', color: 'cyan' },
+  { id: 6, name: '美食', color: 'gold' },
+  { id: 7, name: '读书', color: 'geekblue' },
+];
+
 /**
  * 文章归档页面
  * 响应式布局：电脑端显示左侧边栏，手机端使用抽屉
+ * Box1: 标签展示区
+ * Box2: 文章列表区
  */
 export default function ArticlesPage() {
   const { isMobile } = useResponsive();
@@ -99,20 +113,29 @@ export default function ArticlesPage() {
         }
       />
       
-      {/* PageLayout带边框 */}
-      <div style={{
-        width: '100vw',
-        height: '100vh',
-        borderTop: '45px solid black',
-        borderLeft: '6px solid black',
-        borderRight: '6px solid black',
-        borderBottom: '6px solid black',
-        boxSizing: 'border-box',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        background: '#f0f2f5',
-      }}>
-        <Layout style={{ minHeight: 'calc(100vh - 45px - 6px)', background: 'transparent' }}>
+      <PageLayout
+        box1Content={
+          <div style={{ padding: '16px 24px' }}>
+            <Flex gap="small" align="center" wrap>
+              {tags.map((tag) => (
+                <Tag
+                  key={tag.id}
+                  color={tag.color}
+                  style={{
+                    fontSize: '14px',
+                    padding: '4px 12px',
+                  }}
+                >
+                  {tag.name}
+                </Tag>
+              ))}
+            </Flex>
+          </div>
+        }
+        box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+        box2BgColor="#f0f2f5"
+      >
+        <Layout style={{ minHeight: '100%', background: 'transparent' }}>
           {/* 电脑端 - 固定侧边栏 */}
           {!isMobile && (
             <Sider 
@@ -233,7 +256,7 @@ export default function ArticlesPage() {
           </Content>
         </Layout>
         </Layout>
-      </div>
+      </PageLayout>
     </>
   );
 }
