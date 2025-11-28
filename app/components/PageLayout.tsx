@@ -23,7 +23,7 @@ export default function PageLayout({
     <div
       style={{
         width: '100vw',
-        height: '100vh',
+        minHeight: '100vh',
         borderTop: '45px solid black',
         borderLeft: '6px solid black',
         borderRight: '6px solid black',
@@ -33,10 +33,10 @@ export default function PageLayout({
         overflowX: 'hidden',
       }}
     >
-      {/* 盒模型1：顶部区域，60px高，紧贴大盒子边框 */}
+      {/* 盒模型1：顶部区域，最小60px高，可自适应，紧贴大盒子边框 */}
       <div
         style={{
-          height: '60px',
+          minHeight: '60px',
           background: box1BgColor,
           ...box1Style,
         }}
