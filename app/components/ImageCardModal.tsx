@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Avatar, Spin } from 'antd';
-import { EditOutlined, EllipsisOutlined, SettingOutlined } from '@ant-design/icons';
+import { Card, Avatar, Spin, Button } from 'antd';
+import { EditOutlined, EllipsisOutlined, SettingOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 const { Meta } = Card;
 
@@ -30,6 +30,10 @@ interface ImageCardModalProps {
   onClose: () => void;
   title?: string;
   description?: string;
+  currentIndex?: number;
+  totalCount?: number;
+  onPrevious?: () => void;
+  onNext?: () => void;
 }
 
 const ImageCardModal: React.FC<ImageCardModalProps> = ({
@@ -38,42 +42,64 @@ const ImageCardModal: React.FC<ImageCardModalProps> = ({
   onClose,
   title = 'Image Title',
   description = 'This is the description',
+  currentIndex = 0,
+  totalCount = 1,
+  onPrevious,
+  onNext,
 }) => {
   const [loading, setLoading] = useState(true);
-  const [percent, setPercent] = useState(0);
+  const [showLoading, setShowLoading] = useState(false);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [animationKey, setAnimationKey] = useState(0);
+
+  // 切换图片时重置动画
+  const handleSwitch = (callback?: () => void) => {
+    if (callback) {
+      setAnimationKey(prev => prev + 1);
+      callback();
+    }
+  };
 
   useEffect(() => {
-    if (visible) {
-      setLoading(true);
-      setPercent(0);
-
-      // 模拟加载进度
-      let ptg = -10;
-      const interval = setInterval(() => {
-        ptg += 5;
-        setPercent(ptg);
-
-        if (ptg > 120) {
-          clearInterval(interval);
-        }
-      }, 100);
-
+    if (visible && imageUrl) {
       // 加载图片
       const img = new Image();
       img.src = imageUrl;
-      img.onload = () => {
-        setImageSize({ width: img.width, height: img.height });
-        setTimeout(() => {
-          setLoading(false);
-          setPercent(0);
-          clearInterval(interval);
-        }, 500);
-      };
+      let isLoaded = false;
 
-      return () => clearInterval(interval);
+      // 检查图片是否已经缓存（立即加载完成）
+      if (img.complete) {
+        // 图片已缓存，直接显示，不显示加载动画
+        setImageSize({ width: img.width, height: img.height });
+        setLoading(false);
+        setShowLoading(false);
+      } else {
+        // 图片需要加载
+        setLoading(true);
+        setShowLoading(false);
+
+        // 200ms 后如果还在加载，才显示加载动画
+        const showLoadingTimer = setTimeout(() => {
+          if (!isLoaded) {
+            setShowLoading(true);
+          }
+        }, 200);
+
+        img.onload = () => {
+          isLoaded = true;
+          setImageSize({ width: img.width, height: img.height });
+          // 加载完成后立即显示
+          clearTimeout(showLoadingTimer);
+          setLoading(false);
+          setShowLoading(false);
+        };
+
+        return () => {
+          clearTimeout(showLoadingTimer);
+        };
+      }
     }
-  }, [visible, imageUrl]);
+  }, [visible, imageUrl, animationKey]);
 
   if (!visible) return null;
 
@@ -117,8 +143,46 @@ const ImageCardModal: React.FC<ImageCardModalProps> = ({
           animation: 'fadeIn 0.3s ease',
         }}
       >
+        {/* 左箭头按钮 */}
+        {!loading && currentIndex > 0 && onPrevious && (
+          <Button
+            type="primary"
+            shape="circle"
+            size="large"
+            icon={<LeftOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSwitch(onPrevious);
+            }}
+            style={{
+              position: 'absolute',
+              left: '20px',
+              zIndex: 1001,
+            }}
+          />
+        )}
+
+        {/* 右箭头按钮 */}
+        {!loading && currentIndex < totalCount - 1 && onNext && (
+          <Button
+            type="primary"
+            shape="circle"
+            size="large"
+            icon={<RightOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSwitch(onNext);
+            }}
+            style={{
+              position: 'absolute',
+              right: '20px',
+              zIndex: 1001,
+            }}
+          />
+        )}
+
         {/* 加载状态 */}
-        {loading && <Spin spinning={loading} percent={percent} fullscreen />}
+        {showLoading && <Spin spinning={showLoading} fullscreen />}
 
         {/* 卡片 */}
         {!loading && (
@@ -127,6 +191,7 @@ const ImageCardModal: React.FC<ImageCardModalProps> = ({
             style={{
               animation: 'scaleIn 0.3s ease',
             }}
+            key={animationKey}
           >
             <Card
               style={{

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Masonry } from 'antd';
 import PageLayout from '../components/PageLayout';
 import Header from '../components/Header';
@@ -25,8 +25,56 @@ const imageList = [
   'https://images.unsplash.com/photo-1709198165282-1dab551df890',
 ];
 
+// 根据屏幕宽度计算列数
+const calculateColumns = (width: number) => {
+  if (width >= 1400) return 5;
+  if (width >= 1200) return 4;
+  if (width >= 768) return 3;
+  if (width >= 480) return 2;
+  return 1;
+};
+
 export default function GalleryPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [columns, setColumns] = useState<number>(4);
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      setColumns(calculateColumns(window.innerWidth));
+    };
+
+    // 初始化列数
+    handleResize();
+
+    // 添加窗口大小变化监听
+    window.addEventListener('resize', handleResize);
+
+    // 清理监听器
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleImageClick = (imageUrl: string, index: number) => {
+    setSelectedImage(imageUrl);
+    setSelectedIndex(index);
+  };
+
+  const handlePrevious = () => {
+    if (selectedIndex > 0) {
+      const newIndex = selectedIndex - 1;
+      setSelectedIndex(newIndex);
+      setSelectedImage(imageList[newIndex]);
+    }
+  };
+
+  const handleNext = () => {
+    if (selectedIndex < imageList.length - 1) {
+      const newIndex = selectedIndex + 1;
+      setSelectedIndex(newIndex);
+      setSelectedImage(imageList[newIndex]);
+    }
+  };
 
   return (
     <PageLayout
@@ -38,13 +86,14 @@ export default function GalleryPage() {
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         
         <Masonry
-          columns={4}
+          columns={columns}
           gutter={16}
           items={imageList.map((img, index) => ({
             key: `item-${index}`,
             data: img,
+            index: index,
           }))}
-          itemRender={({ data }) => (
+          itemRender={({ data, index }) => (
             <img 
               src={`${data}?w=523&auto=format`} 
               alt="gallery" 
@@ -53,7 +102,7 @@ export default function GalleryPage() {
                 cursor: 'pointer',
                 transition: 'transform 0.3s ease',
               }}
-              onClick={() => setSelectedImage(data)}
+              onClick={() => handleImageClick(data, index)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
               }}
@@ -70,8 +119,12 @@ export default function GalleryPage() {
         visible={!!selectedImage}
         imageUrl={selectedImage || ''}
         onClose={() => setSelectedImage(null)}
-        title="精美图片"
+        title={`精美图片 ${selectedIndex + 1}/${imageList.length}`}
         description="这是一张来自 Unsplash 的精美图片"
+        currentIndex={selectedIndex}
+        totalCount={imageList.length}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
       />
     </PageLayout>
   );
