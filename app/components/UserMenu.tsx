@@ -1,72 +1,165 @@
 'use client';
 
 import React from 'react';
-import { Avatar, Dropdown, Button } from 'antd';
-import { UserOutlined, LoginOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
-import type { MenuProps } from 'antd';
-import { userMenuItems } from '@/app/config/navigation';
+import { Avatar, Button, Card } from 'antd';
+import { UserOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import TimeRangeSelector from './TimeRangeSelector';
 
 interface UserMenuProps {
   isLoggedIn: boolean;
   username: string;
   onLogin: () => void;
   onLogout: () => void;
+  onClose?: () => void;
 }
 
 /**
- * 用户菜单组件
- * 负责显示用户头像、下拉菜单或登录按钮
- * 响应式：移动端隐藏用户名
+ * 用户卡片组件
+ * 以卡片形式展示用户信息和操作按钮
+ * 响应式：移动端和桌面端样式略有不同
  */
-export default function UserMenu({ isLoggedIn, username, onLogin, onLogout }: UserMenuProps) {
+export default function UserMenu({ 
+  isLoggedIn, 
+  username, 
+  onLogin, 
+  onLogout,
+  onClose 
+}: UserMenuProps) {
   const { isMobile } = useResponsive();
-  const router = useRouter();
 
-  // 用户下拉菜单项
-  const dropdownMenuItems: MenuProps['items'] = [
-    ...userMenuItems.map(item => ({
-      key: item.key,
-      label: item.label,
-      onClick: () => router.push(item.path),
-    })),
-    {
-      type: 'divider' as const,
-    },
-    {
-      key: 'logout',
-      label: '退出登录',
-      danger: true,
-      onClick: onLogout,
-    },
-  ];
+  const handleLogin = () => {
+    onLogin();
+    onClose?.();
+  };
 
-  // 未登录状态 - 显示登录按钮
-  if (!isLoggedIn) {
-    return (
-      <Button
-        type="primary"
-        icon={<LoginOutlined />}
-        onClick={onLogin}
-      >
-        登录
-      </Button>
-    );
-  }
+  const handleLogout = () => {
+    onLogout();
+    onClose?.();
+  };
 
-  // 已登录状态 - 显示用户头像和下拉菜单
   return (
-    <Dropdown menu={{ items: dropdownMenuItems }} placement="bottomRight">
-      <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
-        {!isMobile && (
-          <span style={{ color: 'white' }}>
-            {username}
-          </span>
-        )}
+    <Card
+      style={{
+        background: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '12px',
+        minWidth: isMobile ? 'auto' : '280px',
+      }}
+      bodyStyle={{
+        padding: isMobile ? '20px 16px' : '16px 20px',
+      }}
+    >
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+      }}>
+        {/* 第一行：头像、用户信息和操作按钮 */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '12px',
+        }}>
+          {/* 用户头像 */}
+          <div style={{
+            position: 'relative',
+            flexShrink: 0,
+          }}>
+            <Avatar 
+              size={isMobile ? 48 : 48} 
+              icon={<UserOutlined />} 
+              style={{ 
+                backgroundColor: isLoggedIn ? '#1677ff' : '#666',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+              }} 
+            />
+            {isLoggedIn && (
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: '12px',
+                height: '12px',
+                background: '#52c41a',
+                borderRadius: '50%',
+                border: '2px solid black',
+              }}></div>
+            )}
+          </div>
+
+          {/* 用户信息和操作按钮 */}
+          <div style={{ 
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: isMobile ? '8px' : '16px',
+          }}>
+            {/* 用户名 */}
+            <div style={{ 
+              textAlign: 'left',
+              flex: 1,
+            }}>
+              <div style={{ 
+                color: 'white', 
+                fontSize: '14px',
+                fontWeight: 600,
+                marginBottom: '2px',
+              }}>
+                {isLoggedIn ? username : '访客'}
+              </div>
+              <div style={{
+                color: 'rgba(255, 255, 255, 0.5)',
+                fontSize: '12px',
+              }}>
+                {isLoggedIn ? '已登录' : '未登录'}
+              </div>
+            </div>
+
+            {/* 操作按钮 */}
+            {isLoggedIn ? (
+              <Button
+                type="default"
+                danger
+                icon={<LogoutOutlined />}
+                onClick={handleLogout}
+                size="middle"
+                style={{ 
+                  fontWeight: 500,
+                  flexShrink: 0,
+                }}
+              >
+                {isMobile ? '退出' : '退出登录'}
+              </Button>
+            ) : (
+              <Button
+                type="primary"
+                icon={<LoginOutlined />}
+                onClick={handleLogin}
+                size="middle"
+                style={{ 
+                  fontWeight: 500,
+                  flexShrink: 0,
+                }}
+              >
+                登录
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* 第二行：时间范围选择器 */}
+        <div style={{
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          paddingTop: '12px',
+        }}>
+          <TimeRangeSelector />
+        </div>
       </div>
-    </Dropdown>
+    </Card>
   );
 }
 

@@ -38,10 +38,10 @@ export const publicNavigationItems: NavigationItem[] = [
     path: '/gallery',
   },
   {
-    key: 'posts',
-    label: '文章列表',
+    key: 'articles',
+    label: '文章归档',
     icon: '📝',
-    path: '/posts',
+    path: '/articles',
   },
   {
     key: 'contact',
