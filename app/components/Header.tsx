@@ -6,22 +6,22 @@ import { MenuOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import NavigationDrawer from './NavigationDrawer';
-import UserMenu from './UserMenu';
 import LoginModal from './LoginModal';
 import TimeRangeSelector from './TimeRangeSelector';
 
 interface HeaderProps {
   isVisible?: boolean;
+  leftContent?: React.ReactNode; // 左侧自定义内容（可选）
 }
 
 /**
  * Header 组件
  * 职责：顶部栏布局容器，组合子组件
  * - 左侧：菜单按钮
- * - 中间：Logo
- * - 右侧：用户菜单
+ * - 中间：时间范围选择器
+ * - 右侧：占位保持对称
  */
-export default function Header({ isVisible = true }: HeaderProps) {
+export default function Header({ isVisible = true, leftContent }: HeaderProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const { isLoggedIn, username, logout, login } = useAuth();
@@ -68,7 +68,14 @@ export default function Header({ isVisible = true }: HeaderProps) {
             pointerEvents: 'auto',
           }}
         >
-          {/* 左侧 - 菜单按钮 */}
+          {/* 左侧 - 自定义内容或占位（NavigationDrawer打开时隐藏） */}
+          {!drawerOpen && leftContent ? leftContent : <div style={{ width: '40px' }}></div>}
+          
+          {/* 中间 - 时间范围选择器 */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <TimeRangeSelector />
+          </div>
+          {/* 右侧 - 占位保持对称 */}
           <Button
             type="text"
             icon={<MenuOutlined style={{ fontSize: '20px', color: 'white' }} />}
@@ -76,18 +83,6 @@ export default function Header({ isVisible = true }: HeaderProps) {
             style={{ border: 'none' }}
           />
 
-          {/* 中间 - 时间范围选择器 */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <TimeRangeSelector />
-          </div>
-
-          {/* 右侧 - 用户菜单 */}
-          <UserMenu
-            isLoggedIn={isLoggedIn}
-            username={username}
-            onLogin={() => setLoginModalOpen(true)}
-            onLogout={handleLogout}
-          />
         </header>
 
         {/* 导航抽屉 - 在header容器内渲染 */}
@@ -95,6 +90,9 @@ export default function Header({ isVisible = true }: HeaderProps) {
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           isLoggedIn={isLoggedIn}
+          username={username}
+          onLogin={() => setLoginModalOpen(true)}
+          onLogout={handleLogout}
         />
       </div>
 

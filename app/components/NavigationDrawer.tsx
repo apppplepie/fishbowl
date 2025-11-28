@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Drawer, Menu } from 'antd';
+import { Drawer, Menu, Avatar, Button } from 'antd';
+import { UserOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
 import { usePathname, useRouter } from 'next/navigation';
 import type { MenuProps } from 'antd';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
@@ -11,15 +12,25 @@ interface NavigationDrawerProps {
   open: boolean;
   onClose: () => void;
   isLoggedIn: boolean;
+  username?: string;
+  onLogin: () => void;
+  onLogout: () => void;
 }
 
 /**
  * 导航抽屉组件
- * 负责显示侧边导航菜单，根据登录状态动态调整菜单项
+ * 负责显示侧边导航菜单和个人面板
  * 响应式：桌面端横向布局，手机端竖向布局
  * 从Header下方弹出，而非全屏
  */
-export default function NavigationDrawer({ open, onClose, isLoggedIn }: NavigationDrawerProps) {
+export default function NavigationDrawer({ 
+  open, 
+  onClose, 
+  isLoggedIn, 
+  username = '访客',
+  onLogin,
+  onLogout 
+}: NavigationDrawerProps) {
   const { isMobile } = useResponsive();
   const pathname = usePathname();
   const router = useRouter();
@@ -72,7 +83,7 @@ export default function NavigationDrawer({ open, onClose, isLoggedIn }: Navigati
       maskClosable={true}
       styles={{
         body: {
-          padding: isMobile ? '16px 0' : '12px 24px',
+          padding: isMobile ? '20px 16px' : '16px 24px',
           background: 'black',
         },
         wrapper: {
@@ -92,18 +103,79 @@ export default function NavigationDrawer({ open, onClose, isLoggedIn }: Navigati
         },
       }}
     >
-      <Menu
-        mode={isMobile ? 'vertical' : 'horizontal'}
-        selectedKeys={[pathname]}
-        items={buildMenuItems()}
-        style={{ 
-          border: 'none',
-          justifyContent: isMobile ? 'flex-start' : 'center',
-          background: 'black',
-          color: 'white',
-        }}
-        theme="dark"
-      />
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '24px' : '40px',
+        alignItems: isMobile ? 'stretch' : 'center',
+      }}>
+        {/* 个人面板 */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          padding: isMobile ? '16px' : '12px 24px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '8px',
+          minWidth: isMobile ? 'auto' : '200px',
+        }}>
+          <Avatar 
+            size={isMobile ? 64 : 56} 
+            icon={<UserOutlined />} 
+            style={{ backgroundColor: isLoggedIn ? '#1677ff' : '#666' }} 
+          />
+          <span style={{ 
+            color: 'white', 
+            fontSize: isMobile ? '16px' : '14px',
+            fontWeight: 500,
+          }}>
+            {isLoggedIn ? username : '访客'}
+          </span>
+          {isLoggedIn ? (
+            <Button
+              type="default"
+              danger
+              icon={<LogoutOutlined />}
+              onClick={() => {
+                onLogout();
+                onClose();
+              }}
+              style={{ width: '100%' }}
+            >
+              退出登录
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={() => {
+                onLogin();
+                onClose();
+              }}
+              style={{ width: '100%' }}
+            >
+              登录
+            </Button>
+          )}
+        </div>
+
+        {/* 导航菜单 */}
+        <div style={{ flex: 1 }}>
+          <Menu
+            mode={isMobile ? 'vertical' : 'horizontal'}
+            selectedKeys={[pathname]}
+            items={buildMenuItems()}
+            style={{ 
+              border: 'none',
+              justifyContent: isMobile ? 'flex-start' : 'center',
+              background: 'transparent',
+              color: 'white',
+            }}
+            theme="dark"
+          />
+        </div>
+      </div>
     </Drawer>
   );
 }
