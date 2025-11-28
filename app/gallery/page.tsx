@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Masonry } from 'antd';
 import PageLayout from '../components/PageLayout';
 import Header from '../components/Header';
+import ImageCardModal from '../components/ImageCardModal';
 
 const imageList = [
   'https://images.unsplash.com/photo-1510001618818-4b4e3d86bf0f',
@@ -25,6 +26,8 @@ const imageList = [
 ];
 
 export default function GalleryPage() {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   return (
     <PageLayout
       box1Content={<Header />}
@@ -50,6 +53,7 @@ export default function GalleryPage() {
                 cursor: 'pointer',
                 transition: 'transform 0.3s ease',
               }}
+              onClick={() => setSelectedImage(data)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
               }}
@@ -60,6 +64,15 @@ export default function GalleryPage() {
           )}
         />
       </div>
+
+      {/* 图片卡片模态框 */}
+      <ImageCardModal
+        visible={!!selectedImage}
+        imageUrl={selectedImage || ''}
+        onClose={() => setSelectedImage(null)}
+        title="精美图片"
+        description="这是一张来自 Unsplash 的精美图片"
+      />
     </PageLayout>
   );
 }
