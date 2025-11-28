@@ -44,6 +44,12 @@ export const publicNavigationItems: NavigationItem[] = [
     path: '/articles',
   },
   {
+    key: 'publish',
+    label: '发布内容',
+    icon: '✨',
+    path: '/publish',
+  },
+  {
     key: 'contact',
     label: '联系方式',
     path: '/contact',
