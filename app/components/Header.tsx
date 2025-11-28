@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import NavigationDrawer from './NavigationDrawer';
 import LoginModal from './LoginModal';
-import TimeRangeSelector from './TimeRangeSelector';
 
 interface HeaderProps {
   isVisible?: boolean;
@@ -17,9 +16,8 @@ interface HeaderProps {
 /**
  * Header 组件
  * 职责：顶部栏布局容器，组合子组件
- * - 左侧：菜单按钮
- * - 中间：时间范围选择器
- * - 右侧：占位保持对称
+ * - 左侧：可自定义内容插槽
+ * - 右侧：导航菜单按钮
  */
 export default function Header({ isVisible = true, leftContent }: HeaderProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -71,11 +69,10 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
           {/* 左侧 - 自定义内容或占位（NavigationDrawer打开时隐藏） */}
           {!drawerOpen && leftContent ? leftContent : <div style={{ width: '40px' }}></div>}
           
-          {/* 中间 - 时间范围选择器 */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <TimeRangeSelector />
-          </div>
-          {/* 右侧 - 占位保持对称 */}
+          {/* 中间 - 占位保持居中 */}
+          <div style={{ flex: 1 }}></div>
+          
+          {/* 右侧 - 菜单按钮 */}
           <Button
             type="text"
             icon={<MenuOutlined style={{ fontSize: '20px', color: 'white' }} />}

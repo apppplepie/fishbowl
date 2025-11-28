@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { useRouter } from 'next/navigation';
 import Header from '@/app/components/Header';
 
 const { Sider, Content } = Layout;
@@ -46,11 +47,12 @@ const sideMenuItems: MenuProps['items'] = [
 ];
 
 /**
- * Posts 展示页面
+ * 文章归档页面
  * 响应式布局：电脑端显示左侧边栏，手机端使用抽屉
  */
-export default function PostsPage() {
+export default function ArticlesPage() {
   const { isMobile } = useResponsive();
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedKey, setSelectedKey] = useState('all');
 
@@ -76,9 +78,14 @@ export default function PostsPage() {
     />
   );
 
+  // 点击文章卡片跳转到详情页
+  const handleArticleClick = (id: number) => {
+    router.push(`/article/${id}`);
+  };
+
   return (
     <>
-      {/* Header 独立在最顶部 */}
+      {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header 
         leftContent={
           isMobile ? (
@@ -92,12 +99,20 @@ export default function PostsPage() {
         }
       />
       
+      {/* PageLayout带边框 */}
       <div style={{
-        paddingTop: '45px',
-        minHeight: '100vh',
+        width: '100vw',
+        height: '100vh',
+        borderTop: '45px solid black',
+        borderLeft: '6px solid black',
+        borderRight: '6px solid black',
+        borderBottom: '6px solid black',
+        boxSizing: 'border-box',
+        overflowY: 'auto',
+        overflowX: 'hidden',
         background: '#f0f2f5',
       }}>
-        <Layout style={{ minHeight: 'calc(100vh - 45px)', background: 'transparent' }}>
+        <Layout style={{ minHeight: 'calc(100vh - 45px - 6px)', background: 'transparent' }}>
           {/* 电脑端 - 固定侧边栏 */}
           {!isMobile && (
             <Sider 
@@ -157,7 +172,7 @@ export default function PostsPage() {
               borderRadius: '8px',
             }}
           >
-            <h1 style={{ marginBottom: '24px' }}>文章列表</h1>
+            <h1 style={{ marginBottom: '24px' }}>文章归档</h1>
             
             {/* 占位内容 - 示例卡片 */}
             <div style={{ 
@@ -169,7 +184,8 @@ export default function PostsPage() {
                 <Card
                   key={item}
                   hoverable
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', cursor: 'pointer' }}
+                  onClick={() => handleArticleClick(item)}
                   cover={
                     <div style={{
                       height: isMobile ? '150px' : '200px',

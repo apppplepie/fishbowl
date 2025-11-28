@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Drawer, Menu, Avatar, Button } from 'antd';
-import { UserOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Drawer, Menu } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import type { MenuProps } from 'antd';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import UserMenu from './UserMenu';
 
 interface NavigationDrawerProps {
   open: boolean;
@@ -109,56 +109,14 @@ export default function NavigationDrawer({
         gap: isMobile ? '24px' : '40px',
         alignItems: isMobile ? 'stretch' : 'center',
       }}>
-        {/* 个人面板 */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-          padding: isMobile ? '16px' : '12px 24px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '8px',
-          minWidth: isMobile ? 'auto' : '200px',
-        }}>
-          <Avatar 
-            size={isMobile ? 64 : 56} 
-            icon={<UserOutlined />} 
-            style={{ backgroundColor: isLoggedIn ? '#1677ff' : '#666' }} 
-          />
-          <span style={{ 
-            color: 'white', 
-            fontSize: isMobile ? '16px' : '14px',
-            fontWeight: 500,
-          }}>
-            {isLoggedIn ? username : '访客'}
-          </span>
-          {isLoggedIn ? (
-            <Button
-              type="default"
-              danger
-              icon={<LogoutOutlined />}
-              onClick={() => {
-                onLogout();
-                onClose();
-              }}
-              style={{ width: '100%' }}
-            >
-              退出登录
-            </Button>
-          ) : (
-            <Button
-              type="primary"
-              icon={<LoginOutlined />}
-              onClick={() => {
-                onLogin();
-                onClose();
-              }}
-              style={{ width: '100%' }}
-            >
-              登录
-            </Button>
-          )}
-        </div>
+        {/* 用户卡片 */}
+        <UserMenu
+          isLoggedIn={isLoggedIn}
+          username={username}
+          onLogin={onLogin}
+          onLogout={onLogout}
+          onClose={onClose}
+        />
 
         {/* 导航菜单 */}
         <div style={{ flex: 1 }}>
