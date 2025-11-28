@@ -16,7 +16,8 @@ interface NavigationDrawerProps {
 /**
  * 导航抽屉组件
  * 负责显示侧边导航菜单，根据登录状态动态调整菜单项
- * 响应式：移动端宽度 75%，桌面端固定 300px
+ * 响应式：桌面端横向布局，手机端竖向布局
+ * 从Header下方弹出，而非全屏
  */
 export default function NavigationDrawer({ open, onClose, isLoggedIn }: NavigationDrawerProps) {
   const { isMobile } = useResponsive();
@@ -62,23 +63,46 @@ export default function NavigationDrawer({ open, onClose, isLoggedIn }: Navigati
   return (
     <Drawer
       title="导航菜单"
-      placement="left"
+      placement="top"
       onClose={onClose}
       open={open}
+      getContainer={false}
+      mask={true}
+      closable={false}
+      maskClosable={true}
       styles={{
         body: {
-          padding: 0,
+          padding: isMobile ? '16px 0' : '12px 24px',
+          background: 'black',
         },
         wrapper: {
-          width: isMobile ? '75%' : '300px',
+          position: 'absolute',
+          top: '45px',
+          pointerEvents: 'auto',
+          height: isMobile ? undefined : 'fit-content',
+        },
+        header: {
+          display: 'none',
+        },
+        mask: {
+          position: 'absolute',
+          top: '45px',
+          height: 'calc(100vh - 45px)',
+          pointerEvents: 'auto',
         },
       }}
     >
       <Menu
-        mode="vertical"
+        mode={isMobile ? 'vertical' : 'horizontal'}
         selectedKeys={[pathname]}
         items={buildMenuItems()}
-        style={{ border: 'none' }}
+        style={{ 
+          border: 'none',
+          justifyContent: isMobile ? 'flex-start' : 'center',
+          background: 'black',
+          color: 'white',
+        }}
+        theme="dark"
       />
     </Drawer>
   );
