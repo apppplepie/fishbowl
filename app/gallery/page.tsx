@@ -23,6 +23,7 @@ const imageList = [
   'https://images.unsplash.com/photo-1731901245099-20ac7f85dbaa',
   'https://images.unsplash.com/photo-1617694455303-59af55af7e58',
   'https://images.unsplash.com/photo-1709198165282-1dab551df890',
+
 ];
 
 // 根据屏幕宽度计算列数
@@ -32,6 +33,56 @@ const calculateColumns = (width: number) => {
   if (width >= 768) return 3;
   if (width >= 480) return 2;
   return 1;
+};
+
+// 图片项组件
+const GalleryImage: React.FC<{
+  src: string;
+  index: number;
+  onClick: () => void;
+}> = ({ src, index, onClick }) => {
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        cursor: 'pointer',
+      }}
+      onClick={onClick}
+    >
+      {/* 占位图 */}
+      {!imgLoaded && (
+        <img
+          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f0f0f0'/%3E%3Cpath d='M200 120 L200 180 M170 150 L230 150' stroke='%23d0d0d0' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E"
+          alt="loading"
+          style={{
+            width: '100%',
+            display: 'block',
+          }}
+        />
+      )}
+      
+      {/* 真实图片 */}
+      <img 
+        src={`${src}?w=523&auto=format`} 
+        alt="gallery"
+        onLoad={() => setImgLoaded(true)}
+        style={{ 
+          width: '100%',
+          display: imgLoaded ? 'block' : 'none',
+          transition: 'transform 0.3s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+      />
+    </div>
+  );
 };
 
 export default function GalleryPage() {
@@ -94,21 +145,10 @@ export default function GalleryPage() {
             index: index,
           }))}
           itemRender={({ data, index }) => (
-            <img 
-              src={`${data}?w=523&auto=format`} 
-              alt="gallery" 
-              style={{ 
-                width: '100%',
-                cursor: 'pointer',
-                transition: 'transform 0.3s ease',
-              }}
+            <GalleryImage
+              src={data}
+              index={index}
               onClick={() => handleImageClick(data, index)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
             />
           )}
         />
