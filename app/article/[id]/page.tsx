@@ -70,14 +70,41 @@ export default function ArticlePage() {
 
   // 加载文章数据
   useEffect(() => {
-    const articleData = getArticleWithBlocks(articleId);
-    if (articleData) {
-      setArticle(articleData);
-      setEditedArticle(articleData);
-    } else {
-      message.error('文章不存在');
-      router.push('/articles');
+    async function loadArticle() {
+      try {
+        // 先尝试从 API 加载
+        const response = await fetch(`/api/articles/${articleId}`);
+        const result = await response.json();
+
+        if (response.ok && result.success && result.article) {
+          setArticle(result.article);
+          setEditedArticle(result.article);
+        } else {
+          // 如果 API 失败，尝试从 mock 数据加载
+          const articleData = getArticleWithBlocks(articleId);
+          if (articleData) {
+            setArticle(articleData);
+            setEditedArticle(articleData);
+          } else {
+            message.error('文章不存在');
+            router.push('/articles');
+          }
+        }
+      } catch (error) {
+        console.error('加载文章失败:', error);
+        // 如果网络错误，尝试从 mock 数据加载
+        const articleData = getArticleWithBlocks(articleId);
+        if (articleData) {
+          setArticle(articleData);
+          setEditedArticle(articleData);
+        } else {
+          message.error('加载文章失败');
+          router.push('/articles');
+        }
+      }
     }
+
+    loadArticle();
   }, [articleId, router]);
 
   // 编辑时的临时数据

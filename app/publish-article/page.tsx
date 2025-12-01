@@ -51,7 +51,7 @@ export default function PublishArticlePage() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // 表单提交
-  const onFinish = (values: any) => {
+  const onFinish = async (values: any) => {
     // 检查是否有实际内容
     const hasContent = blocks.some(block => {
       if (block.type === 'text') return (block as any).content?.trim();
@@ -65,23 +65,56 @@ export default function PublishArticlePage() {
       return;
     }
 
-    const article: Article = {
-      id: `article-${Date.now()}`,
+    // 生成摘要（从第一个文字块提取）
+    let excerpt = '';
+    const firstTextBlock = blocks.find(b => b.type === 'text');
+    if (firstTextBlock && (firstTextBlock as any).content) {
+      const content = (firstTextBlock as any).content;
+      excerpt = content.substring(0, 150).replace(/\n/g, ' ') + (content.length > 150 ? '...' : '');
+    }
+
+    const articleData = {
       title: values.title,
       author: values.author || '匿名',
-      coverImage: values.coverImage,
+      excerpt,
       tags: values.tags || [],
       blocks: blocks,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      status: 'published' as const,
     };
 
-    console.log('发布文章:', article);
+    console.log('发布文章:', articleData);
     
-    // 这里应该调用API保存文章
-    // await fetch('/api/articles', { method: 'POST', body: JSON.stringify(article) });
-    
-    message.success('文章发布成功！（仅为演示，实际需接入后端API）');
+    try {
+      // 调用API保存文章
+      const response = await fetch('/api/articles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(articleData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        message.success('文章发布成功！');
+        // 清空表单和块
+        form.resetFields();
+        setBlocks([{
+          id: `block-initial-${Date.now()}`,
+          type: 'text',
+          order: 0,
+          content: '',
+        }]);
+        // 清除草稿
+        localStorage.removeItem('article-draft');
+      } else {
+        message.error(result.error || '发布失败，请重试');
+      }
+    } catch (error) {
+      console.error('发布文章失败:', error);
+      message.error('发布失败，请检查网络连接');
+    }
   };
 
   // 保存草稿
