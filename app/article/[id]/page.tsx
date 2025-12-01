@@ -1,11 +1,14 @@
 'use client';
 
-import React from 'react';
-import { Button, Space, Divider } from 'antd';
-import { LikeOutlined, ShareAltOutlined, MessageOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Button } from 'antd';
+import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import { useParams } from 'next/navigation';
+import ArticleTocNav from '@/app/components/ArticleTocNav';
+import ArticleTocDrawer from '@/app/components/ArticleTocDrawer';
+import { useParams, useRouter } from 'next/navigation';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 /**
  * 文章详情页面
@@ -13,7 +16,15 @@ import { useParams } from 'next/navigation';
  */
 export default function ArticlePage() {
   const params = useParams();
+  const router = useRouter();
   const articleId = params.id as string;
+  const { isMobile } = useResponsive();
+  const [tocDrawerOpen, setTocDrawerOpen] = useState(false);
+
+  // 处理文章点击
+  const handleArticleClick = (newArticleId: string) => {
+    router.push(`/article/${newArticleId}`);
+  };
 
   // 示例文章数据（后续可以从数据库获取）
   const article = {
@@ -49,9 +60,51 @@ qui officia deserunt mollit anim id est laborum.
   return (
     <>
       {/* Header 覆盖在PageLayout顶部边框上 */}
-      <Header />
+      <Header 
+        leftContent={
+          isMobile ? (
+            <Button
+              type="text"
+              icon={<UnorderedListOutlined style={{ fontSize: '20px', color: 'white' }} />}
+              onClick={() => setTocDrawerOpen(true)}
+              style={{ border: 'none' }}
+            />
+          ) : null
+        }
+      />
       
-      <PageLayout
+      {/* 移动端目录抽屉 */}
+      <ArticleTocDrawer
+        open={tocDrawerOpen}
+        onClose={() => setTocDrawerOpen(false)}
+        currentArticleId={articleId}
+        onArticleClick={handleArticleClick}
+      />
+
+      {/* 电脑端固定侧边栏 - 从 header 下方到页面底部 */}
+      {!isMobile && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: '45px', // header 的高度
+            bottom: 0,
+            width: '280px',
+            background: 'white',
+            borderRight: '1px solid #e8e8e8',
+            zIndex: 999,
+            overflowY: 'auto',
+          }}
+        >
+          <ArticleTocNav 
+            currentArticleId={articleId}
+            onArticleClick={handleArticleClick}
+          />
+        </div>
+      )}
+      
+      <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
+        <PageLayout
           box1Content={
             <div style={{ 
               padding: '12px 24px',
@@ -63,10 +116,15 @@ qui officia deserunt mollit anim id est laborum.
           }
           box1BgColor="rgba(0, 0, 0, 0.7)"
           box2BgColor="#f5f5f5"
+          box2Style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+          }}
         >
           <div style={{
+            width: '100%',
             maxWidth: '900px',
-            margin: '0 auto',
             padding: '40px 24px',
           }}>
             {/* Part 1: 标题和元信息 */}
@@ -179,6 +237,7 @@ qui officia deserunt mollit anim id est laborum.
             </div>
           </div>
         </PageLayout>
+      </div>
     </>
   );
 }

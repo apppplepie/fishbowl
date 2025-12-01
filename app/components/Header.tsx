@@ -48,7 +48,7 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
           right: 0,
           height: '100vh',
           display: isVisible ? 'block' : 'none',
-          zIndex: 1000,
+          zIndex: 10000,
           pointerEvents: 'none',
         }}
       >
@@ -62,7 +62,7 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0 24px',
-            zIndex: 1001,
+            zIndex: 10001,
             pointerEvents: 'auto',
           }}
         >
