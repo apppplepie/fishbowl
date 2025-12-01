@@ -20,41 +20,94 @@ export default function PageLayout({
   box2Style,
 }: PageLayoutProps) {
   return (
-    <div
-      style={{
-        width: '100vw',
-        minHeight: '100vh',
-        borderTop: '45px solid black',
-        borderLeft: '6px solid black',
-        borderRight: '6px solid black',
-        borderBottom: '6px solid black',
-        boxSizing: 'border-box',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-      }}
-    >
-      {/* 盒模型1：顶部区域，最小60px高，可自适应，紧贴大盒子边框 */}
+    <>
+      {/* 固定黑框 - 始终显示在视口 */}
       <div
         style={{
-          minHeight: '60px',
-          background: box1BgColor,
-          ...box1Style,
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'none', // 让点击事件穿透
+          zIndex: 9999,
         }}
       >
-        {box1Content}
+        {/* 上边框 */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '45px',
+          background: 'black',
+        }} />
+        
+        {/* 左边框 */}
+        <div style={{
+          position: 'absolute',
+          top: '45px',
+          left: 0,
+          bottom: 0,
+          width: '6px',
+          background: 'black',
+        }} />
+        
+        {/* 右边框 */}
+        <div style={{
+          position: 'absolute',
+          top: '45px',
+          right: 0,
+          bottom: 0,
+          width: '6px',
+          background: 'black',
+        }} />
+        
+        {/* 下边框 */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '6px',
+          background: 'black',
+        }} />
       </div>
 
-      {/* 盒模型2：内容区域，紧贴盒模型1 */}
+      {/* 内容区域 */}
       <div
         style={{
-          background: box2BgColor,
-          minHeight: 'calc(100vh - 60px - 45px - 6px)',
-          ...box2Style,
+          paddingTop: '45px',
+          paddingLeft: '6px',
+          paddingRight: '6px',
+          paddingBottom: '6px',
+          minHeight: '100vh',
+          boxSizing: 'border-box',
         }}
       >
-        {children}
+        {/* 盒模型1：顶部区域，最小60px高，可自适应 */}
+        <div
+          style={{
+            minHeight: '60px',
+            background: box1BgColor,
+            ...box1Style,
+          }}
+        >
+          {box1Content}
+        </div>
+
+        {/* 盒模型2：内容区域，紧贴盒模型1 */}
+        <div
+          style={{
+            background: box2BgColor,
+            minHeight: 'calc(100vh - 60px - 45px - 6px)',
+            ...box2Style,
+          }}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -46,8 +46,10 @@ export default function UserMenu({
         borderRadius: '12px',
         minWidth: isMobile ? 'auto' : '280px',
       }}
-      bodyStyle={{
-        padding: isMobile ? '20px 16px' : '16px 20px',
+      styles={{
+        body: {
+          padding: isMobile ? '20px 16px' : '16px 20px',
+        },
       }}
     >
       <div style={{
