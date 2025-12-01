@@ -22,6 +22,12 @@ export const publicNavigationItems: NavigationItem[] = [
     path: '/',
   },
   {
+    key: 'aquarium',
+    label: '数字鱼缸',
+    icon: '🐠',
+    path: '/aquarium',
+  },
+  {
     key: 'about',
     label: '关于我们',
     path: '/about',
@@ -48,6 +54,12 @@ export const publicNavigationItems: NavigationItem[] = [
     label: '发布内容',
     icon: '✨',
     path: '/publish',
+  },
+  {
+    key: 'publish-article',
+    label: '创作文章',
+    icon: '✍️',
+    path: '/publish-article',
   },
   {
     key: 'contact',
