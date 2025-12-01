@@ -15,6 +15,7 @@ interface TextBlockProps {
   onMoveDown?: () => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  canDelete: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   onDragOver?: (e: React.DragEvent) => void;
@@ -29,6 +30,7 @@ export default function TextBlock({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  canDelete,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -45,8 +47,8 @@ export default function TextBlock({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // 如果内容为空且按下删除键，删除整个块
-    if (e.key === 'Backspace' && block.content === '') {
+    // 如果内容为空且按下删除键，删除整个块（但要检查是否可以删除）
+    if (e.key === 'Backspace' && block.content === '' && canDelete) {
       e.preventDefault();
       onDelete();
     }
@@ -119,7 +121,8 @@ export default function TextBlock({
           danger
           icon={<DeleteOutlined />}
           onClick={onDelete}
-          title="删除块"
+          disabled={!canDelete}
+          title={canDelete ? "删除块" : "至少需要保留一个块"}
         />
       </div>
 
@@ -161,7 +164,7 @@ export default function TextBlock({
       />
 
       {/* 空块提示 */}
-      {block.content === '' && isFocused && (
+      {block.content === '' && isFocused && canDelete && (
         <div
           style={{
             position: 'absolute',

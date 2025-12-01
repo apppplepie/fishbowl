@@ -12,14 +12,16 @@ import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, C
 interface BlockEditorProps {
   blocks: Block[];
   onChange: (blocks: Block[]) => void;
+  showAddButton?: boolean; // 是否显示底部的添加新块按钮
 }
 
-export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
+export default function BlockEditor({ blocks, onChange, showAddButton = true }: BlockEditorProps) {
   const [addBlockModalVisible, setAddBlockModalVisible] = useState(false);
   const [addImageModalVisible, setAddImageModalVisible] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [insertPosition, setInsertPosition] = useState<number>(-1); // 记录要插入的位置，-1表示末尾
 
   // 生成唯一ID
   const generateId = () => {
@@ -31,11 +33,29 @@ export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
     const newBlock: TextBlockType = {
       id: generateId(),
       type: 'text',
-      order: blocks.length,
+      order: 0, // 临时值，后面会重新排序
       content: '',
     };
-    onChange([...blocks, newBlock]);
+    
+    // 在指定位置插入
+    const newBlocks = [...blocks];
+    if (insertPosition === -1) {
+      // 添加到末尾
+      newBlocks.push(newBlock);
+    } else {
+      // 在指定位置后面插入
+      newBlocks.splice(insertPosition + 1, 0, newBlock);
+    }
+    
+    // 重新排序
+    const reorderedBlocks = newBlocks.map((block, i) => ({
+      ...block,
+      order: i,
+    }));
+    
+    onChange(reorderedBlocks);
     setAddBlockModalVisible(false);
+    setInsertPosition(-1);
   };
 
   // 添加代码块
@@ -43,12 +63,30 @@ export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
     const newBlock: CodeBlockType = {
       id: generateId(),
       type: 'code',
-      order: blocks.length,
+      order: 0, // 临时值，后面会重新排序
       code: '',
       language: 'javascript',
     };
-    onChange([...blocks, newBlock]);
+    
+    // 在指定位置插入
+    const newBlocks = [...blocks];
+    if (insertPosition === -1) {
+      // 添加到末尾
+      newBlocks.push(newBlock);
+    } else {
+      // 在指定位置后面插入
+      newBlocks.splice(insertPosition + 1, 0, newBlock);
+    }
+    
+    // 重新排序
+    const reorderedBlocks = newBlocks.map((block, i) => ({
+      ...block,
+      order: i,
+    }));
+    
+    onChange(reorderedBlocks);
     setAddBlockModalVisible(false);
+    setInsertPosition(-1);
   };
 
   // 添加图片块
@@ -64,14 +102,31 @@ export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
     const newBlock: ImageBlockType = {
       id: generateId(),
       type: 'image',
-      order: blocks.length,
+      order: 0, // 临时值，后面会重新排序
       imageUrl: finalImageUrl,
     };
 
-    onChange([...blocks, newBlock]);
+    // 在指定位置插入
+    const newBlocks = [...blocks];
+    if (insertPosition === -1) {
+      // 添加到末尾
+      newBlocks.push(newBlock);
+    } else {
+      // 在指定位置后面插入
+      newBlocks.splice(insertPosition + 1, 0, newBlock);
+    }
+    
+    // 重新排序
+    const reorderedBlocks = newBlocks.map((block, i) => ({
+      ...block,
+      order: i,
+    }));
+
+    onChange(reorderedBlocks);
     setAddImageModalVisible(false);
     setImageUrl('');
     setFileList([]);
+    setInsertPosition(-1);
   };
 
   // 更新块
@@ -83,6 +138,12 @@ export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
 
   // 删除块
   const deleteBlock = (index: number) => {
+    // 如果只剩一个块，不允许删除
+    if (blocks.length <= 1) {
+      message.warning('至少需要保留一个内容块');
+      return;
+    }
+    
     const newBlocks = blocks.filter((_, i) => i !== index);
     // 重新排序
     const reorderedBlocks = newBlocks.map((block, i) => ({
@@ -158,6 +219,7 @@ export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
       onMoveDown: () => moveBlockDown(index),
       canMoveUp: index > 0,
       canMoveDown: index < blocks.length - 1,
+      canDelete: blocks.length > 1, // 只有多于一个块时才能删除
       onDragStart: () => handleDragStart(index),
       onDragEnd: handleDragEnd,
       onDragOver: (e: React.DragEvent) => handleDragOver(e, index),
@@ -244,7 +306,10 @@ export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 type="dashed"
                 size="small"
                 icon={<PlusOutlined />}
-                onClick={() => setAddBlockModalVisible(true)}
+                onClick={() => {
+                  setInsertPosition(index); // 记录要在这个块后面插入
+                  setAddBlockModalVisible(true);
+                }}
               >
                 在此处添加块
               </Button>
@@ -254,36 +319,44 @@ export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
       </div>
 
       {/* 底部添加块按钮 */}
-      <div
-        style={{
-          marginLeft: '48px',
-          marginTop: '24px',
-          padding: '24px',
-          border: '2px dashed #d9d9d9',
-          borderRadius: '8px',
-          textAlign: 'center',
-          backgroundColor: '#fafafa',
-        }}
-      >
-        <Button
-          type="primary"
-          size="large"
-          icon={<PlusOutlined />}
-          onClick={() => setAddBlockModalVisible(true)}
+      {showAddButton && (
+        <div
+          style={{
+            marginLeft: '48px',
+            marginTop: '24px',
+            padding: '24px',
+            border: '2px dashed #d9d9d9',
+            borderRadius: '8px',
+            textAlign: 'center',
+            backgroundColor: '#fafafa',
+          }}
         >
-          添加新块
-        </Button>
-      </div>
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setInsertPosition(-1); // 添加到末尾
+              setAddBlockModalVisible(true);
+            }}
+          >
+            添加新块
+          </Button>
+        </div>
+      )}
 
       {/* 添加块类型选择弹窗 */}
       <Modal
-        title="选择块类型"
+        title={insertPosition === -1 ? "选择块类型" : `在第 ${insertPosition + 1} 个块后添加`}
         open={addBlockModalVisible}
-        onCancel={() => setAddBlockModalVisible(false)}
+        onCancel={() => {
+          setAddBlockModalVisible(false);
+          setInsertPosition(-1);
+        }}
         footer={null}
         width={500}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space vertical style={{ width: '100%' }} size="large">
           <Button
             type="default"
             size="large"
@@ -333,18 +406,19 @@ export default function BlockEditor({ blocks, onChange }: BlockEditorProps) {
 
       {/* 添加图片弹窗 */}
       <Modal
-        title="添加图片块"
+        title={insertPosition === -1 ? "添加图片块" : `在第 ${insertPosition + 1} 个块后添加图片`}
         open={addImageModalVisible}
         onCancel={() => {
           setAddImageModalVisible(false);
           setImageUrl('');
           setFileList([]);
+          setInsertPosition(-1);
         }}
         onOk={handleAddImageBlock}
         okText="添加"
         cancelText="取消"
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space vertical style={{ width: '100%' }} size="middle">
           <div>
             <div style={{ marginBottom: '8px' }}>方式一：输入图片URL</div>
             <Input

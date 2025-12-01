@@ -32,14 +32,32 @@ const { Option } = Select;
  */
 export default function PublishArticlePage() {
   const [form] = Form.useForm();
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  
+  // 初始化一个空的文字块
+  const [blocks, setBlocks] = useState<Block[]>([
+    {
+      id: `block-initial-${Date.now()}`,
+      type: 'text',
+      order: 0,
+      content: '',
+    }
+  ]);
+  
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // 表单提交
   const onFinish = (values: any) => {
-    if (blocks.length === 0) {
-      message.warning('请至少添加一个内容块');
+    // 检查是否有实际内容
+    const hasContent = blocks.some(block => {
+      if (block.type === 'text') return (block as any).content?.trim();
+      if (block.type === 'code') return (block as any).code?.trim();
+      if (block.type === 'image') return true; // 图片块总是有内容
+      return false;
+    });
+    
+    if (!hasContent) {
+      message.warning('请至少添加一些内容');
       return;
     }
 
@@ -270,7 +288,7 @@ export default function PublishArticlePage() {
 
               <Divider />
 
-              <BlockEditor blocks={blocks} onChange={setBlocks} />
+              <BlockEditor blocks={blocks} onChange={setBlocks} showAddButton={false} />
             </Card>
 
             <Card

@@ -14,6 +14,7 @@ interface ImageBlockProps {
   onMoveDown?: () => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  canDelete: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   onDragOver?: (e: React.DragEvent) => void;
@@ -28,6 +29,7 @@ export default function ImageBlock({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  canDelete,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -126,7 +128,8 @@ export default function ImageBlock({
             danger
             icon={<DeleteOutlined />}
             onClick={onDelete}
-            title="删除块"
+            disabled={!canDelete}
+            title={canDelete ? "删除块" : "至少需要保留一个块"}
           />
         </div>
 
