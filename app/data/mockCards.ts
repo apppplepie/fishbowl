@@ -17,18 +17,33 @@ export const mockCards: Card[] = [
     tags: ['摄影', '风景'],
   },
   
-  // 文章卡片
+  // 文章卡片 - 纯文字文章（来自数据库）
   {
-    id: 2,
+    id: 'article_1',
     type: 'article',
-    title: 'Next.js 15 的新特性深度解析',
-    excerpt: '随着 Next.js 15 的发布，我们迎来了许多激动人心的新特性。本文将深入探讨这些新功能如何改变我们的开发方式，提升应用性能和开发体验...',
-    coverImage: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee',
+    title: '关于写作的一些思考',
+    excerpt: '一篇简单的文章，分享关于写作的思考和感悟。写作不仅是记录，更是与自己对话的过程。',
+    coverImage: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800',
     author: '张三',
-    readTime: 8,
-    views: 1234,
-    comments: 45,
-    createdAt: '2024-01-14',
+    readTime: 3,
+    views: 420,
+    comments: 8,
+    createdAt: '2024-01-15',
+    tags: ['随笔', '生活'],
+  },
+
+  // 文章卡片 - 包含文字、图片、代码的混合文章（来自数据库）
+  {
+    id: 'article_2',
+    type: 'article',
+    title: '全栈开发入门：从前端到后端的完整示例',
+    excerpt: '通过实际代码示例，带你了解全栈开发的基本流程。包括 React 前端组件、Next.js API 后端接口，以及前后端通信的完整实现。',
+    coverImage: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800',
+    author: '李四',
+    readTime: 10,
+    views: 1560,
+    comments: 34,
+    createdAt: '2024-01-18',
     tags: ['技术', 'Next.js'],
   },
 

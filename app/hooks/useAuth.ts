@@ -64,6 +64,7 @@ export function useAuth() {
   return {
     isLoggedIn,
     username,
+    user: isLoggedIn ? { username, avatar: undefined } : null,
     login,
     logout,
     checkLoginStatus,

@@ -12,18 +12,22 @@ import {
   message,
   Divider,
   Tag,
+  Dropdown,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import { 
   PlusOutlined, 
   SaveOutlined,
   EyeOutlined,
   UploadOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import BlockEditor from '@/app/components/BlockEditor';
-import type { Block, Article } from '@/app/types/block';
+import type { Block, Article, TextBlock as TextBlockType } from '@/app/types/block';
+import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 
 const { Option } = Select;
 
@@ -148,6 +152,75 @@ export default function PublishArticlePage() {
   };
 
   const stats = getStatistics();
+
+  // 批量格式化所有文字块
+  const batchFormat = (option: FormatOption) => {
+    let count = 0;
+    const newBlocks = blocks.map(block => {
+      if (block.type === 'text') {
+        count++;
+        return {
+          ...block,
+          content: applyFormat((block as TextBlockType).content, option),
+        };
+      }
+      return block;
+    });
+
+    setBlocks(newBlocks);
+
+    const messages: Record<FormatOption, string> = {
+      indent: '首行缩进',
+      removeEmpty: '去除所有空行',
+      normalizeBreaks: '统一段落间距',
+      cleanSpaces: '清理空格',
+      chinese: '中文排版',
+      removeIndent: '移除缩进',
+    };
+
+    message.success(`已对 ${count} 个文字块应用【${messages[option]}】`);
+  };
+
+  // 批量格式化菜单
+  const batchFormatMenuItems: MenuProps['items'] = [
+    {
+      key: 'chinese',
+      icon: <ThunderboltOutlined />,
+      label: '批量中文排版（一键）',
+      onClick: () => batchFormat('chinese'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'indent',
+      label: '批量首行缩进',
+      onClick: () => batchFormat('indent'),
+    },
+    {
+      key: 'removeIndent',
+      label: '批量移除缩进',
+      onClick: () => batchFormat('removeIndent'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'removeEmpty',
+      label: '批量去除所有空行',
+      onClick: () => batchFormat('removeEmpty'),
+    },
+    {
+      key: 'normalizeBreaks',
+      label: '批量统一段落间距',
+      onClick: () => batchFormat('normalizeBreaks'),
+    },
+    {
+      key: 'cleanSpaces',
+      label: '批量清理空格',
+      onClick: () => batchFormat('cleanSpaces'),
+    },
+  ];
 
   return (
     <>
@@ -283,6 +356,18 @@ export default function PublishArticlePage() {
                   <Tag color="purple">{stats.codeBlocks} 代码</Tag>
                   <Tag>{stats.totalChars} 字</Tag>
                   <Tag>约 {stats.estimatedReadTime} 分钟阅读</Tag>
+                  
+                  {stats.textBlocks > 0 && (
+                    <Dropdown menu={{ items: batchFormatMenuItems }} placement="bottomRight">
+                      <Button 
+                        type="primary" 
+                        size="small"
+                        icon={<ThunderboltOutlined />}
+                      >
+                        批量格式化
+                      </Button>
+                    </Dropdown>
+                  )}
                 </Space>
               </div>
 

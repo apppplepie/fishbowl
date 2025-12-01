@@ -1,13 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Space, Modal, Input, Upload, message } from 'antd';
-import { PlusOutlined, FileTextOutlined, PictureOutlined, CodeOutlined } from '@ant-design/icons';
+import { Button, Space, Modal, Input, Upload, message, Dropdown } from 'antd';
+import type { MenuProps } from 'antd';
+import { 
+  PlusOutlined, 
+  FileTextOutlined, 
+  PictureOutlined, 
+  CodeOutlined,
+  ThunderboltOutlined,
+  FormatPainterOutlined,
+} from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import TextBlock from './blocks/TextBlock';
 import ImageBlock from './blocks/ImageBlock';
 import CodeBlock from './blocks/CodeBlock';
 import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, CodeBlock as CodeBlockType } from '@/app/types/block';
+import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -210,6 +219,76 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     onChange(reorderedBlocks);
     setDraggedIndex(index);
   };
+
+  // 批量格式化所有文字块
+  const batchFormat = (option: FormatOption) => {
+    let count = 0;
+    const newBlocks = blocks.map(block => {
+      if (block.type === 'text') {
+        count++;
+        return {
+          ...block,
+          content: applyFormat((block as TextBlockType).content, option),
+        };
+      }
+      return block;
+    });
+
+    onChange(newBlocks);
+
+    const messages: Record<FormatOption, string> = {
+      indent: '首行缩进',
+      removeEmpty: '去除所有空行',
+      normalizeBreaks: '统一段落间距',
+      cleanSpaces: '清理空格',
+      chinese: '中文排版',
+      removeIndent: '移除缩进',
+    };
+
+    message.success(`已对 ${count} 个文字块应用【${messages[option]}】`);
+  };
+
+  // 批量格式化菜单
+  const batchFormatMenuItems: MenuProps['items'] = [
+    {
+      key: 'indent',
+      icon: <FormatPainterOutlined />,
+      label: '批量首行缩进',
+      onClick: () => batchFormat('indent'),
+    },
+    {
+      key: 'removeIndent',
+      label: '批量移除缩进',
+      onClick: () => batchFormat('removeIndent'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'removeEmpty',
+      label: '批量去除所有空行',
+      onClick: () => batchFormat('removeEmpty'),
+    },
+    {
+      key: 'normalizeBreaks',
+      label: '批量统一段落间距',
+      onClick: () => batchFormat('normalizeBreaks'),
+    },
+    {
+      key: 'cleanSpaces',
+      label: '批量清理空格',
+      onClick: () => batchFormat('cleanSpaces'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'chinese',
+      icon: <ThunderboltOutlined />,
+      label: '批量中文排版（一键）',
+      onClick: () => batchFormat('chinese'),
+    },
+  ];
 
   // 渲染块
   const renderBlock = (block: Block, index: number) => {
