@@ -8,9 +8,18 @@ import Header from '@/app/components/Header';
 import ArticleTocNav from '@/app/components/ArticleTocNav';
 import ArticleTocDrawer from '@/app/components/ArticleTocDrawer';
 import ArticleEditFloat, { EditMode } from '@/app/components/ArticleEditFloat';
+import CommentSection from '@/app/components/CommentSection';
+import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useAuth } from '@/app/hooks/useAuth';
+import { 
+  getArticleWithBlocks, 
+  type Block, 
+  type TextBlockContent, 
+  type ImageBlockContent, 
+  type CodeBlockContent 
+} from '@/app/data/mockDatabase';
 
 const { TextArea } = Input;
 
@@ -23,7 +32,7 @@ export default function ArticlePage() {
   const router = useRouter();
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const [tocDrawerOpen, setTocDrawerOpen] = useState(false);
   
   // 编辑模式状态
@@ -54,39 +63,31 @@ export default function ArticlePage() {
     };
   }, [editMode]);
   
-  // 示例文章数据（后续可以从数据库获取）
-  const [article, setArticle] = useState({
-    id: articleId,
-    title: '这是一篇示例文章的标题',
-    author: '张三',
-    publishDate: '2024-01-15',
-    lastModified: '2024-01-20',
-    content: `
-这是文章的第一段内容。Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+  // 从数据源获取文章
+  const [article, setArticle] = useState<any>(null);
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<ImageBlockContent | null>(null);
 
-这是文章的第二段内容。Ut enim ad minim veniam, quis nostrud exercitation ullamco 
-laboris nisi ut aliquip ex ea commodo consequat.
-
-## 这是一个小标题
-
-这是小标题下的内容。Duis aute irure dolor in reprehenderit in voluptate velit 
-esse cillum dolore eu fugiat nulla pariatur.
-
-### 这是三级标题
-
-更多的内容在这里。Excepteur sint occaecat cupidatat non proident, sunt in culpa 
-qui officia deserunt mollit anim id est laborum.
-
-最后一段总结性的内容。感谢阅读！
-    `,
-    likes: 128,
-    shares: 45,
-    comments: 23,
-  });
+  // 加载文章数据
+  useEffect(() => {
+    const articleData = getArticleWithBlocks(articleId);
+    if (articleData) {
+      setArticle(articleData);
+      setEditedArticle(articleData);
+    } else {
+      message.error('文章不存在');
+      router.push('/articles');
+    }
+  }, [articleId, router]);
 
   // 编辑时的临时数据
-  const [editedArticle, setEditedArticle] = useState(article);
+  const [editedArticle, setEditedArticle] = useState<any>(null);
+
+  // 打开图片查看器
+  const handleImageClick = (imageContent: ImageBlockContent) => {
+    setSelectedImage(imageContent);
+    setIsImageModalVisible(true);
+  };
 
   // 处理文章点击 - 编辑模式下需要确认
   const handleArticleClick = (newArticleId: string) => {
@@ -111,9 +112,11 @@ qui officia deserunt mollit anim id est laborum.
 
   // 进入编辑模式
   const handleEdit = () => {
-    setEditedArticle(article); // 复制当前文章数据到编辑状态
-    setEditMode('edit');
-    message.info('进入编辑模式');
+    if (article) {
+      setEditedArticle(article); // 复制当前文章数据到编辑状态
+      setEditMode('edit');
+      message.info('进入编辑模式');
+    }
   };
 
   // 进入预览模式
@@ -124,10 +127,12 @@ qui officia deserunt mollit anim id est laborum.
 
   // 保存文章
   const handleSave = () => {
-    setArticle(editedArticle); // 保存编辑的内容
-    setEditMode('view');
-    message.success('文章已保存！');
-    // TODO: 这里后续可以添加实际的保存到数据库的逻辑
+    if (editedArticle) {
+      setArticle(editedArticle); // 保存编辑的内容
+      setEditMode('view');
+      message.success('文章已保存！');
+      // TODO: 这里后续可以添加实际的保存到数据库的逻辑
+    }
   };
 
   // 取消编辑 - 带确认对话框
@@ -140,9 +145,11 @@ qui officia deserunt mollit anim id est laborum.
       cancelText: '继续编辑',
       okType: 'danger',
       onOk() {
-        setEditedArticle(article); // 恢复原始数据
-        setEditMode('view');
-        message.warning('已取消编辑');
+        if (article) {
+          setEditedArticle(article); // 恢复原始数据
+          setEditMode('view');
+          message.warning('已取消编辑');
+        }
       },
     });
   };
@@ -217,7 +224,7 @@ qui officia deserunt mollit anim id est laborum.
               color: 'white',
               fontSize: '14px',
             }}>
-              首页 / 文章归档 / {article.title}
+              首页 / 文章归档 / {article?.title}
             </div>
           }
           box1BgColor="rgba(0, 0, 0, 0.7)"
@@ -271,8 +278,8 @@ qui officia deserunt mollit anim id est laborum.
                       文章标题
                     </label>
                     <Input
-                      value={editedArticle.title}
-                      onChange={(e) => setEditedArticle({ ...editedArticle, title: e.target.value })}
+                      value={editedArticle?.title || ''}
+                      onChange={(e) => editedArticle && setEditedArticle({ ...editedArticle, title: e.target.value })}
                       placeholder="请输入文章标题"
                       size="large"
                       style={{
@@ -290,8 +297,8 @@ qui officia deserunt mollit anim id est laborum.
                     paddingTop: '24px',
                     borderTop: '1px solid #e8e8e8',
                   }}>
-                    <span>👤 作者：<strong>{editedArticle.author}</strong></span>
-                    <span>📅 发布：{editedArticle.publishDate}</span>
+                    <span>👤 作者：<strong>{editedArticle?.author}</strong></span>
+                    <span>📅 发布：{editedArticle?.publish_date}</span>
                     <span>🔄 更新：{new Date().toISOString().split('T')[0]}</span>
                   </div>
                 </>
@@ -304,7 +311,7 @@ qui officia deserunt mollit anim id est laborum.
                     marginBottom: '24px',
                     color: '#1a1a1a',
                   }}>
-                    {editMode === 'preview' ? editedArticle.title : article.title}
+                    {editMode === 'preview' ? editedArticle?.title : article?.title}
                   </h1>
                   
                   <div style={{
@@ -315,9 +322,9 @@ qui officia deserunt mollit anim id est laborum.
                     paddingBottom: '24px',
                     borderBottom: '1px solid #e8e8e8',
                   }}>
-                    <span>👤 作者：<strong>{editMode === 'preview' ? editedArticle.author : article.author}</strong></span>
-                    <span>📅 发布：{editMode === 'preview' ? editedArticle.publishDate : article.publishDate}</span>
-                    <span>🔄 更新：{editMode === 'preview' ? editedArticle.lastModified : article.lastModified}</span>
+                    <span>👤 作者：<strong>{editMode === 'preview' ? editedArticle?.author : article?.author}</strong></span>
+                    <span>📅 发布：{editMode === 'preview' ? editedArticle?.publish_date : article?.publish_date}</span>
+                    <span>🔄 更新：{editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified}</span>
                   </div>
                 </>
               )}
@@ -335,32 +342,116 @@ qui officia deserunt mollit anim id est laborum.
               color: '#333',
             }}>
               {editMode === 'edit' ? (
-                // 编辑模式 - 可编辑内容
-                <div>
-                  <label style={{
-                    display: 'block',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#666',
-                  }}>
-                    文章内容
-                  </label>
-                  <TextArea
-                    value={editedArticle.content}
-                    onChange={(e) => setEditedArticle({ ...editedArticle, content: e.target.value })}
-                    placeholder="请输入文章内容"
-                    rows={20}
-                    style={{
-                      fontSize: '16px',
-                      lineHeight: '1.8',
-                    }}
-                  />
+                // 编辑模式 - 暂不支持块编辑，显示提示
+                <div style={{
+                  padding: '40px',
+                  textAlign: 'center',
+                  color: '#999',
+                  background: '#fafafa',
+                  borderRadius: '8px',
+                }}>
+                  <p>编辑模式暂不支持块内容编辑</p>
+                  <p style={{ fontSize: '14px' }}>请前往文章发布页面进行编辑</p>
                 </div>
               ) : (
-                // 浏览/预览模式 - 显示内容
-                <div style={{ whiteSpace: 'pre-wrap' }}>
-                  {editMode === 'preview' ? editedArticle.content : article.content}
+                // 浏览/预览模式 - 渲染块内容
+                <div>
+                  {(editMode === 'preview' && editedArticle ? editedArticle.blocks : article?.blocks || []).map((block: Block & { parsedContent: any }, index: number) => (
+                    <div key={block.id} style={{ marginBottom: '32px' }}>
+                      {block.type === 'text' ? (
+                        // 文字块
+                        <div style={{ 
+                          whiteSpace: 'pre-wrap',
+                          lineHeight: '1.8',
+                          fontSize: '16px',
+                          color: '#333',
+                        }}>
+                          {(block.parsedContent as TextBlockContent).content}
+                        </div>
+                      ) : block.type === 'image' ? (
+                        // 图片块
+                        <div 
+                          style={{
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'transform 0.2s',
+                          }}
+                          onClick={() => handleImageClick(block.parsedContent as ImageBlockContent)}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.02)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          <img 
+                            src={(block.parsedContent as ImageBlockContent).url}
+                            alt={(block.parsedContent as ImageBlockContent).title || '图片'}
+                            style={{
+                              maxWidth: '100%',
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            }}
+                          />
+                          {(block.parsedContent as ImageBlockContent).title && (
+                            <div style={{
+                              marginTop: '12px',
+                              fontSize: '14px',
+                              color: '#666',
+                              fontWeight: 500,
+                            }}>
+                              {(block.parsedContent as ImageBlockContent).title}
+                            </div>
+                          )}
+                          {(block.parsedContent as ImageBlockContent).description && (
+                            <div style={{
+                              marginTop: '8px',
+                              fontSize: '13px',
+                              color: '#999',
+                            }}>
+                              {(block.parsedContent as ImageBlockContent).description}
+                            </div>
+                          )}
+                        </div>
+                      ) : block.type === 'code' ? (
+                        // 代码块
+                        <div style={{
+                          background: '#282c34',
+                          borderRadius: '8px',
+                          padding: '20px',
+                          overflow: 'auto',
+                        }}>
+                          {(block.parsedContent as CodeBlockContent).title && (
+                            <div style={{
+                              color: '#61dafb',
+                              fontSize: '14px',
+                              marginBottom: '12px',
+                              fontWeight: 500,
+                            }}>
+                              {(block.parsedContent as CodeBlockContent).title}
+                            </div>
+                          )}
+                          <div style={{
+                            fontSize: '13px',
+                            color: '#abb2bf',
+                            marginBottom: '8px',
+                            opacity: 0.7,
+                          }}>
+                            {(block.parsedContent as CodeBlockContent).language}
+                          </div>
+                          <pre style={{
+                            margin: 0,
+                            color: '#abb2bf',
+                            fontSize: '14px',
+                            lineHeight: '1.6',
+                            overflowX: 'auto',
+                          }}>
+                            <code>{(block.parsedContent as CodeBlockContent).code}</code>
+                          </pre>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -385,50 +476,55 @@ qui officia deserunt mollit anim id est laborum.
                   size="large"
                   style={{ minWidth: '120px' }}
                 >
-                  点赞 {article.likes}
+                  点赞 {article?.likes || 0}
                 </Button>
                 <Button 
                   icon={<ShareAltOutlined />} 
                   size="large"
                   style={{ minWidth: '120px' }}
                 >
-                  分享 {article.shares}
+                  分享 {article?.shares || 0}
                 </Button>
                 <Button 
                   icon={<MessageOutlined />} 
                   size="large"
                   style={{ minWidth: '120px' }}
+                  onClick={() => {
+                    // 滚动到评论区
+                    const commentSection = document.querySelector('#comment-section');
+                    if (commentSection) {
+                      commentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }}
                 >
-                  评论 {article.comments}
+                  评论
                 </Button>
               </div>
 
               {/* 评论区 */}
-              <div style={{ marginTop: '32px' }}>
-                <h3 style={{ 
-                  fontSize: '20px', 
-                  fontWeight: 600,
-                  marginBottom: '24px',
-                }}>
-                  评论区（{article.comments}）
-                </h3>
-                
-                {/* 评论列表占位 */}
-                <div style={{
-                  padding: '40px',
-                  textAlign: 'center',
-                  color: '#999',
-                  background: '#fafafa',
-                  borderRadius: '8px',
-                }}>
-                  <MessageOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
-                  <div>暂无评论，来抢沙发吧~</div>
-                </div>
-              </div>
+              <CommentSection 
+                articleId={articleId}
+                currentUser={user ? { username: user.username, avatar: user.avatar } : null}
+                isLoggedIn={isLoggedIn}
+              />
             </div>
           </div>
         </PageLayout>
       </div>
+
+      {/* 图片查看器 */}
+      {selectedImage && (
+        <ImageCardModal
+          visible={isImageModalVisible}
+          imageUrl={selectedImage.url}
+          title={selectedImage.title || ''}
+          description={selectedImage.description || ''}
+          onClose={() => {
+            setIsImageModalVisible(false);
+            setSelectedImage(null);
+          }}
+        />
+      )}
     </>
   );
 }
