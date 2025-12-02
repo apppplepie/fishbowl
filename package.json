@@ -16,8 +16,10 @@
   "dependencies": {
     "@ant-design/cssinjs": "^2.0.1",
     "@ant-design/nextjs-registry": "^1.2.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/uuid": "^10.0.0",
     "antd": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "mysql2": "^3.15.3",
     "next": "16.0.3",
     "react": "19.2.0",
