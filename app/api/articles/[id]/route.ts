@@ -144,7 +144,8 @@ export async function GET(
     // 2. 获取文章的所有块（按 order 排序）
     const blocks = await query<any[]>(
       `SELECT 
-        b.id, b.type, b.content, b.author, b.created_at
+        b.id, b.type, b.content, b.author, b.created_at,
+        ab.\`order\` as \`order\`
        FROM blocks b
        INNER JOIN article_blocks ab ON b.id = ab.block_id
        WHERE ab.article_id = ?
@@ -155,6 +156,7 @@ export async function GET(
     // 3. 解析块的 content（JSON 字符串 -> 对象）
     const parsedBlocks = blocks.map(block => ({
       ...block,
+      order: block.order, // 保留 order 字段
       parsedContent: JSON.parse(block.content),
     }));
 
