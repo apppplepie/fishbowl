@@ -100,15 +100,23 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
 
       console.log('构建的 blocks:', blocks.length, '个');
 
+      // 获取 Token
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        message.error('请先登录');
+        return;
+      }
+
       // 调用文章 API 创建绘画类型文章
       const response = await fetch('/api/articles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: values.title,
-          author: user?.username || '匿名',
           excerpt: values.description || '一组绘画作品',
           blocks: blocks,
           status: 'published',

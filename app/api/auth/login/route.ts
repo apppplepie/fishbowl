@@ -1,100 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { generateToken } from '@/lib/auth';
+import bcrypt from 'bcryptjs';
 
-// 模拟用户数据库（实际项目中应该从真实数据库读取）
-const MOCK_USERS = [
-  {
-    id: 1,
-    username: 'A',
-    password: '123', // 实际项目中应该存储加密后的密码
-    displayName: '用户A',
-    email: 'userA@example.com',
-  },
-  {
-    id: 2,
-    username: 'admin',
-    password: 'admin123',
-    displayName: '管理员',
-    email: 'admin@fishbowl.com',
-  },
-  {
-    id: 3,
-    username: 'test',
-    password: 'test123',
-    displayName: '测试用户',
-    email: 'test@fishbowl.com',
-  },
-];
-
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/auth/login - 用户登录
+ */
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await req.json();
     const { username, password } = body;
 
-    // 验证输入
+    // 1. 验证必填字段
     if (!username || !password) {
       return NextResponse.json(
-        {
-          success: false,
-          message: '用户名和密码不能为空',
-        },
+        { success: false, error: '用户名和密码不能为空' },
         { status: 400 }
       );
     }
 
-    // 模拟数据库查询延迟
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // 2. 查询用户（支持用户名或邮箱登录）
+    const users = await query(
+      `SELECT id, username, email, password_hash, display_name, avatar_url, role, status 
+       FROM users 
+       WHERE username = ? OR email = ?`,
+      [username, username]
+    ) as any[];
 
-    // 查找用户
-    const user = MOCK_USERS.find(
-      u => u.username === username && u.password === password
-    );
-
-    if (user) {
-      // 登录成功
-      // 实际项目中应该：
-      // 1. 生成 JWT token
-      // 2. 设置 httpOnly cookie
-      // 3. 记录登录日志
-      
-      return NextResponse.json({
-        success: true,
-        message: '登录成功',
-        user: {
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName,
-          email: user.email,
-        },
-      });
-    } else {
-      // 登录失败
+    if (users.length === 0) {
       return NextResponse.json(
-        {
-          success: false,
-          message: '用户名或密码错误',
-        },
+        { success: false, error: '用户名或密码错误' },
         { status: 401 }
       );
     }
-  } catch (error) {
-    console.error('登录 API 错误:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: '服务器错误，请稍后重试',
+
+    const user = users[0];
+
+    // 3. 检查用户状态
+    if (user.status === 'suspended') {
+      return NextResponse.json(
+        { success: false, error: '账号已被封禁，请联系管理员' },
+        { status: 403 }
+      );
+    }
+
+    if (user.status === 'deleted') {
+      return NextResponse.json(
+        { success: false, error: '账号已被删除' },
+        { status: 403 }
+      );
+    }
+
+    // 4. 验证密码
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { success: false, error: '用户名或密码错误' },
+        { status: 401 }
+      );
+    }
+
+    // 5. 更新最后登录时间
+    await query(
+      'UPDATE users SET last_login_at = NOW() WHERE id = ?',
+      [user.id]
+    );
+
+    // 6. 生成JWT Token
+    const token = generateToken({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    });
+
+    // 7. 返回用户信息和token
+    return NextResponse.json({
+      success: true,
+      message: '登录成功',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        display_name: user.display_name,
+        avatar_url: user.avatar_url,
+        role: user.role,
       },
+    });
+
+  } catch (error: any) {
+    console.error('登录失败:', error);
+    return NextResponse.json(
+      { success: false, error: '登录失败: ' + error.message },
       { status: 500 }
     );
   }
 }
-
-// 获取当前用户信息（可选）
-export async function GET(request: NextRequest) {
-  // 实际项目中应该验证 token 或 session
-  // 这里只是演示
-  return NextResponse.json({
-    success: true,
-    message: '请先登录',
-  });
-}
-

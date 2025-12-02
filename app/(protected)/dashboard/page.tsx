@@ -2,19 +2,18 @@
 
 import { Typography, Card, Button } from 'antd';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/hooks/useAuth';
 import Header from '../../components/Header';
 
 const { Title, Paragraph } = Typography;
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('username');
-    // 触发自定义事件通知其他组件登录状态变化
-    window.dispatchEvent(new Event('loginStatusChanged'));
-    router.push('/login');
+    logout();
+    router.push('/');
   };
 
   return (
@@ -23,7 +22,13 @@ export default function DashboardPage() {
       <div style={{ paddingTop: '8vh', minHeight: '100vh', background: '#f0f2f5', padding: '80px 24px 24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <Title level={1}>🎯 仪表盘</Title>
-          <Paragraph>这是一个受保护的页面，只有登录用户才能访问。</Paragraph>
+          <Paragraph>
+            欢迎，<strong>{user?.display_name || user?.username}</strong>！
+            这是一个受保护的页面，只有登录用户才能访问。
+          </Paragraph>
+          <Paragraph>
+            角色：<strong>{user?.role === 'admin' ? '管理员' : user?.role === 'moderator' ? '版主' : '普通用户'}</strong>
+          </Paragraph>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginTop: '40px' }}>
             <Card title="用户统计" hoverable>
