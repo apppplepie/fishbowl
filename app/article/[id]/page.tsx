@@ -12,6 +12,7 @@ import Header from '@/app/components/Header';
 import ArticleTocNav from '@/app/components/ArticleTocNav';
 import ArticleTocDrawer from '@/app/components/ArticleTocDrawer';
 import ArticleEditFloat, { EditMode } from '@/app/components/ArticleEditFloat';
+// import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CommentSection from '@/app/components/CommentSection';
 import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter } from 'next/navigation';
@@ -74,6 +75,7 @@ export default function ArticlePage() {
   const [article, setArticle] = useState<any>(null);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageBlockContent | null>(null);
+  // const [categoryModalOpen, setCategoryModalOpen] = useState(false); // 功能开发中
 
   // 加载文章数据
   useEffect(() => {
@@ -201,12 +203,45 @@ export default function ArticlePage() {
   const handleSave = async () => {
     if (editedArticle) {
       try {
+        // 验证标题
+        if (!editedArticle.title?.trim()) {
+          message.warning('请输入文章标题');
+          return;
+        }
+
+        // 验证绘画类型必须有图片
+        if (editedArticle.type === 'drawing') {
+          const hasImage = editedArticle.editorBlocks?.some((block: any) => block.type === 'image');
+          if (!hasImage) {
+            message.warning('🎨 绘画类型文章必须包含至少一张图片！');
+            return;
+          }
+        }
+
+        // 验证代码类型必须有代码块
+        if (editedArticle.type === 'code') {
+          const hasCode = editedArticle.editorBlocks?.some((block: any) => block.type === 'code');
+          if (!hasCode) {
+            message.warning('💻 代码类型文章必须包含至少一个代码块！');
+            return;
+          }
+        }
+
+        // 验证图片类型必须有图片块
+        if (editedArticle.type === 'image') {
+          const hasImage = editedArticle.editorBlocks?.some((block: any) => block.type === 'image');
+          if (!hasImage) {
+            message.warning('📷 图片类型文章必须包含至少一张图片！');
+            return;
+          }
+        }
+
         message.loading({ content: '正在保存...', key: 'save' });
 
         // 准备保存的数据
         const saveData = {
           title: editedArticle.title,
-          type: editedArticle.type,
+          type: editedArticle.type || 'text',
           blocks: editedArticle.editorBlocks || [],
         };
 
@@ -286,6 +321,11 @@ export default function ArticlePage() {
     }
   };
 
+  // 调整章节功能（开发中）
+  const handleAdjustCategory = () => {
+    message.info('📁 章节管理功能正在开发中，敬请期待！');
+  };
+
   return (
     <>
       {/* Header 覆盖在PageLayout顶部边框上 */}
@@ -319,6 +359,7 @@ export default function ArticlePage() {
           onSave={handleSave}
           onCancel={editMode === 'preview' ? handleBackToEdit : handleCancel}
           onDelete={handleDelete}
+          onAdjustCategory={handleAdjustCategory}
           articleAuthor={article.author}
           currentUser={user?.username}
         />
@@ -432,17 +473,41 @@ export default function ArticlePage() {
                     <Select
                       value={editedArticle?.type || 'text'}
                       onChange={(value) => editedArticle && setEditedArticle({ ...editedArticle, type: value })}
-                      style={{ width: '200px' }}
                       size="large"
+                      style={{ width: '300px' }}
                     >
-                      <Option value="text">📝 文字类型</Option>
-                      <Option value="image">🖼️ 图片类型</Option>
-                      <Option value="code">💻 代码类型</Option>
-                      <Option value="diary">📔 日记类型</Option>
+                      <Option value="text">📝 普通文章</Option>
+                      <Option value="image">📷 图片内容</Option>
+                      <Option value="drawing">🎨 绘画作品</Option>
+                      <Option value="code">💻 代码片段</Option>
+                      <Option value="diary">📔 日记</Option>
                     </Select>
-                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
-                      类型决定了文章在归档页面的展示样式
-                    </div>
+                    {(editedArticle?.type === 'drawing' || editedArticle?.type === 'image') && (
+                      <div style={{ 
+                        marginTop: '8px', 
+                        color: '#faad14', 
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}>
+                        <span>⚠️</span>
+                        <span>{editedArticle?.type === 'drawing' ? '绘画' : '图片'}类型必须包含至少一张图片才能保存</span>
+                      </div>
+                    )}
+                    {editedArticle?.type === 'code' && (
+                      <div style={{ 
+                        marginTop: '8px', 
+                        color: '#faad14', 
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}>
+                        <span>⚠️</span>
+                        <span>代码类型必须包含至少一个代码块才能保存</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div style={{
@@ -684,6 +749,18 @@ export default function ArticlePage() {
           }}
         />
       )}
+
+      {/* 调整章节弹窗 - 功能开发中，暂时注释 */}
+      {/* {article && (
+        <ArticleCategoryModal
+          open={categoryModalOpen}
+          articleId={articleId}
+          articleTitle={article.title}
+          currentCategoryId={article.category_id}
+          onClose={() => setCategoryModalOpen(false)}
+          onSuccess={handleCategoryAdjustSuccess}
+        />
+      )} */}
     </>
   );
 }

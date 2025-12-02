@@ -9,7 +9,8 @@ import {
   EyeOutlined,
   SaveOutlined,
   DeleteOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  FolderOutlined
 } from '@ant-design/icons';
 
 export type EditMode = 'view' | 'edit' | 'preview';
@@ -21,6 +22,7 @@ interface ArticleEditFloatProps {
   onSave: () => void;
   onCancel: () => void;
   onDelete?: () => void;
+  onAdjustCategory?: () => void; // 新增：调整章节
   articleAuthor?: string;
   currentUser?: string;
 }
@@ -39,18 +41,20 @@ export default function ArticleEditFloat({
   onSave,
   onCancel,
   onDelete,
+  onAdjustCategory,
   articleAuthor,
   currentUser,
 }: ArticleEditFloatProps) {
-  // 检查是否有删除权限（当前用户和文章作者一致）
-  const canDelete = articleAuthor && currentUser && articleAuthor === currentUser;
+  // 检查是否有编辑权限（当前用户和文章作者一致）
+  const canEdit = articleAuthor && currentUser && articleAuthor === currentUser;
   
   // 调试信息
   console.log('ArticleEditFloat 权限检查:', {
     articleAuthor,
     currentUser,
-    canDelete,
+    canEdit,
     hasOnDelete: !!onDelete,
+    hasOnAdjustCategory: !!onAdjustCategory,
     mode,
   });
 
@@ -71,7 +75,7 @@ export default function ArticleEditFloat({
 
   // 浏览模式：显示编辑按钮（如果有权限，显示按钮组）
   if (mode === 'view') {
-    if (canDelete && onDelete) {
+    if (canEdit) {
       return (
         <FloatButton.Group
           trigger="click"
@@ -85,11 +89,20 @@ export default function ArticleEditFloat({
             tooltip={{ title: '编辑文章', placement: 'left' }}
             onClick={onEdit}
           />
-          <FloatButton
-            icon={<DeleteOutlined />}
-            tooltip={{ title: '删除文章', placement: 'left' }}
-            onClick={handleDelete}
-          />
+          {onAdjustCategory && (
+            <FloatButton
+              icon={<FolderOutlined />}
+              tooltip={{ title: '调整章节', placement: 'left' }}
+              onClick={onAdjustCategory}
+            />
+          )}
+          {onDelete && (
+            <FloatButton
+              icon={<DeleteOutlined />}
+              tooltip={{ title: '删除文章', placement: 'left' }}
+              onClick={handleDelete}
+            />
+          )}
         </FloatButton.Group>
       );
     }
