@@ -94,41 +94,68 @@ export default function CategoryTreeSelect({
   };
 
   /**
-   * 转换为 TreeSelect 需要的数据格式
+   * 获取分类的完整路径（如：绘画作品/角色设计）
    */
-  const convertToTreeData = (categories: Category[]): any[] => {
-    return categories.map(cat => ({
-      title: (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          width: '100%',
-        }}>
-          <span>📁 {cat.name}</span>
-          <Button
-            type="text"
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAddCategory(cat.id, cat.name);
-            }}
-            style={{ 
-              marginLeft: '8px',
-              opacity: 0.6,
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-          />
-        </div>
-      ),
-      value: cat.id,
-      key: cat.id,
-      children: cat.children && cat.children.length > 0 
-        ? convertToTreeData(cat.children)
-        : undefined,
-    }));
+  const getCategoryPath = (categoryId: string, tree: Category[]): string => {
+    const findPath = (id: string, categories: Category[], path: string[] = []): string[] | null => {
+      for (const cat of categories) {
+        if (cat.id === id) {
+          return [...path, cat.name];
+        }
+        if (cat.children) {
+          const found = findPath(id, cat.children, [...path, cat.name]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const path = findPath(categoryId, tree);
+    return path ? path.join(' / ') : '';
+  };
+
+  /**
+   * 构建包含路径的树数据
+   */
+  const buildTreeDataWithPath = (categories: Category[], parentPath: string[] = []): any[] => {
+    return categories.map(cat => {
+      const currentPath = [...parentPath, cat.name];
+      const fullPath = currentPath.join(' / ');
+      
+      return {
+        title: (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            width: '100%',
+          }}>
+            <span>📁 {cat.name}</span>
+            <Button
+              type="text"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddCategory(cat.id, cat.name);
+              }}
+              style={{ 
+                marginLeft: '8px',
+                opacity: 0.6,
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+            />
+          </div>
+        ),
+        value: cat.id,
+        key: cat.id,
+        label: `📁 ${fullPath}`, // 用于选中时显示
+        children: cat.children && cat.children.length > 0 
+          ? buildTreeDataWithPath(cat.children, currentPath)
+          : undefined,
+      };
+    });
   };
 
   /**
@@ -205,13 +232,13 @@ export default function CategoryTreeSelect({
       <TreeSelect
         value={value}
         onChange={onChange}
-        treeData={convertToTreeData(categories)}
+        treeData={buildTreeDataWithPath(categories)}
         placeholder={placeholder}
         loading={loading}
         allowClear={allowClear}
         treeDefaultExpandAll
         showSearch
-        treeNodeFilterProp="title"
+        treeNodeLabelProp="label" // 使用 label 作为选中后显示的文本（完整路径）
         style={{ width: '100%', ...style }}
         styles={{ 
           popup: { 

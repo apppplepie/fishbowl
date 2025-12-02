@@ -41,6 +41,7 @@ export interface Article {
   author: string;
   coverImage?: string;
   tags?: string[];
+  category_id?: string | null;
   blocks: Block[];
   createdAt?: string;
   updatedAt?: string;

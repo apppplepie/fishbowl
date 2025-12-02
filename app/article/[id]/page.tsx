@@ -13,6 +13,7 @@ import ArticleTocNav from '@/app/components/ArticleTocNav';
 import ArticleTocDrawer from '@/app/components/ArticleTocDrawer';
 import ArticleEditFloat, { EditMode } from '@/app/components/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
+import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import CommentSection from '@/app/components/CommentSection';
 import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter } from 'next/navigation';
@@ -20,6 +21,7 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { useAuth } from '@/app/hooks/useAuth';
 import BlockEditor from '@/app/components/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
+import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import type { Block as BlockType } from '@/app/types/block';
 import { 
   getArticleWithBlocks, 
@@ -242,6 +244,7 @@ export default function ArticlePage() {
         const saveData = {
           title: editedArticle.title,
           type: editedArticle.type || 'text',
+          category_id: editedArticle.category_id || null,
           blocks: editedArticle.editorBlocks || [],
         };
 
@@ -509,6 +512,26 @@ export default function ArticlePage() {
                       </div>
                     )}
                   </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#666',
+                    }}>
+                      文章目录
+                    </label>
+                    <CategoryTreeSelect 
+                      value={editedArticle?.category_id}
+                      onChange={(value) => editedArticle && setEditedArticle({ ...editedArticle, category_id: value })}
+                      placeholder="选择文章所属目录（可选）"
+                    />
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
+                      选择文章的分类目录，方便管理和查找
+                    </div>
+                  </div>
                   
                   <div style={{
                     display: 'flex',
@@ -518,9 +541,18 @@ export default function ArticlePage() {
                     paddingTop: '24px',
                     borderTop: '1px solid #e8e8e8',
                   }}>
-                    <span>👤 作者：<strong>{editedArticle?.author}</strong></span>
-                    <span>📅 发布：{editedArticle?.publish_date}</span>
-                    <span>🔄 更新：{new Date().toISOString().split('T')[0]}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>👤</span>
+                      <span>作者：<strong style={{ color: '#1a1a1a' }}>{editedArticle?.author}</strong></span>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>📅</span>
+                      <span>发布：{editedArticle?.publish_date ? formatTimeToMinute(editedArticle.publish_date) : '-'}</span>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>🔄</span>
+                      <span>更新：{editedArticle?.last_modified ? formatTimeToMinute(editedArticle.last_modified) : formatTimeToMinute(new Date().toISOString())}</span>
+                    </span>
                   </div>
                 </>
               ) : (
@@ -543,9 +575,18 @@ export default function ArticlePage() {
                     paddingBottom: '24px',
                     borderBottom: '1px solid #e8e8e8',
                   }}>
-                    <span>👤 作者：<strong>{editMode === 'preview' ? editedArticle?.author : article?.author}</strong></span>
-                    <span>📅 发布：{editMode === 'preview' ? editedArticle?.publish_date : article?.publish_date}</span>
-                    <span>🔄 更新：{editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>👤</span>
+                      <span>作者：<strong style={{ color: '#1a1a1a' }}>{editMode === 'preview' ? editedArticle?.author : article?.author}</strong></span>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>📅</span>
+                      <span>发布：{formatTimeToMinute(editMode === 'preview' ? editedArticle?.publish_date : article?.publish_date)}</span>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>🔄</span>
+                      <span>更新：{formatTimeToMinute(editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified)}</span>
+                    </span>
                   </div>
                 </>
               )}
