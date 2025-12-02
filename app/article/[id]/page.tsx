@@ -75,9 +75,26 @@ export default function ArticlePage() {
   
   // 从数据源获取文章
   const [article, setArticle] = useState<any>(null);
+  const [categoryPath, setCategoryPath] = useState<Array<{ id: string; name: string }>>([]);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageBlockContent | null>(null);
   // const [categoryModalOpen, setCategoryModalOpen] = useState(false); // 功能开发中
+
+  /**
+   * 获取分类路径
+   */
+  const fetchCategoryPath = async (categoryId: string) => {
+    try {
+      const response = await fetch(`/api/categories/${categoryId}/path`);
+      const result = await response.json();
+      
+      if (result.success && result.path) {
+        setCategoryPath(result.path);
+      }
+    } catch (error) {
+      console.error('获取分类路径失败:', error);
+    }
+  };
 
   // 加载文章数据
   useEffect(() => {
@@ -90,6 +107,11 @@ export default function ArticlePage() {
         if (response.ok && result.success && result.article) {
           setArticle(result.article);
           setEditedArticle(result.article);
+          
+          // 如果文章有分类，获取分类路径
+          if (result.article.category_id) {
+            fetchCategoryPath(result.article.category_id);
+          }
         } else {
           // 如果 API 失败，尝试从 mock 数据加载
           const articleData = getArticleWithBlocks(articleId);
@@ -398,7 +420,22 @@ export default function ArticlePage() {
               color: 'white',
               fontSize: '14px',
             }}>
-              首页 / 文章归档 / {article?.title}
+              <span>首页</span>
+              {categoryPath.length > 0 && (
+                <>
+                  {categoryPath.map((cat, index) => (
+                    <span key={cat.id}>
+                      <span style={{ margin: '0 8px' }}>/</span>
+                      <span>{cat.name}</span>
+                    </span>
+                  ))}
+                  <span style={{ margin: '0 8px' }}>/</span>
+                </>
+              )}
+              {!categoryPath.length && <span style={{ margin: '0 8px' }}>/</span>}
+              {!categoryPath.length && <span>文章归档</span>}
+              {!categoryPath.length && <span style={{ margin: '0 8px' }}>/</span>}
+              <span>{article?.title}</span>
             </div>
           }
           box1BgColor="rgba(0, 0, 0, 0.7)"
@@ -525,7 +562,17 @@ export default function ArticlePage() {
                     </label>
                     <CategoryTreeSelect 
                       value={editedArticle?.category_id}
-                      onChange={(value) => editedArticle && setEditedArticle({ ...editedArticle, category_id: value })}
+                      onChange={(value) => {
+                        if (editedArticle) {
+                          setEditedArticle({ ...editedArticle, category_id: value });
+                          // 更新面包屑路径
+                          if (value) {
+                            fetchCategoryPath(value);
+                          } else {
+                            setCategoryPath([]);
+                          }
+                        }
+                      }}
                       placeholder="选择文章所属目录（可选）"
                     />
                     <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>

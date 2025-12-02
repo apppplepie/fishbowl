@@ -27,6 +27,7 @@ interface CreateArticleRequest {
   excerpt?: string;
   blocks: Block[];
   tags?: string[];
+  category_id?: string | null;
   status?: 'draft' | 'published';
   type?: 'text' | 'image' | 'code' | 'drawing';
 }
@@ -112,8 +113,8 @@ export async function POST(request: NextRequest) {
     // 1. 插入文章记录
     await query(
       `INSERT INTO articles 
-       (id, title, author, publish_date, last_modified, excerpt, type, status, likes, shares, comments) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+       (id, title, author, publish_date, last_modified, excerpt, type, category_id, status, likes, shares, comments) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
         body.title,
@@ -122,6 +123,7 @@ export async function POST(request: NextRequest) {
         currentDate,
         excerpt,
         articleType,
+        body.category_id || null,
         body.status || 'published',
       ]
     );
