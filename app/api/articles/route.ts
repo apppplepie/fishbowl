@@ -33,10 +33,21 @@ interface CreateArticleRequest {
 }
 
 /**
- * POST - 发布文章
+ * POST - 发布文章（需要登录）
  */
 export async function POST(request: NextRequest) {
   try {
+    // 1. 验证用户登录
+    const { getCurrentUser } = await import('@/lib/auth');
+    const currentUser = getCurrentUser(request);
+    
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
     const body: CreateArticleRequest = await request.json();
     
     // 验证必填字段
@@ -110,15 +121,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 1. 插入文章记录
+    // 2. 插入文章记录（使用当前登录用户作为作者）
     await query(
       `INSERT INTO articles 
-       (id, title, author, publish_date, last_modified, excerpt, type, category_id, status, likes, shares, comments) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+       (id, title, author, author_id, publish_date, last_modified, excerpt, type, category_id, status, likes, shares, comments) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
         body.title,
-        body.author || '匿名',
+        currentUser.username,  // 使用登录用户的用户名
+        currentUser.id,         // 使用登录用户的ID
         publishDate,
         currentDate,
         excerpt,
@@ -128,7 +140,7 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    // 2. 插入块并建立关联
+    // 3. 插入块并建立关联
     for (let i = 0; i < body.blocks.length; i++) {
       const block = body.blocks[i];
       const blockId = block.id || uuidv4();
@@ -180,7 +192,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    console.log(`API: 文章创建成功，ID: ${articleId}，共 ${body.blocks.length} 个块`);
+    console.log(`✅ 文章发布成功: ${body.title} by ${currentUser.username} (ID: ${articleId})`);
 
     return NextResponse.json({
       success: true,

@@ -1,12 +1,15 @@
 /**
  * 单篇文章 API 路由
  * GET /api/articles/[id] - 获取单篇文章详情（包括所有块）
+ * PUT /api/articles/[id] - 更新文章（需要权限）
+ * DELETE /api/articles/[id] - 删除文章（需要权限）
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getCurrentUser, canModerate } from '@/lib/auth';
 
 /**
- * PUT - 更新文章
+ * PUT - 更新文章（需要权限验证）
  */
 export async function PUT(
   request: NextRequest,
@@ -16,10 +19,47 @@ export async function PUT(
     const { id: articleId } = await params;
     const body = await request.json();
 
-    // 验证必填字段
+    // 1. 验证用户登录
+    const currentUser = getCurrentUser(request);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
+    // 2. 获取文章信息（检查文章是否存在和作者）
+    const articles = await query(
+      'SELECT id, author, author_id FROM articles WHERE id = ?',
+      [articleId]
+    ) as any[];
+
+    if (!articles || articles.length === 0) {
+      return NextResponse.json(
+        { success: false, error: '文章不存在' },
+        { status: 404 }
+      );
+    }
+
+    const article = articles[0];
+
+    // 3. 权限检查：作者本人 OR 管理员 OR 版主
+    const isAuthor = 
+      article.author === currentUser.username || 
+      article.author_id === currentUser.id;
+    const hasModeratePermission = canModerate(currentUser);
+
+    if (!isAuthor && !hasModeratePermission) {
+      return NextResponse.json(
+        { success: false, error: '无权编辑此文章' },
+        { status: 403 }
+      );
+    }
+
+    // 4. 验证必填字段
     if (!body.title) {
       return NextResponse.json(
-        { error: '标题不能为空' },
+        { success: false, error: '标题不能为空' },
         { status: 400 }
       );
     }
@@ -121,7 +161,7 @@ export async function PUT(
 }
 
 /**
- * DELETE - 删除文章
+ * DELETE - 删除文章（需要权限验证）
  */
 export async function DELETE(
   request: NextRequest,
@@ -130,24 +170,50 @@ export async function DELETE(
   try {
     const { id: articleId } = await params;
 
-    // 检查文章是否存在
+    // 1. 验证用户登录
+    const currentUser = getCurrentUser(request);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
+    // 2. 检查文章是否存在并获取作者信息
     const articles = await query<any[]>(
-      `SELECT id, title, author FROM articles WHERE id = ?`,
+      `SELECT id, title, author, author_id FROM articles WHERE id = ?`,
       [articleId]
     );
 
     if (!articles || articles.length === 0) {
       return NextResponse.json(
-        { error: '文章不存在' },
+        { success: false, error: '文章不存在' },
         { status: 404 }
       );
     }
 
-    // 删除文章（CASCADE 会自动删除关联的 article_blocks）
+    const article = articles[0];
+
+    // 3. 权限检查：作者本人 OR 管理员 OR 版主
+    const isAuthor = 
+      article.author === currentUser.username || 
+      article.author_id === currentUser.id;
+    const hasModeratePermission = canModerate(currentUser);
+
+    if (!isAuthor && !hasModeratePermission) {
+      return NextResponse.json(
+        { success: false, error: '无权删除此文章' },
+        { status: 403 }
+      );
+    }
+
+    // 4. 删除文章（CASCADE 会自动删除关联的 article_blocks）
     await query(
       `DELETE FROM articles WHERE id = ?`,
       [articleId]
     );
+
+    console.log(`文章已删除: ${article.title} (ID: ${articleId}) by ${currentUser.username}`);
 
     return NextResponse.json({
       success: true,
@@ -157,7 +223,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error('删除文章失败:', error);
     return NextResponse.json(
-      { error: '删除文章失败: ' + error.message },
+      { success: false, error: '删除文章失败: ' + error.message },
       { status: 500 }
     );
   }

@@ -270,11 +270,20 @@ export default function ArticlePage() {
           blocks: editedArticle.editorBlocks || [],
         };
 
+        // 获取 Token
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          message.error({ content: '请先登录', key: 'save' });
+          return;
+        }
+
         // 调用更新 API
         const response = await fetch(`/api/articles/${articleId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify(saveData),
         });
@@ -325,8 +334,19 @@ export default function ArticlePage() {
   // 删除文章
   const handleDelete = async () => {
     try {
+      // 获取 Token
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        message.error('请先登录');
+        return;
+      }
+
       const response = await fetch(`/api/articles/${articleId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
@@ -375,19 +395,24 @@ export default function ArticlePage() {
         onArticleClick={handleArticleClick}
       />
 
-      {/* 编辑悬浮按钮 - 仅登录用户可见 */}
-      {isLoggedIn && article && (
-        <ArticleEditFloat
-          mode={editMode}
-          onEdit={handleEdit}
-          onPreview={handlePreview}
-          onSave={handleSave}
-          onCancel={editMode === 'preview' ? handleBackToEdit : handleCancel}
-          onDelete={handleDelete}
-          onAdjustCategory={handleAdjustCategory}
-          articleAuthor={article.author}
-          currentUser={user?.username}
-        />
+      {/* 编辑悬浮按钮 - 仅文章作者、管理员或版主可见 */}
+      {isLoggedIn && article && user && (
+        // 检查权限：作者本人、管理员或版主
+        (article.author === user.username || 
+         user.role === 'admin' || 
+         user.role === 'moderator') && (
+          <ArticleEditFloat
+            mode={editMode}
+            onEdit={handleEdit}
+            onPreview={handlePreview}
+            onSave={handleSave}
+            onCancel={editMode === 'preview' ? handleBackToEdit : handleCancel}
+            onDelete={handleDelete}
+            onAdjustCategory={handleAdjustCategory}
+            articleAuthor={article.author}
+            currentUser={user.username}
+          />
+        )
       )}
 
       {/* 电脑端固定侧边栏 - 从 header 下方到页面底部 */}
@@ -816,7 +841,7 @@ export default function ArticlePage() {
               {/* 评论区 */}
               <CommentSection 
                 articleId={articleId}
-                currentUser={user ? { username: user.username, avatar: user.avatar } : null}
+                currentUser={user ? { username: user.username, avatar: user.avatar_url } : null}
                 isLoggedIn={isLoggedIn}
               />
             </div>

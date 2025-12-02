@@ -93,11 +93,20 @@ export default function PublishArticlePage() {
     console.log('发布文章:', articleData);
     
     try {
+      // 获取 Token
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        message.error('请先登录');
+        return;
+      }
+
       // 调用API保存文章
       const response = await fetch('/api/articles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(articleData),
       });

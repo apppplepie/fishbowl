@@ -37,12 +37,26 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
       if (response.ok && data.success) {
         // 登录成功
         message.success('登录成功！');
+        
+        // 保存 token 和用户信息到 localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // 如果勾选了"记住我"，设置较长的过期时间（这里简化处理）
+        if (values.remember) {
+          localStorage.setItem('remember', 'true');
+        }
+        
         form.resetFields();
-        // 通知父组件处理登录状态（由 useAuth 统一管理）
-        onLoginSuccess(data.user.displayName || data.user.username);
+        
+        // 通知父组件处理登录状态
+        onLoginSuccess(data.user.display_name || data.user.username);
+        
+        // 刷新页面以更新登录状态
+        window.location.reload();
       } else {
         // 登录失败
-        message.error(data.message || '登录失败，请检查用户名和密码');
+        message.error(data.error || '登录失败，请检查用户名和密码');
       }
     } catch (error) {
       console.error('登录错误:', error);
@@ -147,8 +161,8 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
 
         <div style={{ marginTop: '24px', padding: '12px', background: '#f0f5ff', borderRadius: '4px', fontSize: '12px', color: '#666' }}>
           💡 测试账号：<br />
-          用户名: <strong>A</strong><br />
-          密码: <strong>123</strong>
+          管理员 - 用户名: <strong>admin</strong> 密码: <strong>admin123456</strong><br />
+          普通用户 - 用户名: <strong>testuser</strong> 密码: <strong>test123456</strong>
         </div>
       </div>
     </Modal>
