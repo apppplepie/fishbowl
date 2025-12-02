@@ -26,6 +26,7 @@ import type { UploadFile } from 'antd';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import BlockEditor from '@/app/components/BlockEditor';
+import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import type { Block, Article, TextBlock as TextBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -84,6 +85,7 @@ export default function PublishArticlePage() {
       author: author,
       excerpt,
       tags: values.tags || [],
+      category_id: values.category_id || null,
       blocks: blocks,
       status: 'published' as const,
     };
@@ -131,11 +133,12 @@ export default function PublishArticlePage() {
   const saveDraft = () => {
     const values = form.getFieldsValue();
     const author = user?.username || '匿名';
-    const draft: Article = {
+    const draft = {
       id: `draft-${Date.now()}`,
       title: values.title || '未命名草稿',
       author: author,
       tags: values.tags || [],
+      category_id: values.category_id || null,
       blocks: blocks,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -348,6 +351,14 @@ export default function PublishArticlePage() {
                   <Option value="教程">教程</Option>
                   <Option value="思考">思考</Option>
                 </Select>
+              </Form.Item>
+
+              <Form.Item
+                label="文章目录"
+                name="category_id"
+                tooltip="选择文章所属分类目录，方便管理和查找"
+              >
+                <CategoryTreeSelect placeholder="选择文章所属目录（可选）" />
               </Form.Item>
             </Card>
 
