@@ -8,6 +8,10 @@ import { useRouter } from 'next/navigation';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import CardRenderer from '@/app/components/cards/CardRenderer';
+import ArticleCard from '@/app/components/cards/ArticleCard';
+import ImageCard from '@/app/components/cards/ImageCard';
+import CodeCard from '@/app/components/cards/CodeCard';
+import DiaryCard from '@/app/components/cards/DiaryCard';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 
@@ -40,7 +44,76 @@ export default function ArticlesPage() {
   const { isMobile } = useResponsive();
   const router = useRouter();
   const [columns, setColumns] = useState<number>(3);
-  const [cards] = useState<Card[]>(mockCards);
+  const [cards, setCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 从 API 加载文章数据
+  useEffect(() => {
+    async function loadArticles() {
+      try {
+        const response = await fetch('/api/articles?status=published&limit=50');
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          // 处理文章数据，为不同类型添加必要的字段
+          const processedArticles = await Promise.all(
+            result.articles.map(async (article: any) => {
+              // 如果是图片或代码类型，需要获取块信息
+              if (article.type === 'image' || article.type === 'code') {
+                try {
+                  const detailRes = await fetch(`/api/articles/${article.id}`);
+                  const detailResult = await detailRes.json();
+                  if (detailRes.ok && detailResult.success) {
+                    const articleWithBlocks = detailResult.article;
+                    
+                    // 图片类型：提取第一个图片块
+                    if (article.type === 'image') {
+                      const firstImageBlock = articleWithBlocks.blocks.find(
+                        (b: any) => b.type === 'image'
+                      );
+                      if (firstImageBlock) {
+                        article.firstImageUrl = firstImageBlock.parsedContent.url;
+                      }
+                    }
+                    
+                    // 代码类型：提取第一个代码块预览
+                    if (article.type === 'code') {
+                      const codeBlocks = articleWithBlocks.blocks.filter(
+                        (b: any) => b.type === 'code'
+                      );
+                      if (codeBlocks.length > 0) {
+                        article.codePreview = codeBlocks[0].parsedContent.code;
+                        article.codeLanguage = codeBlocks[0].parsedContent.language;
+                        article.codeBlockCount = codeBlocks.length;
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('获取文章详情失败:', error);
+                }
+              }
+              
+              return article;
+            })
+          );
+          
+          setCards(processedArticles);
+        } else {
+          // API 失败，使用 mock 数据
+          console.log('API 失败，使用 mock 数据');
+          setCards(mockCards);
+        }
+      } catch (error) {
+        console.error('加载文章失败:', error);
+        // 网络错误，使用 mock 数据
+        setCards(mockCards);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadArticles();
+  }, []);
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -54,13 +127,35 @@ export default function ArticlesPage() {
   }, []);
 
   // 点击卡片处理
-  const handleCardClick = (card: Card) => {
+  const handleCardClick = (card: any) => {
     console.log('点击了卡片:', card);
-    // 可以根据不同类型的卡片做不同处理
-    if (card.type === 'article') {
+    // 数据库文章直接跳转
+    if (card.type === 'text' || card.type === 'image' || card.type === 'code' || card.type === 'diary') {
+      router.push(`/article/${card.id}`);
+    } else if (card.type === 'article') {
+      // mock 数据兼容
       router.push(`/article/${card.id}`);
     }
     // 其他类型的卡片可以弹出模态框或其他操作
+  };
+
+  // 根据文章类型渲染对应的卡片
+  const renderCard = (article: any) => {
+    const handleClick = () => handleCardClick(article);
+
+    switch (article.type) {
+      case 'text':
+        return <ArticleCard key={article.id} card={article} onClick={handleClick} />;
+      case 'image':
+        return <ImageCard key={article.id} card={article} onClick={handleClick} />;
+      case 'code':
+        return <CodeCard key={article.id} card={article} onClick={handleClick} />;
+      case 'diary':
+        return <DiaryCard key={article.id} card={article} onClick={handleClick} />;
+      default:
+        // 兼容 mock 数据的其他类型
+        return <CardRenderer key={article.id} card={article} onClick={handleClick} />;
+    }
   };
 
   return (
@@ -97,20 +192,21 @@ export default function ArticlesPage() {
           margin: '0 auto',
           width: '100%',
         }}>
-          <Masonry
-            columns={columns}
-            gutter={16}
-            items={cards.map((card) => ({
-              key: `card-${card.id}`,
-              data: card,
-            }))}
-            itemRender={({ data }) => (
-              <CardRenderer 
-                card={data} 
-                onClick={handleCardClick}
-              />
-            )}
-          />
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
+              加载中...
+            </div>
+          ) : (
+            <Masonry
+              columns={columns}
+              gutter={16}
+              items={cards.map((card) => ({
+                key: `card-${card.id}`,
+                data: card,
+              }))}
+              itemRender={({ data }) => renderCard(data)}
+            />
+          )}
         </div>
       </PageLayout>
     </>

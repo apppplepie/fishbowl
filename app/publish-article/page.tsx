@@ -28,6 +28,7 @@ import PageLayout from '@/app/components/PageLayout';
 import BlockEditor from '@/app/components/BlockEditor';
 import type { Block, Article, TextBlock as TextBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
+import { useAuth } from '@/app/hooks/useAuth';
 
 const { Option } = Select;
 
@@ -36,6 +37,7 @@ const { Option } = Select;
  */
 export default function PublishArticlePage() {
   const [form] = Form.useForm();
+  const { isLoggedIn, user } = useAuth();
   
   // 初始化一个空的文字块
   const [blocks, setBlocks] = useState<Block[]>([
@@ -73,9 +75,12 @@ export default function PublishArticlePage() {
       excerpt = content.substring(0, 150).replace(/\n/g, ' ') + (content.length > 150 ? '...' : '');
     }
 
+    // 获取当前用户作为作者
+    const author = user?.username || '匿名';
+
     const articleData = {
       title: values.title,
-      author: values.author || '匿名',
+      author: author,
       excerpt,
       tags: values.tags || [],
       blocks: blocks,
@@ -120,10 +125,11 @@ export default function PublishArticlePage() {
   // 保存草稿
   const saveDraft = () => {
     const values = form.getFieldsValue();
+    const author = user?.username || '匿名';
     const draft: Article = {
       id: `draft-${Date.now()}`,
       title: values.title || '未命名草稿',
-      author: values.author || '匿名',
+      author: author,
       tags: values.tags || [],
       blocks: blocks,
       createdAt: new Date().toISOString(),
@@ -142,18 +148,17 @@ export default function PublishArticlePage() {
   const loadDraft = () => {
     const draftStr = localStorage.getItem('article-draft');
     if (draftStr) {
-      try {
-        const draft: Article = JSON.parse(draftStr);
-        form.setFieldsValue({
-          title: draft.title,
-          author: draft.author,
-          tags: draft.tags,
-        });
-        setBlocks(draft.blocks || []);
-        message.success('草稿已加载');
-      } catch (error) {
-        message.error('加载草稿失败');
-      }
+        try {
+          const draft: Article = JSON.parse(draftStr);
+          form.setFieldsValue({
+            title: draft.title,
+            tags: draft.tags,
+          });
+          setBlocks(draft.blocks || []);
+          message.success('草稿已加载');
+        } catch (error) {
+          message.error('加载草稿失败');
+        }
     } else {
       message.info('没有找到草稿');
     }
@@ -292,7 +297,6 @@ export default function PublishArticlePage() {
             layout="vertical"
             onFinish={onFinish}
             initialValues={{
-              author: '匿名',
               tags: [],
             }}
           >
@@ -346,12 +350,21 @@ export default function PublishArticlePage() {
                 </Upload>
               </Form.Item>
 
-              <Form.Item
-                label="作者"
-                name="author"
-              >
-                <Input placeholder="作者名称" size="large" />
-              </Form.Item>
+              {/* 显示当前作者（只读） */}
+              <div style={{
+                padding: '12px 16px',
+                background: '#f5f5f5',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <span style={{ color: '#666', fontSize: '14px' }}>📝 作者：</span>
+                <span style={{ fontSize: '16px', fontWeight: 500, color: '#1890ff' }}>
+                  {user?.username || '匿名'}
+                </span>
+              </div>
 
               <Form.Item
                 label="标签"

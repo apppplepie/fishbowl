@@ -49,20 +49,54 @@ export async function POST(request: NextRequest) {
     const currentDate = new Date();
     const publishDate = currentDate.toISOString().split('T')[0];
     
-    // 生成摘要（如果没有提供）
+    // 自动识别文章类型（优先级：图片 > 代码 > 文字）
+    let articleType: 'text' | 'image' | 'code' = 'text';
+    const hasImageBlock = body.blocks.some(b => b.type === 'image');
+    const hasCodeBlock = body.blocks.some(b => b.type === 'code');
+    
+    if (hasImageBlock) {
+      articleType = 'image';
+    } else if (hasCodeBlock) {
+      articleType = 'code';
+    }
+    
+    // 根据文章类型生成摘要
     let excerpt = body.excerpt || '';
     if (!excerpt && body.blocks.length > 0) {
-      const firstTextBlock = body.blocks.find(b => b.type === 'text');
-      if (firstTextBlock && firstTextBlock.content) {
-        excerpt = firstTextBlock.content.substring(0, 150) + '...';
+      if (articleType === 'image') {
+        // 图片类型：使用第一个图片的 description
+        const firstImageBlock = body.blocks.find(b => b.type === 'image');
+        if (firstImageBlock && firstImageBlock.description) {
+          excerpt = firstImageBlock.description;
+        } else if (firstImageBlock && firstImageBlock.title) {
+          excerpt = firstImageBlock.title;
+        } else {
+          excerpt = '一组图片分享';
+        }
+      } else if (articleType === 'code') {
+        // 代码类型：使用第一个文字块
+        const firstTextBlock = body.blocks.find(b => b.type === 'text');
+        if (firstTextBlock && firstTextBlock.content) {
+          excerpt = firstTextBlock.content.substring(0, 150).replace(/\n/g, ' ') + (firstTextBlock.content.length > 150 ? '...' : '');
+        } else {
+          // 如果没有文字块，生成默认描述
+          const codeCount = body.blocks.filter(b => b.type === 'code').length;
+          excerpt = `包含 ${codeCount} 个代码示例的技术文章`;
+        }
+      } else {
+        // 文字类型：使用第一个文字块
+        const firstTextBlock = body.blocks.find(b => b.type === 'text');
+        if (firstTextBlock && firstTextBlock.content) {
+          excerpt = firstTextBlock.content.substring(0, 150).replace(/\n/g, ' ') + (firstTextBlock.content.length > 150 ? '...' : '');
+        }
       }
     }
 
     // 1. 插入文章记录
     await query(
       `INSERT INTO articles 
-       (id, title, author, publish_date, last_modified, excerpt, status, likes, shares, comments) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+       (id, title, author, publish_date, last_modified, excerpt, type, status, likes, shares, comments) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
         body.title,
@@ -70,6 +104,7 @@ export async function POST(request: NextRequest) {
         publishDate,
         currentDate,
         excerpt,
+        articleType,
         body.status || 'published',
       ]
     );
@@ -143,18 +178,19 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'published';
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
 
+    // 使用字符串拼接而不是参数绑定（LIMIT 和 OFFSET 不支持 ? 占位符）
     const articles = await query<any[]>(
       `SELECT 
         id, title, author, publish_date, last_modified, 
-        excerpt, status, likes, shares, comments
+        excerpt, type, status, likes, shares, comments
        FROM articles 
        WHERE status = ?
        ORDER BY publish_date DESC, created_at DESC
-       LIMIT ? OFFSET ?`,
-      [status, limit, offset]
+       LIMIT ${limit} OFFSET ${offset}`,
+      [status]
     );
 
     return NextResponse.json({

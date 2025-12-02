@@ -16,9 +16,9 @@ async function seedData() {
     console.log('1️⃣ 插入文章1...');
     await query(
       `INSERT INTO articles 
-       (id, title, author, publish_date, last_modified, excerpt, status, likes, shares, comments) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE title = VALUES(title)`,
+       (id, title, author, publish_date, last_modified, excerpt, type, status, likes, shares, comments) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE title = VALUES(title), type = VALUES(type)`,
       [
         article1Id,
         '关于写作的一些思考',
@@ -26,6 +26,7 @@ async function seedData() {
         '2024-01-15',
         '2024-01-15 08:30:00',
         '一篇简单的文章，分享关于写作的思考和感悟。写作不仅是记录，更是与自己对话的过程。',
+        'text', // 只有文字块，类型为 text
         'published',
         42,
         15,
@@ -62,16 +63,17 @@ async function seedData() {
     
     await query(
       `INSERT INTO articles 
-       (id, title, author, publish_date, last_modified, excerpt, status, likes, shares, comments) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE title = VALUES(title)`,
+       (id, title, author, publish_date, last_modified, excerpt, type, status, likes, shares, comments) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE title = VALUES(title), type = VALUES(type)`,
       [
         article2Id,
         '全栈开发入门：从前端到后端的完整示例',
         '李四',
         '2024-01-18',
         '2024-01-19 09:45:00',
-        '通过实际代码示例，带你了解全栈开发的基本流程。包括 React 前端组件、Next.js API 后端接口，以及前后端通信的完整实现。',
+        '在现代 Web 开发中，掌握多种技术栈是非常重要的。今天我想和大家分享一个完整的全栈开发示例，包括前端展示、后端逻辑和数据库设计。',
+        'code', // 有代码块，类型为 code
         'published',
         156,
         67,

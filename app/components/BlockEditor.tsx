@@ -99,14 +99,47 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
   };
 
   // 添加图片块
-  const handleAddImageBlock = () => {
+  const handleAddImageBlock = async () => {
     if (!imageUrl && fileList.length === 0) {
       message.warning('请输入图片URL或上传图片');
       return;
     }
 
-    // 这里应该上传图片到服务器，暂时使用URL或本地预览
-    const finalImageUrl = imageUrl || (fileList[0] ? URL.createObjectURL(fileList[0].originFileObj as Blob) : '');
+    let finalImageUrl = imageUrl;
+
+    // 如果用户上传了文件，则上传到服务器
+    if (fileList.length > 0 && fileList[0].originFileObj) {
+      try {
+        message.loading({ content: '正在上传图片...', key: 'upload' });
+        
+        const formData = new FormData();
+        formData.append('file', fileList[0].originFileObj);
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          finalImageUrl = result.url;
+          message.success({ content: '图片上传成功！', key: 'upload' });
+        } else {
+          message.error({ content: result.error || '图片上传失败', key: 'upload' });
+          return;
+        }
+      } catch (error) {
+        console.error('上传图片失败:', error);
+        message.error({ content: '图片上传失败，请重试', key: 'upload' });
+        return;
+      }
+    }
+
+    if (!finalImageUrl) {
+      message.warning('请输入图片URL或上传图片');
+      return;
+    }
 
     const newBlock: ImageBlockType = {
       id: generateId(),

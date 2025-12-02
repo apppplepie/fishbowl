@@ -6,7 +6,7 @@ import { HeartOutlined, HeartFilled } from '@ant-design/icons';
 import type { ImageCard as ImageCardType } from '@/app/types/card';
 
 interface ImageCardProps {
-  card: ImageCardType;
+  card: ImageCardType | any; // 支持数据库返回的格式
   onClick?: () => void;
 }
 
@@ -44,7 +44,7 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
           </div>
         )}
         <img
-          src={card.imageUrl}
+          src={card.imageUrl || card.firstImageUrl}
           alt={card.title}
           onLoad={() => setImgLoaded(true)}
           style={{
@@ -62,7 +62,7 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
       </div>
 
       {/* 信息区域 */}
-      {(card.title || card.description) && (
+      {(card.title || card.description || card.excerpt) && (
         <div style={{ padding: '16px' }}>
           {card.title && (
             <h4 style={{ 
@@ -73,14 +73,18 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
               {card.title}
             </h4>
           )}
-          {card.description && (
+          {(card.description || card.excerpt) && (
             <p style={{
               margin: 0,
               color: '#666',
               fontSize: '14px',
               lineHeight: '1.5',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
             }}>
-              {card.description}
+              {card.description || card.excerpt}
             </p>
           )}
           
@@ -93,7 +97,10 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
             fontSize: '12px',
             color: '#999',
           }}>
-            <span>{card.createdAt}</span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {card.author && <span>👤 {card.author}</span>}
+              <span>📅 {card.publish_date || card.createdAt}</span>
+            </div>
             <div
               onClick={(e) => {
                 e.stopPropagation();

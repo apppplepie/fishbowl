@@ -19,7 +19,7 @@ export async function GET(
     const articles = await query<any[]>(
       `SELECT 
         id, title, author, publish_date, last_modified, 
-        excerpt, status, likes, shares, comments
+        excerpt, type, status, likes, shares, comments
        FROM articles 
        WHERE id = ?`,
       [articleId]
