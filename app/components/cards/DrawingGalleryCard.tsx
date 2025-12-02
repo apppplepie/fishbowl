@@ -44,7 +44,8 @@ interface DrawingGalleryCardProps {
  */
 export default function DrawingGalleryCard({ article, onClick, onTitleClick }: DrawingGalleryCardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0])); // 记录已加载的图片索引
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set()); // 记录已加载的图片索引
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set()); // 记录加载失败的图片索引
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
@@ -81,10 +82,18 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
   // 标记当前图片已加载
   const handleImageLoad = () => {
     setLoadedImages(prev => new Set(prev).add(currentIndex));
+    console.log('图片加载成功，索引:', currentIndex, 'URL:', currentImage?.url);
+  };
+
+  // 标记当前图片加载失败
+  const handleImageError = () => {
+    setFailedImages(prev => new Set(prev).add(currentIndex));
+    console.error('图片加载失败，索引:', currentIndex, 'URL:', currentImage?.url);
   };
 
   // 判断当前图片是否已加载
   const isCurrentImageLoaded = loadedImages.has(currentIndex);
+  const isCurrentImageFailed = failedImages.has(currentIndex);
 
   // 预加载相邻图片
   useEffect(() => {
@@ -192,7 +201,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {!isCurrentImageLoaded && (
+        {!isCurrentImageLoaded && !isCurrentImageFailed && (
           <div style={{
             position: 'absolute',
             top: 0,
@@ -225,14 +234,38 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
             </div>
           </div>
         )}
+        {isCurrentImageFailed && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1,
+            color: 'white',
+            padding: '20px',
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>😢</div>
+            <div style={{ fontSize: '16px', fontWeight: 500 }}>图片加载失败</div>
+            <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.8, textAlign: 'center', wordBreak: 'break-all' }}>
+              {currentImage.url}
+            </div>
+          </div>
+        )}
         <img
           key={currentImage.id}
           src={currentImage.url}
           alt="图片"
           onLoad={handleImageLoad}
+          onError={handleImageError}
           style={{
             maxWidth: '100%',
-            maxHeight: '70vh',
+            maxHeight: 'calc(100vh - 111px - 200px)', // 减去PageLayout黑框+header(111px) 和卡片信息区域(约200px)
             width: 'auto',
             height: 'auto',
             display: 'block',

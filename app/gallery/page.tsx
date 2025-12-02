@@ -52,8 +52,11 @@ const GalleryImage: React.FC<{
         onLoad={() => setImgLoaded(true)}
         style={{ 
           width: '100%',
+          maxHeight: '500px',
+          objectFit: 'cover',
           display: imgLoaded ? 'block' : 'none',
           transition: 'transform 0.3s ease',
+          borderRadius: '8px',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.05)';
