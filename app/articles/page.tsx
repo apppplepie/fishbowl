@@ -58,8 +58,8 @@ export default function ArticlesPage() {
           // 处理文章数据，为不同类型添加必要的字段
           const processedArticles = await Promise.all(
             result.articles.map(async (article: any) => {
-              // 如果是图片或代码类型，需要获取块信息
-              if (article.type === 'image' || article.type === 'code') {
+              // 如果是图片、代码或绘画类型，需要获取块信息
+              if (article.type === 'image' || article.type === 'code' || article.type === 'drawing') {
                 try {
                   const detailRes = await fetch(`/api/articles/${article.id}`);
                   const detailResult = await detailRes.json();
@@ -73,6 +73,18 @@ export default function ArticlesPage() {
                       );
                       if (firstImageBlock) {
                         article.firstImageUrl = firstImageBlock.parsedContent.url;
+                      }
+                    }
+                    
+                    // 绘画类型：提取 order 最大的图片块（最后一张）
+                    if (article.type === 'drawing') {
+                      const imageBlocks = articleWithBlocks.blocks
+                        .filter((b: any) => b.type === 'image')
+                        .sort((a: any, b: any) => b.order - a.order); // 按 order 降序排列
+                      
+                      if (imageBlocks.length > 0) {
+                        article.firstImageUrl = imageBlocks[0].parsedContent.url;
+                        article.imageCount = imageBlocks.length;
                       }
                     }
                     
@@ -130,7 +142,7 @@ export default function ArticlesPage() {
   const handleCardClick = (card: any) => {
     console.log('点击了卡片:', card);
     // 数据库文章直接跳转
-    if (card.type === 'text' || card.type === 'image' || card.type === 'code' || card.type === 'diary') {
+    if (card.type === 'text' || card.type === 'image' || card.type === 'code' || card.type === 'diary' || card.type === 'drawing') {
       router.push(`/article/${card.id}`);
     } else if (card.type === 'article') {
       // mock 数据兼容
@@ -148,6 +160,12 @@ export default function ArticlesPage() {
         return <ArticleCard key={article.id} card={article} onClick={handleClick} />;
       case 'image':
         return <ImageCard key={article.id} card={article} onClick={handleClick} />;
+      case 'drawing':
+        // 绘画类型使用 ImageCard 显示，但添加特殊标识
+        return <ImageCard key={article.id} card={{
+          ...article,
+          description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
+        }} onClick={handleClick} />;
       case 'code':
         return <CodeCard key={article.id} card={article} onClick={handleClick} />;
       case 'diary':

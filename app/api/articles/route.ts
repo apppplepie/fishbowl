@@ -49,12 +49,15 @@ export async function POST(request: NextRequest) {
     const currentDate = new Date();
     const publishDate = currentDate.toISOString().split('T')[0];
     
-    // 自动识别文章类型（优先级：图片 > 代码 > 文字）
-    let articleType: 'text' | 'image' | 'code' = 'text';
-    const hasImageBlock = body.blocks.some(b => b.type === 'image');
+    // 自动识别文章类型（优先级：绘画 > 图片 > 代码 > 文字）
+    let articleType: 'text' | 'image' | 'code' | 'drawing' = 'text';
+    const imageBlockCount = body.blocks.filter(b => b.type === 'image').length;
     const hasCodeBlock = body.blocks.some(b => b.type === 'code');
     
-    if (hasImageBlock) {
+    // 如果图片块数量 >= 3，识别为绘画类型
+    if (imageBlockCount >= 3) {
+      articleType = 'drawing';
+    } else if (imageBlockCount > 0) {
       articleType = 'image';
     } else if (hasCodeBlock) {
       articleType = 'code';
@@ -63,7 +66,15 @@ export async function POST(request: NextRequest) {
     // 根据文章类型生成摘要
     let excerpt = body.excerpt || '';
     if (!excerpt && body.blocks.length > 0) {
-      if (articleType === 'image') {
+      if (articleType === 'drawing') {
+        // 绘画类型：使用第一个文字块
+        const firstTextBlock = body.blocks.find(b => b.type === 'text');
+        if (firstTextBlock && firstTextBlock.content) {
+          excerpt = firstTextBlock.content.substring(0, 150).replace(/\n/g, ' ') + (firstTextBlock.content.length > 150 ? '...' : '');
+        } else {
+          excerpt = `一组绘画作品（${imageBlockCount} 张）`;
+        }
+      } else if (articleType === 'image') {
         // 图片类型：使用第一个图片的 description
         const firstImageBlock = body.blocks.find(b => b.type === 'image');
         if (firstImageBlock && firstImageBlock.description) {
