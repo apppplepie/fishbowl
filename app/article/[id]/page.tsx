@@ -80,6 +80,14 @@ export default function ArticlePage() {
   const [selectedImage, setSelectedImage] = useState<ImageBlockContent | null>(null);
   // const [categoryModalOpen, setCategoryModalOpen] = useState(false); // 功能开发中
 
+  // 点赞相关状态
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [isLiking, setIsLiking] = useState(false);
+
+  // 评论数量状态
+  const [commentsCount, setCommentsCount] = useState(0);
+
   /**
    * 获取分类路径
    */
@@ -107,6 +115,8 @@ export default function ArticlePage() {
         if (response.ok && result.success && result.article) {
           setArticle(result.article);
           setEditedArticle(result.article);
+          setLikesCount(result.article.likes || 0);
+          setCommentsCount(result.article.comments || 0);
           
           // 如果文章有分类，获取分类路径
           if (result.article.category_id) {
@@ -118,6 +128,8 @@ export default function ArticlePage() {
           if (articleData) {
             setArticle(articleData);
             setEditedArticle(articleData);
+            setLikesCount(articleData.likes || 0);
+            setCommentsCount(articleData.comments || 0);
           } else {
             message.error('文章不存在');
             router.push('/articles');
@@ -130,6 +142,8 @@ export default function ArticlePage() {
         if (articleData) {
           setArticle(articleData);
           setEditedArticle(articleData);
+          setLikesCount(articleData.likes || 0);
+          setCommentsCount(articleData.comments || 0);
         } else {
           message.error('加载文章失败');
           router.push('/articles');
@@ -139,6 +153,24 @@ export default function ArticlePage() {
 
     loadArticle();
   }, [articleId, router]);
+
+  // 检查点赞状态
+  useEffect(() => {
+    async function checkLikeStatus() {
+      try {
+        const response = await fetch(`/api/articles/${articleId}/like`);
+        const result = await response.json();
+
+        if (result.success) {
+          setIsLiked(result.liked);
+        }
+      } catch (error) {
+        console.error('检查点赞状态失败:', error);
+      }
+    }
+
+    checkLikeStatus();
+  }, [articleId]);
 
   // 编辑时的临时数据
   const [editedArticle, setEditedArticle] = useState<any>(null);
@@ -371,6 +403,60 @@ export default function ArticlePage() {
     message.info('📁 章节管理功能正在开发中，敬请期待！');
   };
 
+  // 处理点赞/取消点赞
+  const handleLike = async () => {
+    if (isLiking) return;
+
+    setIsLiking(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (isLiked) {
+        // 取消点赞
+        const response = await fetch(`/api/articles/${articleId}/like`, {
+          method: 'DELETE',
+          headers: token ? {
+            'Authorization': `Bearer ${token}`,
+          } : {},
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setIsLiked(false);
+          setLikesCount(result.likes);
+          message.success('已取消点赞');
+        } else {
+          message.error(result.error || '操作失败');
+        }
+      } else {
+        // 点赞
+        const response = await fetch(`/api/articles/${articleId}/like`, {
+          method: 'POST',
+          headers: token ? {
+            'Authorization': `Bearer ${token}`,
+          } : {},
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setIsLiked(true);
+          setLikesCount(result.likes);
+          message.success('点赞成功！');
+        } else {
+          message.error(result.error || '操作失败');
+        }
+      }
+    } catch (error: any) {
+      console.error('点赞操作失败:', error);
+      message.error('操作失败，请重试');
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
   return (
     <>
       {/* Header 覆盖在PageLayout顶部边框上 */}
@@ -411,6 +497,7 @@ export default function ArticlePage() {
             onAdjustCategory={handleAdjustCategory}
             articleAuthor={article.author}
             currentUser={user.username}
+            userRole={user.role}
           />
         )
       )}
@@ -463,7 +550,7 @@ export default function ArticlePage() {
               <span>{article?.title}</span>
             </div>
           }
-          box1BgColor="rgba(0, 0, 0, 0.7)"
+          box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
           box2BgColor="#f5f5f5"
           box2Style={{
             display: 'flex',
@@ -811,14 +898,23 @@ export default function ArticlePage() {
                 <Button 
                   icon={<LikeOutlined />} 
                   size="large"
-                  style={{ minWidth: '120px' }}
+                  style={{ 
+                    minWidth: '120px',
+                    color: isLiked ? '#1890ff' : undefined,
+                    borderColor: isLiked ? '#1890ff' : undefined,
+                  }}
+                  onClick={handleLike}
+                  loading={isLiking}
                 >
-                  点赞 {article?.likes || 0}
+                  {isLiked ? '已点赞' : '点赞'} {likesCount}
                 </Button>
                 <Button 
                   icon={<ShareAltOutlined />} 
                   size="large"
                   style={{ minWidth: '120px' }}
+                  onClick={() => {
+                    message.info('分享功能开发中');
+                  }}
                 >
                   分享 {article?.shares || 0}
                 </Button>
@@ -834,15 +930,16 @@ export default function ArticlePage() {
                     }
                   }}
                 >
-                  评论
+                  评论 {commentsCount}
                 </Button>
               </div>
 
               {/* 评论区 */}
               <CommentSection 
                 articleId={articleId}
-                currentUser={user ? { username: user.username, avatar: user.avatar_url } : null}
+                currentUser={user ? { username: user.username, avatar: user.avatar_url, role: user.role } : null}
                 isLoggedIn={isLoggedIn}
+                onCommentCountChange={setCommentsCount}
               />
             </div>
           </div>

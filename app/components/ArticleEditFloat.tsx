@@ -25,6 +25,7 @@ interface ArticleEditFloatProps {
   onAdjustCategory?: () => void; // 新增：调整章节
   articleAuthor?: string;
   currentUser?: string;
+  userRole?: 'admin' | 'moderator' | 'user'; // 新增：用户角色
 }
 
 /**
@@ -44,14 +45,25 @@ export default function ArticleEditFloat({
   onAdjustCategory,
   articleAuthor,
   currentUser,
+  userRole,
 }: ArticleEditFloatProps) {
-  // 检查是否有编辑权限（当前用户和文章作者一致）
-  const canEdit = articleAuthor && currentUser && articleAuthor === currentUser;
+  // 检查是否有编辑权限
+  // 1. 作者本人
+  // 2. 管理员
+  // 3. 版主
+  const isAuthor = articleAuthor && currentUser && articleAuthor === currentUser;
+  const isAdmin = userRole === 'admin';
+  const isModerator = userRole === 'moderator';
+  const canEdit = isAuthor || isAdmin || isModerator;
   
   // 调试信息
   console.log('ArticleEditFloat 权限检查:', {
     articleAuthor,
     currentUser,
+    userRole,
+    isAuthor,
+    isAdmin,
+    isModerator,
     canEdit,
     hasOnDelete: !!onDelete,
     hasOnAdjustCategory: !!onAdjustCategory,

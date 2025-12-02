@@ -1,19 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button, Input, Avatar, message, Space, Tooltip } from 'antd';
-import { MessageOutlined, UserOutlined, DeleteOutlined, LikeOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Button, Input, Avatar, message, Space, Tooltip, Modal } from 'antd';
+import { MessageOutlined, UserOutlined, DeleteOutlined, LikeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { formatTimeToMinute } from '@/app/utils/timeFormat';
 
 const { TextArea } = Input;
 
 interface Comment {
   id: string;
-  author: string;
-  avatar?: string;
+  user_id: string;
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
   content: string;
-  timestamp: string;
-  likes: number;
-  isLiked?: boolean;
+  created_at: string;
+  replies?: Comment[];
 }
 
 interface CommentSectionProps {
@@ -21,35 +23,51 @@ interface CommentSectionProps {
   currentUser?: {
     username: string;
     avatar?: string;
+    role?: string;
   } | null;
   isLoggedIn: boolean;
+  onCommentCountChange?: (count: number) => void;
 }
 
-export default function CommentSection({ articleId, currentUser, isLoggedIn }: CommentSectionProps) {
-  // 评论数据（示例数据，后续可从后端获取）
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: '1',
-      author: '李四',
-      avatar: undefined,
-      content: '写得非常好！学到了很多东西，感谢分享～',
-      timestamp: '2024-01-20 14:30',
-      likes: 5,
-      isLiked: false,
-    },
-    {
-      id: '2',
-      author: '王五',
-      avatar: undefined,
-      content: '赞同！这篇文章解决了我的问题。',
-      timestamp: '2024-01-20 15:45',
-      likes: 3,
-      isLiked: false,
-    },
-  ]);
-
+export default function CommentSection({ articleId, currentUser, isLoggedIn, onCommentCountChange }: CommentSectionProps) {
+  const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 加载评论列表
+  useEffect(() => {
+    loadComments();
+  }, [articleId]);
+
+  // 通知父组件评论数量变化
+  useEffect(() => {
+    if (onCommentCountChange) {
+      onCommentCountChange(comments.length);
+    }
+  }, [comments.length, onCommentCountChange]);
+
+  const loadComments = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/articles/${articleId}/comments`);
+      const result = await response.json();
+
+      if (result.success) {
+        setComments(result.comments || []);
+        // 通知父组件评论数量变化
+        if (onCommentCountChange) {
+          onCommentCountChange(result.comments?.length || 0);
+        }
+      } else {
+        console.error('加载评论失败:', result.error);
+      }
+    } catch (error) {
+      console.error('加载评论失败:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // 发表评论
   const handleSubmitComment = async () => {
@@ -71,58 +89,72 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn }: C
     setIsSubmitting(true);
 
     try {
-      // 模拟 API 调用
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const newComment: Comment = {
-        id: Date.now().toString(),
-        author: currentUser?.username || '匿名用户',
-        avatar: currentUser?.avatar,
-        content: commentText.trim(),
-        timestamp: new Date().toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`/api/articles/${articleId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: commentText.trim(),
         }),
-        likes: 0,
-        isLiked: false,
-      };
+      });
 
-      setComments([newComment, ...comments]);
-      setCommentText('');
-      message.success('评论发表成功！');
-    } catch (error) {
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('评论发表成功！');
+        setCommentText('');
+        // 重新加载评论列表
+        await loadComments();
+      } else {
+        message.error(result.error || '评论发表失败');
+      }
+    } catch (error: any) {
+      console.error('评论发表失败:', error);
       message.error('评论发表失败，请重试');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 点赞评论
-  const handleLikeComment = (commentId: string) => {
-    if (!isLoggedIn) {
-      message.warning('请先登录');
-      return;
-    }
-
-    setComments(comments.map(comment => {
-      if (comment.id === commentId) {
-        return {
-          ...comment,
-          likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1,
-          isLiked: !comment.isLiked,
-        };
-      }
-      return comment;
-    }));
-  };
-
   // 删除评论
-  const handleDeleteComment = (commentId: string) => {
-    setComments(comments.filter(comment => comment.id !== commentId));
-    message.success('评论已删除');
+  const handleDeleteComment = async (commentId: string) => {
+    Modal.confirm({
+      title: '确认删除评论？',
+      icon: <ExclamationCircleOutlined />,
+      content: '删除后将无法恢复',
+      okText: '确认删除',
+      cancelText: '取消',
+      okType: 'danger',
+      async onOk() {
+        try {
+          const token = localStorage.getItem('token');
+          
+          const response = await fetch(`/api/comments/${commentId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            message.success('评论已删除');
+            // 重新加载评论列表
+            await loadComments();
+          } else {
+            message.error(result.error || '删除失败');
+          }
+        } catch (error: any) {
+          console.error('删除评论失败:', error);
+          message.error('删除失败，请重试');
+        }
+      },
+    });
   };
 
   return (
@@ -203,7 +235,17 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn }: C
       </div>
 
       {/* 评论列表 */}
-      {comments.length === 0 ? (
+      {isLoading ? (
+        <div style={{
+          padding: '60px 40px',
+          textAlign: 'center',
+          color: '#999',
+          background: '#fafafa',
+          borderRadius: '8px',
+        }}>
+          <div style={{ fontSize: '16px' }}>加载中...</div>
+        </div>
+      ) : comments.length === 0 ? (
         <div style={{
           padding: '60px 40px',
           textAlign: 'center',
@@ -238,7 +280,7 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn }: C
                 <Avatar 
                   size={40} 
                   icon={<UserOutlined />}
-                  src={comment.avatar}
+                  src={comment.avatar_url}
                   style={{ flexShrink: 0 }}
                 />
 
@@ -257,19 +299,23 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn }: C
                         fontSize: '14px',
                         color: '#333',
                       }}>
-                        {comment.author}
+                        {comment.display_name || comment.username}
                       </span>
                       <span style={{ 
                         marginLeft: '12px',
                         fontSize: '12px',
                         color: '#999',
                       }}>
-                        {comment.timestamp}
+                        {formatTimeToMinute(comment.created_at)}
                       </span>
                     </div>
 
-                    {/* 删除按钮（只有自己的评论才能删除） */}
-                    {isLoggedIn && currentUser?.username === comment.author && (
+                    {/* 删除按钮（评论作者、管理员或版主可删除） */}
+                    {isLoggedIn && (
+                      currentUser?.username === comment.username || 
+                      currentUser?.role === 'admin' || 
+                      currentUser?.role === 'moderator'
+                    ) && (
                       <Tooltip title="删除评论">
                         <Button
                           type="text"
@@ -292,21 +338,6 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn }: C
                     wordBreak: 'break-word',
                   }}>
                     {comment.content}
-                  </div>
-
-                  {/* 点赞按钮 */}
-                  <div>
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<LikeOutlined />}
-                      onClick={() => handleLikeComment(comment.id)}
-                      style={{
-                        color: comment.isLiked ? '#1890ff' : '#666',
-                      }}
-                    >
-                      {comment.likes > 0 ? comment.likes : '点赞'}
-                    </Button>
                   </div>
                 </div>
               </div>
