@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { FloatButton, Modal, Form, Input, Upload, message, Button } from 'antd';
 import { PlusOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
+import { useAuth } from '@/app/hooks/useAuth';
 
 interface GalleryPublishFloatProps {
   onSuccess?: () => void;
@@ -14,6 +15,7 @@ interface GalleryPublishFloatProps {
  * 点击后弹出表单，创建绘画类型文章和图组
  */
 export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatProps) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
@@ -42,16 +44,37 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
     setLoading(true);
 
     try {
-      // 获取图片 URL（使用 base64 或者上传到服务器）
+      // 上传图片到服务器
       const imageUrls: string[] = [];
       
-      for (const file of fileList) {
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
         if (file.originFileObj) {
-          // 转换为 base64（生产环境应该上传到云存储）
-          const base64 = await getBase64(file.originFileObj);
-          imageUrls.push(base64);
+          message.loading(`上传图片 ${i + 1}/${fileList.length}...`, 0);
+          
+          // 创建 FormData
+          const formData = new FormData();
+          formData.append('file', file.originFileObj);
+
+          // 上传到服务器
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const uploadData = await uploadResponse.json();
+
+          if (uploadData.success) {
+            imageUrls.push(uploadData.url);
+            console.log(`图片 ${i + 1} 上传成功:`, uploadData.url);
+          } else {
+            throw new Error(uploadData.error || '上传失败');
+          }
         }
       }
+
+      message.destroy(); // 清除加载提示
+      console.log('总共上传了', imageUrls.length, '张图片');
 
       // 构建文章块（第一个是文字块，后面是图片块）
       const blocks: any[] = [];
@@ -61,7 +84,6 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         blocks.push({
           type: 'text',
           content: values.description,
-          order: 0,
         });
       }
       
@@ -71,9 +93,11 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           type: 'image',
           imageUrl: url,
           description: '',
-          order: blocks.length,
         });
+        console.log(`图片块 ${index + 1} 添加成功，URL:`, url);
       });
+
+      console.log('构建的 blocks:', blocks.length, '个');
 
       // 调用文章 API 创建绘画类型文章
       const response = await fetch('/api/articles', {
@@ -83,10 +107,11 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         },
         body: JSON.stringify({
           title: values.title,
-          author: '当前用户', // TODO: 从用户系统获取
+          author: user?.username || '匿名',
           excerpt: values.description || '一组绘画作品',
           blocks: blocks,
           status: 'published',
+          type: 'drawing', // 明确指定为绘画类型
         }),
       });
 
@@ -103,6 +128,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
       }
     } catch (error: any) {
       console.error('发布失败:', error);
+      message.destroy(); // 清除加载提示
       message.error('发布失败: ' + error.message);
     } finally {
       setLoading(false);

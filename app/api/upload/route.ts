@@ -1,15 +1,13 @@
 /**
  * 文件上传 API
- * POST /api/upload - 上传图片文件
+ * POST /api/upload - 上传图片到 public/uploads
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
-/**
- * POST - 上传图片
- */
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -17,50 +15,59 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { error: '没有文件被上传' },
+        { error: '没有上传文件' },
         { status: 400 }
       );
     }
 
     // 检查文件类型
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
+    if (!file.type.startsWith('image/')) {
       return NextResponse.json(
-        { error: '只支持图片格式：JPEG, PNG, GIF, WebP' },
+        { error: '只能上传图片文件' },
         { status: 400 }
       );
     }
 
-    // 检查文件大小（限制 5MB）
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: '文件大小不能超过 5MB' },
-        { status: 400 }
-      );
-    }
-
-    // 生成唯一文件名
+    // 读取文件内容
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // 获取文件扩展名
-    const ext = file.name.split('.').pop() || 'jpg';
-    const filename = `${uuidv4()}.${ext}`;
+    // 生成文件名（UUID + 原始扩展名）
+    const ext = path.extname(file.name);
+    const filename = `${uuidv4()}${ext}`;
 
-    // 保存文件到 public/uploads 文件夹
-    const filepath = join(process.cwd(), 'public', 'uploads', filename);
-    await writeFile(filepath, buffer);
+    // 按日期分类存储：public/uploads/2024/12/
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    
+    // 构建存储路径
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', String(year), month);
+    const filePath = path.join(uploadDir, filename);
 
-    // 返回文件的访问 URL
-    const fileUrl = `/uploads/${filename}`;
+    // 确保目录存在
+    if (!existsSync(uploadDir)) {
+      await mkdir(uploadDir, { recursive: true });
+    }
+
+    // 保存文件
+    await writeFile(filePath, buffer);
+
+    // 返回可访问的 URL
+    const fileUrl = `/uploads/${year}/${month}/${filename}`;
+
+    console.log('文件上传成功:', {
+      originalName: file.name,
+      size: file.size,
+      type: file.type,
+      url: fileUrl,
+    });
 
     return NextResponse.json({
       success: true,
       url: fileUrl,
       filename: filename,
       size: file.size,
-      type: file.type,
     });
 
   } catch (error: any) {
@@ -71,21 +78,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-/**
- * GET - 获取上传文件列表（可选功能）
- */
-export async function GET() {
-  return NextResponse.json({
-    message: '文件上传 API',
-    usage: 'POST /api/upload',
-    params: {
-      file: 'File to upload (multipart/form-data)',
-    },
-    limits: {
-      maxSize: '5MB',
-      allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    },
-  });
-}
-

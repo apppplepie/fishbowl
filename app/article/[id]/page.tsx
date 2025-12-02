@@ -262,6 +262,30 @@ export default function ArticlePage() {
     setEditMode('edit');
   };
 
+  // 删除文章
+  const handleDelete = async () => {
+    try {
+      const response = await fetch(`/api/articles/${articleId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        message.success('文章删除成功');
+        // 跳转到归档页面
+        setTimeout(() => {
+          router.push('/articles');
+        }, 1000);
+      } else {
+        message.error(data.error || '删除失败');
+      }
+    } catch (error: any) {
+      console.error('删除文章失败:', error);
+      message.error('删除失败: ' + error.message);
+    }
+  };
+
   return (
     <>
       {/* Header 覆盖在PageLayout顶部边框上 */}
@@ -287,13 +311,16 @@ export default function ArticlePage() {
       />
 
       {/* 编辑悬浮按钮 - 仅登录用户可见 */}
-      {isLoggedIn && (
+      {isLoggedIn && article && (
         <ArticleEditFloat
           mode={editMode}
           onEdit={handleEdit}
           onPreview={handlePreview}
           onSave={handleSave}
           onCancel={editMode === 'preview' ? handleBackToEdit : handleCancel}
+          onDelete={handleDelete}
+          articleAuthor={article.author}
+          currentUser={user?.username}
         />
       )}
 

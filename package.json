@@ -10,7 +10,8 @@
     "db:init": "ts-node --project tsconfig.node.json scripts/init-db.ts",
     "db:seed": "ts-node --project tsconfig.node.json scripts/seed-data.ts",
     "db:migrate:drawing": "ts-node --project tsconfig.node.json scripts/add-drawing-type.ts",
-    "db:rollback:galleries": "ts-node --project tsconfig.node.json scripts/remove-galleries-tables.ts"
+    "db:rollback:galleries": "ts-node --project tsconfig.node.json scripts/remove-galleries-tables.ts",
+    "db:fix:blocks": "ts-node --project tsconfig.node.json scripts/fix-blocks-content-size.ts"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^2.0.1",
@@ -21,6 +22,7 @@
     "next": "16.0.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "sharp": "^0.34.5",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

@@ -54,7 +54,7 @@ export async function initDatabase() {
       CREATE TABLE IF NOT EXISTS blocks (
         id VARCHAR(36) PRIMARY KEY,
         type ENUM('text', 'image', 'code') NOT NULL,
-        content TEXT NOT NULL,
+        content LONGTEXT NOT NULL,
         author VARCHAR(100) NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_type (type),

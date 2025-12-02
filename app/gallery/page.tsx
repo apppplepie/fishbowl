@@ -94,8 +94,17 @@ export default function GalleryPage() {
               
               if (detailData.success) {
                 const articleWithBlocks = detailData.article;
+                
+                // 调试信息
+                console.log('文章详情:', {
+                  id: article.id,
+                  title: article.title,
+                  blocksCount: articleWithBlocks.blocks?.length || 0,
+                  blocks: articleWithBlocks.blocks,
+                });
+                
                 // 获取所有图片块
-                const imageBlocks = articleWithBlocks.blocks.filter((b: any) => b.type === 'image');
+                const imageBlocks = articleWithBlocks.blocks?.filter((b: any) => b.type === 'image') || [];
                 
                 if (imageBlocks.length > 0) {
                   // 找到 order 最大的图片（最后一张）
@@ -109,10 +118,14 @@ export default function GalleryPage() {
                     cover_image_url: lastImage.parsedContent.url,
                     image_count: imageBlocks.length,
                   };
+                } else {
+                  console.warn('文章没有图片块:', article.id, article.title);
                 }
+              } else {
+                console.error('获取文章详情失败:', article.id, detailData.error);
               }
             } catch (error) {
-              console.error('获取文章详情失败:', error);
+              console.error('获取文章详情异常:', article.id, error);
             }
             return null;
           })
@@ -120,6 +133,7 @@ export default function GalleryPage() {
         
         // 过滤掉失败的项
         const validArticles = articlesWithFullData.filter(a => a !== null);
+        console.log('有效文章数量:', validArticles.length, '/', drawingArticles.length);
         setArticles(validArticles);
       } else {
         message.error('获取文章失败');

@@ -1,3 +1,1 @@
-# 这个文件确保 uploads 文件夹被 git 追踪
-# 上传的文件应该被 .gitignore 忽略
-
+# 保留 uploads 文件夹
