@@ -5,7 +5,7 @@ import { Card } from 'antd';
 import type { DiaryCard as DiaryCardType } from '@/app/types/card';
 
 interface DiaryCardProps {
-  card: DiaryCardType;
+  card: DiaryCardType | any; // 支持数据库返回的格式
   onClick?: () => void;
 }
 
@@ -25,6 +25,18 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
       styles={{ body: { padding: '20px' } }}
       onClick={onClick}
     >
+      {/* 标题（日期） */}
+      {card.title && (
+        <h4 style={{
+          margin: '0 0 8px 0',
+          fontSize: '16px',
+          fontWeight: 600,
+          color: '#333',
+        }}>
+          {card.title}
+        </h4>
+      )}
+
       {/* 日期和心情 */}
       <div style={{
         display: 'flex',
@@ -34,7 +46,7 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
         fontSize: '14px',
         color: '#666',
       }}>
-        <span>📅 {card.createdAt}</span>
+        <span>📅 {card.publish_date || card.createdAt}</span>
         <span>{card.mood || '😊'}</span>
       </div>
 
@@ -45,8 +57,12 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
         lineHeight: '1.8',
         color: '#333',
         whiteSpace: 'pre-wrap',
+        display: '-webkit-box',
+        WebkitLineClamp: 4,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
       }}>
-        {card.content}
+        {card.content || card.excerpt}
       </p>
 
       {/* 底部信息 */}

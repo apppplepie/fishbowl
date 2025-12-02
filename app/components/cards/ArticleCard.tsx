@@ -6,7 +6,7 @@ import { ClockCircleOutlined, EyeOutlined, MessageOutlined } from '@ant-design/i
 import type { ArticleCard as ArticleCardType } from '@/app/types/card';
 
 interface ArticleCardProps {
-  card: ArticleCardType;
+  card: ArticleCardType | any; // 支持数据库返回的格式
   onClick?: () => void;
 }
 
@@ -47,7 +47,7 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
       {/* 标签 */}
       {card.tags && card.tags.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
-          {card.tags.slice(0, 2).map((tag, index) => (
+          {card.tags.slice(0, 2).map((tag: string, index: number) => (
             <Tag key={index} color="blue" style={{ marginRight: '8px' }}>
               {tag}
             </Tag>
@@ -89,11 +89,12 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         fontSize: '12px',
         color: '#999',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span>✍️ {card.author}</span>
+          <span>📅 {card.publish_date || card.createdAt}</span>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <span><ClockCircleOutlined /> {card.readTime}min</span>
+          {card.readTime && <span><ClockCircleOutlined /> {card.readTime}min</span>}
           {card.views !== undefined && <span><EyeOutlined /> {card.views}</span>}
           {card.comments !== undefined && <span><MessageOutlined /> {card.comments}</span>}
         </div>

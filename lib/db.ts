@@ -36,6 +36,7 @@ export async function initDatabase() {
         publish_date DATE NOT NULL,
         last_modified DATETIME NOT NULL,
         excerpt TEXT,
+        type ENUM('default', 'text', 'image', 'code', 'diary') DEFAULT 'text',
         status ENUM('draft', 'published') DEFAULT 'published',
         likes INT DEFAULT 0,
         shares INT DEFAULT 0,
@@ -43,6 +44,7 @@ export async function initDatabase() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_status (status),
+        INDEX idx_type (type),
         INDEX idx_publish_date (publish_date)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
