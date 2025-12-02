@@ -39,7 +39,7 @@ export default function ArticleEditFloat({
     return (
       <FloatButton
         icon={<EditOutlined />}
-        tooltip="编辑文章"
+        tooltip={{ title: '编辑文章', placement: 'left' }}
         type="primary"
         style={{ insetInlineEnd: 24 }}
         onClick={onEdit}
@@ -54,17 +54,17 @@ export default function ArticleEditFloat({
         trigger="click"
         style={{ insetInlineEnd: 24 }}
         icon={<EditOutlined />}
-        tooltip="编辑中"
+        tooltip={{ title: '编辑中', placement: 'left' }}
         type="primary"
       >
         <FloatButton
           icon={<EyeOutlined />}
-          tooltip="预览"
+          tooltip={{ title: '预览', placement: 'left' }}
           onClick={onPreview}
         />
         <FloatButton
           icon={<CloseOutlined />}
-          tooltip="取消"
+          tooltip={{ title: '取消', placement: 'left' }}
           onClick={onCancel}
         />
       </FloatButton.Group>
@@ -78,17 +78,17 @@ export default function ArticleEditFloat({
         trigger="click"
         style={{ insetInlineEnd: 24 }}
         icon={<EyeOutlined />}
-        tooltip="预览中"
+        tooltip={{ title: '预览中', placement: 'left' }}
         type="primary"
       >
         <FloatButton
           icon={<SaveOutlined />}
-          tooltip="保存"
+          tooltip={{ title: '保存', placement: 'left' }}
           onClick={onSave}
         />
         <FloatButton
           icon={<EditOutlined />}
-          tooltip="继续编辑"
+          tooltip={{ title: '继续编辑', placement: 'left' }}
           onClick={() => onCancel()} // 返回编辑模式
         />
       </FloatButton.Group>

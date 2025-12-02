@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card } from 'antd';
 import type { DiaryCard as DiaryCardType } from '@/app/types/card';
+import { formatRelativeTime } from '@/app/utils/timeFormat';
 
 interface DiaryCardProps {
   card: DiaryCardType | any; // 支持数据库返回的格式
@@ -43,10 +44,10 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '12px',
-        fontSize: '14px',
+        fontSize: '12px',
         color: '#666',
       }}>
-        <span>📅 {card.publish_date || card.createdAt}</span>
+        <span>📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt)}</span>
         <span>{card.mood || '😊'}</span>
       </div>
 

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card } from 'antd';
 import { CodeOutlined, EyeOutlined, MessageOutlined } from '@ant-design/icons';
+import { formatRelativeTime } from '@/app/utils/timeFormat';
 
 interface CodeCardProps {
   card: {
@@ -11,6 +12,7 @@ interface CodeCardProps {
     excerpt: string;
     author: string;
     publish_date?: string;
+    last_modified?: string; // 最后编辑时间
     createdAt?: string;
     codePreview?: string; // 第一个代码块的预览
     codeLanguage?: string; // 第一个代码块的语言
@@ -170,7 +172,9 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
               <MessageOutlined /> {card.comments}
             </span>
           )}
-          <span>📅 {card.publish_date || card.createdAt}</span>
+          <span style={{ fontSize: '12px' }}>
+            📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt || new Date().toISOString())}
+          </span>
         </div>
       </div>
     </Card>

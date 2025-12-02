@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
         excerpt, type, status, likes, shares, comments
        FROM articles 
        WHERE status = ?
-       ORDER BY publish_date DESC, created_at DESC
+       ORDER BY last_modified DESC, publish_date DESC
        LIMIT ${limit} OFFSET ${offset}`,
       [status]
     );

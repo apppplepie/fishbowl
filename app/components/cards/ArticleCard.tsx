@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, Tag } from 'antd';
 import { ClockCircleOutlined, EyeOutlined, MessageOutlined } from '@ant-design/icons';
 import type { ArticleCard as ArticleCardType } from '@/app/types/card';
+import { formatRelativeTime } from '@/app/utils/timeFormat';
 
 interface ArticleCardProps {
   card: ArticleCardType | any; // 支持数据库返回的格式
@@ -91,7 +92,9 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span>✍️ {card.author}</span>
-          <span>📅 {card.publish_date || card.createdAt}</span>
+          <span style={{ color: '#999', fontSize: '12px' }}>
+            📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt)}
+          </span>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {card.readTime && <span><ClockCircleOutlined /> {card.readTime}min</span>}

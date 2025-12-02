@@ -52,12 +52,6 @@ export default function ImageBlock({
     });
   };
 
-  const handleAuthorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({
-      ...block,
-      author: e.target.value,
-    });
-  };
 
   return (
     <>
@@ -208,12 +202,6 @@ export default function ImageBlock({
             placeholder="图片描述（可选）"
             value={block.description}
             onChange={handleDescriptionChange}
-            style={{ fontSize: '14px' }}
-          />
-          <Input
-            placeholder="作者（可选）"
-            value={block.author}
-            onChange={handleAuthorChange}
             style={{ fontSize: '14px' }}
           />
         </div>
