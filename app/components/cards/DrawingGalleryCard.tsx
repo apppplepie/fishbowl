@@ -45,6 +45,8 @@ interface DrawingGalleryCardProps {
 export default function DrawingGalleryCard({ article, onClick, onTitleClick }: DrawingGalleryCardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0])); // 记录已加载的图片索引
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // 从文章块中提取所有图片块，按 order 降序排列（成图在前）
   const images = useMemo(() => {
@@ -60,6 +62,9 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
   }, [article.blocks]);
 
   const currentImage = images[currentIndex];
+
+  // 最小滑动距离（像素）
+  const minSwipeDistance = 50;
 
   // 切换到下一张（循环）
   const handleNext = (e: React.MouseEvent) => {
@@ -120,6 +125,34 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
     // 中间1/3不触发切换
   };
 
+  // 触摸开始
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  // 触摸移动
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  // 触摸结束
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // 左滑：显示上一张
+      handlePrevious({ stopPropagation: () => {} } as React.MouseEvent);
+    } else if (isRightSwipe) {
+      // 右滑：显示下一张
+      handleNext({ stopPropagation: () => {} } as React.MouseEvent);
+    }
+  };
+
   if (!currentImage) return null;
 
   return (
@@ -144,7 +177,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      {/* 图片区域 - 点击左右切换 */}
+      {/* 图片区域 - 点击左右切换 + 触摸滑动 */}
       <div 
         style={{ 
           position: 'relative',
@@ -155,6 +188,9 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
           minHeight: '200px',
         }}
         onClick={handleImageClick}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         {!isCurrentImageLoaded && (
           <div style={{

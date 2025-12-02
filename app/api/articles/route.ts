@@ -28,6 +28,7 @@ interface CreateArticleRequest {
   blocks: Block[];
   tags?: string[];
   status?: 'draft' | 'published';
+  type?: 'text' | 'image' | 'code' | 'drawing';
 }
 
 /**
@@ -49,18 +50,21 @@ export async function POST(request: NextRequest) {
     const currentDate = new Date();
     const publishDate = currentDate.toISOString().split('T')[0];
     
-    // 自动识别文章类型（优先级：绘画 > 图片 > 代码 > 文字）
-    let articleType: 'text' | 'image' | 'code' | 'drawing' = 'text';
-    const imageBlockCount = body.blocks.filter(b => b.type === 'image').length;
-    const hasCodeBlock = body.blocks.some(b => b.type === 'code');
+    // 识别文章类型
+    let articleType: 'text' | 'image' | 'code' | 'drawing' = body.type || 'text';
     
-    // 如果图片块数量 >= 3，识别为绘画类型
-    if (imageBlockCount >= 3) {
-      articleType = 'drawing';
-    } else if (imageBlockCount > 0) {
-      articleType = 'image';
-    } else if (hasCodeBlock) {
-      articleType = 'code';
+    // 如果没有指定类型，自动识别
+    if (!body.type) {
+      const imageBlockCount = body.blocks.filter(b => b.type === 'image').length;
+      const hasCodeBlock = body.blocks.some(b => b.type === 'code');
+      
+      if (imageBlockCount >= 3) {
+        articleType = 'drawing';
+      } else if (imageBlockCount > 0) {
+        articleType = 'image';
+      } else if (hasCodeBlock) {
+        articleType = 'code';
+      }
     }
     
     // 根据文章类型生成摘要
@@ -72,6 +76,8 @@ export async function POST(request: NextRequest) {
         if (firstTextBlock && firstTextBlock.content) {
           excerpt = firstTextBlock.content.substring(0, 150).replace(/\n/g, ' ') + (firstTextBlock.content.length > 150 ? '...' : '');
         } else {
+          // imageBlockCount is only defined above, so we need to make sure it's defined here as well.
+          const imageBlockCount = body.blocks.filter(b => b.type === 'image').length;
           excerpt = `一组绘画作品（${imageBlockCount} 张）`;
         }
       } else if (articleType === 'image') {
@@ -138,6 +144,11 @@ export async function POST(request: NextRequest) {
           title: block.title || '',
           description: block.description || '',
         };
+        console.log(`API: 处理图片块 ${i}`, {
+          blockId,
+          hasImageUrl: !!block.imageUrl,
+          imageUrlLength: block.imageUrl?.length || 0,
+        });
       } else if (block.type === 'code') {
         blockContent = {
           language: block.language || 'javascript',
@@ -166,6 +177,8 @@ export async function POST(request: NextRequest) {
         [articleId, blockId, i]
       );
     }
+    
+    console.log(`API: 文章创建成功，ID: ${articleId}，共 ${body.blocks.length} 个块`);
 
     return NextResponse.json({
       success: true,

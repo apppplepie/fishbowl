@@ -1,13 +1,15 @@
 'use client';
 
 import React from 'react';
-import { FloatButton } from 'antd';
+import { FloatButton, Modal } from 'antd';
 import { 
   EditOutlined, 
   CheckOutlined, 
   CloseOutlined, 
   EyeOutlined,
-  SaveOutlined 
+  SaveOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 
 export type EditMode = 'view' | 'edit' | 'preview';
@@ -18,6 +20,9 @@ interface ArticleEditFloatProps {
   onPreview: () => void;
   onSave: () => void;
   onCancel: () => void;
+  onDelete?: () => void;
+  articleAuthor?: string;
+  currentUser?: string;
 }
 
 /**
@@ -33,9 +38,62 @@ export default function ArticleEditFloat({
   onPreview,
   onSave,
   onCancel,
+  onDelete,
+  articleAuthor,
+  currentUser,
 }: ArticleEditFloatProps) {
-  // 浏览模式：只显示编辑按钮
+  // 检查是否有删除权限（当前用户和文章作者一致）
+  const canDelete = articleAuthor && currentUser && articleAuthor === currentUser;
+  
+  // 调试信息
+  console.log('ArticleEditFloat 权限检查:', {
+    articleAuthor,
+    currentUser,
+    canDelete,
+    hasOnDelete: !!onDelete,
+    mode,
+  });
+
+  // 删除确认
+  const handleDelete = () => {
+    Modal.confirm({
+      title: '确认删除',
+      icon: <ExclamationCircleOutlined />,
+      content: '确定要删除这篇文章吗？此操作不可恢复。',
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => {
+        onDelete?.();
+      },
+    });
+  };
+
+  // 浏览模式：显示编辑按钮（如果有权限，显示按钮组）
   if (mode === 'view') {
+    if (canDelete && onDelete) {
+      return (
+        <FloatButton.Group
+          trigger="click"
+          style={{ insetInlineEnd: 24 }}
+          icon={<EditOutlined />}
+          tooltip={{ title: '操作', placement: 'left' }}
+          type="primary"
+        >
+          <FloatButton
+            icon={<EditOutlined />}
+            tooltip={{ title: '编辑文章', placement: 'left' }}
+            onClick={onEdit}
+          />
+          <FloatButton
+            icon={<DeleteOutlined />}
+            tooltip={{ title: '删除文章', placement: 'left' }}
+            onClick={handleDelete}
+          />
+        </FloatButton.Group>
+      );
+    }
+    
     return (
       <FloatButton
         icon={<EditOutlined />}

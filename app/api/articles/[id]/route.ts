@@ -113,6 +113,49 @@ export async function PUT(
 }
 
 /**
+ * DELETE - 删除文章
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: articleId } = await params;
+
+    // 检查文章是否存在
+    const articles = await query<any[]>(
+      `SELECT id, title, author FROM articles WHERE id = ?`,
+      [articleId]
+    );
+
+    if (!articles || articles.length === 0) {
+      return NextResponse.json(
+        { error: '文章不存在' },
+        { status: 404 }
+      );
+    }
+
+    // 删除文章（CASCADE 会自动删除关联的 article_blocks）
+    await query(
+      `DELETE FROM articles WHERE id = ?`,
+      [articleId]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: '文章删除成功',
+    });
+
+  } catch (error: any) {
+    console.error('删除文章失败:', error);
+    return NextResponse.json(
+      { error: '删除文章失败: ' + error.message },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * GET - 获取单篇文章详情
  */
 export async function GET(
@@ -154,11 +197,23 @@ export async function GET(
     );
 
     // 3. 解析块的 content（JSON 字符串 -> 对象）
-    const parsedBlocks = blocks.map(block => ({
-      ...block,
-      order: block.order, // 保留 order 字段
-      parsedContent: JSON.parse(block.content),
-    }));
+    const parsedBlocks = blocks.map(block => {
+      try {
+        return {
+          ...block,
+          order: block.order, // 保留 order 字段
+          parsedContent: JSON.parse(block.content),
+        };
+      } catch (parseError) {
+        console.error('解析块内容失败:', block.id, block.content, parseError);
+        // 如果解析失败，返回原始内容
+        return {
+          ...block,
+          order: block.order,
+          parsedContent: { error: '内容解析失败', raw: block.content },
+        };
+      }
+    });
 
     // 4. 组合返回
     return NextResponse.json({
