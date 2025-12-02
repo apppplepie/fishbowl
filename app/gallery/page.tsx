@@ -1,30 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Masonry } from 'antd';
+import { Masonry, Modal, Spin, message } from 'antd';
+import { useRouter } from 'next/navigation';
 import PageLayout from '../components/PageLayout';
 import Header from '../components/Header';
-import ImageCardModal from '../components/ImageCardModal';
-
-const imageList = [
-  'https://images.unsplash.com/photo-1510001618818-4b4e3d86bf0f',
-  'https://images.unsplash.com/photo-1507513319174-e556268bb244',
-  'https://images.unsplash.com/photo-1474181487882-5abf3f0ba6c2',
-  'https://images.unsplash.com/photo-1492778297155-7be4c83960c7',
-  'https://images.unsplash.com/photo-1508062878650-88b52897f298',
-  'https://images.unsplash.com/photo-1506158278516-d720e72406fc',
-  'https://images.unsplash.com/photo-1552203274-e3c7bd771d26',
-  'https://images.unsplash.com/photo-1528163186890-de9b86b54b51',
-  'https://images.unsplash.com/photo-1727423304224-6d2fd99b864c',
-  'https://images.unsplash.com/photo-1675090391405-432434e23595',
-  'https://images.unsplash.com/photo-1554196967-97a8602084d9',
-  'https://images.unsplash.com/photo-1491961865842-98f7befd1a60',
-  'https://images.unsplash.com/photo-1721728613411-d56d2ddda959',
-  'https://images.unsplash.com/photo-1731901245099-20ac7f85dbaa',
-  'https://images.unsplash.com/photo-1617694455303-59af55af7e58',
-  'https://images.unsplash.com/photo-1709198165282-1dab551df890',
-
-];
+import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
+import GalleryPublishFloat from '../components/GalleryPublishFloat';
 
 // 根据屏幕宽度计算列数
 const calculateColumns = (width: number) => {
@@ -35,12 +17,11 @@ const calculateColumns = (width: number) => {
   return 1;
 };
 
-// 图片项组件
+// 图片项组件（显示文章的封面）
 const GalleryImage: React.FC<{
-  src: string;
-  index: number;
+  article: any;
   onClick: () => void;
-}> = ({ src, index, onClick }) => {
+}> = ({ article, onClick }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
@@ -66,8 +47,8 @@ const GalleryImage: React.FC<{
       
       {/* 真实图片 */}
       <img 
-        src={`${src}?w=523&auto=format`} 
-        alt="gallery"
+        src={article.cover_image_url} 
+        alt={article.title}
         onLoad={() => setImgLoaded(true)}
         style={{ 
           width: '100%',
@@ -81,14 +62,96 @@ const GalleryImage: React.FC<{
           e.currentTarget.style.transform = 'scale(1)';
         }}
       />
+      
+      {/* 图片数量标识 */}
+      {article.image_count > 1 && (
+        <div style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          background: 'rgba(0, 0, 0, 0.6)',
+          color: '#fff',
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '12px',
+          fontWeight: 'bold',
+        }}>
+          🎨 {article.image_count}
+        </div>
+      )}
     </div>
   );
 };
 
 export default function GalleryPage() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const router = useRouter();
+  const [articles, setArticles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [columns, setColumns] = useState<number>(4);
+
+  // 获取绘画类型文章列表（加载完整数据并缓存）
+  const fetchDrawingArticles = async () => {
+    try {
+      setLoading(true);
+      // 获取所有绘画类型文章
+      const response = await fetch('/api/articles?status=published&limit=100');
+      const data = await response.json();
+      
+      if (data.success) {
+        // 筛选出绘画类型的文章
+        const drawingArticles = data.articles.filter((a: any) => a.type === 'drawing');
+        
+        // 为每篇文章获取完整数据（包含所有 blocks）
+        const articlesWithFullData = await Promise.all(
+          drawingArticles.map(async (article: any) => {
+            try {
+              const detailRes = await fetch(`/api/articles/${article.id}`);
+              const detailData = await detailRes.json();
+              
+              if (detailData.success) {
+                const articleWithBlocks = detailData.article;
+                // 获取所有图片块
+                const imageBlocks = articleWithBlocks.blocks.filter((b: any) => b.type === 'image');
+                
+                if (imageBlocks.length > 0) {
+                  // 找到 order 最大的图片（最后一张）
+                  const lastImage = imageBlocks.reduce((max: any, block: any) => 
+                    block.order > max.order ? block : max
+                  );
+                  
+                  // 返回完整数据，同时添加封面字段
+                  return {
+                    ...articleWithBlocks, // 包含所有 blocks
+                    cover_image_url: lastImage.parsedContent.url,
+                    image_count: imageBlocks.length,
+                  };
+                }
+              }
+            } catch (error) {
+              console.error('获取文章详情失败:', error);
+            }
+            return null;
+          })
+        );
+        
+        // 过滤掉失败的项
+        const validArticles = articlesWithFullData.filter(a => a !== null);
+        setArticles(validArticles);
+      } else {
+        message.error('获取文章失败');
+      }
+    } catch (error) {
+      console.error('获取文章失败:', error);
+      message.error('获取文章失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDrawingArticles();
+  }, []);
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -106,25 +169,14 @@ export default function GalleryPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleImageClick = (imageUrl: string, index: number) => {
-    setSelectedImage(imageUrl);
-    setSelectedIndex(index);
+  const handleImageClick = (article: any) => {
+    // 直接使用已缓存的完整数据，无需重新请求
+    setSelectedArticle(article);
   };
 
-  const handlePrevious = () => {
-    if (selectedIndex > 0) {
-      const newIndex = selectedIndex - 1;
-      setSelectedIndex(newIndex);
-      setSelectedImage(imageList[newIndex]);
-    }
-  };
-
-  const handleNext = () => {
-    if (selectedIndex < imageList.length - 1) {
-      const newIndex = selectedIndex + 1;
-      setSelectedIndex(newIndex);
-      setSelectedImage(imageList[newIndex]);
-    }
+  const handleTitleClick = (article: any) => {
+    // 跳转到文章页面
+    router.push(`/article/${article.id}`);
   };
 
   return (
@@ -135,37 +187,57 @@ export default function GalleryPage() {
       box2Style={{ padding: '40px 20px' }}
     >
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        
-        <Masonry
-          columns={columns}
-          gutter={16}
-          items={imageList.map((img, index) => ({
-            key: `item-${index}`,
-            data: img,
-            index: index,
-          }))}
-          itemRender={({ data, index }) => (
-            <GalleryImage
-              src={data}
-              index={index}
-              onClick={() => handleImageClick(data, index)}
-            />
-          )}
-        />
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '100px 0' }}>
+            <Spin size="large" />
+          </div>
+        ) : articles.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '100px 20px',
+            color: '#999',
+          }}>
+            <p style={{ fontSize: '16px', marginBottom: '8px' }}>🎨 还没有作品</p>
+            <p style={{ fontSize: '14px' }}>点击右下角按钮发布你的第一个绘画作品吧！</p>
+          </div>
+        ) : (
+          <Masonry
+            columns={columns}
+            gutter={16}
+            items={articles.map((article, index) => ({
+              key: article.id,
+              data: article,
+              index: index,
+            }))}
+            itemRender={({ data }) => (
+              <GalleryImage
+                article={data}
+                onClick={() => handleImageClick(data)}
+              />
+            )}
+          />
+        )}
       </div>
 
-      {/* 图片卡片模态框 */}
-      <ImageCardModal
-        visible={!!selectedImage}
-        imageUrl={selectedImage || ''}
-        onClose={() => setSelectedImage(null)}
-        title={`精美图片 ${selectedIndex + 1}/${imageList.length}`}
-        description="这是一张来自 Unsplash 的精美图片"
-        currentIndex={selectedIndex}
-        totalCount={imageList.length}
-        onPrevious={handlePrevious}
-        onNext={handleNext}
-      />
+      {/* 图组卡片模态框 */}
+      <Modal
+        open={!!selectedArticle}
+        onCancel={() => setSelectedArticle(null)}
+        footer={null}
+        width={600}
+        centered
+        styles={{ body: { padding: 0 } }}
+      >
+        {selectedArticle && (
+          <DrawingGalleryCard
+            article={selectedArticle}
+            onTitleClick={() => handleTitleClick(selectedArticle)}
+          />
+        )}
+      </Modal>
+
+      {/* 发布悬浮按钮 */}
+      <GalleryPublishFloat onSuccess={fetchDrawingArticles} />
     </PageLayout>
   );
 }

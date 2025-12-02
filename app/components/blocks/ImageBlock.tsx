@@ -38,13 +38,6 @@ export default function ImageBlock({
   const [isHovered, setIsHovered] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({
-      ...block,
-      title: e.target.value,
-    });
-  };
-
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange({
       ...block,
@@ -160,7 +153,7 @@ export default function ImageBlock({
         >
           <AntImage
             src={block.imageUrl}
-            alt={block.title || '图片'}
+            alt="图片"
             preview={false}
             style={{
               width: '100%',
@@ -191,13 +184,7 @@ export default function ImageBlock({
         </div>
 
         {/* 图片信息编辑 */}
-        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <Input
-            placeholder="图片标题（可选）"
-            value={block.title}
-            onChange={handleTitleChange}
-            style={{ fontSize: '14px' }}
-          />
+        <div style={{ marginTop: '12px' }}>
           <Input
             placeholder="图片描述（可选）"
             value={block.description}
@@ -223,7 +210,7 @@ export default function ImageBlock({
       <ImageCardModal
         visible={showModal}
         imageUrl={block.imageUrl}
-        title={block.title || '图片预览'}
+        title="图片预览"
         description={block.description || ''}
         onClose={() => setShowModal(false)}
       />

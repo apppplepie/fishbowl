@@ -36,7 +36,7 @@ export async function initDatabase() {
         publish_date DATE NOT NULL,
         last_modified DATETIME NOT NULL,
         excerpt TEXT,
-        type ENUM('default', 'text', 'image', 'code', 'diary') DEFAULT 'text',
+        type ENUM('default', 'text', 'image', 'code', 'diary', 'drawing') DEFAULT 'text',
         status ENUM('draft', 'published') DEFAULT 'published',
         likes INT DEFAULT 0,
         shares INT DEFAULT 0,

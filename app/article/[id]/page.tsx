@@ -528,23 +528,13 @@ export default function ArticlePage() {
                         >
                           <img 
                             src={(block.parsedContent as ImageBlockContent).url}
-                            alt={(block.parsedContent as ImageBlockContent).title || '图片'}
+                            alt="图片"
                             style={{
                               maxWidth: '100%',
                               borderRadius: '8px',
                               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                             }}
                           />
-                          {(block.parsedContent as ImageBlockContent).title && (
-                            <div style={{
-                              marginTop: '12px',
-                              fontSize: '14px',
-                              color: '#666',
-                              fontWeight: 500,
-                            }}>
-                              {(block.parsedContent as ImageBlockContent).title}
-                            </div>
-                          )}
                           {(block.parsedContent as ImageBlockContent).description && (
                             <div style={{
                               marginTop: '8px',
