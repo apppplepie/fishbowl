@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button, Input, message, Modal } from 'antd';
+import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space } from 'antd';
+import type { MenuProps } from 'antd';
+import { ThunderboltOutlined } from '@ant-design/icons';
+
+const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
@@ -13,6 +17,9 @@ import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useAuth } from '@/app/hooks/useAuth';
+import BlockEditor from '@/app/components/BlockEditor';
+import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
+import type { Block as BlockType } from '@/app/types/block';
 import { 
   getArticleWithBlocks, 
   type Block, 
@@ -140,7 +147,41 @@ export default function ArticlePage() {
   // 进入编辑模式
   const handleEdit = () => {
     if (article) {
-      setEditedArticle(article); // 复制当前文章数据到编辑状态
+      // 转换块数据格式为编辑器格式
+      const editorBlocks = article.blocks.map((b: any, index: number) => {
+        if (b.type === 'text') {
+          return {
+            id: b.id,
+            type: 'text',
+            order: index,
+            content: b.parsedContent.content,
+          };
+        } else if (b.type === 'image') {
+          return {
+            id: b.id,
+            type: 'image',
+            order: index,
+            imageUrl: b.parsedContent.url,
+            title: b.parsedContent.title,
+            description: b.parsedContent.description,
+          };
+        } else if (b.type === 'code') {
+          return {
+            id: b.id,
+            type: 'code',
+            order: index,
+            language: b.parsedContent.language,
+            code: b.parsedContent.code,
+            title: b.parsedContent.title,
+          };
+        }
+        return b;
+      });
+
+      setEditedArticle({
+        ...article,
+        editorBlocks,
+      });
       setEditMode('edit');
       message.info('进入编辑模式');
     }
@@ -148,17 +189,52 @@ export default function ArticlePage() {
 
   // 进入预览模式
   const handlePreview = () => {
+    if (!editedArticle.title?.trim()) {
+      message.warning('请输入文章标题');
+      return;
+    }
     setEditMode('preview');
     message.info('预览模式 - 请确认后保存');
   };
 
   // 保存文章
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editedArticle) {
-      setArticle(editedArticle); // 保存编辑的内容
-      setEditMode('view');
-      message.success('文章已保存！');
-      // TODO: 这里后续可以添加实际的保存到数据库的逻辑
+      try {
+        message.loading({ content: '正在保存...', key: 'save' });
+
+        // 准备保存的数据
+        const saveData = {
+          title: editedArticle.title,
+          type: editedArticle.type,
+          blocks: editedArticle.editorBlocks || [],
+        };
+
+        // 调用更新 API
+        const response = await fetch(`/api/articles/${articleId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(saveData),
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          message.success({ content: '文章保存成功！', key: 'save' });
+          setEditMode('view');
+          // 跳转到归档页
+          setTimeout(() => {
+            router.push('/articles');
+          }, 1000);
+        } else {
+          message.error({ content: result.error || '保存失败', key: 'save' });
+        }
+      } catch (error) {
+        console.error('保存文章失败:', error);
+        message.error({ content: '保存失败，请重试', key: 'save' });
+      }
     }
   };
 
@@ -292,7 +368,7 @@ export default function ArticlePage() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             }}>
               {editMode === 'edit' ? (
-                // 编辑模式 - 可编辑标题
+                // 编辑模式 - 可编辑标题和类型
                 <>
                   <div style={{ marginBottom: '24px' }}>
                     <label style={{
@@ -314,6 +390,32 @@ export default function ArticlePage() {
                         fontWeight: 700,
                       }}
                     />
+                  </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#666',
+                    }}>
+                      文章类型
+                    </label>
+                    <Select
+                      value={editedArticle?.type || 'text'}
+                      onChange={(value) => editedArticle && setEditedArticle({ ...editedArticle, type: value })}
+                      style={{ width: '200px' }}
+                      size="large"
+                    >
+                      <Option value="text">📝 文字类型</Option>
+                      <Option value="image">🖼️ 图片类型</Option>
+                      <Option value="code">💻 代码类型</Option>
+                      <Option value="diary">📔 日记类型</Option>
+                    </Select>
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
+                      类型决定了文章在归档页面的展示样式
+                    </div>
                   </div>
                   
                   <div style={{
@@ -360,7 +462,7 @@ export default function ArticlePage() {
             {/* Part 2: 文章主体内容 */}
             <div style={{
               background: 'white',
-              padding: '40px',
+              padding: editMode === 'edit' ? '40px' : '40px',
               borderRadius: '8px',
               marginBottom: '24px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -369,17 +471,30 @@ export default function ArticlePage() {
               color: '#333',
             }}>
               {editMode === 'edit' ? (
-                // 编辑模式 - 暂不支持块编辑，显示提示
-                <div style={{
-                  padding: '40px',
-                  textAlign: 'center',
-                  color: '#999',
-                  background: '#fafafa',
-                  borderRadius: '8px',
-                }}>
-                  <p>编辑模式暂不支持块内容编辑</p>
-                  <p style={{ fontSize: '14px' }}>请前往文章发布页面进行编辑</p>
-                </div>
+                // 编辑模式 - 使用块编辑器
+                <>
+                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '18px' }}>🧱 文章内容</h3>
+                    <Space>
+                      {editedArticle?.editorBlocks && (
+                        <>
+                          <Tag color="blue">{editedArticle.editorBlocks.length} 个块</Tag>
+                          <Tag color="green">{editedArticle.editorBlocks.filter((b: any) => b.type === 'text').length} 文字</Tag>
+                          <Tag color="orange">{editedArticle.editorBlocks.filter((b: any) => b.type === 'image').length} 图片</Tag>
+                          <Tag color="purple">{editedArticle.editorBlocks.filter((b: any) => b.type === 'code').length} 代码</Tag>
+                        </>
+                      )}
+                    </Space>
+                  </div>
+
+                  <Divider />
+
+                  <BlockEditor 
+                    blocks={editedArticle?.editorBlocks || []} 
+                    onChange={(blocks) => setEditedArticle({ ...editedArticle, editorBlocks: blocks })} 
+                    showAddButton={false} 
+                  />
+                </>
               ) : (
                 // 浏览/预览模式 - 渲染块内容
                 <div>

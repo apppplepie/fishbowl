@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Card } from 'antd';
 import { HeartOutlined, HeartFilled } from '@ant-design/icons';
 import type { ImageCard as ImageCardType } from '@/app/types/card';
+import { formatRelativeTime } from '@/app/utils/timeFormat';
 
 interface ImageCardProps {
   card: ImageCardType | any; // 支持数据库返回的格式
@@ -97,9 +98,11 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
             fontSize: '12px',
             color: '#999',
           }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
               {card.author && <span>👤 {card.author}</span>}
-              <span>📅 {card.publish_date || card.createdAt}</span>
+              <span style={{ color: '#999' }}>
+                📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt)}
+              </span>
             </div>
             <div
               onClick={(e) => {

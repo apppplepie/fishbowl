@@ -29,6 +29,7 @@ import BlockEditor from '@/app/components/BlockEditor';
 import type { Block, Article, TextBlock as TextBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useAuth } from '@/app/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 const { Option } = Select;
 
@@ -38,6 +39,7 @@ const { Option } = Select;
 export default function PublishArticlePage() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
+  const router = useRouter();
   
   // 初始化一个空的文字块
   const [blocks, setBlocks] = useState<Block[]>([
@@ -49,7 +51,6 @@ export default function PublishArticlePage() {
     }
   ]);
   
-  const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // 表单提交
@@ -113,6 +114,10 @@ export default function PublishArticlePage() {
         }]);
         // 清除草稿
         localStorage.removeItem('article-draft');
+        // 跳转到归档页
+        setTimeout(() => {
+          router.push('/articles');
+        }, 1000);
       } else {
         message.error(result.error || '发布失败，请重试');
       }
@@ -164,10 +169,6 @@ export default function PublishArticlePage() {
     }
   };
 
-  // 封面上传
-  const handleCoverUploadChange = ({ fileList: newFileList }: any) => {
-    setCoverFileList(newFileList);
-  };
 
   // 统计信息
   const getStatistics = () => {
@@ -329,42 +330,6 @@ export default function PublishArticlePage() {
                 />
               </Form.Item>
 
-              <Form.Item
-                label="封面图"
-                name="coverImage"
-                tooltip="可选，为文章添加封面图片"
-              >
-                <Upload
-                  listType="picture-card"
-                  fileList={coverFileList}
-                  onChange={handleCoverUploadChange}
-                  beforeUpload={() => false}
-                  maxCount={1}
-                >
-                  {coverFileList.length < 1 && (
-                    <div>
-                      <PlusOutlined />
-                      <div style={{ marginTop: 8 }}>上传封面</div>
-                    </div>
-                  )}
-                </Upload>
-              </Form.Item>
-
-              {/* 显示当前作者（只读） */}
-              <div style={{
-                padding: '12px 16px',
-                background: '#f5f5f5',
-                borderRadius: '8px',
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}>
-                <span style={{ color: '#666', fontSize: '14px' }}>📝 作者：</span>
-                <span style={{ fontSize: '16px', fontWeight: 500, color: '#1890ff' }}>
-                  {user?.username || '匿名'}
-                </span>
-              </div>
 
               <Form.Item
                 label="标签"
@@ -403,7 +368,7 @@ export default function PublishArticlePage() {
                   <Tag>{stats.totalChars} 字</Tag>
                   <Tag>约 {stats.estimatedReadTime} 分钟阅读</Tag>
                   
-                  {stats.textBlocks > 0 && (
+                  {stats.textBlocks > 0 && !isPreviewMode && (
                     <Dropdown menu={{ items: batchFormatMenuItems }} placement="bottomRight">
                       <Button 
                         type="primary" 
@@ -419,7 +384,124 @@ export default function PublishArticlePage() {
 
               <Divider />
 
-              <BlockEditor blocks={blocks} onChange={setBlocks} showAddButton={false} />
+              {isPreviewMode ? (
+                // 预览模式：只显示内容，不可编辑
+                <div style={{
+                  padding: '20px',
+                  background: 'white',
+                  borderRadius: '8px',
+                  minHeight: '400px',
+                }}>
+                  <h1 style={{
+                    fontSize: '32px',
+                    fontWeight: 700,
+                    marginBottom: '24px',
+                    color: '#1a1a1a',
+                  }}>
+                    {form.getFieldValue('title') || '未命名文章'}
+                  </h1>
+
+                  <div style={{
+                    display: 'flex',
+                    gap: '16px',
+                    marginBottom: '32px',
+                    paddingBottom: '16px',
+                    borderBottom: '1px solid #e8e8e8',
+                    fontSize: '14px',
+                    color: '#666',
+                  }}>
+                    <span>👤 作者：{user?.username || '匿名'}</span>
+                    <span>📅 {new Date().toLocaleDateString('zh-CN')}</span>
+                    <span>⏱️ 约 {stats.estimatedReadTime} 分钟阅读</span>
+                  </div>
+
+                  {blocks.map((block, index) => (
+                    <div key={block.id} style={{ marginBottom: '32px' }}>
+                      {block.type === 'text' && (
+                        <div style={{
+                          whiteSpace: 'pre-wrap',
+                          lineHeight: '1.8',
+                          fontSize: '16px',
+                          color: '#333',
+                        }}>
+                          {(block as any).content}
+                        </div>
+                      )}
+                      {block.type === 'image' && (
+                        <div style={{ textAlign: 'center' }}>
+                          <img
+                            src={(block as any).imageUrl}
+                            alt={(block as any).title || '图片'}
+                            style={{
+                              maxWidth: '100%',
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            }}
+                          />
+                          {(block as any).title && (
+                            <div style={{
+                              marginTop: '12px',
+                              fontSize: '14px',
+                              color: '#666',
+                              fontWeight: 500,
+                            }}>
+                              {(block as any).title}
+                            </div>
+                          )}
+                          {(block as any).description && (
+                            <div style={{
+                              marginTop: '8px',
+                              fontSize: '13px',
+                              color: '#999',
+                            }}>
+                              {(block as any).description}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {block.type === 'code' && (
+                        <div style={{
+                          background: '#282c34',
+                          borderRadius: '8px',
+                          padding: '20px',
+                          overflow: 'auto',
+                        }}>
+                          {(block as any).title && (
+                            <div style={{
+                              color: '#61dafb',
+                              fontSize: '14px',
+                              marginBottom: '12px',
+                              fontWeight: 500,
+                            }}>
+                              {(block as any).title}
+                            </div>
+                          )}
+                          <div style={{
+                            fontSize: '13px',
+                            color: '#abb2bf',
+                            marginBottom: '8px',
+                            opacity: 0.7,
+                          }}>
+                            {(block as any).language || 'code'}
+                          </div>
+                          <pre style={{
+                            margin: 0,
+                            color: '#abb2bf',
+                            fontSize: '14px',
+                            lineHeight: '1.6',
+                            overflowX: 'auto',
+                          }}>
+                            <code>{(block as any).code}</code>
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // 编辑模式：显示块编辑器
+                <BlockEditor blocks={blocks} onChange={setBlocks} showAddButton={false} />
+              )}
             </Card>
 
             <Card
@@ -452,15 +534,26 @@ export default function PublishArticlePage() {
                   size="large" 
                   icon={<EyeOutlined />}
                   onClick={() => {
-                    if (blocks.length === 0) {
+                    const values = form.getFieldsValue();
+                    if (!values.title) {
+                      message.warning('请先输入文章标题');
+                      return;
+                    }
+                    if (blocks.length === 0 || !blocks.some(b => {
+                      if (b.type === 'text') return (b as any).content?.trim();
+                      if (b.type === 'code') return (b as any).code?.trim();
+                      if (b.type === 'image') return true;
+                      return false;
+                    })) {
                       message.warning('请先添加一些内容');
                       return;
                     }
-                    message.info('预览功能开发中...');
-                    // 这里可以跳转到预览页面或打开预览弹窗
+                    setIsPreviewMode(!isPreviewMode);
+                    message.info(isPreviewMode ? '退出预览模式' : '进入预览模式');
                   }}
+                  type={isPreviewMode ? 'primary' : 'default'}
                 >
-                  预览
+                  {isPreviewMode ? '退出预览' : '预览'}
                 </Button>
               </Space>
 
