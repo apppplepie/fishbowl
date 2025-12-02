@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
+import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import type { UploadFile } from 'antd';
 
 const { TextArea } = Input;
@@ -123,6 +124,14 @@ export default function PublishPage() {
               <Option value="人像">人像</Option>
               <Option value="生活">生活</Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="分类"
+            name="category_id"
+            tooltip="选择文章所属分类，支持新建分类"
+          >
+            <CategoryTreeSelect placeholder="选择分类（可选）" />
           </Form.Item>
 
           <Form.Item>
@@ -228,6 +237,14 @@ export default function PublishPage() {
             </Select>
           </Form.Item>
 
+          <Form.Item
+            label="分类"
+            name="category_id"
+            tooltip="选择文章所属分类，支持新建分类"
+          >
+            <CategoryTreeSelect placeholder="选择分类（可选）" />
+          </Form.Item>
+
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit" size="large" icon={<PlusOutlined />}>
@@ -302,6 +319,14 @@ export default function PublishPage() {
             name="location"
           >
             <Input placeholder="在哪里？" size="large" prefix="📍" />
+          </Form.Item>
+
+          <Form.Item
+            label="分类"
+            name="category_id"
+            tooltip="选择文章所属分类，支持新建分类"
+          >
+            <CategoryTreeSelect placeholder="选择分类（可选）" />
           </Form.Item>
 
           <Form.Item>
@@ -385,6 +410,14 @@ export default function PublishPage() {
                 }} />
               </Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="分类"
+            name="category_id"
+            tooltip="选择文章所属分类，支持新建分类"
+          >
+            <CategoryTreeSelect placeholder="选择分类（可选）" />
           </Form.Item>
 
           <Form.Item>
@@ -485,6 +518,14 @@ export default function PublishPage() {
             </Select>
           </Form.Item>
 
+          <Form.Item
+            label="分类"
+            name="category_id"
+            tooltip="选择文章所属分类，支持新建分类"
+          >
+            <CategoryTreeSelect placeholder="选择分类（可选）" />
+          </Form.Item>
+
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit" size="large" icon={<PlusOutlined />}>
@@ -575,6 +616,14 @@ export default function PublishPage() {
               <Option value="工具">工具</Option>
               <Option value="文档">文档</Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="分类"
+            name="category_id"
+            tooltip="选择文章所属分类，支持新建分类"
+          >
+            <CategoryTreeSelect placeholder="选择分类（可选）" />
           </Form.Item>
 
           <Form.Item>

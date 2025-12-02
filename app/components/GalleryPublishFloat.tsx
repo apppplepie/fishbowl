@@ -5,6 +5,7 @@ import { FloatButton, Modal, Form, Input, Upload, message, Button } from 'antd';
 import { PlusOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
+import CategoryTreeSelect from './CategoryTreeSelect';
 
 interface GalleryPublishFloatProps {
   onSuccess?: () => void;
@@ -112,6 +113,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           blocks: blocks,
           status: 'published',
           type: 'drawing', // 明确指定为绘画类型
+          category_id: values.category_id || 'cat_drawing', // 未选择时默认发到绘画作品分类
         }),
       });
 
@@ -177,6 +179,17 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
             <Input.TextArea 
               placeholder="描述你的创作过程或想法（会作为文字块显示在文章开头）..." 
               rows={4}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="category_id"
+            label="分类"
+            tooltip="选择绘画作品的子分类，未选择时默认发布到【绘画作品】"
+          >
+            <CategoryTreeSelect 
+              placeholder="选择分类（可选，默认：绘画作品）" 
+              rootCategoryId="cat_drawing"
             />
           </Form.Item>
 
