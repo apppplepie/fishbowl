@@ -4,6 +4,22 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card } from 'antd';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 
+// 注入 CSS 动画
+if (typeof document !== 'undefined') {
+  const styleId = 'drawing-gallery-card-animations';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.innerHTML = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
 interface DrawingGalleryCardProps {
   article: {
     id: string;
@@ -45,16 +61,16 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
 
   const currentImage = images[currentIndex];
 
-  // 切换到上一张（循环）
-  const handlePrevious = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  };
-
   // 切换到下一张（循环）
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  // 切换到上一张（循环）
+  const handlePrevious = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
   // 标记当前图片已加载
@@ -88,18 +104,20 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
     preloadImage(prevIndex);
   }, [currentIndex, images, loadedImages]);
 
-  // 处理图片区域点击（左侧上一张，右侧下一张）
+  // 处理图片区域点击（左侧1/3下一张，右侧1/3上一张）
   const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const halfWidth = rect.width / 2;
+    const leftThird = rect.width / 3;
+    const rightThird = rect.width * 2 / 3;
 
-    if (clickX < halfWidth) {
-      handlePrevious(e);
-    } else {
+    if (clickX < leftThird) {
       handleNext(e);
+    } else if (clickX > rightThird) {
+      handlePrevious(e);
     }
+    // 中间1/3不触发切换
   };
 
   if (!currentImage) return null;
@@ -108,16 +126,34 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
     <Card
       hoverable
       style={{ 
-        borderRadius: '12px',
+        borderRadius: '16px',
         overflow: 'hidden',
         cursor: 'pointer',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        transition: 'all 0.3s ease',
+        border: 'none',
       }}
       styles={{ body: { padding: 0 } }}
       onClick={onClick}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+        e.currentTarget.style.transform = 'translateY(-4px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+        e.currentTarget.style.transform = 'translateY(0)';
+      }}
     >
       {/* 图片区域 - 点击左右切换 */}
       <div 
-        style={{ position: 'relative', minHeight: '300px' }}
+        style={{ 
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          minHeight: '200px',
+        }}
         onClick={handleImageClick}
       >
         {!isCurrentImageLoaded && (
@@ -127,40 +163,58 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
             left: 0,
             width: '100%',
             height: '100%',
-            background: '#f0f0f0',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1,
           }}>
-            加载中...
+            <div style={{
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <div className="loading-spinner" style={{
+                width: '20px',
+                height: '20px',
+                border: '3px solid rgba(255,255,255,0.3)',
+                borderTopColor: 'white',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }} />
+              加载中...
+            </div>
           </div>
         )}
         <img
-          key={currentImage.id} // 添加 key 确保每张图片独立渲染
+          key={currentImage.id}
           src={currentImage.url}
           alt="图片"
           onLoad={handleImageLoad}
           style={{
-            width: '100%',
+            maxWidth: '100%',
+            maxHeight: '70vh',
+            width: 'auto',
+            height: 'auto',
             display: 'block',
+            objectFit: 'contain',
             opacity: isCurrentImageLoaded ? 1 : 0,
             transition: 'opacity 0.3s ease',
           }}
         />
         
-        {/* 图片指示点 */}
+        {/* 图片指示点 - 极简风格 */}
         {images.length > 1 && (
           <div style={{
             position: 'absolute',
-            bottom: '12px',
+            bottom: '16px',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
             gap: '8px',
-            padding: '8px 12px',
-            background: 'rgba(0, 0, 0, 0.5)',
-            borderRadius: '20px',
           }}>
             {images.map((_, index) => (
               <div
@@ -169,8 +223,18 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  background: index === currentIndex ? '#fff' : 'rgba(255, 255, 255, 0.4)',
-                  transition: 'background 0.3s ease',
+                  background: index === currentIndex 
+                    ? '#ffffff'
+                    : 'rgba(255, 255, 255, 0.4)',
+                  transition: 'background 0.2s ease',
+                  cursor: 'pointer',
+                  boxShadow: index === currentIndex 
+                    ? '0 2px 4px rgba(0,0,0,0.2)' 
+                    : 'none',
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex(index);
                 }}
               />
             ))}
@@ -180,26 +244,35 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
 
       {/* 信息区域 - 点击进入文章 */}
       <div 
-        style={{ padding: '16px' }}
+        style={{ 
+          padding: '20px',
+          background: 'linear-gradient(to bottom, #ffffff 0%, #fafafa 100%)',
+        }}
         onClick={(e) => {
           e.stopPropagation();
           onTitleClick?.();
         }}
       >
         <h4 style={{ 
-          margin: '0 0 8px 0',
-          fontSize: '16px',
+          margin: '0 0 10px 0',
+          fontSize: '18px',
           fontWeight: 600,
           cursor: 'pointer',
-        }}>
+          color: '#1a1a1a',
+          lineHeight: '1.4',
+          transition: 'color 0.2s ease',
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
+        onMouseLeave={(e) => e.currentTarget.style.color = '#1a1a1a'}
+        >
           {article.title}
         </h4>
         {article.excerpt && (
           <p style={{
-            margin: 0,
+            margin: '0 0 14px 0',
             color: '#666',
             fontSize: '14px',
-            lineHeight: '1.5',
+            lineHeight: '1.6',
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
@@ -212,19 +285,54 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
         
         {/* 底部信息 */}
         <div style={{
-          marginTop: '12px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: '12px',
+          fontSize: '13px',
           color: '#999',
+          paddingTop: '12px',
+          borderTop: '1px solid #f0f0f0',
         }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span>👤 {article.author}</span>
-            <span>🎨 {images.length} 张</span>
+          <div style={{ 
+            display: 'flex', 
+            gap: '12px', 
+            alignItems: 'center',
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+              borderRadius: '6px',
+              color: '#667eea',
+              fontWeight: 500,
+            }}>
+              <span style={{ fontSize: '16px' }}>👤</span>
+              {article.author}
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              background: 'linear-gradient(135deg, #f093fb15 0%, #f5576c15 100%)',
+              borderRadius: '6px',
+              color: '#f5576c',
+              fontWeight: 500,
+            }}>
+              <span style={{ fontSize: '16px' }}>🎨</span>
+              {images.length} 张
+            </div>
           </div>
-          <span>
-            📝 {formatRelativeTime(article.last_modified)}
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: '#999',
+          }}>
+            <span style={{ fontSize: '14px' }}>📝</span>
+            {formatRelativeTime(article.last_modified)}
           </span>
         </div>
       </div>

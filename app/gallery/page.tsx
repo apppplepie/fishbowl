@@ -62,23 +62,6 @@ const GalleryImage: React.FC<{
           e.currentTarget.style.transform = 'scale(1)';
         }}
       />
-      
-      {/* 图片数量标识 */}
-      {article.image_count > 1 && (
-        <div style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          background: 'rgba(0, 0, 0, 0.6)',
-          color: '#fff',
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: 'bold',
-        }}>
-          🎨 {article.image_count}
-        </div>
-      )}
     </div>
   );
 };
@@ -224,6 +207,7 @@ export default function GalleryPage() {
         open={!!selectedArticle}
         onCancel={() => setSelectedArticle(null)}
         footer={null}
+        closable={false}
         width={600}
         centered
         styles={{ body: { padding: 0 } }}
