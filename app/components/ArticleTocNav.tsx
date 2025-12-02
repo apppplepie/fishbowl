@@ -1,127 +1,37 @@
 'use client';
 
-import React from 'react';
-import { Menu } from 'antd';
-import { FileTextOutlined, FolderOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Menu, Spin, Empty } from 'antd';
+import { 
+  FileTextOutlined, 
+  FolderOutlined, 
+  CodeOutlined,
+  PictureOutlined,
+  EditOutlined,
+} from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import { useRouter } from 'next/navigation';
 
 /**
  * 文章目录导航组件
- * 展示文章所属的目录结构
+ * 展示文章所属的目录结构，支持点击跳转
  */
 
-// 示例目录数据结构 - 支持多级嵌套
-const tocItems: MenuProps['items'] = [
-  {
-    key: 'cat1',
-    icon: <FolderOutlined />,
-    label: '技术文章',
-    children: [
-      {
-        key: 'cat1-1',
-        icon: <FolderOutlined />,
-        label: '前端开发',
-        children: [
-          {
-            key: 'cat1-1-1',
-            icon: <FolderOutlined />,
-            label: 'React 系列',
-            children: [
-              {
-                key: 'article1',
-                icon: <FileTextOutlined />,
-                label: 'React 入门教程',
-              },
-              {
-                key: 'article2',
-                icon: <FileTextOutlined />,
-                label: 'React Hooks 详解',
-              },
-              {
-                key: 'article3',
-                icon: <FileTextOutlined />,
-                label: 'React 性能优化',
-              },
-            ],
-          },
-          {
-            key: 'cat1-1-2',
-            icon: <FolderOutlined />,
-            label: 'Vue 系列',
-            children: [
-              {
-                key: 'article4',
-                icon: <FileTextOutlined />,
-                label: 'Vue 3 新特性',
-              },
-              {
-                key: 'article5',
-                icon: <FileTextOutlined />,
-                label: 'Composition API',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        key: 'cat1-2',
-        icon: <FolderOutlined />,
-        label: '后端开发',
-        children: [
-          {
-            key: 'article6',
-            icon: <FileTextOutlined />,
-            label: 'Node.js 实践',
-          },
-          {
-            key: 'article7',
-            icon: <FileTextOutlined />,
-            label: 'Python Django',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'cat2',
-    icon: <FolderOutlined />,
-    label: '生活随笔',
-    children: [
-      {
-        key: 'article8',
-        icon: <FileTextOutlined />,
-        label: '旅行日记',
-      },
-      {
-        key: 'article9',
-        icon: <FileTextOutlined />,
-        label: '读书笔记',
-      },
-    ],
-  },
-  {
-    key: 'cat3',
-    icon: <FolderOutlined />,
-    label: '项目经验',
-    children: [
-      {
-        key: 'article10',
-        icon: <FileTextOutlined />,
-        label: '项目复盘',
-      },
-      {
-        key: 'article11',
-        icon: <FileTextOutlined />,
-        label: '技术选型',
-      },
-      {
-        key: 'article12',
-        icon: <FileTextOutlined />,
-        label: '性能优化',
-      },
-    ],
-  },
-];
+interface Article {
+  id: string;
+  title: string;
+  type: string;
+  publish_date: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  order_index: number;
+  children?: Category[];
+  articles?: Article[];
+}
 
 interface ArticleTocNavProps {
   currentArticleId?: string;
@@ -129,13 +39,150 @@ interface ArticleTocNavProps {
 }
 
 export default function ArticleTocNav({ 
-  currentArticleId = 'article1',
-  onArticleClick 
+  currentArticleId,
+  onArticleClick
 }: ArticleTocNavProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuProps['items']>([]);
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
+
+  /**
+   * 获取文章类型图标
+   */
+  const getArticleIcon = (type: string) => {
+    switch (type) {
+      case 'code':
+        return <CodeOutlined />;
+      case 'drawing':
+      case 'image':
+        return <PictureOutlined />;
+      default:
+        return <FileTextOutlined />;
+    }
+  };
+
+  /**
+   * 构建菜单项
+   */
+  const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
+    return categories.map(category => {
+      const children: MenuProps['items'] = [];
+
+      // 添加子分类
+      if (category.children && category.children.length > 0) {
+        const subCategories = buildMenuItems(category.children);
+        children.push(...(subCategories || []));
+      }
+
+      // 添加文章
+      if (category.articles && category.articles.length > 0) {
+        const articleItems = category.articles.map(article => ({
+          key: `article-${article.id}`,
+          icon: getArticleIcon(article.type),
+          label: (
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+            }}>
+              <span style={{ 
+                flex: 1, 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {article.title}
+              </span>
+            </span>
+          ),
+        }));
+        children.push(...articleItems);
+      }
+
+      return {
+        key: `category-${category.id}`,
+        icon: <FolderOutlined />,
+        label: (
+          <span style={{ fontWeight: 500 }}>
+            {category.name}
+            {category.articles && category.articles.length > 0 && (
+              <span style={{ 
+                marginLeft: '8px', 
+                fontSize: '12px', 
+                color: '#999',
+              }}>
+                ({category.articles.length})
+              </span>
+            )}
+          </span>
+        ),
+        children: children.length > 0 ? children : undefined,
+      };
+    });
+  };
+
+  /**
+   * 收集所有应该展开的 keys
+   */
+  const getAllCategoryKeys = (categories: Category[]): string[] => {
+    const keys: string[] = [];
+    const collect = (cats: Category[]) => {
+      cats.forEach(cat => {
+        keys.push(`category-${cat.id}`);
+        if (cat.children) {
+          collect(cat.children);
+        }
+      });
+    };
+    collect(categories);
+    return keys;
+  };
+
+  /**
+   * 加载分类树和文章
+   */
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/categories/tree-with-articles');
+        const result = await response.json();
+
+        if (result.success) {
+          setCategories(result.data);
+          const items = buildMenuItems(result.data);
+          setMenuItems(items);
+          
+          // 默认展开所有分类
+          const keys = getAllCategoryKeys(result.data);
+          setOpenKeys(keys);
+        }
+      } catch (error) {
+        console.error('加载目录失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  /**
+   * 处理菜单点击
+   */
   const handleMenuClick: MenuProps['onClick'] = (e) => {
-    // 只处理文章项的点击（不处理分类）
-    if (e.key.startsWith('article')) {
-      onArticleClick?.(e.key);
+    // 只处理文章项的点击
+    if (e.key.startsWith('article-')) {
+      const articleId = e.key.replace('article-', '');
+      // 如果有回调函数，调用回调；否则直接跳转
+      if (onArticleClick) {
+        onArticleClick(articleId);
+      } else {
+        router.push(`/article/${articleId}`);
+      }
     }
   };
 
@@ -170,18 +217,35 @@ export default function ArticleTocNav({
 
         {/* 菜单区域 */}
         <div style={{ padding: '8px 0' }}>
-          <Menu
-            mode="inline"
-            defaultSelectedKeys={[currentArticleId]}
-            defaultOpenKeys={['cat1', 'cat1-1', 'cat1-1-1', 'cat1-1-2', 'cat1-2', 'cat2', 'cat3']}
-            style={{ 
-              borderInlineEnd: 'none',
-              background: 'transparent',
-              fontSize: '14px',
-            }}
-            items={tocItems}
-            onClick={handleMenuClick}
-          />
+          {loading ? (
+            <div style={{ 
+              padding: '40px 0', 
+              textAlign: 'center',
+            }}>
+              <Spin tip="加载中...">
+                <div style={{ minHeight: '50px' }} />
+              </Spin>
+            </div>
+          ) : menuItems && menuItems.length > 0 ? (
+            <Menu
+              mode="inline"
+              selectedKeys={currentArticleId ? [`article-${currentArticleId}`] : []}
+              openKeys={openKeys}
+              onOpenChange={(keys) => setOpenKeys(keys)}
+              style={{ 
+                borderInlineEnd: 'none',
+                background: 'transparent',
+                fontSize: '14px',
+              }}
+              items={menuItems}
+              onClick={handleMenuClick}
+            />
+          ) : (
+            <Empty 
+              description="暂无文章"
+              style={{ padding: '40px 0' }}
+            />
+          )}
         </div>
       </div>
 

@@ -26,20 +26,28 @@ export async function PUT(
 
     const currentDate = new Date();
 
+    // 构建动态更新字段
+    const updateFields: string[] = ['title = ?', 'last_modified = ?'];
+    const updateValues: any[] = [body.title, currentDate];
+
     // 如果提供了类型，更新类型
-    let updateType = '';
-    if (body.type) {
-      updateType = `, type = ?`;
+    if (body.type !== undefined) {
+      updateFields.push('type = ?');
+      updateValues.push(body.type);
+    }
+
+    // 如果提供了 category_id，更新分类
+    if (body.category_id !== undefined) {
+      updateFields.push('category_id = ?');
+      updateValues.push(body.category_id);
     }
 
     // 更新文章基本信息
     await query(
       `UPDATE articles 
-       SET title = ?, last_modified = ?${updateType}
+       SET ${updateFields.join(', ')}
        WHERE id = ?`,
-      body.type 
-        ? [body.title, currentDate, body.type, articleId]
-        : [body.title, currentDate, articleId]
+      [...updateValues, articleId]
     );
 
     // 如果提供了块数据，更新块
@@ -169,7 +177,7 @@ export async function GET(
     const articles = await query<any[]>(
       `SELECT 
         id, title, author, publish_date, last_modified, 
-        excerpt, type, status, likes, shares, comments
+        excerpt, type, category_id, status, likes, shares, comments
        FROM articles 
        WHERE id = ?`,
       [articleId]

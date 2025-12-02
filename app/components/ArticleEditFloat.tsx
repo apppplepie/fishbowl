@@ -30,8 +30,8 @@ interface ArticleEditFloatProps {
 /**
  * 文章编辑悬浮按钮组件
  * 根据不同模式显示不同的操作按钮
- * - view: 显示编辑按钮
- * - edit: 显示预览和取消按钮
+ * - view: 显示编辑按钮组（编辑、调整章节、删除）
+ * - edit: 显示保存、预览和取消按钮
  * - preview: 显示保存和返回编辑按钮
  */
 export default function ArticleEditFloat({
@@ -118,7 +118,7 @@ export default function ArticleEditFloat({
     );
   }
 
-  // 编辑模式：显示预览和取消按钮组
+  // 编辑模式：显示保存、预览和取消按钮组
   if (mode === 'edit') {
     return (
       <FloatButton.Group
@@ -128,6 +128,11 @@ export default function ArticleEditFloat({
         tooltip={{ title: '编辑中', placement: 'left' }}
         type="primary"
       >
+        <FloatButton
+          icon={<SaveOutlined />}
+          tooltip={{ title: '保存', placement: 'left' }}
+          onClick={onSave}
+        />
         <FloatButton
           icon={<EyeOutlined />}
           tooltip={{ title: '预览', placement: 'left' }}
