@@ -337,17 +337,6 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
         }}>
           <div style={{ fontSize: '16px' }}>加载中...</div>
         </div>
-      ) : comments.length === 0 ? (
-        <div style={{
-          padding: '60px 40px',
-          textAlign: 'center',
-          color: '#999',
-          background: '#fafafa',
-          borderRadius: '8px',
-        }}>
-          <MessageOutlined style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }} />
-          <div style={{ fontSize: '16px' }}>暂无评论，来抢沙发吧~</div>
-        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {comments.map((comment) => (

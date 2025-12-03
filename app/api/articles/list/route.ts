@@ -5,16 +5,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+/**
+ * 递归获取分类及其所有子分类的ID
+ */
+async function getCategoryAndChildrenIds(categoryId: string): Promise<string[]> {
+  const result: string[] = [categoryId];
+
+  // 递归查询子分类
+  const findChildren = async (parentIds: string[]) => {
+    const placeholders = parentIds.map(() => '?').join(',');
+    const children = await query<any[]>(
+      `SELECT id FROM categories WHERE parent_id IN (${placeholders})`,
+      parentIds
+    );
+
+    if (children.length > 0) {
+      const childIds = children.map(child => child.id);
+      result.push(...childIds);
+      await findChildren(childIds);
+    }
+  };
+
+  await findChildren([categoryId]);
+  return result;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'published';
     const limit = parseInt(searchParams.get('limit') || '15', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const categoryId = searchParams.get('categoryId');
+
+    // 构建查询条件
+    let whereClause = 'a.status = ?';
+    const queryParams: any[] = [status];
+
+    if (categoryId) {
+      // 获取该分类及其所有子分类的ID
+      const categoryIds = await getCategoryAndChildrenIds(categoryId);
+      if (categoryIds.length > 0) {
+        const placeholders = categoryIds.map(() => '?').join(',');
+        whereClause += ` AND a.category_id IN (${placeholders})`;
+        queryParams.push(...categoryIds);
+      }
+    }
 
     // 优化查询：使用子查询直接获取预览数据
     const articles = await query<any[]>(
-      `SELECT 
+      `SELECT
         a.id,
         a.title,
         a.author,
@@ -28,7 +68,7 @@ export async function GET(request: NextRequest) {
         a.shares,
         a.comments,
         -- 图片类型：获取第一个图片的 URL
-        CASE 
+        CASE
           WHEN a.type = 'image' THEN (
             SELECT JSON_EXTRACT(b.content, '$.url')
             FROM blocks b
@@ -40,7 +80,7 @@ export async function GET(request: NextRequest) {
           ELSE NULL
         END as first_image_url,
         -- 绘画类型：获取 order 最大的图片（成图）
-        CASE 
+        CASE
           WHEN a.type = 'drawing' THEN (
             SELECT JSON_EXTRACT(b.content, '$.url')
             FROM blocks b
@@ -52,7 +92,7 @@ export async function GET(request: NextRequest) {
           ELSE NULL
         END as drawing_cover_url,
         -- 绘画类型：统计图片数量
-        CASE 
+        CASE
           WHEN a.type = 'drawing' THEN (
             SELECT COUNT(*)
             FROM blocks b
@@ -62,7 +102,7 @@ export async function GET(request: NextRequest) {
           ELSE NULL
         END as image_count,
         -- 代码类型：获取第一个代码块的代码
-        CASE 
+        CASE
           WHEN a.type = 'code' THEN (
             SELECT JSON_EXTRACT(b.content, '$.code')
             FROM blocks b
@@ -74,7 +114,7 @@ export async function GET(request: NextRequest) {
           ELSE NULL
         END as code_preview,
         -- 代码类型：获取第一个代码块的语言
-        CASE 
+        CASE
           WHEN a.type = 'code' THEN (
             SELECT JSON_EXTRACT(b.content, '$.language')
             FROM blocks b
@@ -86,7 +126,7 @@ export async function GET(request: NextRequest) {
           ELSE NULL
         END as code_language,
         -- 代码类型：统计代码块数量
-        CASE 
+        CASE
           WHEN a.type = 'code' THEN (
             SELECT COUNT(*)
             FROM blocks b
@@ -96,10 +136,10 @@ export async function GET(request: NextRequest) {
           ELSE NULL
         END as code_block_count
        FROM articles a
-       WHERE a.status = ?
+       WHERE ${whereClause}
        ORDER BY a.last_modified DESC, a.publish_date DESC
        LIMIT ${limit} OFFSET ${offset}`,
-      [status]
+      queryParams
     );
 
     // 处理 JSON_EXTRACT 返回的带引号字符串
