@@ -6,6 +6,7 @@ import { PlusOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
 import CategoryTreeSelect from './CategoryTreeSelect';
+import TagInput from './TagInput';
 
 interface GalleryPublishFloatProps {
   onSuccess?: () => void;
@@ -119,6 +120,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           title: values.title,
           excerpt: values.description || '一组绘画作品',
           blocks: blocks,
+          tags: values.tags || [],
           status: 'published',
           type: 'drawing', // 明确指定为绘画类型
           category_id: values.category_id || 'cat_drawing', // 未选择时默认发到绘画作品分类
@@ -199,6 +201,14 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
               placeholder="选择分类（可选，默认：绘画作品）" 
               rootCategoryId="cat_drawing"
             />
+          </Form.Item>
+
+          <Form.Item
+            name="tags"
+            label="标签"
+            tooltip="添加标签可以帮助读者更好地找到你的作品"
+          >
+            <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
           </Form.Item>
 
           <Form.Item

@@ -191,6 +191,48 @@ export async function POST(request: NextRequest) {
         [articleId, blockId, i]
       );
     }
+
+    // 4. 处理标签
+    if (body.tags && Array.isArray(body.tags) && body.tags.length > 0) {
+      for (const tagName of body.tags) {
+        if (!tagName || typeof tagName !== 'string') continue;
+        
+        const trimmedTagName = tagName.trim();
+        if (!trimmedTagName) continue;
+
+        // 查找或创建标签
+        let tagId: string;
+        const existingTags = await query<any[]>(
+          'SELECT id FROM tags WHERE name = ?',
+          [trimmedTagName]
+        );
+
+        if (existingTags.length > 0) {
+          tagId = existingTags[0].id;
+        } else {
+          // 创建新标签
+          tagId = uuidv4();
+          await query(
+            'INSERT INTO tags (id, name) VALUES (?, ?)',
+            [tagId, trimmedTagName]
+          );
+        }
+
+        // 建立文章-标签关联
+        try {
+          await query(
+            'INSERT INTO article_tags (article_id, tag_id) VALUES (?, ?)',
+            [articleId, tagId]
+          );
+        } catch (error: any) {
+          // 忽略重复关联错误
+          if (error.code !== 'ER_DUP_ENTRY') {
+            throw error;
+          }
+        }
+      }
+      console.log(`✅ 已关联 ${body.tags.length} 个标签`);
+    }
     
     console.log(`✅ 文章发布成功: ${body.title} by ${currentUser.username} (ID: ${articleId})`);
 
@@ -230,6 +272,19 @@ export async function GET(request: NextRequest) {
        LIMIT ${limit} OFFSET ${offset}`,
       [status]
     );
+
+    // 获取每篇文章的标签
+    for (const article of articles) {
+      const tags = await query<any[]>(
+        `SELECT t.id, t.name 
+         FROM tags t
+         JOIN article_tags at ON t.id = at.tag_id
+         WHERE at.article_id = ?
+         ORDER BY t.name ASC`,
+        [article.id]
+      );
+      article.tags = tags.map((t: any) => t.name);
+    }
 
     return NextResponse.json({
       success: true,

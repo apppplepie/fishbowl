@@ -27,6 +27,7 @@ import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import BlockEditor from '@/app/components/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
+import TagInput from '@/app/components/TagInput';
 import type { Block, Article, TextBlock as TextBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -348,18 +349,7 @@ export default function PublishArticlePage() {
                 name="tags"
                 tooltip="添加标签可以帮助读者更好地找到你的文章"
               >
-                <Select
-                  mode="tags"
-                  placeholder="添加标签（按回车添加）"
-                  size="large"
-                  style={{ width: '100%' }}
-                >
-                  <Option value="技术">技术</Option>
-                  <Option value="生活">生活</Option>
-                  <Option value="随笔">随笔</Option>
-                  <Option value="教程">教程</Option>
-                  <Option value="思考">思考</Option>
-                </Select>
+                <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
               </Form.Item>
 
               <Form.Item

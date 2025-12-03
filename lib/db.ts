@@ -33,6 +33,7 @@ export async function initDatabase() {
         id VARCHAR(36) PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         author VARCHAR(100) NOT NULL,
+        author_id VARCHAR(36),
         publish_date DATE NOT NULL,
         last_modified DATETIME NOT NULL,
         excerpt TEXT,
@@ -41,11 +42,14 @@ export async function initDatabase() {
         likes INT DEFAULT 0,
         shares INT DEFAULT 0,
         comments INT DEFAULT 0,
+        category_id VARCHAR(36),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_status (status),
         INDEX idx_type (type),
-        INDEX idx_publish_date (publish_date)
+        INDEX idx_publish_date (publish_date),
+        INDEX idx_author_id (author_id),
+        INDEX idx_category_id (category_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 

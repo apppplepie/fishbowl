@@ -47,12 +47,21 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
     >
       {/* 标签 */}
       {card.tags && card.tags.length > 0 && (
-        <div style={{ marginBottom: '12px' }}>
-          {card.tags.slice(0, 2).map((tag: string, index: number) => (
-            <Tag key={index} color="blue" style={{ marginRight: '8px' }}>
-              {tag}
+        <div style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {card.tags.slice(0, 5).map((tag: string, index: number) => {
+            const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
+            const color = colors[index % colors.length];
+            return (
+              <Tag key={index} color={color}>
+                {tag}
+              </Tag>
+            );
+          })}
+          {card.tags.length > 5 && (
+            <Tag color="default">
+              +{card.tags.length - 5}
             </Tag>
-          ))}
+          )}
         </div>
       )}
 
