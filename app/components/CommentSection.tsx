@@ -34,6 +34,7 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string; content: string } | null>(null);
 
   // 加载评论列表
   useEffect(() => {
@@ -47,6 +48,23 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
     }
   }, [comments.length, onCommentCountChange]);
 
+  // 将评论树扁平化为列表
+  const flattenComments = (comments: Comment[]): Comment[] => {
+    const result: Comment[] = [];
+    
+    const flatten = (commentList: Comment[]) => {
+      commentList.forEach(comment => {
+        result.push(comment);
+        if (comment.replies && comment.replies.length > 0) {
+          flatten(comment.replies);
+        }
+      });
+    };
+    
+    flatten(comments);
+    return result;
+  };
+
   const loadComments = async () => {
     try {
       setIsLoading(true);
@@ -54,10 +72,12 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
       const result = await response.json();
 
       if (result.success) {
-        setComments(result.comments || []);
+        // 将评论树扁平化，所有评论按时间顺序显示
+        const flatComments = flattenComments(result.comments || []);
+        setComments(flatComments);
         // 通知父组件评论数量变化
         if (onCommentCountChange) {
-          onCommentCountChange(result.comments?.length || 0);
+          onCommentCountChange(flatComments.length);
         }
       } else {
         console.error('加载评论失败:', result.error);
@@ -67,6 +87,43 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 点击回复按钮
+  const handleReplyClick = (comment: Comment) => {
+    if (!isLoggedIn) {
+      message.warning('请先登录后再回复');
+      return;
+    }
+
+    // 提取评论开头5个字
+    const contentPreview = comment.content.length > 5 
+      ? comment.content.substring(0, 5) + '...' 
+      : comment.content;
+    
+    // 设置回复引用
+    const replyPrefix = `@${comment.display_name || comment.username} "${contentPreview}" `;
+    setCommentText(replyPrefix);
+    setReplyingTo({
+      id: comment.id,
+      username: comment.display_name || comment.username,
+      content: contentPreview,
+    });
+
+    // 聚焦到输入框
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea');
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(replyPrefix.length, replyPrefix.length);
+      }
+    }, 100);
+  };
+
+  // 取消回复
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+    setCommentText('');
   };
 
   // 发表评论
@@ -99,14 +156,16 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
         },
         body: JSON.stringify({
           content: commentText.trim(),
+          parent_id: replyingTo?.id || null, // 如果是回复，传入父评论 ID
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        message.success('评论发表成功！');
+        message.success(replyingTo ? '回复成功！' : '评论发表成功！');
         setCommentText('');
+        setReplyingTo(null);
         // 重新加载评论列表
         await loadComments();
       } else {
@@ -174,6 +233,32 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
         background: '#fafafa',
         borderRadius: '8px',
       }}>
+        {/* 回复提示 */}
+        {replyingTo && (
+          <div style={{
+            marginBottom: '12px',
+            padding: '8px 12px',
+            background: '#e6f7ff',
+            border: '1px solid #91d5ff',
+            borderRadius: '4px',
+            fontSize: '13px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <span>
+              💬 回复 <strong>{replyingTo.username}</strong>: "{replyingTo.content}"
+            </span>
+            <Button 
+              type="text" 
+              size="small"
+              onClick={handleCancelReply}
+            >
+              取消
+            </Button>
+          </div>
+        )}
+
         <div style={{ 
           display: 'flex', 
           gap: '12px',
@@ -221,14 +306,21 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
               <span style={{ fontSize: '12px', color: '#999' }}>
                 {isLoggedIn ? `当前用户：${currentUser?.username || '匿名用户'}` : '请先登录'}
               </span>
-              <Button 
-                type="primary"
-                onClick={handleSubmitComment}
-                loading={isSubmitting}
-                disabled={!isLoggedIn || !commentText.trim()}
-              >
-                发表评论
-              </Button>
+              <Space>
+                {replyingTo && (
+                  <Button onClick={handleCancelReply}>
+                    取消回复
+                  </Button>
+                )}
+                <Button 
+                  type="primary"
+                  onClick={handleSubmitComment}
+                  loading={isSubmitting}
+                  disabled={!isLoggedIn || !commentText.trim()}
+                >
+                  {replyingTo ? '发表回复' : '发表评论'}
+                </Button>
+              </Space>
             </div>
           </div>
         </div>
@@ -338,6 +430,30 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                     wordBreak: 'break-word',
                   }}>
                     {comment.content}
+                  </div>
+
+                  {/* 评论操作按钮 */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '16px',
+                    paddingTop: '8px',
+                  }}>
+                    {/* 回复按钮 */}
+                    {isLoggedIn && (
+                      <Button
+                        type="text"
+                        size="small"
+                        onClick={() => handleReplyClick(comment)}
+                        style={{ 
+                          padding: '0 4px',
+                          height: 'auto',
+                          fontSize: '13px',
+                          color: '#666',
+                        }}
+                      >
+                        回复
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -37,11 +37,16 @@ export default function ArticlesPage() {
   const [columns, setColumns] = useState<number>(3);
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   
   // 过滤条件状态
   const [allTags, setAllTags] = useState<string[]>([]); // 所有可用标签
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 选中的标签
   const [searchKeyword, setSearchKeyword] = useState(''); // 搜索关键词
+
+  const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
   // 加载所有可用标签
   useEffect(() => {
@@ -61,84 +66,120 @@ export default function ArticlesPage() {
     loadTags();
   }, []);
 
-  // 从 API 加载文章数据
-  useEffect(() => {
-    async function loadArticles() {
-      try {
-        const response = await fetch('/api/articles?status=published&limit=50');
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-          // 处理文章数据，为不同类型添加必要的字段
-          const processedArticles = await Promise.all(
-            result.articles.map(async (article: any) => {
-              // 如果是图片、代码或绘画类型，需要获取块信息
-              if (article.type === 'image' || article.type === 'code' || article.type === 'drawing') {
-                try {
-                  const detailRes = await fetch(`/api/articles/${article.id}`);
-                  const detailResult = await detailRes.json();
-                  if (detailRes.ok && detailResult.success) {
-                    const articleWithBlocks = detailResult.article;
-                    
-                    // 图片类型：提取第一个图片块
-                    if (article.type === 'image') {
-                      const firstImageBlock = articleWithBlocks.blocks.find(
-                        (b: any) => b.type === 'image'
-                      );
-                      if (firstImageBlock) {
-                        article.firstImageUrl = firstImageBlock.parsedContent.url;
-                      }
-                    }
-                    
-                    // 绘画类型：提取 order 最大的图片块（最后一张）
-                    if (article.type === 'drawing') {
-                      const imageBlocks = articleWithBlocks.blocks
-                        .filter((b: any) => b.type === 'image')
-                        .sort((a: any, b: any) => b.order - a.order); // 按 order 降序排列
-                      
-                      if (imageBlocks.length > 0) {
-                        article.firstImageUrl = imageBlocks[0].parsedContent.url;
-                        article.imageCount = imageBlocks.length;
-                      }
-                    }
-                    
-                    // 代码类型：提取第一个代码块预览
-                    if (article.type === 'code') {
-                      const codeBlocks = articleWithBlocks.blocks.filter(
-                        (b: any) => b.type === 'code'
-                      );
-                      if (codeBlocks.length > 0) {
-                        article.codePreview = codeBlocks[0].parsedContent.code;
-                        article.codeLanguage = codeBlocks[0].parsedContent.language;
-                        article.codeBlockCount = codeBlocks.length;
-                      }
-                    }
-                  }
-                } catch (error) {
-                  console.error('获取文章详情失败:', error);
+  // 处理文章数据（提取图片/代码预览）
+  const processArticles = async (articles: any[]) => {
+    return await Promise.all(
+      articles.map(async (article: any) => {
+        // 如果是图片、代码或绘画类型，需要获取块信息
+        if (article.type === 'image' || article.type === 'code' || article.type === 'drawing') {
+          try {
+            const detailRes = await fetch(`/api/articles/${article.id}`);
+            const detailResult = await detailRes.json();
+            if (detailRes.ok && detailResult.success) {
+              const articleWithBlocks = detailResult.article;
+              
+              // 图片类型：提取第一个图片块
+              if (article.type === 'image') {
+                const firstImageBlock = articleWithBlocks.blocks.find(
+                  (b: any) => b.type === 'image'
+                );
+                if (firstImageBlock) {
+                  article.firstImageUrl = firstImageBlock.parsedContent.url;
                 }
               }
               
-              return article;
-            })
-          );
-          
-          setCards(processedArticles);
+              // 绘画类型：提取 order 最大的图片块（最后一张）
+              if (article.type === 'drawing') {
+                const imageBlocks = articleWithBlocks.blocks
+                  .filter((b: any) => b.type === 'image')
+                  .sort((a: any, b: any) => b.order - a.order); // 按 order 降序排列
+                
+                if (imageBlocks.length > 0) {
+                  article.firstImageUrl = imageBlocks[0].parsedContent.url;
+                  article.imageCount = imageBlocks.length;
+                }
+              }
+              
+              // 代码类型：提取第一个代码块预览
+              if (article.type === 'code') {
+                const codeBlocks = articleWithBlocks.blocks.filter(
+                  (b: any) => b.type === 'code'
+                );
+                if (codeBlocks.length > 0) {
+                  article.codePreview = codeBlocks[0].parsedContent.code;
+                  article.codeLanguage = codeBlocks[0].parsedContent.language;
+                  article.codeBlockCount = codeBlocks.length;
+                }
+              }
+            }
+          } catch (error) {
+            console.error('获取文章详情失败:', error);
+          }
+        }
+        
+        return article;
+      })
+    );
+  };
+
+  // 加载文章数据（支持分批加载）
+  const loadArticles = async (currentOffset: number, append: boolean = false) => {
+    try {
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await fetch(
+        `/api/articles?status=published&limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`
+      );
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        const processedArticles = await processArticles(result.articles);
+        
+        if (append) {
+          // 追加模式：添加到现有列表，并去重
+          setCards(prev => {
+            const existingIds = new Set(prev.map(card => card.id));
+            const newArticles = processedArticles.filter(
+              article => !existingIds.has(article.id)
+            );
+            return [...prev, ...newArticles];
+          });
         } else {
-          // API 失败，使用 mock 数据
+          // 初始加载模式：替换列表
+          setCards(processedArticles);
+        }
+
+        // 判断是否还有更多数据
+        setHasMore(result.articles.length === ITEMS_PER_PAGE);
+        setOffset(currentOffset + result.articles.length);
+      } else {
+        // API 失败
+        if (!append) {
           console.log('API 失败，使用 mock 数据');
           setCards(mockCards);
+          setHasMore(false);
         }
-      } catch (error) {
-        console.error('加载文章失败:', error);
+      }
+    } catch (error) {
+      console.error('加载文章失败:', error);
+      if (!append) {
         // 网络错误，使用 mock 数据
         setCards(mockCards);
-      } finally {
-        setLoading(false);
+        setHasMore(false);
       }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
+  };
 
-    loadArticles();
+  // 初次加载
+  useEffect(() => {
+    loadArticles(0, false);
   }, []);
 
   // 过滤文章
@@ -170,6 +211,27 @@ export default function ArticlesPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // 监听滚动，实现无限加载
+  useEffect(() => {
+    const handleScroll = () => {
+      // 如果正在加载或没有更多数据，不触发
+      if (loading || loadingMore || !hasMore) return;
+
+      // 计算是否滚动到底部
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+
+      // 距离底部 300px 时开始加载
+      if (scrollHeight - scrollTop - clientHeight < 300) {
+        loadArticles(offset, true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [offset, loading, loadingMore, hasMore]);
 
   // 点击卡片处理
   const handleCardClick = (card: any) => {
@@ -320,15 +382,52 @@ export default function ArticlesPage() {
               <div style={{ fontSize: '14px' }}>试试调整筛选条件或搜索其他关键词？</div>
             </div>
           ) : (
-            <Masonry
-              columns={columns}
-              gutter={16}
-              items={filteredCards.map((card) => ({
-                key: `card-${card.id}`,
-                data: card,
-              }))}
-              itemRender={({ data }) => renderCard(data)}
-            />
+            <>
+              <Masonry
+                columns={columns}
+                gutter={16}
+                items={filteredCards.map((card) => ({
+                  key: `card-${card.id}`,
+                  data: card,
+                }))}
+                itemRender={({ data }) => renderCard(data)}
+              />
+
+              {/* 加载更多提示 */}
+              {loadingMore && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px 0',
+                  color: '#999',
+                }}>
+                  <div style={{
+                    display: 'inline-block',
+                    width: '24px',
+                    height: '24px',
+                    border: '3px solid #f0f0f0',
+                    borderTopColor: '#1890ff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }} />
+                  <div style={{ marginTop: '12px', fontSize: '14px' }}>
+                    加载更多...
+                  </div>
+                </div>
+              )}
+
+              {/* 没有更多数据提示 */}
+              {!hasMore && filteredCards.length > 0 && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px 0',
+                  color: '#999',
+                  fontSize: '14px',
+                }}>
+                  <div style={{ marginBottom: '8px' }}>✨</div>
+                  已经到底了，没有更多内容啦~
+                </div>
+              )}
+            </>
           )}
         </div>
       </PageLayout>
@@ -338,9 +437,19 @@ export default function ArticlesPage() {
         onSuccess={() => {
           message.success('日记发布成功！');
           // 重新加载文章列表
-          window.location.reload();
+          setOffset(0);
+          setHasMore(true);
+          loadArticles(0, false);
         }}
       />
+
+      {/* 添加旋转动画样式 */}
+      <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }

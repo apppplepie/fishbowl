@@ -28,6 +28,8 @@ interface DrawingGalleryCardProps {
     author: string;
     last_modified: string;
     tags?: string[]; // 标签
+    likes?: number;
+    comments?: number;
     blocks: Array<{
       id: string;
       type: string;
@@ -416,15 +418,31 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
               {images.length} 张
             </div>
           </div>
-          <span style={{
+          <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            color: '#999',
+            gap: '12px',
           }}>
-            <span style={{ fontSize: '14px' }}>📝</span>
-            {formatRelativeTime(article.last_modified)}
-          </span>
+            {(article.likes !== undefined && article.likes !== null) && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                ❤️ {article.likes}
+              </span>
+            )}
+            {(article.comments !== undefined && article.comments !== null) && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                💬 {article.comments}
+              </span>
+            )}
+            <span style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: '#999',
+            }}>
+              <span style={{ fontSize: '14px' }}>📝</span>
+              {formatRelativeTime(article.last_modified)}
+            </span>
+          </div>
         </div>
       </div>
     </Card>

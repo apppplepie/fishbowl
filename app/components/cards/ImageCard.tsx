@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Card, Tag } from 'antd';
-import { HeartOutlined, HeartFilled } from '@ant-design/icons';
 import type { ImageCard as ImageCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 
@@ -16,7 +15,6 @@ interface ImageCardProps {
  * 大图展示，适合摄影作品、视觉内容
  */
 export default function ImageCard({ card, onClick }: ImageCardProps) {
-  const [liked, setLiked] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
@@ -119,21 +117,23 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
             fontSize: '12px',
             color: '#999',
           }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12px' }}>
               {card.author && <span>👤 {card.author}</span>}
               <span style={{ color: '#999' }}>
                 📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt)}
               </span>
             </div>
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                setLiked(!liked);
-              }}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              {liked ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
-              <span>{(card.likes || 0) + (liked ? 1 : 0)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {(card.likes !== undefined && card.likes !== null) && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  ❤️ {card.likes}
+                </span>
+              )}
+              {(card.comments !== undefined && card.comments !== null) && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  💬 {card.comments}
+                </span>
+              )}
             </div>
           </div>
         </div>
