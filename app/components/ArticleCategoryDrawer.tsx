@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Drawer, Menu, Spin, Empty, Button } from 'antd';
-import { MenuUnfoldOutlined, FolderOutlined } from '@ant-design/icons';
+import { UnorderedListOutlined, FolderOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 
 /**
@@ -268,19 +268,10 @@ export function CategoryDrawerButton({
 }) {
   return (
     <Button
-      type="primary"
-      icon={<MenuUnfoldOutlined />}
+      type="text"
+      icon={<UnorderedListOutlined style={{ fontSize: '20px', color: 'white' }} />}
       onClick={onClick}
-      style={{
-        position: 'fixed',
-        top: '20px',
-        left: '20px',
-        zIndex: 1000,
-        borderRadius: '6px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-      }}
-    >
-      目录
-    </Button>
+      style={{ border: 'none' }}
+    />
   );
 }
