@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Masonry, Input, Tag, Select, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
@@ -33,7 +33,7 @@ const calculateColumns = (width: number) => {
  * Box1: 标签筛选区
  * Box2: 瀑布流卡片展示区
  */
-export default function ArticlesPage() {
+function ArticlesPageContent() {
   const { isMobile } = useResponsive();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -332,9 +332,6 @@ export default function ArticlesPage() {
                 fontSize: '13px',
                 color: 'rgba(255, 255, 255, 0.9)',
               }}>
-                {selectedCategoryId && (
-                  <span>分类筛选中</span>
-                )}
                 {selectedCategoryId && (selectedTags.length > 0 || searchKeyword) && <span> · </span>}
                 {selectedTags.length > 0 && (
                   <span>已选 <strong>{selectedTags.length}</strong> 个标签</span>
@@ -476,3 +473,10 @@ export default function ArticlesPage() {
   );
 }
 
+export default function ArticlesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ArticlesPageContent />
+    </Suspense>
+  );
+}

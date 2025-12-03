@@ -224,7 +224,7 @@ export default function ArticleTocNav({
       >
 
         {/* 菜单区域 */}
-        <div style={{ padding: '8px 0' }}>
+        <div>
           {loading ? (
             <div style={{ 
               padding: '40px 0', 
