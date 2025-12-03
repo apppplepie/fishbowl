@@ -34,6 +34,18 @@ export default function ArticleCategorySidebar({
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   /**
+   * 处理目录文字点击
+   */
+  const handleCategoryTextClick = (categoryId: string) => {
+    if (onCategorySelect) {
+      onCategorySelect(categoryId);
+    } else {
+      // 如果没有提供回调函数，直接跳转
+      router.push(`/articles?category=${categoryId}`);
+    }
+  };
+
+  /**
    * 构建菜单项（只显示目录）
    */
   const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
@@ -52,7 +64,14 @@ export default function ArticleCategorySidebar({
       return {
         key: `category-${category.id}`,
         icon: <FolderOutlined />,
-        label: category.name,
+        label: (
+          <span
+            style={{ fontWeight: 500, cursor: 'pointer' }}
+            onClick={() => handleCategoryTextClick(category.id)}
+          >
+            {category.name}
+          </span>
+        ),
         children: children.length > 0 ? children : undefined,
       };
     });
@@ -90,9 +109,8 @@ export default function ArticleCategorySidebar({
           const items = buildMenuItems(result.data);
           setMenuItems(items);
 
-          // 默认展开所有分类
-          const keys = getAllCategoryKeys(result.data);
-          setOpenKeys(keys);
+          // 默认不展开任何分类，让用户手动展开
+          setOpenKeys([]);
         }
       } catch (error) {
         console.error('加载目录失败:', error);
@@ -104,21 +122,6 @@ export default function ArticleCategorySidebar({
     loadData();
   }, []);
 
-  /**
-   * 处理菜单点击
-   */
-  const handleMenuClick: MenuProps['onClick'] = (e) => {
-    // 只处理目录项的点击
-    if (e.key.startsWith('category-')) {
-      const categoryId = e.key.replace('category-', '');
-      if (onCategorySelect) {
-        onCategorySelect(categoryId);
-      } else {
-        // 如果没有提供回调函数，直接跳转
-        router.push(`/articles?category=${categoryId}`);
-      }
-    }
-  };
 
   return (
     <div
@@ -135,7 +138,8 @@ export default function ArticleCategorySidebar({
           padding: '40px 0',
           textAlign: 'center',
         }}>
-          <Spin tip="加载中..." />
+          <Spin />
+          <div style={{ marginTop: '8px', color: '#999' }}>加载中...</div>
         </div>
       ) : menuItems && menuItems.length > 0 ? (
         <Menu
@@ -149,7 +153,6 @@ export default function ArticleCategorySidebar({
             fontSize: '14px',
           }}
           items={menuItems}
-          onClick={handleMenuClick}
         />
       ) : (
         <Empty
