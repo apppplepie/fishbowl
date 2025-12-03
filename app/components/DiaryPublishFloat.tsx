@@ -13,8 +13,8 @@ interface DiaryPublishFloatProps {
 }
 
 /**
- * 日记发布悬浮按钮
- * 点击后弹出表单，快速发布日记
+ * 日志发布悬浮按钮
+ * 点击后弹出表单，快速发布日志
  */
 export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps) {
   const { user } = useAuth();
@@ -50,10 +50,10 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
       // 生成日期标题
       const title = generateDateTitle();
 
-      // 构建日记内容块（只有一个文本块，内容包含状态、地点和正文）
+      // 构建日志内容块（只有一个文本块，内容包含状态、地点和正文）
       const blocks: any[] = [];
       
-      // 将所有日记信息放入一个文本块
+      // 将所有日志信息放入一个文本块
       let diaryContent = values.content;
       
       // 添加元信息到内容前面（可选）
@@ -70,7 +70,7 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
         content: diaryContent,
       });
 
-      // 调用文章 API 创建日记类型文章
+      // 调用文章 API 创建日志类型文章
       const response = await fetch('/api/articles', {
         method: 'POST',
         headers: {
@@ -79,19 +79,19 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
         },
         body: JSON.stringify({
           title: title,
-          excerpt: diaryContent, // 完整的日记内容（包含元信息）存储在 excerpt 字段
+          excerpt: diaryContent, // 完整的日志内容（包含元信息）存储在 excerpt 字段
           blocks: blocks,
           tags: [],
           status: 'published',
-          type: 'diary', // 指定为日记类型
-          category_id: 'cat_diary', // 自动归类到日记分类
+          type: 'diary', // 指定为日志类型
+          category_id: 'cat_diary', // 自动归类到日志分类
         }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        message.success('日记发布成功！');
+        message.success('日志发布成功！');
         form.resetFields();
         setOpen(false);
         onSuccess?.();
@@ -99,7 +99,7 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
         message.error(data.error || '发布失败');
       }
     } catch (error: any) {
-      console.error('发布日记失败:', error);
+      console.error('发布日志失败:', error);
       message.error('发布失败: ' + error.message);
     } finally {
       setLoading(false);
@@ -113,11 +113,11 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
         type="primary"
         style={{ right: 24, bottom: 24 }}
         onClick={() => setOpen(true)}
-        tooltip="写日记"
+        tooltip="写日志"
       />
 
       <Modal
-        title={`📝 写日记 - ${generateDateTitle()}`}
+        title={`📝 写日志 - ${generateDateTitle()}`}
         open={open}
         onCancel={() => {
           setOpen(false);
@@ -134,8 +134,8 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
         >
           <Form.Item
             name="content"
-            label="日记内容"
-            rules={[{ required: true, message: '请输入日记内容' }]}
+            label="日志内容"
+            rules={[{ required: true, message: '请输入日志内容' }]}
           >
             <TextArea 
               rows={8} 

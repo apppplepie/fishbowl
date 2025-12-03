@@ -32,7 +32,7 @@ export interface ArticleCard extends BaseCard {
   comments?: number;
 }
 
-// C. 日记卡片
+// C. 日志卡片
 export interface DiaryCard extends BaseCard {
   type: 'diary';
   content: string;

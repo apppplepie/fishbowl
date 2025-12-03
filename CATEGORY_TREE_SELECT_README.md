@@ -60,7 +60,7 @@ import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 **文件位置：** `app/publish/page.tsx`
 
 **说明：**
-- 为6种内容类型（图片、文章、日记、引言、视频、链接）都添加了分类选择
+- 为6种内容类型（图片、文章、日志、引言、视频、链接）都添加了分类选择
 - 可以选择任意分类
 - 支持在任意分类下新建子分类
 
