@@ -3,6 +3,21 @@ import { query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
+// 评论类型定义
+interface Comment {
+  id: string;
+  article_id: string;
+  user_id: string;
+  parent_id: string | null;
+  content: string;
+  status: string;
+  created_at: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  replies?: Comment[];
+}
+
 /**
  * GET /api/articles/[id]/comments - 获取文章的所有评论
  */
@@ -23,7 +38,7 @@ export async function GET(
          AND c.status = 'visible'
        ORDER BY c.created_at DESC`,
       [articleId]
-    ) as any[];
+    ) as Comment[];
 
     // 获取所有回复
     const allReplies = await query(
@@ -35,10 +50,10 @@ export async function GET(
          AND c.status = 'visible'
        ORDER BY c.created_at ASC`,
       [articleId]
-    ) as any[];
+    ) as Comment[];
 
-    // 构建评论树
-    const buildCommentTree = (parentId: string) => {
+    // 构建评论树的递归函数
+    const buildCommentTree = (parentId: string): Comment[] => {
       return allReplies
         .filter(reply => reply.parent_id === parentId)
         .map(reply => ({
@@ -47,7 +62,8 @@ export async function GET(
         }));
     };
 
-    const comments = topComments.map(comment => ({
+    // 为每个顶级评论添加回复树
+    const comments: Comment[] = topComments.map(comment => ({
       ...comment,
       replies: buildCommentTree(comment.id),
     }));

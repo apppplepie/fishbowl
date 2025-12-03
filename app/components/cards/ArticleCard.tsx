@@ -107,8 +107,8 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {card.readTime && <span><ClockCircleOutlined /> {card.readTime}min</span>}
-          {card.views !== undefined && <span><EyeOutlined /> {card.views}</span>}
-          {card.comments !== undefined && <span><MessageOutlined /> {card.comments}</span>}
+          {(card.likes !== undefined && card.likes !== null) && <span>❤️ {card.likes}</span>}
+          {(card.comments !== undefined && card.comments !== null) && <span><MessageOutlined /> {card.comments}</span>}
         </div>
       </div>
     </Card>

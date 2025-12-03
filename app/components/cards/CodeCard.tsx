@@ -18,7 +18,7 @@ interface CodeCardProps {
     codeLanguage?: string; // 第一个代码块的语言
     codeBlockCount?: number; // 代码块数量
     tags?: string[]; // 标签
-    views?: number;
+    likes?: number;
     comments?: number;
   };
   onClick?: () => void;
@@ -183,12 +183,12 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#999' }}>
-          {card.views !== undefined && (
+          {(card.likes !== undefined && card.likes !== null) && (
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <EyeOutlined /> {card.views}
+              ❤️ {card.likes}
             </span>
           )}
-          {card.comments !== undefined && (
+          {(card.comments !== undefined && card.comments !== null) && (
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <MessageOutlined /> {card.comments}
             </span>
