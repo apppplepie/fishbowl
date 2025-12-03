@@ -73,84 +73,66 @@ export default function GalleryPage() {
   const router = useRouter();
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [columns, setColumns] = useState<number>(4);
 
-  // 获取绘画类型文章列表（加载完整数据并缓存）
-  const fetchDrawingArticles = async () => {
+  const ITEMS_PER_PAGE = 20; // 每页加载20个作品
+
+  // 获取绘画作品列表（使用优化的 API）
+  const fetchDrawingArticles = async (currentOffset: number, append: boolean = false) => {
     try {
-      setLoading(true);
-      // 获取所有绘画类型文章
-      const response = await fetch('/api/articles?status=published&limit=100');
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      // 使用优化的绘画作品 API，一次查询返回所有需要的数据
+      const response = await fetch(
+        `/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`
+      );
       const data = await response.json();
       
       if (data.success) {
-        // 筛选出绘画类型的文章
-        const drawingArticles = data.articles.filter((a: any) => a.type === 'drawing');
-        
-        // 为每篇文章获取完整数据（包含所有 blocks）
-        const articlesWithFullData = await Promise.all(
-          drawingArticles.map(async (article: any) => {
-            try {
-              const detailRes = await fetch(`/api/articles/${article.id}`);
-              const detailData = await detailRes.json();
-              
-              if (detailData.success) {
-                const articleWithBlocks = detailData.article;
-                
-                // 调试信息
-                console.log('文章详情:', {
-                  id: article.id,
-                  title: article.title,
-                  blocksCount: articleWithBlocks.blocks?.length || 0,
-                  blocks: articleWithBlocks.blocks,
-                });
-                
-                // 获取所有图片块
-                const imageBlocks = articleWithBlocks.blocks?.filter((b: any) => b.type === 'image') || [];
-                
-                if (imageBlocks.length > 0) {
-                  // 找到 order 最大的图片（最后一张）
-                  const lastImage = imageBlocks.reduce((max: any, block: any) => 
-                    block.order > max.order ? block : max
-                  );
-                  
-                  // 返回完整数据，同时添加封面字段
-                  return {
-                    ...articleWithBlocks, // 包含所有 blocks
-                    cover_image_url: lastImage.parsedContent.url,
-                    image_count: imageBlocks.length,
-                  };
-                } else {
-                  console.warn('文章没有图片块:', article.id, article.title);
-                }
-              } else {
-                console.error('获取文章详情失败:', article.id, detailData.error);
-              }
-            } catch (error) {
-              console.error('获取文章详情异常:', article.id, error);
-            }
-            return null;
-          })
-        );
-        
-        // 过滤掉失败的项
-        const validArticles = articlesWithFullData.filter(a => a !== null);
-        console.log('有效文章数量:', validArticles.length, '/', drawingArticles.length);
-        setArticles(validArticles);
+        if (append) {
+          // 追加模式：添加到现有列表，并去重
+          setArticles(prev => {
+            const existingIds = new Set(prev.map(article => article.id));
+            const newArticles = data.articles.filter(
+              (article: any) => !existingIds.has(article.id)
+            );
+            return [...prev, ...newArticles];
+          });
+        } else {
+          // 初始加载模式：替换列表
+          setArticles(data.articles);
+        }
+
+        // 判断是否还有更多数据
+        setHasMore(data.articles.length === ITEMS_PER_PAGE);
+        setOffset(currentOffset + data.articles.length);
+
+        console.log(`加载了 ${data.articles.length} 个作品，总计 ${append ? articles.length + data.articles.length : data.articles.length} 个`);
       } else {
-        message.error('获取文章失败');
+        message.error('获取作品失败');
+        setHasMore(false);
       }
     } catch (error) {
-      console.error('获取文章失败:', error);
-      message.error('获取文章失败');
+      console.error('获取作品失败:', error);
+      message.error('获取作品失败');
+      setHasMore(false);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
+  // 初次加载
   useEffect(() => {
-    fetchDrawingArticles();
+    fetchDrawingArticles(0, false);
   }, []);
 
   // 监听窗口大小变化
@@ -169,9 +151,59 @@ export default function GalleryPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleImageClick = (article: any) => {
-    // 直接使用已缓存的完整数据，无需重新请求
-    setSelectedArticle(article);
+  // 监听滚动，实现无限加载
+  useEffect(() => {
+    const handleScroll = () => {
+      // 如果正在加载或没有更多数据，不触发
+      if (loading || loadingMore || !hasMore) return;
+
+      // 计算是否滚动到底部
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+
+      // 距离底部 300px 时开始加载
+      if (scrollHeight - scrollTop - clientHeight < 300) {
+        fetchDrawingArticles(offset, true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [offset, loading, loadingMore, hasMore]);
+
+  const handleImageClick = async (article: any) => {
+    // 如果文章已经有完整的 blocks 数据，直接使用
+    if (article.blocks && article.blocks.length > 0) {
+      setSelectedArticle(article);
+      return;
+    }
+
+    // 否则，需要获取完整的文章数据（包含所有 blocks）
+    try {
+      const detailRes = await fetch(`/api/articles/${article.id}`);
+      const detailData = await detailRes.json();
+      
+      if (detailData.success) {
+        // 合并列表数据和详情数据
+        const fullArticle = {
+          ...article,
+          blocks: detailData.article.blocks,
+        };
+        
+        // 更新缓存
+        setArticles(prev => 
+          prev.map(a => a.id === article.id ? fullArticle : a)
+        );
+        
+        setSelectedArticle(fullArticle);
+      } else {
+        message.error('获取作品详情失败');
+      }
+    } catch (error) {
+      console.error('获取作品详情失败:', error);
+      message.error('获取作品详情失败');
+    }
   };
 
   const handleTitleClick = (article: any) => {
@@ -201,21 +233,50 @@ export default function GalleryPage() {
             <p style={{ fontSize: '14px' }}>点击右下角按钮发布你的第一个绘画作品吧！</p>
           </div>
         ) : (
-          <Masonry
-            columns={columns}
-            gutter={16}
-            items={articles.map((article, index) => ({
-              key: article.id,
-              data: article,
-              index: index,
-            }))}
-            itemRender={({ data }) => (
-              <GalleryImage
-                article={data}
-                onClick={() => handleImageClick(data)}
-              />
+          <>
+            <Masonry
+              columns={columns}
+              gutter={16}
+              items={articles.map((article, index) => ({
+                key: article.id,
+                data: article,
+                index: index,
+              }))}
+              itemRender={({ data }) => (
+                <GalleryImage
+                  article={data}
+                  onClick={() => handleImageClick(data)}
+                />
+              )}
+            />
+
+            {/* 加载更多提示 */}
+            {loadingMore && (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 0',
+                color: '#999',
+              }}>
+                <Spin size="large" />
+                <div style={{ marginTop: '12px', fontSize: '14px' }}>
+                  加载更多作品...
+                </div>
+              </div>
             )}
-          />
+
+            {/* 没有更多数据提示 */}
+            {!hasMore && articles.length > 0 && (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 0',
+                color: '#999',
+                fontSize: '14px',
+              }}>
+                <div style={{ marginBottom: '8px' }}>🎨</div>
+                已经到底了，没有更多作品啦~
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -238,7 +299,14 @@ export default function GalleryPage() {
       </Modal>
 
       {/* 发布悬浮按钮 */}
-      <GalleryPublishFloat onSuccess={fetchDrawingArticles} />
+      <GalleryPublishFloat 
+        onSuccess={() => {
+          // 重新加载列表
+          setOffset(0);
+          setHasMore(true);
+          fetchDrawingArticles(0, false);
+        }} 
+      />
     </PageLayout>
   );
 }

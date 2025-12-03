@@ -19,10 +19,10 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
   const extractDiaryData = () => {
     const rawContent = card.content || card.excerpt || '';
     
-    // 解析元信息（格式：心情：😊 | 天气：☀️ | 地点：北京\n\n正文内容）
+    // 解析元信息（新格式：状态：😊 | 地点：北京\n\n正文内容）
+    // 也兼容旧格式（心情：😊 | 天气：☀️ | 地点：北京）
     const lines = rawContent.split('\n');
-    let mood = card.mood || '😊';
-    let weather = card.weather || '';
+    let status = card.status || card.mood || card.weather || '';
     let location = card.location || '';
     let content = rawContent;
     
@@ -32,11 +32,18 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
       const parts = metaLine.split('|').map((p: string) => p.trim());
       
       parts.forEach((part: string) => {
-        if (part.startsWith('心情：')) {
-          mood = part.replace('心情：', '').trim();
+        // 新格式
+        if (part.startsWith('状态：')) {
+          status = part.replace('状态：', '').trim();
+        } 
+        // 兼容旧格式
+        else if (part.startsWith('心情：')) {
+          status = part.replace('心情：', '').trim();
         } else if (part.startsWith('天气：')) {
-          weather = part.replace('天气：', '').trim();
-        } else if (part.startsWith('地点：')) {
+          status = part.replace('天气：', '').trim();
+        } 
+        // 地点
+        else if (part.startsWith('地点：')) {
           location = part.replace('地点：', '').trim();
         }
       });
@@ -50,15 +57,16 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
       }
     }
     
-    return { mood, weather, location, content };
+    return { status, location, content };
   };
 
-  const { mood, weather, location, content } = extractDiaryData();
+  const { status, location, content } = extractDiaryData();
 
-  // 根据心情/天气/随机生成渐变背景色
+  // 根据状态/随机生成渐变背景色
   const getCardGradient = () => {
-    // 心情对应的颜色
-    const moodColors: { [key: string]: string } = {
+    // 状态对应的颜色（合并了心情和天气）
+    const statusColors: { [key: string]: string } = {
+      // 心情
       '😊': 'linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%)', // 开心 - 黄色
       '😢': 'linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%)', // 难过 - 蓝紫色
       '😍': 'linear-gradient(135deg, #fbc2eb 0%, #f093fb 100%)', // 幸福 - 粉紫色
@@ -67,10 +75,7 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
       '🤔': 'linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)', // 思考 - 紫黄色
       '💪': 'linear-gradient(135deg, #f77062 0%, #fe5196 100%)', // 充满动力 - 红粉色
       '😌': 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', // 平静 - 淡紫蓝色
-    };
-
-    // 天气对应的颜色
-    const weatherColors: { [key: string]: string } = {
+      // 天气
       '☀️': 'linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%)', // 晴天 - 金黄色
       '⛅': 'linear-gradient(135deg, #fbc8d4 0%, #9795f0 100%)', // 多云 - 粉蓝色
       '☁️': 'linear-gradient(135deg, #d7dde8 0%, #b8c6db 100%)', // 阴天 - 灰蓝色
@@ -92,13 +97,9 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
       'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)',
     ];
 
-    // 优先级：天气 > 心情 > 随机
-    if (weather && weatherColors[weather]) {
-      return weatherColors[weather];
-    }
-    
-    if (mood && moodColors[mood]) {
-      return moodColors[mood];
+    // 优先使用状态颜色
+    if (status && statusColors[status]) {
+      return statusColors[status];
     }
     
     // 使用卡片 ID 或标题生成一个稳定的随机索引（避免每次渲染颜色都变）
@@ -132,7 +133,7 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
         </h4>
       )}
 
-      {/* 日期和心情 */}
+      {/* 日期和状态 */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -142,7 +143,7 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
         color: '#666',
       }}>
         <span>📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt)}</span>
-        <span>{mood}</span>
+        {status && <span>{status}</span>}
       </div>
 
       {/* 日记内容 */}
@@ -161,7 +162,7 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
       </p>
 
       {/* 底部信息 */}
-      {(weather || location) && (
+      {location && (
         <div style={{
           display: 'flex',
           gap: '12px',
@@ -170,8 +171,7 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
           paddingTop: '12px',
           borderTop: '1px solid rgba(0,0,0,0.1)',
         }}>
-          {weather && <span>{weather}</span>}
-          {location && <span>📍 {location}</span>}
+          <span>📍 {location}</span>
         </div>
       )}
     </Card>

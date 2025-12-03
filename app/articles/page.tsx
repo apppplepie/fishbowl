@@ -66,62 +66,6 @@ export default function ArticlesPage() {
     loadTags();
   }, []);
 
-  // 处理文章数据（提取图片/代码预览）
-  const processArticles = async (articles: any[]) => {
-    return await Promise.all(
-      articles.map(async (article: any) => {
-        // 如果是图片、代码或绘画类型，需要获取块信息
-        if (article.type === 'image' || article.type === 'code' || article.type === 'drawing') {
-          try {
-            const detailRes = await fetch(`/api/articles/${article.id}`);
-            const detailResult = await detailRes.json();
-            if (detailRes.ok && detailResult.success) {
-              const articleWithBlocks = detailResult.article;
-              
-              // 图片类型：提取第一个图片块
-              if (article.type === 'image') {
-                const firstImageBlock = articleWithBlocks.blocks.find(
-                  (b: any) => b.type === 'image'
-                );
-                if (firstImageBlock) {
-                  article.firstImageUrl = firstImageBlock.parsedContent.url;
-                }
-              }
-              
-              // 绘画类型：提取 order 最大的图片块（最后一张）
-              if (article.type === 'drawing') {
-                const imageBlocks = articleWithBlocks.blocks
-                  .filter((b: any) => b.type === 'image')
-                  .sort((a: any, b: any) => b.order - a.order); // 按 order 降序排列
-                
-                if (imageBlocks.length > 0) {
-                  article.firstImageUrl = imageBlocks[0].parsedContent.url;
-                  article.imageCount = imageBlocks.length;
-                }
-              }
-              
-              // 代码类型：提取第一个代码块预览
-              if (article.type === 'code') {
-                const codeBlocks = articleWithBlocks.blocks.filter(
-                  (b: any) => b.type === 'code'
-                );
-                if (codeBlocks.length > 0) {
-                  article.codePreview = codeBlocks[0].parsedContent.code;
-                  article.codeLanguage = codeBlocks[0].parsedContent.language;
-                  article.codeBlockCount = codeBlocks.length;
-                }
-              }
-            }
-          } catch (error) {
-            console.error('获取文章详情失败:', error);
-          }
-        }
-        
-        return article;
-      })
-    );
-  };
-
   // 加载文章数据（支持分批加载）
   const loadArticles = async (currentOffset: number, append: boolean = false) => {
     try {
@@ -131,26 +75,28 @@ export default function ArticlesPage() {
         setLoading(true);
       }
 
+      // 使用优化的列表 API，一次查询返回所有预览数据
       const response = await fetch(
-        `/api/articles?status=published&limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`
+        `/api/articles/list?status=published&limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`
       );
       const result = await response.json();
       
       if (response.ok && result.success) {
-        const processedArticles = await processArticles(result.articles);
+        // API 已经返回了所有需要的预览数据，无需额外处理
+        const articles = result.articles;
         
         if (append) {
           // 追加模式：添加到现有列表，并去重
           setCards(prev => {
             const existingIds = new Set(prev.map(card => card.id));
-            const newArticles = processedArticles.filter(
-              article => !existingIds.has(article.id)
+            const newArticles = articles.filter(
+              (article: any) => !existingIds.has(article.id)
             );
             return [...prev, ...newArticles];
           });
         } else {
           // 初始加载模式：替换列表
-          setCards(processedArticles);
+          setCards(articles);
         }
 
         // 判断是否还有更多数据

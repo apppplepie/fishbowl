@@ -50,7 +50,7 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
       // 生成日期标题
       const title = generateDateTitle();
 
-      // 构建日记内容块（只有一个文本块，内容包含心情、天气、地点和正文）
+      // 构建日记内容块（只有一个文本块，内容包含状态、地点和正文）
       const blocks: any[] = [];
       
       // 将所有日记信息放入一个文本块
@@ -58,8 +58,7 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
       
       // 添加元信息到内容前面（可选）
       const metadata: string[] = [];
-      if (values.mood) metadata.push(`心情：${values.mood}`);
-      if (values.weather) metadata.push(`天气：${values.weather}`);
+      if (values.status) metadata.push(`状态：${values.status}`);
       if (values.location) metadata.push(`地点：${values.location}`);
       
       if (metadata.length > 0) {
@@ -132,9 +131,6 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
           layout="vertical"
           onFinish={handleSubmit}
           style={{ marginTop: 24 }}
-          initialValues={{
-            mood: '😊',
-          }}
         >
           <Form.Item
             name="content"
@@ -152,11 +148,11 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
 
           <div style={{ display: 'flex', gap: '12px' }}>
             <Form.Item
-              name="mood"
-              label="心情"
+              name="status"
+              label="状态"
               style={{ flex: 1 }}
             >
-              <Select size="large">
+              <Select size="large" placeholder="选择状态" allowClear>
                 <Option value="😊">😊 开心</Option>
                 <Option value="😢">😢 难过</Option>
                 <Option value="😍">😍 幸福</Option>
@@ -165,15 +161,6 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
                 <Option value="🤔">🤔 思考</Option>
                 <Option value="💪">💪 充满动力</Option>
                 <Option value="😌">😌 平静</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="weather"
-              label="天气"
-              style={{ flex: 1 }}
-            >
-              <Select size="large" placeholder="选择天气" allowClear>
                 <Option value="☀️">☀️ 晴天</Option>
                 <Option value="⛅">⛅ 多云</Option>
                 <Option value="☁️">☁️ 阴天</Option>
@@ -183,14 +170,16 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
                 <Option value="🌙">🌙 夜晚</Option>
               </Select>
             </Form.Item>
+
+            <Form.Item
+              name="location"
+              label="地点"
+              style={{ flex: 1 }}
+            >
+              <Input placeholder="在哪里？" size="large" prefix="📍" />
+            </Form.Item>
           </div>
 
-          <Form.Item
-            name="location"
-            label="地点"
-          >
-            <Input placeholder="在哪里？" size="large" prefix="📍" />
-          </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Button 
