@@ -51,6 +51,9 @@ export default function ArticlesPage() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
+  // 打开目录抽屉的函数
+  const openCategoryDrawer = () => setDrawerVisible(true);
+
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
   // 加载所有可用标签
@@ -244,7 +247,11 @@ export default function ArticlesPage() {
   return (
     <>
       {/* Header 独立在最顶部，覆盖在边框上 */}
-      <Header />
+      <Header
+        leftContent={
+          <CategoryDrawerButton onClick={openCategoryDrawer} />
+        }
+      />
       
       <PageLayout
         box1Content={
@@ -412,9 +419,6 @@ export default function ArticlesPage() {
         onCategorySelect={handleCategorySelect}
         selectedCategoryId={selectedCategoryId}
       />
-
-      {/* 目录抽屉按钮 */}
-      <CategoryDrawerButton onClick={() => setDrawerVisible(true)} />
 
       {/* 日记发布悬浮按钮 */}
       <DiaryPublishFloat
