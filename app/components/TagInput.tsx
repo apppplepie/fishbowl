@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tag, Input, AutoComplete, Space, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import type { InputRef } from 'antd';
 
 interface TagInputProps {
   value?: string[];
@@ -35,7 +34,7 @@ export default function TagInput({
   const [allTags, setAllTags] = useState<TagOption[]>([]);
   const [filteredOptions, setFilteredOptions] = useState<{ value: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<any>(null);
 
   // 加载所有标签
   useEffect(() => {

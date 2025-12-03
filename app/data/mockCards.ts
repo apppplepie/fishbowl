@@ -19,7 +19,7 @@ export const mockCards: Card[] = [
   
   // 文章卡片 - 纯文字文章（来自数据库）
   {
-    id: 'article_1',
+    id: 13,
     type: 'article',
     title: '关于写作的一些思考',
     excerpt: '一篇简单的文章，分享关于写作的思考和感悟。写作不仅是记录，更是与自己对话的过程。',
@@ -34,7 +34,7 @@ export const mockCards: Card[] = [
 
   // 文章卡片 - 包含文字、图片、代码的混合文章（来自数据库）
   {
-    id: 'article_2',
+    id: 14,
     type: 'article',
     title: '全栈开发入门：从前端到后端的完整示例',
     excerpt: '通过实际代码示例，带你了解全栈开发的基本流程。包括 React 前端组件、Next.js API 后端接口，以及前后端通信的完整实现。',

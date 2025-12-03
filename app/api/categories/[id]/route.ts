@@ -13,12 +13,13 @@ import { query } from '@/lib/db';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const category = await query(
       'SELECT * FROM categories WHERE id = ?',
-      [params.id]
+      [id]
     );
 
     if (!category || (category as any[]).length === 0) {
@@ -44,9 +45,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { name, parent_id, order_index } = body;
 
@@ -74,7 +76,7 @@ export async function PUT(
       );
     }
 
-    values.push(params.id);
+    values.push(id);
 
     await query(
       `UPDATE categories SET ${updates.join(', ')} WHERE id = ?`,
@@ -96,13 +98,14 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // 检查是否有文章使用此分类
     const articles = await query<any[]>(
       'SELECT COUNT(*) as count FROM articles WHERE category_id = ?',
-      [params.id]
+      [id]
     );
 
     if (articles[0].count > 0) {
@@ -112,7 +115,7 @@ export async function DELETE(
       );
     }
 
-    await query('DELETE FROM categories WHERE id = ?', [params.id]);
+    await query('DELETE FROM categories WHERE id = ?', [id]);
 
     return NextResponse.json({ success: true, message: '分类删除成功' });
   } catch (error) {

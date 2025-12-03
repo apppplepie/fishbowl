@@ -52,7 +52,14 @@ export default function ArticleCategorySidebar({
       return {
         key: `category-${category.id}`,
         icon: <FolderOutlined />,
-        label: category.name,
+        label: (
+          <span
+            style={{ fontWeight: 500, cursor: 'pointer' }}
+            onClick={() => handleCategoryTextClick(category.id)}
+          >
+            {category.name}
+          </span>
+        ),
         children: children.length > 0 ? children : undefined,
       };
     });
@@ -82,6 +89,18 @@ export default function ArticleCategorySidebar({
     return categories
       .filter(cat => cat.parent_id === null)
       .map(cat => `category-${cat.id}`);
+  };
+
+  /**
+   * 处理目录文字点击
+   */
+  const handleCategoryTextClick = (categoryId: string) => {
+    if (onCategorySelect) {
+      onCategorySelect(categoryId);
+    } else {
+      // 如果没有提供回调函数，直接跳转
+      router.push(`/articles?category=${categoryId}`);
+    }
   };
 
   /**
@@ -136,7 +155,6 @@ export default function ArticleCategorySidebar({
         height: '100%',
         overflowY: 'auto',
         overflowX: 'hidden',
-        padding: '16px 0',
       }}
     >
       {loading ? (
