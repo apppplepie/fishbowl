@@ -1,0 +1,94 @@
+/* 文章筛选样式 - 标签选择框和搜索框 */
+
+/* ==================== 标签选择框样式 ==================== */
+.tag-select-transparent .ant-select-selector,
+.tag-select-transparent.ant-select:not(.ant-select-disabled):not(.ant-select-customize-input):not(.ant-pagination-size-changer):hover .ant-select-selector,
+.tag-select-transparent.ant-select-focused:not(.ant-select-disabled):not(.ant-select-customize-input):not(.ant-pagination-size-changer) .ant-select-selector,
+.tag-select-transparent.ant-select-open .ant-select-selector {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.tag-select-transparent .ant-select-selection-placeholder {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.tag-select-transparent .ant-select-arrow {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.tag-select-transparent .ant-select-clear {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* ==================== 搜索框样式 ==================== */
+.search-input-transparent .ant-input-affix-wrapper,
+.search-input-transparent .ant-input-affix-wrapper:hover,
+.search-input-transparent .ant-input-affix-wrapper:focus,
+.search-input-transparent .ant-input-affix-wrapper-focused,
+.search-input-transparent .ant-input-affix-wrapper:focus-within {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.search-input-transparent .ant-input {
+  background: transparent !important;
+  color: white !important;
+}
+
+.search-input-transparent .ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.search-input-transparent .ant-input-clear-icon,
+.search-input-transparent .anticon {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.search-input-transparent .ant-input-group-addon {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border: none !important;
+}
+
+.search-input-transparent .ant-btn-primary,
+.search-input-transparent .ant-btn-primary:hover,
+.search-input-transparent .ant-btn-primary:focus,
+.search-input-transparent .ant-btn-primary:active {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: none !important;
+}
+
+.search-input-transparent .ant-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* ==================== 标签云样式 ==================== */
+.tag-cloud-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-cloud-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.tag-cloud-item:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.tag-cloud-item.selected {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: scale(1.05);
+}
+

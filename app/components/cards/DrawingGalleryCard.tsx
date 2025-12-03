@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card } from 'antd';
+import { Card, Tag } from 'antd';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 
 // 注入 CSS 动画
@@ -27,6 +27,7 @@ interface DrawingGalleryCardProps {
     excerpt?: string;
     author: string;
     last_modified: string;
+    tags?: string[]; // 标签
     blocks: Array<{
       id: string;
       type: string;
@@ -336,6 +337,27 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
         >
           {article.title}
         </h4>
+
+        {/* 标签 */}
+        {article.tags && article.tags.length > 0 && (
+          <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {article.tags.slice(0, 5).map((tag: string, index: number) => {
+              const colors = ['magenta', 'volcano', 'orange', 'gold', 'purple', 'geekblue', 'blue', 'cyan', 'green', 'lime'];
+              const color = colors[index % colors.length];
+              return (
+                <Tag key={index} color={color}>
+                  {tag}
+                </Tag>
+              );
+            })}
+            {article.tags.length > 5 && (
+              <Tag color="default">
+                +{article.tags.length - 5}
+              </Tag>
+            )}
+          </div>
+        )}
+
         {article.excerpt && (
           <p style={{
             margin: '0 0 14px 0',

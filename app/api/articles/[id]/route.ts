@@ -146,6 +146,55 @@ export async function PUT(
       }
     }
 
+    // 如果提供了标签数据，更新标签
+    if (body.tags !== undefined && Array.isArray(body.tags)) {
+      // 删除旧的文章-标签关联
+      await query(
+        `DELETE FROM article_tags WHERE article_id = ?`,
+        [articleId]
+      );
+
+      // 重新插入标签关联
+      for (const tagName of body.tags) {
+        if (!tagName || typeof tagName !== 'string') continue;
+        
+        const trimmedTagName = tagName.trim();
+        if (!trimmedTagName) continue;
+
+        // 查找或创建标签
+        let tagId: string;
+        const existingTags = await query<any[]>(
+          'SELECT id FROM tags WHERE name = ?',
+          [trimmedTagName]
+        );
+
+        if (existingTags.length > 0) {
+          tagId = existingTags[0].id;
+        } else {
+          // 创建新标签
+          const { v4: uuidv4 } = await import('uuid');
+          tagId = uuidv4();
+          await query(
+            'INSERT INTO tags (id, name) VALUES (?, ?)',
+            [tagId, trimmedTagName]
+          );
+        }
+
+        // 建立文章-标签关联
+        try {
+          await query(
+            'INSERT INTO article_tags (article_id, tag_id) VALUES (?, ?)',
+            [articleId, tagId]
+          );
+        } catch (error: any) {
+          // 忽略重复关联错误
+          if (error.code !== 'ER_DUP_ENTRY') {
+            throw error;
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: '文章更新成功',
@@ -289,12 +338,23 @@ export async function GET(
       }
     });
 
-    // 4. 组合返回
+    // 4. 获取文章的标签
+    const tags = await query<any[]>(
+      `SELECT t.id, t.name 
+       FROM tags t
+       JOIN article_tags at ON t.id = at.tag_id
+       WHERE at.article_id = ?
+       ORDER BY t.name ASC`,
+      [articleId]
+    );
+
+    // 5. 组合返回
     return NextResponse.json({
       success: true,
       article: {
         ...article,
         blocks: parsedBlocks,
+        tags: tags.map((t: any) => t.name),
       },
     });
 

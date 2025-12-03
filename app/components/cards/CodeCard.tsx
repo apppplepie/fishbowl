@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card } from 'antd';
+import { Card, Tag } from 'antd';
 import { CodeOutlined, EyeOutlined, MessageOutlined } from '@ant-design/icons';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 
@@ -17,6 +17,7 @@ interface CodeCardProps {
     codePreview?: string; // 第一个代码块的预览
     codeLanguage?: string; // 第一个代码块的语言
     codeBlockCount?: number; // 代码块数量
+    tags?: string[]; // 标签
     views?: number;
     comments?: number;
   };
@@ -69,6 +70,26 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
             {card.title}
           </h3>
         </div>
+
+        {/* 标签 */}
+        {card.tags && card.tags.length > 0 && (
+          <div style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {card.tags.slice(0, 5).map((tag: string, index: number) => {
+              const colors = ['geekblue', 'blue', 'cyan', 'purple', 'magenta', 'volcano', 'orange', 'gold', 'lime', 'green'];
+              const color = colors[index % colors.length];
+              return (
+                <Tag key={index} color={color}>
+                  {tag}
+                </Tag>
+              );
+            })}
+            {card.tags.length > 5 && (
+              <Tag color="default">
+                +{card.tags.length - 5}
+              </Tag>
+            )}
+          </div>
+        )}
 
         {/* 摘要 */}
         {card.excerpt && (

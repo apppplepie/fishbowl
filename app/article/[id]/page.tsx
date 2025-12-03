@@ -14,6 +14,7 @@ import ArticleTocDrawer from '@/app/components/ArticleTocDrawer';
 import ArticleEditFloat, { EditMode } from '@/app/components/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
+import TagInput from '@/app/components/TagInput';
 import CommentSection from '@/app/components/CommentSection';
 import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter } from 'next/navigation';
@@ -299,6 +300,7 @@ export default function ArticlePage() {
           title: editedArticle.title,
           type: editedArticle.type || 'text',
           category_id: editedArticle.category_id || null,
+          tags: editedArticle.tags || [],
           blocks: editedArticle.editorBlocks || [],
         };
 
@@ -691,6 +693,28 @@ export default function ArticlePage() {
                       选择文章的分类目录，方便管理和查找
                     </div>
                   </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#666',
+                    }}>
+                      文章标签
+                    </label>
+                    <TagInput
+                      value={editedArticle?.tags || []}
+                      onChange={(tags) => {
+                        if (editedArticle) {
+                          setEditedArticle({ ...editedArticle, tags });
+                        }
+                      }}
+                      placeholder="输入标签，按空格或回车添加"
+                      maxTags={10}
+                    />
+                  </div>
                   
                   <div style={{
                     display: 'flex',
@@ -747,6 +771,23 @@ export default function ArticlePage() {
                       <span>更新：{formatTimeToMinute(editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified)}</span>
                     </span>
                   </div>
+
+                  {/* 显示标签 */}
+                  {(editMode === 'preview' ? editedArticle?.tags : article?.tags)?.length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <Space size={[8, 8]} wrap>
+                        {(editMode === 'preview' ? editedArticle?.tags : article?.tags).map((tag: string, index: number) => {
+                          const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
+                          const color = colors[index % colors.length];
+                          return (
+                            <Tag key={index} color={color} style={{ fontSize: '14px', padding: '4px 12px' }}>
+                              {tag}
+                            </Tag>
+                          );
+                        })}
+                      </Space>
+                    </div>
+                  )}
                 </>
               )}
             </div>

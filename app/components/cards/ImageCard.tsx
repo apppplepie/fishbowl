@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card } from 'antd';
+import { Card, Tag } from 'antd';
 import { HeartOutlined, HeartFilled } from '@ant-design/icons';
 import type { ImageCard as ImageCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
@@ -74,6 +74,27 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
               {card.title}
             </h4>
           )}
+
+          {/* 标签 */}
+          {card.tags && card.tags.length > 0 && (
+            <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {card.tags.slice(0, 5).map((tag: string, index: number) => {
+                const colors = ['cyan', 'blue', 'geekblue', 'purple', 'magenta', 'red', 'volcano', 'orange', 'gold', 'green'];
+                const color = colors[index % colors.length];
+                return (
+                  <Tag key={index} color={color}>
+                    {tag}
+                  </Tag>
+                );
+              })}
+              {card.tags.length > 5 && (
+                <Tag color="default">
+                  +{card.tags.length - 5}
+                </Tag>
+              )}
+            </div>
+          )}
+
           {(card.description || card.excerpt) && (
             <p style={{
               margin: 0,
