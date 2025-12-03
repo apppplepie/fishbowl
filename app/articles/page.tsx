@@ -13,6 +13,7 @@ import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import DiaryPublishFloat from '@/app/components/DiaryPublishFloat';
+import ArticleCategoryDrawer, { CategoryDrawerButton } from '@/app/components/ArticleCategoryDrawer';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import '../styles/articles-filter.css';
@@ -46,6 +47,10 @@ export default function ArticlesPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 选中的标签
   const [searchKeyword, setSearchKeyword] = useState(''); // 搜索关键词
 
+  // 目录抽屉状态
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
   // 加载所有可用标签
@@ -67,7 +72,7 @@ export default function ArticlesPage() {
   }, []);
 
   // 加载文章数据（支持分批加载）
-  const loadArticles = async (currentOffset: number, append: boolean = false) => {
+  const loadArticles = async (currentOffset: number, append: boolean = false, categoryId?: string | null) => {
     try {
       if (append) {
         setLoadingMore(true);
@@ -75,10 +80,19 @@ export default function ArticlesPage() {
         setLoading(true);
       }
 
+      // 构建查询参数
+      const params = new URLSearchParams({
+        status: 'published',
+        limit: ITEMS_PER_PAGE.toString(),
+        offset: currentOffset.toString(),
+      });
+
+      if (categoryId) {
+        params.append('categoryId', categoryId);
+      }
+
       // 使用优化的列表 API，一次查询返回所有预览数据
-      const response = await fetch(
-        `/api/articles/list?status=published&limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`
-      );
+      const response = await fetch(`/api/articles/list?${params.toString()}`);
       const result = await response.json();
       
       if (response.ok && result.success) {
@@ -125,8 +139,8 @@ export default function ArticlesPage() {
 
   // 初次加载
   useEffect(() => {
-    loadArticles(0, false);
-  }, []);
+    loadArticles(0, false, selectedCategoryId);
+  }, [selectedCategoryId]);
 
   // 过滤文章
   const filteredCards = useMemo(() => {
@@ -178,6 +192,16 @@ export default function ArticlesPage() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [offset, loading, loadingMore, hasMore]);
+
+  // 处理分类选择
+  const handleCategorySelect = (categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+    setOffset(0);
+    setHasMore(true);
+    // 重置标签和搜索筛选
+    setSelectedTags([]);
+    setSearchKeyword('');
+  };
 
   // 点击卡片处理
   const handleCardClick = (card: any) => {
@@ -246,7 +270,7 @@ export default function ArticlesPage() {
                   maxTagCount="responsive"
                   tokenSeparators={[' ']} // 空格自动分隔
                   tagRender={(props) => {
-                    const { label, value, closable, onClose } = props;
+                    const { label, value } = props;
                     const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
                     const tagIndex = allTags.indexOf(value as string);
                     const color = tagIndex >= 0 
@@ -256,8 +280,7 @@ export default function ArticlesPage() {
                     return (
                       <Tag
                         color={color}
-                        closable={closable}
-                        onClose={onClose}
+                        closable={false}
                         style={{ marginRight: 3 }}
                       >
                         {label}
@@ -285,12 +308,16 @@ export default function ArticlesPage() {
             </div>
 
             {/* 筛选结果提示 */}
-            {(selectedTags.length > 0 || searchKeyword) && (
+            {(selectedTags.length > 0 || searchKeyword || selectedCategoryId) && (
               <div style={{
                 marginTop: '12px',
                 fontSize: '13px',
                 color: 'rgba(255, 255, 255, 0.9)',
               }}>
+                {selectedCategoryId && (
+                  <span>分类筛选中</span>
+                )}
+                {selectedCategoryId && (selectedTags.length > 0 || searchKeyword) && <span> · </span>}
                 {selectedTags.length > 0 && (
                   <span>已选 <strong>{selectedTags.length}</strong> 个标签</span>
                 )}
@@ -378,14 +405,25 @@ export default function ArticlesPage() {
         </div>
       </PageLayout>
 
+      {/* 目录抽屉 */}
+      <ArticleCategoryDrawer
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+        onCategorySelect={handleCategorySelect}
+        selectedCategoryId={selectedCategoryId}
+      />
+
+      {/* 目录抽屉按钮 */}
+      <CategoryDrawerButton onClick={() => setDrawerVisible(true)} />
+
       {/* 日记发布悬浮按钮 */}
-      <DiaryPublishFloat 
+      <DiaryPublishFloat
         onSuccess={() => {
           message.success('日记发布成功！');
           // 重新加载文章列表
           setOffset(0);
           setHasMore(true);
-          loadArticles(0, false);
+          loadArticles(0, false, selectedCategoryId);
         }}
       />
 

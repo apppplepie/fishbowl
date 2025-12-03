@@ -24,12 +24,12 @@ import BlockEditor from '@/app/components/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import type { Block as BlockType } from '@/app/types/block';
-import { 
-  getArticleWithBlocks, 
-  type Block, 
-  type TextBlockContent, 
-  type ImageBlockContent, 
-  type CodeBlockContent 
+import {
+  getArticleWithBlocks,
+  type Block,
+  type TextBlockContent,
+  type ImageBlockContent,
+  type CodeBlockContent
 } from '@/app/data/mockDatabase';
 
 const { TextArea } = Input;
@@ -45,7 +45,7 @@ export default function ArticlePage() {
   const { isMobile } = useResponsive();
   const { isLoggedIn, user } = useAuth();
   const [tocDrawerOpen, setTocDrawerOpen] = useState(false);
-  
+
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
 
@@ -73,7 +73,7 @@ export default function ArticlePage() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [editMode]);
-  
+
   // 从数据源获取文章
   const [article, setArticle] = useState<any>(null);
   const [categoryPath, setCategoryPath] = useState<Array<{ id: string; name: string }>>([]);
@@ -96,7 +96,7 @@ export default function ArticlePage() {
     try {
       const response = await fetch(`/api/categories/${categoryId}/path`);
       const result = await response.json();
-      
+
       if (result.success && result.path) {
         setCategoryPath(result.path);
       }
@@ -118,7 +118,7 @@ export default function ArticlePage() {
           setEditedArticle(result.article);
           setLikesCount(result.article.likes || 0);
           setCommentsCount(result.article.comments || 0);
-          
+
           // 如果文章有分类，获取分类路径
           if (result.article.category_id) {
             fetchCategoryPath(result.article.category_id);
@@ -306,7 +306,7 @@ export default function ArticlePage() {
 
         // 获取 Token
         const token = localStorage.getItem('token');
-        
+
         if (!token) {
           message.error({ content: '请先登录', key: 'save' });
           return;
@@ -370,7 +370,7 @@ export default function ArticlePage() {
     try {
       // 获取 Token
       const token = localStorage.getItem('token');
-      
+
       if (!token) {
         message.error('请先登录');
         return;
@@ -413,7 +413,7 @@ export default function ArticlePage() {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       if (isLiked) {
         // 取消点赞
         const response = await fetch(`/api/articles/${articleId}/like`, {
@@ -462,7 +462,7 @@ export default function ArticlePage() {
   return (
     <>
       {/* Header 覆盖在PageLayout顶部边框上 */}
-      <Header 
+      <Header
         leftContent={
           isMobile ? (
             <Button
@@ -474,7 +474,7 @@ export default function ArticlePage() {
           ) : null
         }
       />
-      
+
       {/* 移动端目录抽屉 */}
       <ArticleTocDrawer
         open={tocDrawerOpen}
@@ -486,9 +486,9 @@ export default function ArticlePage() {
       {/* 编辑悬浮按钮 - 仅文章作者、管理员或版主可见 */}
       {isLoggedIn && article && user && (
         // 检查权限：作者本人、管理员或版主
-        (article.author === user.username || 
-         user.role === 'admin' || 
-         user.role === 'moderator') && (
+        (article.author === user.username ||
+          user.role === 'admin' ||
+          user.role === 'moderator') && (
           <ArticleEditFloat
             mode={editMode}
             onEdit={handleEdit}
@@ -519,17 +519,17 @@ export default function ArticlePage() {
             overflowY: 'auto',
           }}
         >
-          <ArticleTocNav 
+          <ArticleTocNav
             currentArticleId={articleId}
             onArticleClick={handleArticleClick}
           />
         </div>
       )}
-      
+
       <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
         <PageLayout
           box1Content={
-            <div style={{ 
+            <div style={{
               padding: '12px 24px',
               color: 'white',
               fontSize: '14px',
@@ -637,9 +637,9 @@ export default function ArticlePage() {
                       <Option value="diary">📔 日记</Option>
                     </Select>
                     {(editedArticle?.type === 'drawing' || editedArticle?.type === 'image') && (
-                      <div style={{ 
-                        marginTop: '8px', 
-                        color: '#faad14', 
+                      <div style={{
+                        marginTop: '8px',
+                        color: '#faad14',
                         fontSize: '12px',
                         display: 'flex',
                         alignItems: 'center',
@@ -650,9 +650,9 @@ export default function ArticlePage() {
                       </div>
                     )}
                     {editedArticle?.type === 'code' && (
-                      <div style={{ 
-                        marginTop: '8px', 
-                        color: '#faad14', 
+                      <div style={{
+                        marginTop: '8px',
+                        color: '#faad14',
                         fontSize: '12px',
                         display: 'flex',
                         alignItems: 'center',
@@ -674,7 +674,7 @@ export default function ArticlePage() {
                     }}>
                       文章目录
                     </label>
-                    <CategoryTreeSelect 
+                    <CategoryTreeSelect
                       value={editedArticle?.category_id}
                       onChange={(value) => {
                         if (editedArticle) {
@@ -715,7 +715,7 @@ export default function ArticlePage() {
                       maxTags={10}
                     />
                   </div>
-                  
+
                   <div style={{
                     display: 'flex',
                     gap: '24px',
@@ -725,16 +725,10 @@ export default function ArticlePage() {
                     borderTop: '1px solid #e8e8e8',
                   }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>👤</span>
                       <span>作者：<strong style={{ color: '#1a1a1a' }}>{editedArticle?.author}</strong></span>
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>📅</span>
-                      <span>发布：{editedArticle?.publish_date ? formatTimeToMinute(editedArticle.publish_date) : '-'}</span>
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>🔄</span>
-                      <span>更新：{editedArticle?.last_modified ? formatTimeToMinute(editedArticle.last_modified) : formatTimeToMinute(new Date().toISOString())}</span>
+                      <span>日期：{editedArticle?.last_modified ? formatTimeToMinute(editedArticle.last_modified) : formatTimeToMinute(new Date().toISOString())}</span>
                     </span>
                   </div>
                 </>
@@ -749,7 +743,7 @@ export default function ArticlePage() {
                   }}>
                     {editMode === 'preview' ? editedArticle?.title : article?.title}
                   </h1>
-                  
+
                   <div style={{
                     display: 'flex',
                     gap: '24px',
@@ -759,16 +753,10 @@ export default function ArticlePage() {
                     borderBottom: '1px solid #e8e8e8',
                   }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>👤</span>
                       <span>作者：<strong style={{ color: '#1a1a1a' }}>{editMode === 'preview' ? editedArticle?.author : article?.author}</strong></span>
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>📅</span>
-                      <span>发布：{formatTimeToMinute(editMode === 'preview' ? editedArticle?.publish_date : article?.publish_date)}</span>
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>🔄</span>
-                      <span>更新：{formatTimeToMinute(editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified)}</span>
+                      <span>日期：{formatTimeToMinute(editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified)}</span>
                     </span>
                   </div>
 
@@ -822,10 +810,10 @@ export default function ArticlePage() {
 
                   <Divider />
 
-                  <BlockEditor 
-                    blocks={editedArticle?.editorBlocks || []} 
-                    onChange={(blocks) => setEditedArticle({ ...editedArticle, editorBlocks: blocks })} 
-                    showAddButton={false} 
+                  <BlockEditor
+                    blocks={editedArticle?.editorBlocks || []}
+                    onChange={(blocks) => setEditedArticle({ ...editedArticle, editorBlocks: blocks })}
+                    showAddButton={false}
                   />
                 </>
               ) : (
@@ -835,7 +823,7 @@ export default function ArticlePage() {
                     <div key={block.id} style={{ marginBottom: '32px' }}>
                       {block.type === 'text' ? (
                         // 文字块
-                        <div style={{ 
+                        <div style={{
                           whiteSpace: 'pre-wrap',
                           lineHeight: '1.8',
                           fontSize: '16px',
@@ -845,7 +833,7 @@ export default function ArticlePage() {
                         </div>
                       ) : block.type === 'image' ? (
                         // 图片块
-                        <div 
+                        <div
                           style={{
                             cursor: 'pointer',
                             textAlign: 'center',
@@ -859,7 +847,7 @@ export default function ArticlePage() {
                             e.currentTarget.style.transform = 'scale(1)';
                           }}
                         >
-                          <img 
+                          <img
                             src={(block.parsedContent as ImageBlockContent).url}
                             alt="图片"
                             style={{
@@ -936,10 +924,10 @@ export default function ArticlePage() {
                 paddingBottom: '32px',
                 borderBottom: '1px solid #e8e8e8',
               }}>
-                <Button 
-                  icon={<LikeOutlined />} 
+                <Button
+                  icon={<LikeOutlined />}
                   size="large"
-                  style={{ 
+                  style={{
                     minWidth: '120px',
                     color: isLiked ? '#1890ff' : undefined,
                     borderColor: isLiked ? '#1890ff' : undefined,
@@ -949,8 +937,8 @@ export default function ArticlePage() {
                 >
                   {isLiked ? '已点赞' : '点赞'} {likesCount}
                 </Button>
-                <Button 
-                  icon={<ShareAltOutlined />} 
+                <Button
+                  icon={<ShareAltOutlined />}
                   size="large"
                   style={{ minWidth: '120px' }}
                   onClick={() => {
@@ -959,24 +947,10 @@ export default function ArticlePage() {
                 >
                   分享 {article?.shares || 0}
                 </Button>
-                <Button 
-                  icon={<MessageOutlined />} 
-                  size="large"
-                  style={{ minWidth: '120px' }}
-                  onClick={() => {
-                    // 滚动到评论区
-                    const commentSection = document.querySelector('#comment-section');
-                    if (commentSection) {
-                      commentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                  }}
-                >
-                  评论 {commentsCount}
-                </Button>
               </div>
 
               {/* 评论区 */}
-              <CommentSection 
+              <CommentSection
                 articleId={articleId}
                 currentUser={user ? { username: user.username, avatar: user.avatar_url, role: user.role } : null}
                 isLoggedIn={isLoggedIn}
