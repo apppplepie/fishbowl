@@ -11,11 +11,11 @@ interface DiaryCardProps {
 }
 
 /**
- * C. 日记卡片
+ * C. 日志卡片
  * 简短文字记录，适合每日感想、随笔
  */
 export default function DiaryCard({ card, onClick }: DiaryCardProps) {
-  // 从 excerpt 或 content 中提取日记内容和元信息
+  // 从 excerpt 或 content 中提取日志内容和元信息
   const extractDiaryData = () => {
     const rawContent = card.content || card.excerpt || '';
     
@@ -146,7 +146,7 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
         {status && <span>{status}</span>}
       </div>
 
-      {/* 日记内容 */}
+      {/* 日志内容 */}
       <p style={{
         margin: '0 0 12px 0',
         fontSize: '15px',

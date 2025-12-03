@@ -260,7 +260,7 @@ export default function PublishPage() {
       key: 'diary',
       label: (
         <span>
-          <BookOutlined /> 日记
+          <BookOutlined /> 日志
         </span>
       ),
       children: (
@@ -269,9 +269,9 @@ export default function PublishPage() {
           onFinish={onFinish}
         >
           <Form.Item
-            label="日记内容"
+            label="日志内容"
             name="content"
-            rules={[{ required: true, message: '请输入日记内容' }]}
+            rules={[{ required: true, message: '请输入日志内容' }]}
           >
             <TextArea 
               rows={8} 
@@ -332,7 +332,7 @@ export default function PublishPage() {
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit" size="large" icon={<PlusOutlined />}>
-                发布日记
+                发布日志
               </Button>
               <Button size="large">保存草稿</Button>
             </Space>

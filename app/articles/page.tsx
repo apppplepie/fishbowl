@@ -454,10 +454,10 @@ export default function ArticlesPage() {
         selectedCategoryId={selectedCategoryId}
       />
 
-      {/* 日记发布悬浮按钮 */}
+      {/* 日志发布悬浮按钮 */}
       <DiaryPublishFloat
         onSuccess={() => {
-          message.success('日记发布成功！');
+          message.success('日志发布成功！');
           // 重新加载文章列表
           setOffset(0);
           setHasMore(true);

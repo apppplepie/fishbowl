@@ -47,7 +47,7 @@ export const mockCards: Card[] = [
     tags: ['技术', 'Next.js'],
   },
 
-  // 日记卡片
+  // 日志卡片
   {
     id: 3,
     type: 'diary',
@@ -104,7 +104,7 @@ export const mockCards: Card[] = [
     tags: ['摄影'],
   },
 
-  // 更多日记
+  // 更多日志
   {
     id: 8,
     type: 'diary',

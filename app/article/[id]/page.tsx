@@ -693,7 +693,7 @@ export default function ArticlePage() {
                       <Option value="image">📷 图片内容</Option>
                       <Option value="drawing">🎨 绘画作品</Option>
                       <Option value="code">💻 代码片段</Option>
-                      <Option value="diary">📔 日记</Option>
+                      <Option value="diary">📔 日志</Option>
                     </Select>
                     {(editedArticle?.type === 'drawing' || editedArticle?.type === 'image') && (
                       <div style={{
