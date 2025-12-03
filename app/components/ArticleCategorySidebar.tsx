@@ -34,18 +34,6 @@ export default function ArticleCategorySidebar({
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   /**
-   * 处理目录文字点击
-   */
-  const handleCategoryTextClick = (categoryId: string) => {
-    if (onCategorySelect) {
-      onCategorySelect(categoryId);
-    } else {
-      // 如果没有提供回调函数，直接跳转
-      router.push(`/articles?category=${categoryId}`);
-    }
-  };
-
-  /**
    * 构建菜单项（只显示目录）
    */
   const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
@@ -64,14 +52,7 @@ export default function ArticleCategorySidebar({
       return {
         key: `category-${category.id}`,
         icon: <FolderOutlined />,
-        label: (
-          <span
-            style={{ fontWeight: 500, cursor: 'pointer' }}
-            onClick={() => handleCategoryTextClick(category.id)}
-          >
-            {category.name}
-          </span>
-        ),
+        label: category.name,
         children: children.length > 0 ? children : undefined,
       };
     });
@@ -95,6 +76,15 @@ export default function ArticleCategorySidebar({
   };
 
   /**
+   * 获取根目录的 keys（禁止关闭的目录）
+   */
+  const getRootCategoryKeys = (categories: Category[]): string[] => {
+    return categories
+      .filter(cat => cat.parent_id === null)
+      .map(cat => `category-${cat.id}`);
+  };
+
+  /**
    * 加载分类树
    */
   useEffect(() => {
@@ -109,8 +99,9 @@ export default function ArticleCategorySidebar({
           const items = buildMenuItems(result.data);
           setMenuItems(items);
 
-          // 默认不展开任何分类，让用户手动展开
-          setOpenKeys([]);
+          // 默认展开根目录（禁止关闭的）
+          const rootKeys = getRootCategoryKeys(result.data);
+          setOpenKeys(rootKeys);
         }
       } catch (error) {
         console.error('加载目录失败:', error);
@@ -122,6 +113,21 @@ export default function ArticleCategorySidebar({
     loadData();
   }, []);
 
+  /**
+   * 处理菜单点击
+   */
+  const handleMenuClick: MenuProps['onClick'] = (e) => {
+    // 只处理目录项的点击
+    if (e.key.startsWith('category-')) {
+      const categoryId = e.key.replace('category-', '');
+      if (onCategorySelect) {
+        onCategorySelect(categoryId);
+      } else {
+        // 如果没有提供回调函数，直接跳转
+        router.push(`/articles?category=${categoryId}`);
+      }
+    }
+  };
 
   return (
     <div
@@ -146,13 +152,20 @@ export default function ArticleCategorySidebar({
           mode="inline"
           selectedKeys={selectedCategoryId ? [`category-${selectedCategoryId}`] : []}
           openKeys={openKeys}
-          onOpenChange={(keys) => setOpenKeys(keys)}
+          onOpenChange={(keys) => {
+            // 获取根目录的 keys，这些不能被关闭
+            const rootKeys = getRootCategoryKeys(categories);
+            // 确保根目录始终在展开列表中
+            const newKeys = [...new Set([...keys, ...rootKeys])];
+            setOpenKeys(newKeys);
+          }}
           style={{
             borderInlineEnd: 'none',
             background: 'transparent',
             fontSize: '14px',
           }}
           items={menuItems}
+          onClick={handleMenuClick}
         />
       ) : (
         <Empty

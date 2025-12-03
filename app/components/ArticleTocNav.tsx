@@ -36,11 +36,13 @@ interface Category {
 interface ArticleTocNavProps {
   currentArticleId?: string;
   onArticleClick?: (articleId: string) => void;
+  onCategoryClick?: () => void;
 }
 
-export default function ArticleTocNav({ 
+export default function ArticleTocNav({
   currentArticleId,
-  onArticleClick
+  onArticleClick,
+  onCategoryClick
 }: ArticleTocNavProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -107,11 +109,16 @@ export default function ArticleTocNav({
         icon: <FolderOutlined />,
         label: (
           <span style={{ fontWeight: 500 }}>
-            {category.name}
+            <span
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleCategoryTextClick(category.id)}
+            >
+              {category.name}
+            </span>
             {category.articles && category.articles.length > 0 && (
-              <span style={{ 
-                marginLeft: '8px', 
-                fontSize: '12px', 
+              <span style={{
+                marginLeft: '8px',
+                fontSize: '12px',
                 color: '#999',
               }}>
                 ({category.articles.length})
@@ -142,6 +149,15 @@ export default function ArticleTocNav({
   };
 
   /**
+   * 获取根目录的 keys（禁止关闭的目录）
+   */
+  const getRootCategoryKeys = (categories: Category[]): string[] => {
+    return categories
+      .filter(cat => cat.parent_id === null)
+      .map(cat => `category-${cat.id}`);
+  };
+
+  /**
    * 加载分类树和文章
    */
   useEffect(() => {
@@ -155,10 +171,10 @@ export default function ArticleTocNav({
           setCategories(result.data);
           const items = buildMenuItems(result.data);
           setMenuItems(items);
-          
-          // 默认展开所有分类
-          const keys = getAllCategoryKeys(result.data);
-          setOpenKeys(keys);
+
+          // 默认展开根目录（禁止关闭的）
+          const rootKeys = getRootCategoryKeys(result.data);
+          setOpenKeys(rootKeys);
         }
       } catch (error) {
         console.error('加载目录失败:', error);
@@ -169,6 +185,16 @@ export default function ArticleTocNav({
 
     loadData();
   }, []);
+
+  /**
+   * 处理目录文字点击
+   */
+  const handleCategoryTextClick = (categoryId: string) => {
+    if (onCategoryClick) {
+      onCategoryClick(); // 先调用回调（关闭抽屉等）
+    }
+    router.push(`/articles?category=${categoryId}`);
+  };
 
   /**
    * 处理菜单点击
@@ -196,24 +222,6 @@ export default function ArticleTocNav({
           overflowX: 'hidden',
         }}
       >
-        {/* 标题区域 */}
-        <div style={{
-          padding: '20px',
-          borderBottom: '2px solid #f0f0f0',
-          background: '#fafafa',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-        }}>
-          <div style={{
-            fontSize: '16px',
-            fontWeight: 700,
-            color: '#1a1a1a',
-            letterSpacing: '-0.3px',
-          }}>
-            文章目录
-          </div>
-        </div>
 
         {/* 菜单区域 */}
         <div style={{ padding: '8px 0' }}>
@@ -231,7 +239,13 @@ export default function ArticleTocNav({
               mode="inline"
               selectedKeys={currentArticleId ? [`article-${currentArticleId}`] : []}
               openKeys={openKeys}
-              onOpenChange={(keys) => setOpenKeys(keys)}
+              onOpenChange={(keys) => {
+                // 获取根目录的 keys，这些不能被关闭
+                const rootKeys = getRootCategoryKeys(categories);
+                // 确保根目录始终在展开列表中
+                const newKeys = [...new Set([...keys, ...rootKeys])];
+                setOpenKeys(newKeys);
+              }}
               style={{ 
                 borderInlineEnd: 'none',
                 background: 'transparent',

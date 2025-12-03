@@ -26,6 +26,10 @@ export default function ArticleTocDrawer({
     onClose(); // 点击文章后关闭抽屉
   };
 
+  const handleCategoryClick = () => {
+    onClose(); // 点击目录跳转后关闭抽屉
+  };
+
   return (
     <Drawer
       title="文章目录"
@@ -39,9 +43,10 @@ export default function ArticleTocDrawer({
         },
       }}
     >
-      <ArticleTocNav 
+      <ArticleTocNav
         currentArticleId={currentArticleId}
         onArticleClick={handleArticleClick}
+        onCategoryClick={handleCategoryClick}
       />
     </Drawer>
   );
