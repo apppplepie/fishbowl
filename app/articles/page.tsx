@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Masonry, Input, Tag, Select, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import CardRenderer from '@/app/components/cards/CardRenderer';
@@ -14,6 +14,7 @@ import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import DiaryPublishFloat from '@/app/components/DiaryPublishFloat';
 import ArticleCategoryDrawer, { CategoryDrawerButton } from '@/app/components/ArticleCategoryDrawer';
+import ArticleCategorySidebar from '@/app/components/ArticleCategorySidebar';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import '../styles/articles-filter.css';
@@ -35,13 +36,14 @@ const calculateColumns = (width: number) => {
 export default function ArticlesPage() {
   const { isMobile } = useResponsive();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [columns, setColumns] = useState<number>(3);
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  
+
   // 过滤条件状态
   const [allTags, setAllTags] = useState<string[]>([]); // 所有可用标签
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 选中的标签
@@ -53,6 +55,14 @@ export default function ArticlesPage() {
 
   // 打开目录抽屉的函数
   const openCategoryDrawer = () => setDrawerVisible(true);
+
+  // 从 URL 参数初始化分类筛选
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      setSelectedCategoryId(categoryParam);
+    }
+  }, [searchParams]);
 
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
@@ -253,8 +263,9 @@ export default function ArticlesPage() {
         }
       />
       
-      <PageLayout
-        box1Content={
+      <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
+        <PageLayout
+          box1Content={
           <div style={{ padding: '16px 24px' }}>
             {/* 桌面端：左右布局，移动端：上下布局 */}
             <div style={{
@@ -410,7 +421,30 @@ export default function ArticlesPage() {
             </>
           )}
         </div>
-      </PageLayout>
+        </PageLayout>
+      </div>
+
+      {/* 电脑端固定侧边栏 - 从 header 下方到页面底部 */}
+      {!isMobile && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: '45px', // header 的高度
+            bottom: 0,
+            width: '280px',
+            background: 'white',
+            borderRight: '1px solid #e8e8e8',
+            zIndex: 999,
+            overflowY: 'auto',
+          }}
+        >
+          <ArticleCategorySidebar
+            selectedCategoryId={selectedCategoryId}
+            onCategorySelect={handleCategorySelect}
+          />
+        </div>
+      )}
 
       {/* 目录抽屉 */}
       <ArticleCategoryDrawer
