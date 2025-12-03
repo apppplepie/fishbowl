@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space } from 'antd';
+import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, Breadcrumb } from 'antd';
 import type { MenuProps } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
 
@@ -531,25 +531,84 @@ export default function ArticlePage() {
           box1Content={
             <div style={{
               padding: '12px 24px',
-              color: 'white',
-              fontSize: '14px',
             }}>
-              <span>首页</span>
-              {categoryPath.length > 0 && (
-                <>
-                  {categoryPath.map((cat, index) => (
-                    <span key={cat.id}>
-                      <span style={{ margin: '0 8px' }}>/</span>
-                      <span>{cat.name}</span>
-                    </span>
-                  ))}
-                  <span style={{ margin: '0 8px' }}>/</span>
-                </>
-              )}
-              {!categoryPath.length && <span style={{ margin: '0 8px' }}>/</span>}
-              {!categoryPath.length && <span>文章归档</span>}
-              {!categoryPath.length && <span style={{ margin: '0 8px' }}>/</span>}
-              <span>{article?.title}</span>
+              <Breadcrumb
+                items={[
+                  // 首页
+                  {
+                    title: (
+                      <a
+                        style={{
+                          color: 'white',
+                          textDecoration: 'none',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          transition: 'color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                        onClick={() => router.push('/')}
+                      >
+                        首页
+                      </a>
+                    ),
+                  },
+                  // 如果有分类路径，显示分类层级
+                  ...(categoryPath.length > 0
+                    ? categoryPath.map((cat, index) => ({
+                        title: (
+                          <a
+                            style={{
+                              color: 'white',
+                              textDecoration: 'none',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              padding: 0,
+                              transition: 'color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                            onClick={() => router.push(`/articles?category=${cat.id}`)}
+                          >
+                            {cat.name}
+                          </a>
+                        ),
+                      }))
+                    : [
+                        // 如果没有分类路径，显示文章归档
+                        {
+                          title: (
+                            <a
+                              style={{
+                                color: 'white',
+                                textDecoration: 'none',
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                padding: 0,
+                                transition: 'color 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                              onClick={() => router.push('/articles')}
+                            >
+                              文章归档
+                            </a>
+                          ),
+                        },
+                      ]
+                  ),
+                  // 当前文章标题
+                  {
+                    title: <span style={{ color: 'white' }}>{article?.title}</span>,
+                  },
+                ]}
+                separator={<span style={{ color: 'white' }}>/</span>}
+                style={{
+                  color: 'white',
+                  fontSize: '14px',
+                }}
+              />
             </div>
           }
           box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
