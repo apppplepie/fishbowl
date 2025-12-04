@@ -4,7 +4,7 @@ import React from 'react';
 import { Avatar, Button, Card } from 'antd';
 import { UserOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import TimeRangeSelector from './TimeRangeSelector';
+import '../styles/user-menu.css';
 
 interface UserMenuProps {
   isLoggedIn: boolean;
@@ -40,11 +40,14 @@ export default function UserMenu({
 
   return (
     <Card
+      className="user-menu-card"
       style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
+        background: 'rgba(255, 255, 255, 0.08)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        borderRadius: '16px',
         minWidth: isMobile ? 'auto' : '280px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+        backdropFilter: 'blur(10px)',
       }}
       styles={{
         body: {
@@ -54,111 +57,95 @@ export default function UserMenu({
     >
       <div style={{
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: '12px',
       }}>
-        {/* 第一行：头像、用户信息和操作按钮 */}
-        <div style={{
+        {/* 用户头像 */}
+        <div className="user-avatar-container" style={{
+          position: 'relative',
+          flexShrink: 0,
+        }}>
+          <Avatar
+            size={isMobile ? 48 : 48}
+            icon={<UserOutlined />}
+            style={{
+              backgroundColor: isLoggedIn ? '#1677ff' : '#666',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+            }}
+          />
+          {isLoggedIn && (
+            <div className="online-indicator" style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: '12px',
+              height: '12px',
+              background: '#52c41a',
+              borderRadius: '50%',
+              border: '2px solid black',
+            }}></div>
+          )}
+        </div>
+
+        {/* 用户信息和操作按钮 */}
+        <div className="user-info-section" style={{
+          flex: 1,
           display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
-          gap: '12px',
+          gap: isMobile ? '8px' : '16px',
         }}>
-          {/* 用户头像 */}
+          {/* 用户名 */}
           <div style={{
-            position: 'relative',
-            flexShrink: 0,
-          }}>
-            <Avatar 
-              size={isMobile ? 48 : 48} 
-              icon={<UserOutlined />} 
-              style={{ 
-                backgroundColor: isLoggedIn ? '#1677ff' : '#666',
-                border: '2px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-              }} 
-            />
-            {isLoggedIn && (
-              <div style={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                width: '12px',
-                height: '12px',
-                background: '#52c41a',
-                borderRadius: '50%',
-                border: '2px solid black',
-              }}></div>
-            )}
-          </div>
-
-          {/* 用户信息和操作按钮 */}
-          <div style={{ 
+            textAlign: 'left',
             flex: 1,
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: isMobile ? '8px' : '16px',
           }}>
-            {/* 用户名 */}
-            <div style={{ 
-              textAlign: 'left',
-              flex: 1,
+            <div className="username-text" style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              marginBottom: '2px',
             }}>
-              <div style={{ 
-                color: 'white', 
-                fontSize: '14px',
-                fontWeight: 600,
-                marginBottom: '2px',
-              }}>
-                {isLoggedIn ? username : '访客'}
-              </div>
-              <div style={{
-                color: 'rgba(255, 255, 255, 0.5)',
-                fontSize: '12px',
-              }}>
-                {isLoggedIn ? '已登录' : '未登录'}
-              </div>
+              {isLoggedIn ? username : '访客'}
             </div>
-
-            {/* 操作按钮 */}
-            {isLoggedIn ? (
-              <Button
-                type="default"
-                danger
-                icon={<LogoutOutlined />}
-                onClick={handleLogout}
-                size="middle"
-                style={{ 
-                  fontWeight: 500,
-                  flexShrink: 0,
-                }}
-              >
-                {isMobile ? '退出' : '退出登录'}
-              </Button>
-            ) : (
-              <Button
-                type="primary"
-                icon={<LoginOutlined />}
-                onClick={handleLogin}
-                size="middle"
-                style={{ 
-                  fontWeight: 500,
-                  flexShrink: 0,
-                }}
-              >
-                登录
-              </Button>
-            )}
+            <div style={{
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontSize: '12px',
+            }}>
+              {isLoggedIn ? '已登录' : '未登录'}
+            </div>
           </div>
-        </div>
 
-        {/* 第二行：时间范围选择器 */}
-        <div style={{
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          paddingTop: '12px',
-        }}>
-          <TimeRangeSelector />
+          {/* 操作按钮 */}
+          {isLoggedIn ? (
+            <Button
+              type="default"
+              danger
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              size="middle"
+              style={{
+                fontWeight: 500,
+                flexShrink: 0,
+              }}
+            >
+              {isMobile ? '退出' : '退出登录'}
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={handleLogin}
+              size="middle"
+              style={{
+                fontWeight: 500,
+                flexShrink: 0,
+              }}
+            >
+              登录
+            </Button>
+          )}
         </div>
       </div>
     </Card>

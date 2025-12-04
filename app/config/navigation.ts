@@ -6,7 +6,7 @@
 export interface NavigationItem {
   key: string;
   label: string;
-  icon?: string; // emoji 或者可以改成 React 组件
+  icon?: string; // 图标名称
   path: string;
   requireAuth?: boolean; // 是否需要登录
   children?: NavigationItem[]; // 支持多级菜单
@@ -19,31 +19,38 @@ export const publicNavigationItems: NavigationItem[] = [
   {
     key: 'home',
     label: '首页',
+    icon: 'HomeOutlined',
     path: '/',
   },
   {
     key: 'gallery',
     label: '图片墙',
-    icon: '📸',
+    icon: 'PictureOutlined',
     path: '/gallery',
   },
   {
     key: 'articles',
     label: '文章归档',
-    icon: '📝',
+    icon: 'FileTextOutlined',
     path: '/articles',
   },
   {
     key: 'publish',
     label: '发布内容',
-    icon: '✨',
+    icon: 'EditOutlined',
     path: '/publish',
   },
   {
     key: 'publish-article',
     label: '创作文章',
-    icon: '✍️',
+    icon: 'FormOutlined',
     path: '/publish-article',
+  },
+  {
+    key: 'bookcase',
+    label: '书架',
+    icon: 'BookOutlined',
+    path: '/bookcase',
   },
 ];
 
@@ -52,16 +59,9 @@ export const publicNavigationItems: NavigationItem[] = [
  */
 export const protectedNavigationItems: NavigationItem[] = [
   {
-    key: 'dashboard',
-    label: '仪表盘',
-    icon: '🎯',
-    path: '/dashboard',
-    requireAuth: true,
-  },
-  {
     key: 'profile',
     label: '个人资料',
-    icon: '👤',
+    icon: 'UserOutlined',
     path: '/profile',
     requireAuth: true,
   },

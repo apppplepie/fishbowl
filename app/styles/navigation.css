@@ -1,0 +1,92 @@
+/* 导航栏样式美化 */
+
+.custom-nav-menu .ant-menu-item {
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 6px 10px !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  height: 60px !important;
+  line-height: 1.2 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.custom-nav-menu .ant-menu-item:hover {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 0 0 20px 20px !important;
+}
+
+.custom-nav-menu .ant-menu-item-selected {
+  background: rgb(0, 0, 0) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border: none !important;
+  border-radius: 0 0 20px 20px !important;
+}
+
+.custom-nav-menu .ant-menu-item-selected:hover {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* 菜单项文字样式 */
+.custom-nav-menu .ant-menu-item .ant-menu-title-content {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  justify-content: center !important;
+}
+
+/* 图标样式 */
+.custom-nav-menu .ant-menu-item .anticon {
+  font-size: 16px !important;
+  opacity: 0.9 !important;
+  transition: opacity 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.custom-nav-menu .ant-menu-item:hover .anticon,
+.custom-nav-menu .ant-menu-item-selected .anticon {
+  opacity: 1 !important;
+}
+
+/* 仅图标模式下的样式 */
+.custom-nav-menu .ant-menu-item:only-child .ant-menu-title-content,
+.custom-nav-menu .ant-menu-item .ant-menu-title-content:has(.anticon:not(:has(+ *))) {
+  min-width: 48px !important;
+  justify-content: center !important;
+  padding: 8px !important;
+}
+
+/* 响应式布局优化 */
+@media (max-width: 1200px) {
+  .custom-nav-menu .ant-menu-item {
+    min-width: 48px !important;
+  }
+
+  .custom-nav-menu .ant-menu-item .ant-menu-title-content {
+    gap: 0 !important;
+  }
+}
+
+/* 分割线样式 */
+.custom-nav-menu .ant-menu-item-divider {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  margin: 8px 0 !important;
+}
+
+/* 移动端菜单项样式调整 */
+@media (max-width: 768px) {
+  .custom-nav-menu .ant-menu-item {
+    margin: 4px 0 !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+
+  .custom-nav-menu .ant-menu-item:hover {
+    transform: translateX(4px) !important;
+  }
+}
