@@ -1,0 +1,218 @@
+/* 用户卡片美化样式 */
+
+.user-menu-card {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: gentleGlow 4s ease-in-out infinite;
+}
+
+@keyframes gentleGlow {
+  0%, 100% {
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+  50% {
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+}
+
+.user-menu-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.user-menu-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.user-menu-card:hover::before {
+  left: 100%;
+}
+
+/* 头像悬停效果 */
+.user-avatar-container {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.user-menu-card:hover .user-avatar-container {
+  transform: scale(1.1);
+}
+
+.user-avatar-container .ant-avatar {
+  transition: all 0.3s ease;
+}
+
+.user-menu-card:hover .user-avatar-container .ant-avatar {
+  box-shadow:
+    0 4px 16px rgba(22, 119, 255, 0.3),
+    0 0 12px rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* 在线状态指示器动画 */
+.online-indicator {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.user-menu-card:hover .online-indicator {
+  animation-duration: 1s;
+}
+
+/* 用户名悬停效果 */
+.user-info-section {
+  transition: all 0.3s ease;
+}
+
+.user-menu-card:hover .user-info-section {
+  transform: translateX(2px);
+}
+
+.username-text {
+  transition: all 0.4s ease;
+  background: linear-gradient(135deg, #ffffff 0%, #e6f7ff 50%, #ffffff 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  filter: brightness(1);
+}
+
+.user-menu-card:hover .username-text {
+  background-position: right center;
+  transform: scale(1.02);
+  filter: brightness(1.2) saturate(1.1);
+}
+
+/* 按钮悬停增强 */
+.user-menu-card .ant-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.user-menu-card .ant-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.4s ease;
+}
+
+.user-menu-card:hover .ant-btn:hover::before {
+  width: 200px;
+  height: 200px;
+}
+
+.user-menu-card .ant-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(22, 119, 255, 0.4);
+}
+
+.user-menu-card .ant-btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245, 34, 45, 0.4);
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .user-menu-card:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  .user-menu-card:hover .user-avatar-container {
+    transform: scale(1.05);
+  }
+}
+
+/* 暗色主题下的额外效果 */
+@media (prefers-color-scheme: dark) {
+  .user-menu-card:hover {
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.6),
+      0 0 20px rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* 导航栏嵌入式用户信息样式 - 极简设计 */
+.user-info-embedded {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 用户名样式 */
+.user-info-embedded .username-text {
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #ffffff 0%, #e6f7ff 50%, #ffffff 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  filter: brightness(1);
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+  display: inline-block;
+}
+
+.user-info-embedded:hover .username-text {
+  background-position: right center;
+  transform: scale(1.02);
+  filter: brightness(1.1) saturate(1.05);
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-text-fill-color: white;
+}
+
+/* 极简按钮样式 */
+.user-info-embedded .ant-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+  height: 24px !important;
+  border-radius: 4px !important;
+}
+
+.user-info-embedded .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.4);
+}
