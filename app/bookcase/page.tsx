@@ -17,6 +17,7 @@ import DiaryPublishFloat from '@/app/components/float/DiaryPublishFloat';
 import BookCategoryDrawer, { BookCategoryDrawerButton } from '@/app/components/sidebar/BookCategoryDrawer';
 import BookCategoryModal from '@/app/components/sidebar/ChapterDragSort';
 import BookPublishFloat from '@/app/components/float/BookPublishFloat';
+import BookCategorySidebar from '@/app/components/sidebar/BookCategorySidebar'
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import { extractBooksFromArticles } from '@/app/utils/bookUtils';
@@ -342,18 +343,6 @@ function BookcasePageContent() {
                 <span> · 找到 <strong>{filteredCards.length}</strong> 篇文章</span>
               </div>
             )}
-
-            {/* 管理分类按钮 */}
-            <div style={{ marginTop: '12px' }}>
-              <Button
-                type="primary"
-                icon={<UnorderedListOutlined />}
-                onClick={openCategoryModal}
-                size="small"
-              >
-                管理书籍分类
-              </Button>
-            </div>
           </div>
         }
         box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
@@ -434,40 +423,23 @@ function BookcasePageContent() {
 
       {/* 电脑端固定侧边栏 - 从 header 下方到页面底部 */}
       {!isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: '45px', // header 的高度
-            bottom: 0,
-            width: '280px',
-            background: 'white',
-            borderRight: '1px solid #e8e8e8',
-            zIndex: 999,
-            overflowY: 'auto',
-          }}
-        >
-          <div style={{
-            padding: '20px',
-            textAlign: 'center',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: '#1a1a1a',
-          }}>
-            📚 我的书架
-          </div>
-          <div style={{
-            padding: '0 20px 20px',
-            color: '#666',
-            fontSize: '14px',
-            lineHeight: '1.6',
-          }}>
-            这里收藏了我喜欢的书籍和阅读资料。可以通过标签和关键词来快速找到想要的内容。
-          </div>
-        </div>
-      )}
+  <div
+    style={{
+      position: 'fixed',
+      left: 0,
+      top: '45px', // header 的高度
+      bottom: 0,
+      width: '280px',
+      background: 'white',
+      borderRight: '1px solid #e8e8e8',
+      zIndex: 999,
+      overflowY: 'auto',
+    }}
+  >
+    <BookCategorySidebar />
+  </div>
+)}
 
-      {/* 目录抽屉 - 书架页面专用 */}
       {/* 目录抽屉 - 书架页面专用 */}
       <BookCategoryDrawer
         visible={drawerVisible}

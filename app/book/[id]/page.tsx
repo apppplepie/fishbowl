@@ -8,9 +8,9 @@ const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import ArticleTocNav from '@/app/components/sidebar/ArticleTocSidebar';
-import BookTocDrawer from '@/app/components/sidebar/BookTocDrawer';
-import BookTocNav from '@/app/components/sidebar/BookTocSidebar';
+import ArticleTocNav from '@/app/components/sidebar/ArticleIndexSidebar';
+import BookTocDrawer from '@/app/components/sidebar/ChapterIndexDrawer';
+import BookCategorySidebar from '@/app/components/sidebar/ChapterIndexSidebar';
 import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -21,7 +21,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
-import BlockEditor from '@/app/components/BlockEditor';
+import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import type { Block as BlockType } from '@/app/types/block';
@@ -415,7 +415,7 @@ export default function BookPage() {
             overflowY: 'auto',
           }}
         >
-          <BookTocNav
+          <BookCategorySidebar
             currentArticleId={bookId}
             bookCategoryId={bookCategoryId}
             onArticleClick={handleArticleClick}

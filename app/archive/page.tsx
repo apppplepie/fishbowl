@@ -13,8 +13,8 @@ import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import DiaryPublishFloat from '@/app/components/float/DiaryPublishFloat';
-import ArticleCategoryDrawer, { CategoryDrawerButton } from '@/app/components/sidebar/ArticleCategoryDrawer';
-import ArticleCategorySidebar from '@/app/components/sidebar/ArticleCategorySidebar';
+import ArchiveCategoryDrawer, { CategoryDrawerButton } from '@/app/components/sidebar/ArchiveCategroyDrawer';
+import ArchiveCategorySidebar from '@/app/components/sidebar/ArchiveCategorySidebar';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import '../styles/articles-filter.css';
@@ -436,7 +436,7 @@ function ArticlesPageContent() {
             overflowY: 'auto',
           }}
         >
-          <ArticleCategorySidebar
+          <ArchiveCategorySidebar
             selectedCategoryId={selectedCategoryId}
             onCategorySelect={handleCategorySelect}
           />
@@ -444,7 +444,7 @@ function ArticlesPageContent() {
       )}
 
       {/* 目录抽屉 */}
-      <ArticleCategoryDrawer
+      <ArchiveCategoryDrawer
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         onCategorySelect={handleCategorySelect}

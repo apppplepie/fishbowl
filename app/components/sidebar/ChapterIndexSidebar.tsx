@@ -33,19 +33,19 @@ interface Category {
   articles?: Article[];
 }
 
-interface BookTocNavProps {
+interface BookCategorySidebarProps {
   currentArticleId?: string;
   bookCategoryId?: string;
   onArticleClick?: (articleId: string) => void;
   onCategoryClick?: () => void;
 }
 
-export default function BookTocNav({
+export default function BookCategorySidebar({
   currentArticleId,
   bookCategoryId,
   onArticleClick,
   onCategoryClick
-}: BookTocNavProps) {
+}: BookCategorySidebarProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -162,10 +162,10 @@ export default function BookTocNav({
    */
   useEffect(() => {
     const loadData = async () => {
-      console.log('BookTocNav: 开始加载，bookCategoryId:', bookCategoryId);
+      console.log('BookCategorySidebar: 开始加载，bookCategoryId:', bookCategoryId);
 
       if (!bookCategoryId) {
-        console.log('BookTocNav: bookCategoryId 为空，跳过加载');
+        console.log('BookCategorySidebar: bookCategoryId 为空，跳过加载');
         setLoading(false);
         return;
       }
@@ -173,11 +173,11 @@ export default function BookTocNav({
       setLoading(true);
       try {
         // 加载书籍分类的子分类和文章
-        console.log('BookTocNav: 调用API:', `/api/categories/${bookCategoryId}/tree-with-articles`);
+        console.log('BookCategorySidebar: 调用API:', `/api/categories/${bookCategoryId}/tree-with-articles`);
         const response = await fetch(`/api/categories/${bookCategoryId}/tree-with-articles`);
         const result = await response.json();
 
-        console.log('BookTocNav: API响应:', result);
+        console.log('BookCategorySidebar: API响应:', result);
 
         if (result.success) {
           setCategories(result.data);

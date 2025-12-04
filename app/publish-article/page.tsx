@@ -25,7 +25,7 @@ import {
 import type { UploadFile } from 'antd';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
-import BlockEditor from '@/app/components/BlockEditor';
+import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
 import type { Block, Article, TextBlock as TextBlockType } from '@/app/types/block';
