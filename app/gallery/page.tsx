@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import PageLayout from '../components/PageLayout';
 import Header from '../components/Header';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
-import GalleryPublishFloat from '../components/GalleryPublishFloat';
+import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
 
 // 根据屏幕宽度计算列数
 const calculateColumns = (width: number) => {

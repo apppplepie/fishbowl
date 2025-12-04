@@ -8,10 +8,10 @@ const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import ArticleTocNav from '@/app/components/ArticleTocNav';
-import BookTocDrawer from '@/app/components/BookTocDrawer';
-import BookTocNav from '@/app/components/BookTocNav';
-import ArticleEditFloat, { EditMode } from '@/app/components/ArticleEditFloat';
+import ArticleTocNav from '@/app/components/sidebar/ArticleTocSidebar';
+import BookTocDrawer from '@/app/components/sidebar/BookTocDrawer';
+import BookTocNav from '@/app/components/sidebar/BookTocSidebar';
+import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
