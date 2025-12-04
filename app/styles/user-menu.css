@@ -182,7 +182,7 @@
 
 /* 用户名样式 */
 .user-info-embedded .username-text {
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   background: linear-gradient(135deg, #ffffff 0%, #e6f7ff 50%, #ffffff 100%);
   background-clip: text;
   -webkit-background-clip: text;
@@ -193,14 +193,17 @@
   border-radius: 4px;
   line-height: 1.2;
   display: inline-block;
+  cursor: pointer;
 }
 
-.user-info-embedded:hover .username-text {
-  background-position: right center;
-  transform: scale(1.02);
-  filter: brightness(1.1) saturate(1.05);
-  background: rgba(255, 255, 255, 0.1);
+.user-info-embedded .username-text:hover {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0 0 20px 20px;
+  transform: translateX(-3px);
   -webkit-text-fill-color: white;
+  background-clip: border-box;
+  background-image: none;
+  filter: none;
 }
 
 /* 极简按钮样式 */
