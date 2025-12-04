@@ -64,10 +64,23 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const format = searchParams.get('format'); // 'tree' 或 'flat'
+    const type = searchParams.get('type'); // 'children'
+    const parentId = searchParams.get('parentId');
 
-    const categories = await query<Category[]>(
-      'SELECT * FROM categories ORDER BY order_index ASC'
-    );
+    let categories: Category[];
+
+    if (type === 'children' && parentId) {
+      // 查询指定父分类的子分类
+      categories = await query<Category[]>(
+        'SELECT * FROM categories WHERE parent_id = ? ORDER BY order_index ASC',
+        [parentId]
+      );
+    } else {
+      // 查询所有分类
+      categories = await query<Category[]>(
+        'SELECT * FROM categories ORDER BY order_index ASC'
+      );
+    }
 
     if (format === 'tree') {
       const tree = buildCategoryTree(categories);
@@ -105,7 +118,11 @@ export async function POST(request: NextRequest) {
       [id, name, parent_id || null, order_index || 0]
     );
 
-    return NextResponse.json({ success: true, message: '分类创建成功' });
+    return NextResponse.json({
+      success: true,
+      message: '分类创建成功',
+      category: { id, name, parent_id, order_index }
+    });
   } catch (error) {
     console.error('创建分类失败:', error);
     return NextResponse.json(

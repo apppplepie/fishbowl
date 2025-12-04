@@ -162,5 +162,55 @@ export const mockCards: Card[] = [
     createdAt: '2024-01-04',
     tags: ['视频', 'CSS'],
   },
+
+  // 书籍卡片示例
+  {
+    id: 101,
+    type: 'book',
+    title: 'JavaScript高级程序设计',
+    description: '这是一本经典的JavaScript学习书籍，涵盖了JavaScript语言的核心概念和高级特性。适合有一定编程基础的开发者深入学习。',
+    coverImage: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&h=600&fit=crop&crop=center',
+    author: 'Nicholas C. Zakas',
+    updatedAt: '2024-12-01T10:00:00Z',
+    mainArticleId: 'article-1',
+    createdAt: '2023-06-15T08:30:00Z',
+    tags: ['JavaScript', '前端开发', '编程']
+  },
+  {
+    id: 102,
+    type: 'book',
+    title: 'React实战指南',
+    description: '从零开始学习React框架的完整指南，包括组件化开发、状态管理、路由等核心概念。通过实际项目案例深入理解React生态系统。',
+    coverImage: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=600&fit=crop&crop=center',
+    author: '陈瑜',
+    updatedAt: '2024-11-28T15:30:00Z',
+    mainArticleId: 'article-2',
+    createdAt: '2023-08-20T09:15:00Z',
+    tags: ['React', '前端框架', '组件化']
+  },
+  {
+    id: 103,
+    type: 'book',
+    title: '设计模式之美',
+    description: '深入探讨23种经典设计模式在实际项目中的应用，通过生动的代码示例和实际案例，帮助开发者掌握面向对象设计的核心思想。',
+    coverImage: 'https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=400&h=600&fit=crop&crop=center',
+    author: '王争',
+    updatedAt: '2024-11-25T12:20:00Z',
+    mainArticleId: 'article-3',
+    createdAt: '2023-09-10T14:45:00Z',
+    tags: ['设计模式', '软件工程', '架构']
+  },
+  {
+    id: 104,
+    type: 'book',
+    title: 'Node.js微服务架构',
+    description: '基于Node.js构建可扩展微服务架构的实用指南，涵盖服务拆分、API网关、容器化部署等关键技术栈。',
+    coverImage: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&h=600&fit=crop&crop=center',
+    author: '张三',
+    updatedAt: '2024-11-20T16:45:00Z',
+    mainArticleId: 'article-4',
+    createdAt: '2023-10-05T11:20:00Z',
+    tags: ['Node.js', '微服务', '后端开发']
+  },
 ];
 

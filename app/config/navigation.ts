@@ -48,7 +48,7 @@ export const publicNavigationItems: NavigationItem[] = [
   },
   {
     key: 'bookcase',
-    label: '书架',
+    label: '书橱',
     icon: 'BookOutlined',
     path: '/bookcase',
   },
