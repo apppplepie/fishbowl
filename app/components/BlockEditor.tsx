@@ -430,33 +430,6 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
         ))}
       </div>
 
-      {/* 底部添加块按钮 */}
-      {showAddButton && (
-        <div
-          style={{
-            marginLeft: '48px',
-            marginTop: '24px',
-            padding: '24px',
-            border: '2px dashed #d9d9d9',
-            borderRadius: '8px',
-            textAlign: 'center',
-            backgroundColor: '#fafafa',
-          }}
-        >
-          <Button
-            type="primary"
-            size="large"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setInsertPosition(-1); // 添加到末尾
-              setAddBlockModalVisible(true);
-            }}
-          >
-            添加新块
-          </Button>
-        </div>
-      )}
-
       {/* 添加块类型选择弹窗 */}
       <Modal
         title={insertPosition === -1 ? "选择块类型" : `在第 ${insertPosition + 1} 个块后添加`}

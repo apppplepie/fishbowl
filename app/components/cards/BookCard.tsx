@@ -35,22 +35,39 @@ export default function BookCard({ card, onClick }: BookCardProps) {
           overflow: 'hidden',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         }}>
-          <img
-            src={card.coverImage}
-            alt={card.title}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transition: 'transform 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          />
+          {card.coverImage ? (
+            <img
+              src={card.coverImage}
+              alt={card.title}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '16px',
+                fontWeight: 'bold',
+              }}
+            >
+              📚 {card.title}
+            </div>
+          )}
           {/* 渐变遮罩 */}
           <div style={{
             position: 'absolute',

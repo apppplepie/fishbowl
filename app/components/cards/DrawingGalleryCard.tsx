@@ -260,23 +260,41 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
             </div>
           </div>
         )}
-        <img
-          key={currentImage.id}
-          src={currentImage.url}
-          alt="图片"
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-          style={{
-            maxWidth: '100%',
-            maxHeight: 'calc(100vh - 111px - 200px)', // 减去PageLayout黑框+header(111px) 和卡片信息区域(约200px)
-            width: 'auto',
-            height: 'auto',
-            display: 'block',
-            objectFit: 'contain',
-            opacity: isCurrentImageLoaded ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-          }}
-        />
+        {currentImage.url ? (
+          <img
+            key={currentImage.id}
+            src={currentImage.url}
+            alt="图片"
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            style={{
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 111px - 200px)', // 减去PageLayout黑框+header(111px) 和卡片信息区域(约200px)
+              width: 'auto',
+              height: 'auto',
+              display: 'block',
+              objectFit: 'contain',
+              opacity: isCurrentImageLoaded ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 111px - 200px)',
+              width: 'auto',
+              height: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+              fontSize: '16px',
+            }}
+          >
+            图片URL为空
+          </div>
+        )}
         
         {/* 图片指示点 - 极简风格 */}
         {images.length > 1 && (

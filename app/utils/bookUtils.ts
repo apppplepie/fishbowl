@@ -11,53 +11,48 @@ export function extractBooksFromArticles(articles: any[]): BookCard[] {
   const booksByDirectory: { [key: string]: any[] } = {};
 
   articles.forEach(article => {
-    // 假设文章有category或directory字段表示所属目录
-    const directoryName = article.directory || article.category || 'default';
+    // 按category_id分组，每本书籍是一个子分类
+    const categoryId = article.category_id || 'default';
 
-    if (!booksByDirectory[directoryName]) {
-      booksByDirectory[directoryName] = [];
+    if (!booksByDirectory[categoryId]) {
+      booksByDirectory[categoryId] = [];
     }
-    booksByDirectory[directoryName].push(article);
+    booksByDirectory[categoryId].push(article);
   });
 
   const books: BookCard[] = [];
 
   // 为每个目录创建BookCard
-  Object.entries(booksByDirectory).forEach(([directoryName, directoryArticles]) => {
-    // 找到order最小的文章（主要文章）
-    const mainArticle = directoryArticles
-      .filter(article => article.blocks && Array.isArray(article.blocks))
-      .sort((a, b) => (a.order || 0) - (b.order || 0))[0];
+  Object.entries(booksByDirectory).forEach(([categoryId, directoryArticles]) => {
+    // 找到第一篇文章作为主要文章（通常是简介文章）
+    const mainArticle = directoryArticles[0];
 
     if (!mainArticle) return;
 
-    // 从blocks中提取信息
-    const blocks = mainArticle.blocks || [];
-    const sortedBlocks = blocks.sort((a: Block, b: Block) => a.order - b.order);
+    // 使用API返回的预览数据构建书籍信息
+    // 使用分类名称作为书名，如果没有则使用第一篇文章的标题
+    const bookTitle = mainArticle.category_name || mainArticle.title || `书籍 ${categoryId}`;
 
-    // 找到order最小的text block作为简介
-    const firstTextBlock = sortedBlocks.find((block: Block) => block.type === 'text') as any;
-    const description = firstTextBlock?.content || '暂无简介';
+    // 使用文章摘要作为书籍简介
+    const description = mainArticle.excerpt || '暂无简介';
 
-    // 找到order最小的image block作为封面
-    const firstImageBlock = sortedBlocks.find((block: Block) => block.type === 'image') as any;
-    const coverImage = firstImageBlock?.imageUrl || '/default-book-cover.jpg'; // 默认封面
-
-    // 找到order=0的文章作为主要文章ID
-    const orderZeroArticle = directoryArticles.find(article => article.order === 0);
-    const mainArticleId = orderZeroArticle?.id || mainArticle.id;
+    // 使用第一张图片作为封面（如果有的话）
+    let coverImage = '/default-book-cover.jpg'; // 默认封面
+    if (mainArticle.firstImageUrl) {
+      coverImage = mainArticle.firstImageUrl;
+    }
 
     // 创建BookCard
     const bookCard: BookCard = {
       id: parseInt(`${Date.now()}${Math.random()}`), // 生成唯一ID
       type: 'book',
-      title: directoryName, // 目录名作为书名
+      title: bookTitle,
       description: description,
       coverImage: coverImage,
       author: mainArticle.author || '未知作者',
-      updatedAt: mainArticle.updatedAt || mainArticle.createdAt || new Date().toISOString(),
-      mainArticleId: mainArticleId.toString(),
-      createdAt: mainArticle.createdAt || new Date().toISOString(),
+      updatedAt: mainArticle.last_modified || mainArticle.publish_date || new Date().toISOString(),
+      mainArticleId: mainArticle.id.toString(),
+      createdAt: mainArticle.publish_date || new Date().toISOString(),
     };
 
     books.push(bookCard);

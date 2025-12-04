@@ -67,6 +67,8 @@ export async function GET(request: NextRequest) {
         a.likes,
         a.shares,
         a.comments,
+        a.category_id,
+        c.name as category_name,
         -- 图片类型：获取第一个图片的 URL
         CASE
           WHEN a.type = 'image' THEN (
@@ -136,6 +138,7 @@ export async function GET(request: NextRequest) {
           ELSE NULL
         END as code_block_count
        FROM articles a
+       LEFT JOIN categories c ON a.category_id = c.id
        WHERE ${whereClause}
        ORDER BY a.last_modified DESC, a.publish_date DESC
        LIMIT ${limit} OFFSET ${offset}`,
