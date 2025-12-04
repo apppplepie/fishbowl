@@ -75,19 +75,22 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         {card.title}
       </h3>
 
-      {/* 摘要 */}
-      <p style={{
-        margin: '0 0 16px 0',
-        color: '#666',
-        fontSize: '14px',
-        lineHeight: '1.6',
-        display: '-webkit-box',
-        WebkitLineClamp: 3,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-      }}>
-        {card.excerpt}
-      </p>
+      {/* 摘要 - 只有当有摘要时才显示 */}
+      {card.excerpt && (
+        <p style={{
+          margin: '0 0 16px 0',
+          color: '#666',
+          fontSize: '14px',
+          lineHeight: '1.6',
+          display: '-webkit-box',
+          WebkitLineClamp: 3,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          whiteSpace: 'pre-wrap',
+        }}>
+          {card.excerpt}
+        </p>
+      )}
 
       {/* 元信息 */}
       <div style={{

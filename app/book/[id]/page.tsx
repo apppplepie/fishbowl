@@ -9,7 +9,8 @@ import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined,
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
 import ArticleTocNav from '@/app/components/ArticleTocNav';
-import ArticleTocDrawer from '@/app/components/ArticleTocDrawer';
+import BookTocDrawer from '@/app/components/BookTocDrawer';
+import BookTocNav from '@/app/components/BookTocNav';
 import ArticleEditFloat, { EditMode } from '@/app/components/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -18,6 +19,7 @@ import CommentSection from '@/app/components/CommentSection';
 import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
 import BlockEditor from '@/app/components/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
@@ -44,6 +46,7 @@ export default function BookPage() {
   const { isMobile } = useResponsive();
   const { isLoggedIn, user } = useAuth();
   const [tocDrawerOpen, setTocDrawerOpen] = useState(false);
+  const [bookCategoryId, setBookCategoryId] = useState<string>('');
 
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
@@ -114,14 +117,50 @@ export default function BookPage() {
       const result = await response.json();
 
       if (response.ok && result.success && result.article) {
-        setBook(result.article);
+        // 处理blocks数据，为编辑器准备正确的属性
+        const processedBlocks = result.article.blocks.map((block: any) => {
+          if (block.type === 'image' && block.parsedContent?.url) {
+            return {
+              ...block,
+              imageUrl: block.parsedContent.url,
+              title: block.parsedContent.title || block.title || '',
+              description: block.parsedContent.description || block.description || '',
+            };
+          } else if (block.type === 'text' && block.parsedContent?.content) {
+            // 为文字块设置content属性，确保编辑器能正确显示文本
+            return {
+              ...block,
+              content: block.parsedContent.content,
+            };
+          } else if (block.type === 'code' && block.parsedContent) {
+            // 为代码块设置language和code属性
+            return {
+              ...block,
+              language: block.parsedContent.language || 'javascript',
+              code: block.parsedContent.code || '',
+              title: block.parsedContent.title || block.title || '',
+            };
+          }
+          return block;
+        });
+
+        const processedArticle = {
+          ...result.article,
+          blocks: processedBlocks,
+        };
+
+        setBook(processedArticle);
         setIsLiked(false); // 暂时设为 false
         setLikesCount(result.article.likes || 0);
         setCommentsCount(result.article.comments || 0);
 
-        // 如果文章有分类，获取分类路径
+        // 设置书籍分类ID
         if (result.article.category_id) {
+          console.log('书籍分类ID:', result.article.category_id);
+          setBookCategoryId(result.article.category_id);
           await fetchCategoryPath(result.article.category_id);
+        } else {
+          console.log('书籍没有分类ID');
         }
       } else {
         // 如果 API 失败，尝试从 mock 数据加载
@@ -216,7 +255,7 @@ export default function BookPage() {
     });
   };
 
-  // 处理文章点击 - 编辑模式下需要确认
+  // 处理书籍目录中的文章点击 - 编辑模式下需要确认
   const handleArticleClick = (newArticleId: string) => {
     if (editMode === 'edit') {
       Modal.confirm({
@@ -228,11 +267,11 @@ export default function BookPage() {
         okType: 'danger',
         onOk() {
           setEditMode('view');
-          router.push(`/article/${newArticleId}`);
+          router.push(`/book/${newArticleId}`);
         },
       });
     } else {
-      router.push(`/article/${newArticleId}`);
+      router.push(`/book/${newArticleId}`);
     }
   };
 
@@ -252,6 +291,9 @@ export default function BookPage() {
         return;
       }
 
+      // 根据当前blocks重新生成excerpt
+      const updatedExcerpt = generateExcerptFromBlocks(book.blocks) || '暂无简介';
+
       const response = await fetch(`/api/articles/${bookId}`, {
         method: 'PUT',
         headers: {
@@ -261,7 +303,7 @@ export default function BookPage() {
         body: JSON.stringify({
           title: book.title,
           author: book.author,
-          excerpt: book.excerpt,
+          excerpt: updatedExcerpt, // 使用重新生成的excerpt
           category_id: book.category_id,
           blocks: book.blocks,
           tags: book.tags,
@@ -373,8 +415,9 @@ export default function BookPage() {
             overflowY: 'auto',
           }}
         >
-          <ArticleTocNav
+          <BookTocNav
             currentArticleId={bookId}
+            bookCategoryId={bookCategoryId}
             onArticleClick={handleArticleClick}
           />
         </div>
@@ -544,21 +587,7 @@ export default function BookPage() {
                   >
                     分享
                   </Button>
-
-                  {/* 目录 - 仅在非移动端显示 */}
-                  {!isMobile && (
-                    <Button
-                      type="text"
-                      icon={<UnorderedListOutlined />}
-                      onClick={() => setTocDrawerOpen(true)}
-                      style={{
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        borderColor: 'rgba(255, 255, 255, 0.3)',
-                      }}
-                    >
-                      目录
-                    </Button>
-                  )}
+                  
 
                 </div>
               </div>
@@ -593,13 +622,17 @@ export default function BookPage() {
                             lineHeight: '1.8',
                             fontSize: '16px',
                             color: '#333',
+                            whiteSpace: 'pre-wrap',
                           }}
-                          dangerouslySetInnerHTML={{ __html: textContent.content }}
-                        />
+                        >
+                          {textContent.content}
+                        </div>
                       );
 
                     case 'image':
                       const imageContent = block.parsedContent as any;
+                      // 优先使用原始的imageUrl，如果parsedContent.url不存在的话
+                      const displayUrl = (imageContent && imageContent.url) || (block as any).imageUrl;
                       return (
                         <div
                           key={block.id || index}
@@ -608,10 +641,10 @@ export default function BookPage() {
                             textAlign: 'center',
                           }}
                         >
-                          {imageContent && imageContent.url ? (
+                          {displayUrl ? (
                             <img
-                              src={imageContent.url}
-                              alt={imageContent.title || '图片'}
+                              src={displayUrl}
+                              alt={imageContent?.title || '图片'}
                               style={{
                                 width: '100%',
                                 height: 'auto',
@@ -619,7 +652,7 @@ export default function BookPage() {
                                 cursor: 'pointer',
                                 objectFit: 'contain',
                               }}
-                              onClick={() => handleImageClick(imageContent)}
+                              onClick={() => handleImageClick(imageContent || { url: displayUrl })}
                             />
                           ) : (
                             <div
@@ -638,14 +671,14 @@ export default function BookPage() {
                               图片加载失败
                             </div>
                           )}
-                          {imageContent.title && (
+                          {imageContent?.title && (
                             <div style={{
                               marginTop: '8px',
                               fontSize: '14px',
                               color: '#666',
                               textAlign: 'center',
                             }}>
-                              {imageContent.title}
+                              {imageContent?.title}
                             </div>
                           )}
                         </div>
@@ -708,10 +741,12 @@ export default function BookPage() {
       </div>
 
       {/* 目录抽屉 */}
-      <ArticleTocDrawer
+      <BookTocDrawer
         open={tocDrawerOpen}
         onClose={() => setTocDrawerOpen(false)}
         currentArticleId={bookId}
+        bookCategoryId={bookCategoryId}
+        onArticleClick={handleArticleClick}
       />
 
       {/* 图片模态框 */}

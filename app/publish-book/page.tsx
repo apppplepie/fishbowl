@@ -83,10 +83,12 @@ export default function PublishBookPage() {
 
       if (!categoryResponse.ok || !categoryResult.success) {
         message.error(categoryResult.error || '创建书籍分类失败');
+        console.error('创建分类失败:', categoryResult);
         return;
       }
 
       const categoryId = categoryResult.category.id;
+      console.log('成功创建书籍分类:', categoryId, '书名:', values.title);
 
       // 2. 创建书籍简介文章
       const blocks: Block[] = [];
@@ -133,6 +135,7 @@ export default function PublishBookPage() {
       const articleResult = await articleResponse.json();
 
       if (articleResponse.ok && articleResult.success) {
+        console.log('成功创建书籍文章:', articleResult.article.id, '分类ID:', categoryId);
         message.success('书籍发布成功！');
         // 清空表单
         form.resetFields();

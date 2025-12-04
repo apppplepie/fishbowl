@@ -104,6 +104,14 @@ function BookcasePageContent() {
         // API 已经返回了所有需要的预览数据
         const articles = result.articles;
 
+        console.log('API 返回的文章数量:', articles.length);
+        console.log('文章列表:', articles.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          category_id: a.category_id,
+          category_name: a.category_name
+        })));
+
         // 将文章数据转换为书籍卡片
         const bookCards = extractBooksFromArticles(articles);
 
@@ -117,8 +125,11 @@ function BookcasePageContent() {
             return [...prev, ...newBooks];
           });
         } else {
-          // 初始加载模式：替换列表
-          setCards(bookCards);
+          // 初始加载模式：替换列表，但也要去重
+          const uniqueBookCards = bookCards.filter((book, index, self) =>
+            index === self.findIndex(b => b.id === book.id)
+          );
+          setCards(uniqueBookCards);
         }
 
         // 判断是否还有更多数据
@@ -128,16 +139,24 @@ function BookcasePageContent() {
         // API 失败
         if (!append) {
           console.log('API 失败，使用 mock 数据');
-          // 直接使用BookCard mock数据
-          setCards(mockBookCards);
+          // 使用BookCard mock数据，但要与现有数据去重
+          setCards(prev => {
+            const existingIds = new Set(prev.map(card => card.id));
+            const newBooks = mockBookCards.filter(book => !existingIds.has(book.id));
+            return [...prev, ...newBooks];
+          });
           setHasMore(false);
         }
       }
     } catch (error) {
       console.error('加载书架文章失败:', error);
       if (!append) {
-        // 网络错误，使用 mock 数据
-        setCards(mockBookCards);
+        // 网络错误，使用 mock 数据，但要与现有数据去重
+        setCards(prev => {
+          const existingIds = new Set(prev.map(card => card.id));
+          const newBooks = mockBookCards.filter(book => !existingIds.has(book.id));
+          return [...prev, ...newBooks];
+        });
         setHasMore(false);
       }
     } finally {
@@ -154,7 +173,7 @@ function BookcasePageContent() {
 
   // 过滤文章
   const filteredCards = useMemo(() => {
-    return cards.filter(article => {
+    const filtered = cards.filter(article => {
       // 1. 标签过滤（如果选了标签，文章必须包含至少一个选中的标签）
       const matchTags = selectedTags.length === 0 ||
         article.tags?.some((tag: string) => selectedTags.includes(tag));
@@ -169,6 +188,21 @@ function BookcasePageContent() {
       // 两个条件都要满足
       return matchTags && matchSearch;
     });
+
+    // 检查重复ID并记录
+    const idCount: Record<string, number> = {};
+    filtered.forEach(card => {
+      const idStr = String(card.id);
+      idCount[idStr] = (idCount[idStr] || 0) + 1;
+    });
+
+    const duplicates = Object.entries(idCount).filter(([id, count]) => count > 1);
+    if (duplicates.length > 0) {
+      console.error('发现重复的书籍ID:', duplicates);
+      console.error('所有书籍ID:', filtered.map(card => ({ id: card.id, title: card.title })));
+    }
+
+    return filtered;
   }, [cards, selectedTags, searchKeyword]);
 
   // 监听窗口大小变化

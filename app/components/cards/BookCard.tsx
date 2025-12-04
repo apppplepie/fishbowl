@@ -80,12 +80,6 @@ export default function BookCard({ card, onClick }: BookCardProps) {
         </div>
       }
     >
-      {/* 书籍类型标识 */}
-      <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
-        <Tag color="gold" style={{ fontSize: '10px', padding: '2px 6px' }}>
-          📚 书籍
-        </Tag>
-      </div>
 
       {/* 书名 */}
       <h3 style={{
@@ -102,19 +96,22 @@ export default function BookCard({ card, onClick }: BookCardProps) {
         {card.title}
       </h3>
 
-      {/* 简介 */}
-      <p style={{
-        margin: '0 0 16px 0',
-        color: '#666',
-        fontSize: '14px',
-        lineHeight: '1.5',
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-      }}>
-        {card.description}
-      </p>
+      {/* 简介 - 只有当有简介时才显示 */}
+      {card.description && (
+        <p style={{
+          margin: '0 0 16px 0',
+          color: '#666',
+          fontSize: '14px',
+          lineHeight: '1.5',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          whiteSpace: 'pre-wrap',
+        }}>
+          {card.description}
+        </p>
+      )}
 
       {/* 元信息 */}
       <div style={{

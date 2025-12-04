@@ -32,6 +32,7 @@ import type { Block, Article, TextBlock as TextBlockType } from '@/app/types/blo
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 
 const { Option } = Select;
 
@@ -71,12 +72,7 @@ export default function PublishArticlePage() {
     }
 
     // 生成摘要（从第一个文字块提取）
-    let excerpt = '';
-    const firstTextBlock = blocks.find(b => b.type === 'text');
-    if (firstTextBlock && (firstTextBlock as any).content) {
-      const content = (firstTextBlock as any).content;
-      excerpt = content.substring(0, 150).replace(/\n/g, ' ') + (content.length > 150 ? '...' : '');
-    }
+    const excerpt = generateExcerptFromBlocks(blocks);
 
     // 获取当前用户作为作者
     const author = user?.username || '匿名';

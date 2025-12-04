@@ -97,6 +97,7 @@ export default function LinkCard({ card, onClick }: LinkCardProps) {
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
+          whiteSpace: 'pre-wrap',
         }}>
           {card.description}
         </p>
