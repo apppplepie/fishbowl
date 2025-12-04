@@ -16,6 +16,7 @@
 .custom-nav-menu .ant-menu-item:hover {
   background: rgba(0, 0, 0, 0.3) !important;
   border-radius: 0 0 20px 20px !important;
+  transform: translateX(-3px) !important;
 }
 
 .custom-nav-menu .ant-menu-item-selected {
@@ -24,10 +25,12 @@
   font-weight: 600 !important;
   border: none !important;
   border-radius: 0 0 20px 20px !important;
+  transform: translateX(-2px) !important;
 }
 
 .custom-nav-menu .ant-menu-item-selected:hover {
   background: rgba(0, 0, 0, 0.9) !important;
+  transform: translateX(-4px) !important;
 }
 
 /* 菜单项文字样式 */
