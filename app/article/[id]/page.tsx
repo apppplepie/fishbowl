@@ -23,6 +23,7 @@ import { useAuth } from '@/app/hooks/useAuth';
 import BlockEditor from '@/app/components/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
+import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import type { Block as BlockType } from '@/app/types/block';
 import {
   getArticleWithBlocks,
@@ -114,8 +115,40 @@ export default function ArticlePage() {
         const result = await response.json();
 
         if (response.ok && result.success && result.article) {
-          setArticle(result.article);
-          setEditedArticle(result.article);
+          // 处理blocks数据，为编辑器准备正确的属性
+          const processedBlocks = result.article.blocks.map((block: any) => {
+            if (block.type === 'image' && block.parsedContent?.url) {
+              return {
+                ...block,
+                imageUrl: block.parsedContent.url,
+                title: block.parsedContent.title || block.title || '',
+                description: block.parsedContent.description || block.description || '',
+              };
+            } else if (block.type === 'text' && block.parsedContent?.content) {
+              // 为文字块设置content属性，确保编辑器能正确显示文本
+              return {
+                ...block,
+                content: block.parsedContent.content,
+              };
+            } else if (block.type === 'code' && block.parsedContent) {
+              // 为代码块设置language和code属性
+              return {
+                ...block,
+                language: block.parsedContent.language || 'javascript',
+                code: block.parsedContent.code || '',
+                title: block.parsedContent.title || block.title || '',
+              };
+            }
+            return block;
+          });
+
+          const processedArticle = {
+            ...result.article,
+            blocks: processedBlocks,
+          };
+
+          setArticle(processedArticle);
+          setEditedArticle(processedArticle);
           setLikesCount(result.article.likes || 0);
           setCommentsCount(result.article.comments || 0);
 
@@ -295,6 +328,9 @@ export default function ArticlePage() {
 
         message.loading({ content: '正在保存...', key: 'save' });
 
+        // 根据当前blocks重新生成excerpt
+        const updatedExcerpt = generateExcerptFromBlocks(editedArticle.editorBlocks || []);
+
         // 准备保存的数据
         const saveData = {
           title: editedArticle.title,
@@ -302,6 +338,7 @@ export default function ArticlePage() {
           category_id: editedArticle.category_id || null,
           tags: editedArticle.tags || [],
           blocks: editedArticle.editorBlocks || [],
+          excerpt: updatedExcerpt, // 添加重新生成的excerpt
         };
 
         // 获取 Token
@@ -906,36 +943,41 @@ export default function ArticlePage() {
                             e.currentTarget.style.transform = 'scale(1)';
                           }}
                         >
-                          {block.parsedContent && (block.parsedContent as ImageBlockContent).url ? (
-                            <img
-                              src={(block.parsedContent as ImageBlockContent).url}
-                              alt="图片"
-                              style={{
-                                width: '100%',
-                                height: 'auto',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                objectFit: 'contain',
-                              }}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: '100%',
-                                height: '200px',
-                                borderRadius: '8px',
-                                backgroundColor: '#f5f5f5',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#999',
-                                fontSize: '14px',
-                              }}
-                            >
-                              图片加载失败
-                            </div>
-                          )}
-                          {(block.parsedContent as ImageBlockContent).description && (
+                          {(() => {
+                            const parsedContent = block.parsedContent as ImageBlockContent;
+                            // 优先使用原始的imageUrl，如果parsedContent.url不存在的话
+                            const displayUrl = (parsedContent && parsedContent.url) || (block as any).imageUrl;
+                            return displayUrl ? (
+                              <img
+                                src={displayUrl}
+                                alt="图片"
+                                style={{
+                                  width: '100%',
+                                  height: 'auto',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                  objectFit: 'contain',
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: '100%',
+                                  height: '200px',
+                                  borderRadius: '8px',
+                                  backgroundColor: '#f5f5f5',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#999',
+                                  fontSize: '14px',
+                                }}
+                              >
+                                图片加载失败
+                              </div>
+                            );
+                          })()}
+                          {block.parsedContent && (block.parsedContent as ImageBlockContent).description && (
                             <div style={{
                               marginTop: '8px',
                               fontSize: '13px',

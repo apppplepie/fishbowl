@@ -103,6 +103,7 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
+              whiteSpace: 'pre-wrap',
             }}>
               {card.description || card.excerpt}
             </p>

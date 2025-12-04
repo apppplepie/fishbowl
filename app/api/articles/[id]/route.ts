@@ -82,6 +82,12 @@ export async function PUT(
       updateValues.push(body.category_id);
     }
 
+    // 如果提供了 excerpt，更新摘要
+    if (body.excerpt !== undefined) {
+      updateFields.push('excerpt = ?');
+      updateValues.push(body.excerpt);
+    }
+
     // 更新文章基本信息
     await query(
       `UPDATE articles 
