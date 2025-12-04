@@ -148,12 +148,8 @@ function BookcasePageContent() {
 
   // 初次加载
   useEffect(() => {
-    // 临时直接使用mock数据测试
-    console.log('使用mock书籍数据');
-    setCards(mockBookCards);
-    setHasMore(false);
-    setLoading(false);
-    // loadBookcaseArticles(0, false);
+    console.log('加载数据库书籍数据');
+    loadBookcaseArticles(0, false);
   }, []);
 
   // 过滤文章
@@ -217,8 +213,8 @@ function BookcasePageContent() {
       // mock 数据兼容
       router.push(`/article/${card.id}`);
     } else if (card.type === 'book') {
-      // 书籍卡片跳转到主要文章
-      router.push(`/article/${card.mainArticleId}`);
+      // 书籍卡片跳转到书籍详情页
+      router.push(`/book/${card.mainArticleId}`);
     }
     // 其他类型的卡片可以弹出模态框或其他操作
   };
@@ -271,39 +267,6 @@ function BookcasePageContent() {
               alignItems: isMobile ? 'stretch' : 'flex-end',
               justifyContent: isMobile ? 'flex-start' : 'space-between',
             }}>
-              {/* 左侧：标签搜索筛选 */}
-              <div style={{ flex: 1 }}>
-                <Select
-                  mode="tags"
-                  value={selectedTags}
-                  onChange={setSelectedTags}
-                  placeholder="搜索或输入标签，空格/回车添加"
-                  style={{ width: '100%' }}
-                  size="large"
-                  className="tag-select-transparent"
-                  maxTagCount="responsive"
-                  tokenSeparators={[' ']} // 空格自动分隔
-                  tagRender={(props) => {
-                    const { label, value } = props;
-                    const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
-                    const tagIndex = allTags.indexOf(value as string);
-                    const color = tagIndex >= 0
-                      ? colors[tagIndex % colors.length]
-                      : 'default'; // 临时标签用默认颜色
-
-                    return (
-                      <Tag
-                        color={color}
-                        closable={false}
-                        style={{ marginRight: 3 }}
-                      >
-                        {label}
-                      </Tag>
-                    );
-                  }}
-                  options={allTags.map(tag => ({ label: tag, value: tag }))}
-                />
-              </div>
 
               {/* 右侧：关键词搜索 */}
               <div style={{ width: isMobile ? '100%' : '320px' }}>
@@ -457,8 +420,10 @@ function BookcasePageContent() {
         placement="left"
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
-        width={280}
-        styles={{ body: { padding: '20px' } }}
+        styles={{
+          body: { padding: '20px' },
+          wrapper: { width: '280px' }
+        }}
       >
         <div style={{
           textAlign: 'center',

@@ -906,15 +906,35 @@ export default function ArticlePage() {
                             e.currentTarget.style.transform = 'scale(1)';
                           }}
                         >
-                          <img
-                            src={(block.parsedContent as ImageBlockContent).url}
-                            alt="图片"
-                            style={{
-                              maxWidth: '100%',
-                              borderRadius: '8px',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                            }}
-                          />
+                          {block.parsedContent && (block.parsedContent as ImageBlockContent).url ? (
+                            <img
+                              src={(block.parsedContent as ImageBlockContent).url}
+                              alt="图片"
+                              style={{
+                                width: '100%',
+                                height: 'auto',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                objectFit: 'contain',
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '200px',
+                                borderRadius: '8px',
+                                backgroundColor: '#f5f5f5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#999',
+                                fontSize: '14px',
+                              }}
+                            >
+                              图片加载失败
+                            </div>
+                          )}
                           {(block.parsedContent as ImageBlockContent).description && (
                             <div style={{
                               marginTop: '8px',

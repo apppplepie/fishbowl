@@ -151,16 +151,34 @@ export default function ImageBlock({
           }}
           onClick={() => setShowModal(true)}
         >
-          <AntImage
-            src={block.imageUrl}
-            alt="图片"
-            preview={false}
-            style={{
-              width: '100%',
-              borderRadius: '8px',
-              objectFit: 'cover',
-            }}
-          />
+          {block.imageUrl ? (
+            <AntImage
+              src={block.imageUrl}
+              alt="图片"
+              preview={false}
+              style={{
+                width: '100%',
+                borderRadius: '8px',
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '200px',
+                borderRadius: '8px',
+                backgroundColor: '#f5f5f5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#999',
+                fontSize: '14px',
+              }}
+            >
+              图片URL为空
+            </div>
+          )}
           {isHovered && (
             <div
               style={{
