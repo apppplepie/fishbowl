@@ -5,8 +5,8 @@ import { FloatButton, Modal, Form, Input, Upload, message, Button } from 'antd';
 import { PlusOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
-import CategoryTreeSelect from './CategoryTreeSelect';
-import TagInput from './TagInput';
+import CategoryTreeSelect from '../CategoryTreeSelect';
+import TagInput from '../TagInput';
 
 interface GalleryPublishFloatProps {
   onSuccess?: () => void;

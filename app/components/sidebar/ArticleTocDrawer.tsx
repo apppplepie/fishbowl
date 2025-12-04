@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Drawer } from 'antd';
-import ArticleTocNav from './ArticleTocNav';
+import ArticleTocNav from './ArticleTocSidebar';
 
 interface ArticleTocDrawerProps {
   open: boolean;

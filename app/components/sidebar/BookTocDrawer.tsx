@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Drawer } from 'antd';
-import BookTocNav from './BookTocNav';
+import BookTocNav from './BookTocSidebar';
 
 interface BookTocDrawerProps {
   open: boolean;
