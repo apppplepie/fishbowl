@@ -2,7 +2,7 @@
  * 卡片类型定义
  */
 
-export type CardType = 'image' | 'article' | 'diary' | 'quote' | 'video' | 'link';
+export type CardType = 'image' | 'article' | 'diary' | 'quote' | 'video' | 'link' | 'book';
 
 export interface BaseCard {
   id: number;
@@ -69,5 +69,16 @@ export interface LinkCard extends BaseCard {
   thumbnail?: string;
 }
 
-export type Card = ImageCard | ArticleCard | DiaryCard | QuoteCard | VideoCard | LinkCard;
+// G. 书籍卡片
+export interface BookCard extends BaseCard {
+  type: 'book';
+  title: string; // 书名（目录名）
+  description: string; // 简介（order最小的text block）
+  coverImage: string; // 封面图（order最小的image block）
+  author: string; // 作者
+  updatedAt: string; // 更新日期
+  mainArticleId: string; // 主要文章ID（order=0的article）
+}
+
+export type Card = ImageCard | ArticleCard | DiaryCard | QuoteCard | VideoCard | LinkCard | BookCard;
 

@@ -20,6 +20,7 @@ export interface TextBlock extends BaseBlock {
 export interface ImageBlock extends BaseBlock {
   type: 'image';
   imageUrl: string;
+  title?: string;
   description?: string;
   author?: string;
 }

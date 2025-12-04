@@ -12,10 +12,14 @@ import ArticleCard from '@/app/components/cards/ArticleCard';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
+import BookCard from '@/app/components/cards/BookCard';
 import DiaryPublishFloat from '@/app/components/DiaryPublishFloat';
 import { CategoryDrawerButton } from '@/app/components/ArticleCategoryDrawer';
+import BookPublishFloat from '@/app/components/BookPublishFloat';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
+import { extractBooksFromArticles } from '@/app/utils/bookUtils';
+import { mockBookCards } from '@/app/utils/bookMocks';
 import '../styles/articles-filter.css';
 
 // 根据屏幕宽度计算列数
@@ -97,21 +101,24 @@ function BookcasePageContent() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // API 已经返回了所有需要的预览数据，无需额外处理
+        // API 已经返回了所有需要的预览数据
         const articles = result.articles;
+
+        // 将文章数据转换为书籍卡片
+        const bookCards = extractBooksFromArticles(articles);
 
         if (append) {
           // 追加模式：添加到现有列表，并去重
           setCards(prev => {
             const existingIds = new Set(prev.map(card => card.id));
-            const newArticles = articles.filter(
-              (article: any) => !existingIds.has(article.id)
+            const newBooks = bookCards.filter(
+              (book: any) => !existingIds.has(book.id)
             );
-            return [...prev, ...newArticles];
+            return [...prev, ...newBooks];
           });
         } else {
           // 初始加载模式：替换列表
-          setCards(articles);
+          setCards(bookCards);
         }
 
         // 判断是否还有更多数据
@@ -121,9 +128,8 @@ function BookcasePageContent() {
         // API 失败
         if (!append) {
           console.log('API 失败，使用 mock 数据');
-          // 过滤出cat_bookcase分类的mock数据
-          const bookcaseMockCards = mockCards.filter(card => card.categoryId === 'cat_bookcase');
-          setCards(bookcaseMockCards);
+          // 直接使用BookCard mock数据
+          setCards(mockBookCards);
           setHasMore(false);
         }
       }
@@ -131,8 +137,7 @@ function BookcasePageContent() {
       console.error('加载书架文章失败:', error);
       if (!append) {
         // 网络错误，使用 mock 数据
-        const bookcaseMockCards = mockCards.filter(card => card.categoryId === 'cat_bookcase');
-        setCards(bookcaseMockCards);
+        setCards(mockBookCards);
         setHasMore(false);
       }
     } finally {
@@ -143,7 +148,12 @@ function BookcasePageContent() {
 
   // 初次加载
   useEffect(() => {
-    loadBookcaseArticles(0, false);
+    // 临时直接使用mock数据测试
+    console.log('使用mock书籍数据');
+    setCards(mockBookCards);
+    setHasMore(false);
+    setLoading(false);
+    // loadBookcaseArticles(0, false);
   }, []);
 
   // 过滤文章
@@ -206,6 +216,9 @@ function BookcasePageContent() {
     } else if (card.type === 'article') {
       // mock 数据兼容
       router.push(`/article/${card.id}`);
+    } else if (card.type === 'book') {
+      // 书籍卡片跳转到主要文章
+      router.push(`/article/${card.mainArticleId}`);
     }
     // 其他类型的卡片可以弹出模态框或其他操作
   };
@@ -229,6 +242,8 @@ function BookcasePageContent() {
         return <CodeCard key={article.id} card={article} onClick={handleClick} />;
       case 'diary':
         return <DiaryCard key={article.id} card={article} onClick={handleClick} />;
+      case 'book':
+        return <BookCard key={article.id} card={article} onClick={handleClick} />;
       default:
         // 兼容 mock 数据的其他类型
         return <CardRenderer key={article.id} card={article} onClick={handleClick} />;
@@ -443,7 +458,7 @@ function BookcasePageContent() {
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         width={280}
-        bodyStyle={{ padding: '20px' }}
+        styles={{ body: { padding: '20px' } }}
       >
         <div style={{
           textAlign: 'center',
@@ -503,6 +518,9 @@ function BookcasePageContent() {
           to { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* 书籍发布悬浮按钮 */}
+      <BookPublishFloat />
     </>
   );
 }
