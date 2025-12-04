@@ -2,27 +2,25 @@
 
 import React from 'react';
 import { Drawer } from 'antd';
-import BookTocNav from './BookTocSidebar';
+import ArticleTocNav from './ArticleIndexSidebar';
 
-interface BookTocDrawerProps {
+interface ArticleTocDrawerProps {
   open: boolean;
   onClose: () => void;
   currentArticleId?: string;
-  bookCategoryId?: string;
   onArticleClick?: (articleId: string) => void;
 }
 
 /**
- * 书籍目录抽屉组件
- * 用于移动端显示书籍目录导航
+ * 文章目录抽屉组件
+ * 用于移动端显示文章目录导航
  */
-export default function BookTocDrawer({
+export default function ArticleTocDrawer({
   open,
   onClose,
   currentArticleId,
-  bookCategoryId,
   onArticleClick,
-}: BookTocDrawerProps) {
+}: ArticleTocDrawerProps) {
   const handleArticleClick = (articleId: string) => {
     onArticleClick?.(articleId);
     onClose(); // 点击文章后关闭抽屉
@@ -34,7 +32,7 @@ export default function BookTocDrawer({
 
   return (
     <Drawer
-      title="书籍目录"
+      title="文章目录"
       placement="left"
       onClose={onClose}
       open={open}
@@ -45,12 +43,12 @@ export default function BookTocDrawer({
         },
       }}
     >
-      <BookTocNav
+      <ArticleTocNav
         currentArticleId={currentArticleId}
-        bookCategoryId={bookCategoryId}
         onArticleClick={handleArticleClick}
         onCategoryClick={handleCategoryClick}
       />
     </Drawer>
   );
 }
+

@@ -3,6 +3,8 @@
  * 集中管理所有导航菜单项，方便扩展和维护
  */
 
+import { icons } from "antd/es/image/PreviewGroup";
+
 export interface NavigationItem {
   key: string;
   label: string;
@@ -29,10 +31,10 @@ export const publicNavigationItems: NavigationItem[] = [
     path: '/gallery',
   },
   {
-    key: 'articles',
+    key: 'archive',
     label: '文章归档',
     icon: 'FileTextOutlined',
-    path: '/articles',
+    path: '/archive',
   },
   {
     key: 'publish',
@@ -79,6 +81,7 @@ export const userMenuItems = [
   {
     key: 'profile',
     label: '个人资料',
+    icon:'UserOutlined',
     path: '/profile',
   },
 ];

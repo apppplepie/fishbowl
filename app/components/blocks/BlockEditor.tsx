@@ -12,9 +12,9 @@ import {
   FormatPainterOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
-import TextBlock from './blocks/TextBlock';
-import ImageBlock from './blocks/ImageBlock';
-import CodeBlock from './blocks/CodeBlock';
+import TextBlock from './TextBlock';
+import ImageBlock from './ImageBlock';
+import CodeBlock from './CodeBlock';
 import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, CodeBlock as CodeBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 
