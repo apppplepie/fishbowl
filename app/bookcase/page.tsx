@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { Masonry, Input, Tag, Select, message, Drawer } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Masonry, Input, Tag, Select, message, Drawer, Button } from 'antd';
+import { SearchOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/app/components/Header';
@@ -14,7 +14,8 @@ import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import BookCard from '@/app/components/cards/BookCard';
 import DiaryPublishFloat from '@/app/components/DiaryPublishFloat';
-import { CategoryDrawerButton } from '@/app/components/ArticleCategoryDrawer';
+import BookCategoryDrawer, { BookCategoryDrawerButton } from '@/app/components/BookCategoryDrawer';
+import BookCategoryModal from '@/app/components/BookCategoryModal';
 import BookPublishFloat from '@/app/components/BookPublishFloat';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
@@ -56,8 +57,14 @@ function BookcasePageContent() {
   // 目录抽屉状态
   const [drawerVisible, setDrawerVisible] = useState(false);
 
+  // 书籍分类管理模态框状态
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+
   // 打开目录抽屉的函数
   const openCategoryDrawer = () => setDrawerVisible(true);
+
+  // 打开书籍分类管理模态框的函数
+  const openCategoryModal = () => setCategoryModalVisible(true);
 
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
@@ -285,7 +292,7 @@ function BookcasePageContent() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          <CategoryDrawerButton onClick={openCategoryDrawer} />
+          <BookCategoryDrawerButton onClick={openCategoryDrawer} />
         }
       />
 
@@ -335,6 +342,18 @@ function BookcasePageContent() {
                 <span> · 找到 <strong>{filteredCards.length}</strong> 篇文章</span>
               </div>
             )}
+
+            {/* 管理分类按钮 */}
+            <div style={{ marginTop: '12px' }}>
+              <Button
+                type="primary"
+                icon={<UnorderedListOutlined />}
+                onClick={openCategoryModal}
+                size="small"
+              >
+                管理书籍分类
+              </Button>
+            </div>
           </div>
         }
         box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
@@ -449,55 +468,12 @@ function BookcasePageContent() {
       )}
 
       {/* 目录抽屉 - 书架页面专用 */}
-      <Drawer
-        title="📚 我的书架"
-        placement="left"
-        open={drawerVisible}
+      {/* 目录抽屉 - 书架页面专用 */}
+      <BookCategoryDrawer
+        visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
-        styles={{
-          body: { padding: '20px' },
-          wrapper: { width: '280px' }
-        }}
-      >
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '20px',
-        }}>
-          <div style={{
-            fontSize: '48px',
-            marginBottom: '16px',
-          }}>
-            📚
-          </div>
-          <div style={{
-            fontSize: '16px',
-            fontWeight: 'bold',
-            marginBottom: '8px',
-            color: '#1a1a1a',
-          }}>
-            我的书架
-          </div>
-        </div>
-
-        <div style={{
-          color: '#666',
-          fontSize: '14px',
-          lineHeight: '1.6',
-          marginBottom: '20px',
-        }}>
-          这里收藏了我喜欢的书籍和阅读资料。你可以通过顶部搜索框来快速找到想要的内容。
-        </div>
-
-        <div style={{
-          background: '#f5f5f5',
-          padding: '16px',
-          borderRadius: '8px',
-          fontSize: '13px',
-          color: '#666',
-        }}>
-          💡 提示：使用标签筛选可以更精准地找到你想要的书籍。
-        </div>
-      </Drawer>
+        selectedCategoryId={selectedTags.length > 0 ? undefined : undefined} // 这里可以根据需要传递选中的分类ID
+      />
 
       {/* 日志发布悬浮按钮 */}
       <DiaryPublishFloat
@@ -520,6 +496,16 @@ function BookcasePageContent() {
 
       {/* 书籍发布悬浮按钮 */}
       <BookPublishFloat />
+
+      {/* 书籍分类管理模态框 */}
+      <BookCategoryModal
+        open={categoryModalVisible}
+        onClose={() => setCategoryModalVisible(false)}
+        onSuccess={() => {
+          // 分类调整成功后重新加载书籍列表
+          loadBookcaseArticles(0, false);
+        }}
+      />
     </>
   );
 }
