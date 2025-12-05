@@ -9,6 +9,8 @@ interface CategoryWithArticles {
   name: string;
   parent_id: string | null;
   order_index: number;
+  depth: number;
+  path: string;
   children?: CategoryWithArticles[];
   articles?: Array<{
     id: string;
@@ -33,6 +35,8 @@ function buildTree(flatData: any[]): CategoryWithArticles[] {
         name: item.name,
         parent_id: item.parent_id,
         order_index: item.order_index,
+        depth: item.depth || 1,
+        path: item.path || '',
         children: [],
         articles: [],
       });
@@ -52,22 +56,22 @@ function buildTree(flatData: any[]): CategoryWithArticles[] {
     }
   });
 
-  // 排序
-  const sortNodes = (nodes: CategoryWithArticles[]) => {
-    nodes.sort((a, b) => a.order_index - b.order_index);
+  // 按 path 排序（深度优先）
+  const sortByPath = (nodes: CategoryWithArticles[]) => {
+    nodes.sort((a, b) => (a.path || '').localeCompare(b.path || ''));
     nodes.forEach(node => {
       if (node.children && node.children.length > 0) {
-        sortNodes(node.children);
+        sortByPath(node.children);
       }
       if (node.articles && node.articles.length > 0) {
-        node.articles.sort((a, b) => 
+        node.articles.sort((a, b) =>
           new Date(b.publish_date).getTime() - new Date(a.publish_date).getTime()
         );
       }
     });
   };
 
-  sortNodes(roots);
+  sortByPath(roots);
   return roots;
 }
 

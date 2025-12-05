@@ -6,51 +6,94 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
-interface Category {
+interface TreeNode {
   id: string;
   name: string;
   parent_id: string | null;
+  path: string;
+  depth: number;
   order_index: number;
-  children?: Category[];
-  articles?: Article[];
-}
-
-interface Article {
-  id: string;
-  title: string;
-  type: string;
-  publish_date: string;
+  node_type: 'category' | 'article';
+  type?: string; // article type
+  publish_date?: string; // for articles
+  children?: TreeNode[];
 }
 
 /**
- * 递归构建分类树
+ * 获取指定分类的完整子树（包含分类和文章的混合节点）
  */
-async function buildCategoryTree(parentId: string, includeArticles: boolean = true): Promise<Category[]> {
+async function getTreeNodes(parentId: string): Promise<TreeNode[]> {
+  console.log('getTreeNodes called for parentId:', parentId);
+
+  const allNodes: TreeNode[] = [];
+
   // 获取直接子分类
-  const children = await query<Category[]>(
-    'SELECT id, name, parent_id, order_index FROM categories WHERE parent_id = ? ORDER BY order_index ASC, name ASC',
+  const childCategories = await query<any[]>(
+    `SELECT id, name, parent_id, path, depth, order_index
+     FROM categories
+     WHERE parent_id = ?
+     ORDER BY order_index ASC`,
     [parentId]
   );
 
-  // 为每个子分类递归获取子项
-  for (const child of children) {
-    child.children = await buildCategoryTree(child.id, includeArticles);
+  console.log('Found child categories:', childCategories.length);
 
-    // 获取该分类下的文章
-    if (includeArticles) {
-      const articles = await query<Article[]>(
-        `SELECT id, title, type, publish_date
-         FROM articles
-         WHERE category_id = ? AND status = 'published'
-         ORDER BY last_modified DESC, publish_date DESC`,
-        [child.id]
-      );
-      child.articles = articles;
-    }
+  // 添加子分类节点
+  for (const category of childCategories) {
+    const categoryNode: TreeNode = {
+      id: category.id,
+      name: category.name,
+      parent_id: category.parent_id,
+      path: category.path,
+      depth: category.depth,
+      order_index: category.order_index,
+      node_type: 'category',
+    };
+
+    allNodes.push(categoryNode);
   }
 
-  return children;
+  // 获取直接文章
+  const articles = await query<any[]>(
+    `SELECT id, title, type, publish_date, order_in_category
+     FROM articles
+     WHERE category_id = ? AND status = 'published'
+     ORDER BY order_in_category ASC`,
+    [parentId]
+  );
+
+  console.log('Found articles:', articles.length);
+
+  // 添加文章节点
+  for (const article of articles) {
+    // 获取父分类的path
+    const parentCategory = await query<any[]>(
+      'SELECT path, depth FROM categories WHERE id = ?',
+      [parentId]
+    );
+
+    const parentPath = parentCategory.length > 0 ? parentCategory[0].path : '000001';
+    const parentDepth = parentCategory.length > 0 ? parentCategory[0].depth : 1;
+
+    const articleNode: TreeNode = {
+      id: article.id,
+      name: article.title,
+      parent_id: parentId,
+      path: `${parentPath}-${article.order_in_category.toString().padStart(6, '0')}`,
+      depth: parentDepth + 1,
+      order_index: article.order_in_category,
+      node_type: 'article',
+      type: article.type,
+      publish_date: article.publish_date,
+    };
+
+    allNodes.push(articleNode);
+  }
+
+  // 按path排序
+  return allNodes.sort((a, b) => (a.path || '').localeCompare(b.path || ''));
 }
+
 
 export async function GET(
   request: NextRequest,
@@ -72,38 +115,32 @@ export async function GET(
       );
     }
 
-    // 获取分类信息
-    const categoryInfo = (category as any[])[0];
+    console.log('TreeWithArticles API called for category:', id);
 
-    // 构建以该分类为根的子分类树
-    const categoryTree = await buildCategoryTree(id);
+    // 验证分类是否存在
+    const categoryCheck = await query(
+      'SELECT id, name, path, depth FROM categories WHERE id = ?',
+      [id]
+    );
 
-    // 将分类本身作为根节点返回，包含其子分类
-    const rootCategory: Category = {
-      id: categoryInfo.id,
-      name: categoryInfo.name,
-      parent_id: categoryInfo.parent_id,
-      order_index: categoryInfo.order_index,
-      children: categoryTree,
-    };
+    console.log('Category check result:', categoryCheck);
 
-    // 同时获取该分类下的直接文章（如果有的话）
-    if (true) { // 总是包含文章
-      const articles = await query<Article[]>(
-        `SELECT id, title, type, publish_date
-         FROM articles
-         WHERE category_id = ? AND status = 'published'
-         ORDER BY last_modified DESC, publish_date DESC`,
-        [id]
+    if (!categoryCheck || (categoryCheck as any[]).length === 0) {
+      return NextResponse.json(
+        { success: false, error: '分类不存在' },
+        { status: 404 }
       );
-      rootCategory.articles = articles;
     }
 
-    console.log('API返回数据:', [rootCategory]);
+    // 获取该分类下的直接子项（分类和文章的混合列表）
+    const nodes = await getTreeNodes(id);
+
+    console.log('API返回节点数量:', nodes.length);
+    console.log('API返回前3个节点:', nodes.slice(0, 3));
 
     return NextResponse.json({
       success: true,
-      data: [rootCategory], // 返回包含根分类的数组
+      data: nodes,
     });
 
   } catch (error: any) {

@@ -17,20 +17,17 @@ import { useRouter } from 'next/navigation';
  * 展示书籍所属的目录结构，支持点击跳转
  */
 
-interface Article {
-  id: string;
-  title: string;
-  type: string;
-  publish_date: string;
-}
-
-interface Category {
+interface TreeNode {
   id: string;
   name: string;
   parent_id: string | null;
+  path: string;
+  depth: number;
   order_index: number;
-  children?: Category[];
-  articles?: Article[];
+  node_type: 'category' | 'article';
+  type?: string; // article type
+  publish_date?: string; // for articles
+  children?: TreeNode[];
 }
 
 interface BookCategorySidebarProps {
@@ -48,9 +45,10 @@ export default function BookCategorySidebar({
 }: BookCategorySidebarProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<TreeNode[]>([]);
   const [menuItems, setMenuItems] = useState<MenuProps['items']>([]);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const [bookRootId, setBookRootId] = useState<string | null>(null);
 
   /**
    * 获取文章类型图标
@@ -68,23 +66,74 @@ export default function BookCategorySidebar({
   };
 
   /**
-   * 构建菜单项
+   * 找到书籍根节点（depth=2的祖先节点）
    */
-  const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
-    return categories.map(category => {
-      const children: MenuProps['items'] = [];
+  const findBookRootId = async (categoryId: string): Promise<string> => {
+    try {
+      // 直接从数据库获取该分类的path
+      const response = await fetch(`/api/categories/${categoryId}`);
+      const result = await response.json();
 
-      // 添加子分类
-      if (category.children && category.children.length > 0) {
-        const subCategories = buildMenuItems(category.children);
-        children.push(...(subCategories || []));
+      if (result.success && result.categories && result.categories.length > 0) {
+        const category = result.categories[0];
+        if (category.path) {
+          // path格式如：000001-000002-000003
+          // depth=2的节点是path数组中的第二个元素
+          const pathParts = category.path.split('-');
+          if (pathParts.length >= 2) {
+            // 需要找到path为pathParts[0] + '-' + pathParts[1]的分类
+            const bookPath = pathParts.slice(0, 2).join('-');
+
+            // 查询所有分类，找到path匹配的
+            const allCategoriesResponse = await fetch('/api/categories?format=flat');
+            const allCategoriesResult = await allCategoriesResponse.json();
+
+            if (allCategoriesResult.success) {
+              const bookCategory = allCategoriesResult.categories.find((cat: any) =>
+                cat.path === bookPath
+              );
+              if (bookCategory) {
+                return bookCategory.id;
+              }
+            }
+          }
+        }
       }
+    } catch (error) {
+      console.error('查找书籍根节点失败:', error);
+    }
 
-      // 添加文章
-      if (category.articles && category.articles.length > 0) {
-        const articleItems = category.articles.map(article => ({
-          key: `article-${article.id}`,
-          icon: getArticleIcon(article.type),
+    // 如果找不到，默认返回传入的categoryId
+    return categoryId;
+  };
+
+  /**
+   * 构建菜单项 - 处理平铺的混合节点列表
+   */
+  const buildMenuItems = (nodes: TreeNode[]): MenuProps['items'] => {
+    return nodes.map(node => {
+      // 根据节点类型构建菜单项
+      if (node.node_type === 'category') {
+        return {
+          key: `category-${node.id}`,
+          icon: <FolderOutlined />,
+          label: (
+            <span style={{ fontWeight: 500 }}>
+              <span
+                style={{ cursor: 'pointer' }}
+                onClick={() => handleCategoryTextClick(node.id)}
+              >
+                {node.name}
+              </span>
+            </span>
+          ),
+          // 分类节点可以展开，但现在没有子项（由前端按需加载）
+        };
+      } else {
+        // article节点
+        return {
+          key: `article-${node.id}`,
+          icon: getArticleIcon(node.type || 'article'),
           label: (
             <span style={{
               display: 'flex',
@@ -98,63 +147,30 @@ export default function BookCategorySidebar({
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
               }}>
-                {article.title}
+                {node.name}
               </span>
             </span>
           ),
-        }));
-        children.push(...articleItems);
+        };
       }
-
-      return {
-        key: `category-${category.id}`,
-        icon: <FolderOutlined />,
-        label: (
-          <span style={{ fontWeight: 500 }}>
-            <span
-              style={{ cursor: 'pointer' }}
-              onClick={() => handleCategoryTextClick(category.id)}
-            >
-              {category.name}
-            </span>
-            {category.articles && category.articles.length > 0 && (
-              <span style={{
-                marginLeft: '8px',
-                fontSize: '12px',
-                color: '#999',
-              }}>
-                ({category.articles.length})
-              </span>
-            )}
-          </span>
-        ),
-        children: children.length > 0 ? children : undefined,
-      };
     });
   };
 
   /**
    * 收集所有应该展开的 keys
    */
-  const getAllCategoryKeys = (categories: Category[]): string[] => {
-    const keys: string[] = [];
-    const collect = (cats: Category[]) => {
-      cats.forEach(cat => {
-        keys.push(`category-${cat.id}`);
-        if (cat.children) {
-          collect(cat.children);
-        }
-      });
-    };
-    collect(categories);
-    return keys;
+  const getAllCategoryKeys = (nodes: TreeNode[]): string[] => {
+    return nodes
+      .filter(node => node.node_type === 'category')
+      .map(node => `category-${node.id}`);
   };
 
   /**
-   * 获取根目录的 keys（禁止关闭的目录）- 对于书籍，只有一个根目录
+   * 获取根目录的 keys（禁止关闭的目录）
    */
-  const getRootCategoryKeys = (categories: Category[]): string[] => {
-    return categories.map(cat => `category-${cat.id}`);
+  const getRootCategoryKeys = (nodes: TreeNode[]): string[] => {
+    // 对于书籍目录，所有分类节点都可以关闭
+    return [];
   };
 
   /**
@@ -172,20 +188,26 @@ export default function BookCategorySidebar({
 
       setLoading(true);
       try {
-        // 加载书籍分类的子分类和文章
-        console.log('BookCategorySidebar: 调用API:', `/api/categories/${bookCategoryId}/tree-with-articles`);
-        const response = await fetch(`/api/categories/${bookCategoryId}/tree-with-articles`);
+        // 找到书籍根节点（depth=2）
+        const actualBookId = await findBookRootId(bookCategoryId);
+        console.log('BookCategorySidebar: 找到书籍根节点:', actualBookId);
+        setBookRootId(actualBookId);
+
+        // 加载书籍根节点的完整树结构
+        console.log('BookCategorySidebar: 调用API:', `/api/categories/${actualBookId}/tree-with-articles`);
+        const response = await fetch(`/api/categories/${actualBookId}/tree-with-articles`);
         const result = await response.json();
 
         console.log('BookCategorySidebar: API响应:', result);
 
         if (result.success) {
-          setCategories(result.data);
-          const items = buildMenuItems(result.data);
+          const nodes = result.data as TreeNode[];
+          setCategories(nodes); // 这里存储平铺的节点列表
+          const items = buildMenuItems(nodes);
           setMenuItems(items);
 
-          // 默认展开所有目录（书籍目录固定展开）
-          const allKeys = getAllCategoryKeys(result.data);
+          // 默认展开所有目录
+          const allKeys = getAllCategoryKeys(nodes);
           setOpenKeys(allKeys);
         }
       } catch (error) {

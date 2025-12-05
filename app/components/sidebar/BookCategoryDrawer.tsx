@@ -16,6 +16,8 @@ interface Category {
   name: string;
   parent_id: string | null;
   order_index: number;
+  depth: number;
+  path: string;
   children?: Category[];
 }
 
