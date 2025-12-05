@@ -67,34 +67,30 @@ export default function BookCategorySidebar({
 
   /**
    * 找到书籍根节点（depth=2的祖先节点）
+   * 通过解析path字符串直接计算，无需额外API调用
    */
   const findBookRootId = async (categoryId: string): Promise<string> => {
     try {
-      // 直接从数据库获取该分类的path
+      // 获取当前分类的path
       const response = await fetch(`/api/categories/${categoryId}`);
       const result = await response.json();
 
       if (result.success && result.categories && result.categories.length > 0) {
         const category = result.categories[0];
         if (category.path) {
-          // path格式如：000001-000002-000003
-          // depth=2的节点是path数组中的第二个元素
+          // path格式如：000001-000002-000003-000004
+          // depth=2的节点是path的第二段（索引1）
           const pathParts = category.path.split('-');
           if (pathParts.length >= 2) {
-            // 需要找到path为pathParts[0] + '-' + pathParts[1]的分类
+            // 书籍根节点的path是前两段
             const bookPath = pathParts.slice(0, 2).join('-');
 
-            // 查询所有分类，找到path匹配的
-            const allCategoriesResponse = await fetch('/api/categories?format=flat');
-            const allCategoriesResult = await allCategoriesResponse.json();
+            // 直接查询这个path对应的分类ID
+            const bookResponse = await fetch(`/api/categories?path=${encodeURIComponent(bookPath)}`);
+            const bookResult = await bookResponse.json();
 
-            if (allCategoriesResult.success) {
-              const bookCategory = allCategoriesResult.categories.find((cat: any) =>
-                cat.path === bookPath
-              );
-              if (bookCategory) {
-                return bookCategory.id;
-              }
+            if (bookResult.success && bookResult.categories && bookResult.categories.length > 0) {
+              return bookResult.categories[0].id;
             }
           }
         }
@@ -108,12 +104,17 @@ export default function BookCategorySidebar({
   };
 
   /**
-   * 构建菜单项 - 处理平铺的混合节点列表
+   * 递归构建菜单项 - 处理树形结构
    */
-  const buildMenuItems = (nodes: TreeNode[]): MenuProps['items'] => {
+  const buildMenuItemsFromTree = (nodes: TreeNode[]): MenuProps['items'] => {
     return nodes.map(node => {
       // 根据节点类型构建菜单项
       if (node.node_type === 'category') {
+        // 分类节点 - 如果有子项，则创建子菜单
+        const children = node.children && node.children.length > 0
+          ? buildMenuItemsFromTree(node.children)
+          : undefined;
+
         return {
           key: `category-${node.id}`,
           icon: <FolderOutlined />,
@@ -127,10 +128,10 @@ export default function BookCategorySidebar({
               </span>
             </span>
           ),
-          // 分类节点可以展开，但现在没有子项（由前端按需加载）
+          children: children, // 支持展开/折叠的子项
         };
       } else {
-        // article节点
+        // article节点 - 叶子节点
         return {
           key: `article-${node.id}`,
           icon: getArticleIcon(node.type || 'article'),
@@ -200,14 +201,18 @@ export default function BookCategorySidebar({
 
         console.log('BookCategorySidebar: API响应:', result);
 
-        if (result.success) {
-          const nodes = result.data as TreeNode[];
-          setCategories(nodes); // 这里存储平铺的节点列表
-          const items = buildMenuItems(nodes);
+        if (result.success && result.data) {
+          // API现在返回 { flat: TreeNode[], tree: TreeNode[] }
+          const flatNodes = result.data.flat as TreeNode[];
+          const treeNodes = result.data.tree as TreeNode[];
+
+          setCategories(flatNodes); // 存储平铺的节点列表用于查找
+          // 使用树形结构来构建菜单项，支持展开/折叠
+          const items = buildMenuItemsFromTree(treeNodes);
           setMenuItems(items);
 
           // 默认展开所有目录
-          const allKeys = getAllCategoryKeys(nodes);
+          const allKeys = getAllCategoryKeys(flatNodes);
           setOpenKeys(allKeys);
         }
       } catch (error) {

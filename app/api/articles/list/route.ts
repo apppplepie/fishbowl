@@ -5,6 +5,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+// 类型定义
+interface RawArticle {
+  id: string;
+  title: string;
+  author: string;
+  author_id: string;
+  publish_date: Date;
+  last_modified: Date;
+  excerpt: string | null;
+  type: 'text' | 'image' | 'drawing' | 'code';
+  status: string;
+  likes: number;
+  shares: number;
+  comments: number;
+  category_id: string;
+  order_in_category: number;
+  category_name: string;
+  firstImageUrl: string | null;
+  drawingCoverUrl: string | null;
+  image_count: number | null;
+  codePreview: string | null;
+  codeLanguage: string | null;
+  code_block_count: number | null;
+  tags: string[] | null;
+}
+
+interface ProcessedArticle {
+  id: string;
+  title: string;
+  author: string;
+  authorId: string;
+  publishDate: Date;
+  lastModified: Date;
+  excerpt: string | null;
+  type: 'text' | 'image' | 'drawing' | 'code';
+  status: string;
+  likes: number;
+  shares: number;
+  comments: number;
+  categoryId: string;
+  orderInCategory: number;
+  categoryName: string;
+  firstImageUrl: string | null;
+  imageCount: number | null;
+  codePreview: string | null;
+  codeLanguage: string | null;
+  codeBlockCount: number | null;
+  tags: string[];
+}
+
 /**
  * 递归获取分类及其所有子分类的ID
  */
@@ -33,12 +83,22 @@ async function getCategoryAndChildrenIds(categoryId: string): Promise<string[]> 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // 参数验证和清理
     const status = searchParams.get('status') || 'published';
-    const limit = parseInt(searchParams.get('limit') || '15', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '15', 10), 1), 100); // 限制在1-100之间
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
     const categoryId = searchParams.get('categoryId');
     const orderByPath = searchParams.get('orderByPath') === 'true';
-    const parentCategoryId = categoryId; // 用于计算混合排序
+
+    // 验证状态参数
+    const validStatuses = ['published', 'draft', 'archived'];
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json(
+        { success: false, error: `无效的状态参数: ${status}` },
+        { status: 400 }
+      );
+    }
 
     // 构建查询条件
     let whereClause = 'a.status = ?';
@@ -65,7 +125,7 @@ export async function GET(request: NextRequest) {
     console.log('Query params:', queryParams);
 
     // 优化查询：使用子查询直接获取预览数据
-    const articles = await query<any[]>(
+    const articles = await query<RawArticle[]>(
       `SELECT
         a.id,
         a.title,
@@ -85,7 +145,7 @@ export async function GET(request: NextRequest) {
         -- 图片类型：获取第一个图片的 URL
         CASE
           WHEN a.type = 'image' THEN (
-            SELECT JSON_EXTRACT(b.content, '$.url')
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.url'))
             FROM blocks b
             JOIN article_blocks ab ON b.id = ab.block_id
             WHERE ab.article_id = a.id AND b.type = 'image'
@@ -93,11 +153,11 @@ export async function GET(request: NextRequest) {
             LIMIT 1
           )
           ELSE NULL
-        END as first_image_url,
+        END as firstImageUrl,
         -- 绘画类型：获取 order 最大的图片（成图）
         CASE
           WHEN a.type = 'drawing' THEN (
-            SELECT JSON_EXTRACT(b.content, '$.url')
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.url'))
             FROM blocks b
             JOIN article_blocks ab ON b.id = ab.block_id
             WHERE ab.article_id = a.id AND b.type = 'image'
@@ -105,7 +165,7 @@ export async function GET(request: NextRequest) {
             LIMIT 1
           )
           ELSE NULL
-        END as drawing_cover_url,
+        END as drawingCoverUrl,
         -- 绘画类型：统计图片数量
         CASE
           WHEN a.type = 'drawing' THEN (
@@ -119,7 +179,7 @@ export async function GET(request: NextRequest) {
         -- 代码类型：获取第一个代码块的代码
         CASE
           WHEN a.type = 'code' THEN (
-            SELECT JSON_EXTRACT(b.content, '$.code')
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.code'))
             FROM blocks b
             JOIN article_blocks ab ON b.id = ab.block_id
             WHERE ab.article_id = a.id AND b.type = 'code'
@@ -127,11 +187,11 @@ export async function GET(request: NextRequest) {
             LIMIT 1
           )
           ELSE NULL
-        END as code_preview,
+        END as codePreview,
         -- 代码类型：获取第一个代码块的语言
         CASE
           WHEN a.type = 'code' THEN (
-            SELECT JSON_EXTRACT(b.content, '$.language')
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.language'))
             FROM blocks b
             JOIN article_blocks ab ON b.id = ab.block_id
             WHERE ab.article_id = a.id AND b.type = 'code'
@@ -139,7 +199,7 @@ export async function GET(request: NextRequest) {
             LIMIT 1
           )
           ELSE NULL
-        END as code_language,
+        END as codeLanguage,
         -- 代码类型：统计代码块数量
         CASE
           WHEN a.type = 'code' THEN (
@@ -149,7 +209,15 @@ export async function GET(request: NextRequest) {
             WHERE ab.article_id = a.id AND b.type = 'code'
           )
           ELSE NULL
-        END as code_block_count
+        END as codeBlockCount,
+        -- 获取文章标签（JSON数组格式）
+        (
+          SELECT JSON_ARRAYAGG(t.name)
+          FROM tags t
+          JOIN article_tags at ON t.id = at.tag_id
+          WHERE at.article_id = a.id
+          ORDER BY t.name ASC
+        ) as tags
        FROM articles a
        LEFT JOIN categories c ON a.category_id = c.id
        WHERE ${whereClause}
@@ -164,60 +232,32 @@ export async function GET(request: NextRequest) {
 
     console.log('Query returned', articles.length, 'articles');
 
-    // 处理 JSON_EXTRACT 返回的带引号字符串
-    const processedArticles = articles.map(article => {
-      const processed: any = {
-        ...article,
-      };
-
-      // 处理图片 URL（移除 JSON_EXTRACT 的引号）
-      if (article.first_image_url) {
-        processed.firstImageUrl = article.first_image_url.replace(/^"|"$/g, '');
-        delete processed.first_image_url;
-      }
-      
-      if (article.drawing_cover_url) {
-        processed.firstImageUrl = article.drawing_cover_url.replace(/^"|"$/g, '');
-        delete processed.drawing_cover_url;
-      }
-
-      // 处理图片数量
-      if (article.image_count !== null && article.image_count !== undefined) {
-        processed.imageCount = article.image_count;
-        delete processed.image_count;
-      }
-
-      // 处理代码预览
-      if (article.code_preview) {
-        processed.codePreview = article.code_preview.replace(/^"|"$/g, '');
-        delete processed.code_preview;
-      }
-
-      if (article.code_language) {
-        processed.codeLanguage = article.code_language.replace(/^"|"$/g, '');
-        delete processed.code_language;
-      }
-
-      if (article.code_block_count !== null && article.code_block_count !== undefined) {
-        processed.codeBlockCount = article.code_block_count;
-        delete processed.code_block_count;
-      }
-
-      return processed;
-    });
-
-    // 获取每篇文章的标签
-    for (const article of processedArticles) {
-      const tags = await query<any[]>(
-        `SELECT t.id, t.name 
-         FROM tags t
-         JOIN article_tags at ON t.id = at.tag_id
-         WHERE at.article_id = ?
-         ORDER BY t.name ASC`,
-        [article.id]
-      );
-      article.tags = tags.map((t: any) => t.name);
-    }
+    // 处理和清理查询结果
+    const processedArticles: ProcessedArticle[] = articles.map((article: RawArticle) => ({
+      id: article.id,
+      title: article.title,
+      author: article.author,
+      authorId: article.author_id,
+      publishDate: article.publish_date,
+      lastModified: article.last_modified,
+      excerpt: article.excerpt,
+      type: article.type,
+      status: article.status,
+      likes: article.likes,
+      shares: article.shares,
+      comments: article.comments,
+      categoryId: article.category_id,
+      orderInCategory: article.order_in_category,
+      categoryName: article.category_name,
+      // 预览数据（已由SQL处理）
+      firstImageUrl: article.firstImageUrl || article.drawingCoverUrl,
+      imageCount: article.image_count,
+      codePreview: article.codePreview,
+      codeLanguage: article.codeLanguage,
+      codeBlockCount: article.code_block_count,
+      // 标签（JSON数组）
+      tags: article.tags || [],
+    }));
 
     return NextResponse.json({
       success: true,
@@ -227,9 +267,18 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('获取文章列表失败:', error);
+
+    // 更详细的错误处理
+    const errorMessage = error?.message || '未知错误';
+    const statusCode = error?.code === 'ER_BAD_FIELD_ERROR' ? 400 : 500;
+
     return NextResponse.json(
-      { success: false, error: '获取文章列表失败: ' + error.message },
-      { status: 500 }
+      {
+        success: false,
+        error: `获取文章列表失败: ${errorMessage}`,
+        timestamp: new Date().toISOString()
+      },
+      { status: statusCode }
     );
   }
 }
