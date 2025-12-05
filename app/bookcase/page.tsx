@@ -131,41 +131,76 @@ function BookcasePageContent() {
 
       // 根据是否有category参数决定加载逻辑
       if (!categoryFromUrl || categoryFromUrl === 'cat_bookcase') {
-        // 书橱根目录：显示下一级目录的bookcard
-        const params = new URLSearchParams({
-          status: 'published',
-          limit: ITEMS_PER_PAGE.toString(),
-          offset: currentOffset.toString(),
-          categoryId: 'cat_bookcase',
-        });
-
-        const response = await fetch(`/api/articles/list?${params.toString()}`);
+        // 书橱根目录：直接获取下一级目录，按order_index排序显示为bookcard
+        const response = await fetch('/api/categories?type=children&parentId=cat_bookcase');
         const result = await response.json();
 
         if (response.ok && result.success) {
-          articles = result.articles;
-          console.log('书橱根目录 - API 返回的文章数量:', articles.length);
+          const categories = result.categories;
+          console.log('书橱根目录 - 获取到的书籍分类数量:', categories.length);
 
-          // 将文章数据转换为书籍卡片
-          const bookCards = extractBooksFromArticles(articles);
+          // 按order_index排序
+          const sortedCategories = categories.sort((a: any, b: any) => {
+            const orderA = a.order_index || 0;
+            const orderB = b.order_index || 0;
+            return orderA - orderB;
+          });
+
+          // 应用分页
+          const startIndex = currentOffset;
+          const endIndex = startIndex + ITEMS_PER_PAGE;
+          const paginatedCategories = sortedCategories.slice(startIndex, endIndex);
+
+          // 将分类转换为书籍卡片
+          const bookCards = await Promise.all(paginatedCategories.map(async (category: any, index: number) => {
+            // 使用递增的ID确保唯一性
+            const bookCardId = 10000 + currentOffset + index;
+
+            // 获取该分类下的第一篇文章作为书籍信息
+            try {
+              const articleResponse = await fetch(`/api/articles/list?categoryId=${category.id}&limit=1&status=published`);
+              const articleResult = await articleResponse.json();
+
+              if (articleResponse.ok && articleResult.success && articleResult.articles.length > 0) {
+                const mainArticle = articleResult.articles[0];
+                return {
+                  id: bookCardId,
+                  type: 'book',
+                  title: category.name,
+                  description: mainArticle.excerpt || '暂无简介',
+                  coverImage: mainArticle.firstImageUrl || '/default-book-cover.jpg',
+                  author: mainArticle.author || '未知作者',
+                  updatedAt: mainArticle.last_modified || mainArticle.publish_date || new Date().toISOString(),
+                  mainArticleId: mainArticle.id.toString(),
+                  createdAt: mainArticle.publish_date || new Date().toISOString(),
+                };
+              }
+            } catch (error) {
+              console.error(`获取分类 ${category.id} 的文章失败:`, error);
+            }
+
+            // 如果获取文章失败，返回基本的书籍信息
+            return {
+              id: bookCardId,
+              type: 'book',
+              title: category.name,
+              description: '暂无简介',
+              coverImage: '/default-book-cover.jpg',
+              author: '未知作者',
+              updatedAt: new Date().toISOString(),
+              mainArticleId: category.id,
+              createdAt: new Date().toISOString(),
+            };
+          }));
 
           if (append) {
-            setCards(prev => {
-              const existingIds = new Set(prev.map(card => card.id));
-              const newBooks = bookCards.filter(
-                (book: any) => !existingIds.has(book.id)
-              );
-              return [...prev, ...newBooks];
-            });
+            setCards(prev => [...prev, ...bookCards]);
           } else {
-            const uniqueBookCards = bookCards.filter((book, index, self) =>
-              index === self.findIndex(b => b.id === book.id)
-            );
-            setCards(uniqueBookCards);
+            setCards(bookCards);
           }
 
-          setHasMore(result.articles.length === ITEMS_PER_PAGE);
-          setOffset(currentOffset + result.articles.length);
+          setHasMore(endIndex < sortedCategories.length);
+          setOffset(endIndex);
         }
       } else {
         // 具体分类目录：显示该目录及其所有子目录下的所有article
@@ -202,12 +237,23 @@ function BookcasePageContent() {
           index === self.findIndex(a => a.id === article.id)
         );
 
-        console.log('分类目录 - 总文章数量:', uniqueArticles.length);
+        // 按order_in_category排序（从小到大）
+        const sortedArticles = uniqueArticles.sort((a, b) => {
+          const orderA = a.order_in_category || 0;
+          const orderB = b.order_in_category || 0;
+          // 如果order_in_category相同，按创建时间排序
+          if (orderA === orderB) {
+            return new Date(a.createdAt || a.publish_date).getTime() - new Date(b.createdAt || b.publish_date).getTime();
+          }
+          return orderA - orderB;
+        });
+
+        console.log('分类目录 - 总文章数量:', sortedArticles.length);
 
         // 应用分页
         const startIndex = currentOffset;
         const endIndex = startIndex + ITEMS_PER_PAGE;
-        const paginatedArticles = uniqueArticles.slice(startIndex, endIndex);
+        const paginatedArticles = sortedArticles.slice(startIndex, endIndex);
 
         if (append) {
           setCards(prev => [...prev, ...paginatedArticles]);

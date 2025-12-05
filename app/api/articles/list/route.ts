@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
         a.shares,
         a.comments,
         a.category_id,
+        a.order_in_category,
         c.name as category_name,
         -- 图片类型：获取第一个图片的 URL
         CASE
