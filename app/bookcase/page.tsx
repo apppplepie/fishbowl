@@ -206,49 +206,74 @@ function BookcasePageContent() {
         // 具体分类目录：显示该目录及其所有子目录下的所有article
         console.log('加载分类目录:', categoryFromUrl);
 
-        const categoryIds = await getAllCategoryIds(categoryFromUrl);
-        console.log('包含的分类IDs:', categoryIds);
+        // 直接调用API，让API自己处理递归获取所有子分类的文章
+        const params = new URLSearchParams({
+          status: 'published',
+          limit: '1000', // 获取该分类及其所有子分类的所有文章
+          offset: '0',
+          categoryId: categoryFromUrl,
+          orderByPath: 'true', // 按path和order_in_category排序
+        });
 
-        // 分批获取所有分类下的文章
-        const allArticles: any[] = [];
+        const response = await fetch(`/api/articles/list?${params.toString()}`);
+        const result = await response.json();
 
-        for (const catId of categoryIds) {
-          try {
-            const params = new URLSearchParams({
-              status: 'published',
-              limit: '1000', // 获取更多文章
-              offset: '0',
-              categoryId: catId,
-            });
-
-            const response = await fetch(`/api/articles/list?${params.toString()}`);
-            const result = await response.json();
-
-            if (response.ok && result.success && result.articles) {
-              allArticles.push(...result.articles);
-            }
-          } catch (error) {
-            console.error(`获取分类 ${catId} 的文章失败:`, error);
-          }
+        let allArticles: any[] = [];
+        if (response.ok && result.success) {
+          allArticles = result.articles;
+          console.log('分类目录 - API返回文章数量:', allArticles.length);
+        } else {
+          console.error('获取分类文章失败:', result);
         }
+
+        // 获取该分类的直接子分类信息，用于混合排序
+        const childCategoriesResponse = await fetch(`/api/categories?type=children&parentId=${categoryFromUrl}`);
+        const childCategoriesResult = await childCategoriesResponse.json();
+        const childCategories = childCategoriesResult.success ? childCategoriesResult.categories : [];
+
+        // 创建category_id到order_index的映射
+        const categoryOrderMap = new Map<string, number>();
+        childCategories.forEach((cat: any) => {
+          categoryOrderMap.set(cat.id, cat.order_index || 0);
+        });
 
         // 去重
         const uniqueArticles = allArticles.filter((article, index, self) =>
           index === self.findIndex(a => a.id === article.id)
         );
 
-        // 按order_in_category排序（从小到大）
+        // 混合排序：同一级的子分类和文章按统一排序值排序
         const sortedArticles = uniqueArticles.sort((a, b) => {
+          // 计算排序值：直接文章用order_in_category，子分类文章用子分类的order_index
+          const getSortValue = (article: any) => {
+            if (article.category_id === categoryFromUrl) {
+              // 直接文章
+              return article.order_in_category || 0;
+            } else {
+              // 子分类文章，用子分类的order_index
+              return categoryOrderMap.get(article.category_id) || 999;
+            }
+          };
+
+          const sortA = getSortValue(a);
+          const sortB = getSortValue(b);
+
+          if (sortA !== sortB) {
+            return sortA - sortB; // 按排序值从小到大
+          }
+
+          // 相同排序值时，按order_in_category排序
           const orderA = a.order_in_category || 0;
           const orderB = b.order_in_category || 0;
-          // 如果order_in_category相同，按创建时间排序
-          if (orderA === orderB) {
-            return new Date(a.createdAt || a.publish_date).getTime() - new Date(b.createdAt || b.publish_date).getTime();
+          if (orderA !== orderB) {
+            return orderA - orderB;
           }
-          return orderA - orderB;
+
+          // 最后按创建时间排序
+          return new Date(a.createdAt || a.publish_date).getTime() - new Date(b.createdAt || b.publish_date).getTime();
         });
 
-        console.log('分类目录 - 总文章数量:', sortedArticles.length);
+        console.log('分类目录 - 排序后文章数量:', sortedArticles.length);
 
         // 应用分页
         const startIndex = currentOffset;
