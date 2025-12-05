@@ -33,24 +33,35 @@ export default function BookTocDrawer({
   };
 
   return (
-    <Drawer
-      title="书籍目录"
-      placement="left"
-      onClose={onClose}
-      open={open}
-      size={280}
-      styles={{
-        body: {
-          padding: 0,
-        },
-      }}
-    >
-      <BookCategorySidebar
-        currentArticleId={currentArticleId}
-        bookCategoryId={bookCategoryId}
-        onArticleClick={handleArticleClick}
-        onCategoryClick={handleCategoryClick}
-      />
-    </Drawer>
+    <>
+      <Drawer
+        title={null}
+        placement="left"
+        onClose={onClose}
+        open={open}
+        size={280}
+        styles={{
+          body: {
+            padding: 0,
+          },
+          header: { display: 'none' },
+        }}
+      >
+        <BookCategorySidebar
+          currentArticleId={currentArticleId}
+          bookCategoryId={bookCategoryId}
+          onArticleClick={handleArticleClick}
+          onCategoryClick={handleCategoryClick}
+        />
+      </Drawer>
+
+      {/* 自定义样式 */}
+      <style>{`
+        /* 去掉drawer默认间距 */
+        .ant-drawer-body {
+          padding: 0 !important;
+        }
+      `}</style>
+    </>
   );
 }

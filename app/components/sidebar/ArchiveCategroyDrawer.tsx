@@ -130,18 +130,14 @@ export default function ArticleCategoryDrawer({
   return (
     <>
       <Drawer
-        title="文章目录"
+        title={null}
         placement="left"
         open={visible}
         onClose={onClose}
         size={320}
         styles={{
           body: { padding: 0 },
-          header: {
-            padding: '20px',
-            borderBottom: '2px solid #f0f0f0',
-            background: '#fafafa',
-          },
+          header: { display: 'none' },
         }}
       >
         <div
@@ -153,7 +149,7 @@ export default function ArticleCategoryDrawer({
           }}
         >
           {/* 菜单区域 */}
-          <div style={{ padding: '8px 0' }}>
+          <div style={{ padding: '0 0' }}>
             {loading ? (
               <div style={{
                 padding: '40px 0',
@@ -187,6 +183,11 @@ export default function ArticleCategoryDrawer({
 
         {/* 自定义样式 */}
         <style>{`
+          /* 去掉drawer默认间距 */
+          .ant-drawer-body {
+            padding: 0 !important;
+          }
+
           /* 滚动条美化 */
           .category-drawer-container::-webkit-scrollbar {
             width: 6px;

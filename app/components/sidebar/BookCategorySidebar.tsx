@@ -50,7 +50,15 @@ export default function BookCategorySidebar({
         key: `category-${category.id}`,
         icon: <FolderOutlined />,
         label: (
-          <span style={{ fontWeight: 500 }}>
+          <span
+            style={{ fontWeight: 500, cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (typeof handleMenuSelect === 'function') {
+                handleMenuSelect({ key: `category-${category.id}` } as any);
+              }
+            }}
+          >
             {category.name}
           </span>
         ),
@@ -68,7 +76,13 @@ export default function BookCategorySidebar({
       key: 'category-cat_bookcase',
       icon: <FolderOutlined />,
       label: (
-        <span style={{ fontWeight: 500 }}>
+        <span
+          style={{ fontWeight: 500, cursor: 'pointer' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMenuSelect && handleMenuSelect({ key: 'category-cat_bookcase' } as any);
+          }}
+        >
           书橱
         </span>
       ),
