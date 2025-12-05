@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '15', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
     const categoryId = searchParams.get('categoryId');
+    const orderByPath = searchParams.get('orderByPath') === 'true';
+    const parentCategoryId = categoryId; // 用于计算混合排序
 
     // 构建查询条件
     let whereClause = 'a.status = ?';
@@ -45,12 +47,22 @@ export async function GET(request: NextRequest) {
     if (categoryId) {
       // 获取该分类及其所有子分类的ID
       const categoryIds = await getCategoryAndChildrenIds(categoryId);
+      console.log('Category IDs for', categoryId, ':', categoryIds);
+
       if (categoryIds.length > 0) {
         const placeholders = categoryIds.map(() => '?').join(',');
         whereClause += ` AND a.category_id IN (${placeholders})`;
         queryParams.push(...categoryIds);
+      } else {
+        console.log('No category IDs found for', categoryId);
       }
     }
+
+    // 添加ORDER BY的参数（放在最后，确保参数顺序正确）
+    queryParams.push(orderByPath ? 1 : 0, orderByPath ? 1 : 0);
+
+    console.log('WHERE clause:', whereClause);
+    console.log('Query params:', queryParams);
 
     // 优化查询：使用子查询直接获取预览数据
     const articles = await query<any[]>(
@@ -141,10 +153,16 @@ export async function GET(request: NextRequest) {
        FROM articles a
        LEFT JOIN categories c ON a.category_id = c.id
        WHERE ${whereClause}
-       ORDER BY a.last_modified DESC, a.publish_date DESC
+       ORDER BY
+         CASE WHEN ? = 1 THEN COALESCE(c.path, '999999')
+              ELSE a.last_modified END ASC,
+         CASE WHEN ? = 1 THEN COALESCE(c.order_index, a.order_in_category)
+              ELSE a.publish_date END ASC
        LIMIT ${limit} OFFSET ${offset}`,
       queryParams
     );
+
+    console.log('Query returned', articles.length, 'articles');
 
     // 处理 JSON_EXTRACT 返回的带引号字符串
     const processedArticles = articles.map(article => {

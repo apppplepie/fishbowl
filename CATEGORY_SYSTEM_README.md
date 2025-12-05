@@ -14,13 +14,61 @@ CREATE TABLE categories (
   name VARCHAR(255) NOT NULL,
   parent_id VARCHAR(36),              -- 父分类ID，NULL表示根分类
   order_index INT DEFAULT 0,          -- 同级排序
+  depth INT NOT NULL DEFAULT 1,       -- 分类深度（根节点为1）
+  path VARCHAR(1000) NOT NULL DEFAULT '', -- 路径字符串（如：000001-000001-000002）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
+  FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE,
+  INDEX idx_path (path(255)),
+  INDEX idx_depth (depth)
 );
 ```
 
-### 2. 文章表新增字段 (articles)
+### 2. 自动路径生成触发器
+
+为确保分类的 path 字段正确维护，添加了插入触发器：
+
+```sql
+CREATE TRIGGER trg_categories_before_insert
+BEFORE INSERT ON categories
+FOR EACH ROW
+BEGIN
+  DECLARE p_path VARCHAR(1000);
+  DECLARE p_depth INT;
+
+  SET p_path = NULL;
+  SET p_depth = 0;
+
+  -- 若没有父节点，则为根节点
+  IF NEW.parent_id IS NULL OR NEW.parent_id = '' THEN
+    SET NEW.depth = 1;
+    SET NEW.path = LPAD(NEW.order_index, 6, '0');
+  ELSE
+    -- 查询父节点 path/depth
+    SELECT path, depth
+      INTO p_path, p_depth
+      FROM categories
+      WHERE id = NEW.parent_id
+      LIMIT 1;
+
+    -- 如果找不到父节点（异常情况）
+    IF p_path IS NULL THEN
+      SET NEW.depth = 1;
+      SET NEW.path = LPAD(NEW.order_index, 6, '0');
+    ELSE
+      SET NEW.depth = p_depth + 1;
+      SET NEW.path = CONCAT(p_path, '-', LPAD(NEW.order_index, 6, '0'));
+    END IF;
+  END IF;
+END;
+```
+
+**Path 格式说明：**
+- 根节点：`000001` (6位数字，不足补0)
+- 子节点：`000001-000002` (父path-子order_index)
+- 用于实现深度优先排序
+
+### 3. 文章表新增字段 (articles)
 
 ```sql
 ALTER TABLE articles 
@@ -250,6 +298,7 @@ npx ts-node --project tsconfig.node.json scripts/add-categories.ts
 ### 1. 性能优化
 
 - 为 `parent_id` 和 `order_index` 创建了索引
+- 新增 `created_at` 和 `updated_at` 时间戳字段，自动记录创建和更新时间
 - 为 `articles.category_id` 创建了索引
 - 树形结构查询使用递归 CTE，性能较好
 
