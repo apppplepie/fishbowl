@@ -160,7 +160,7 @@ export default function PublishBookPage() {
       const result = await response.json();
 
       if (response.ok && result.success && result.categories.length > 0) {
-        const maxOrder = Math.max(...result.categories.map((cat: any) => cat.order || 0));
+        const maxOrder = Math.max(...result.categories.map((cat: any) => cat.order_index || 0));
         return maxOrder + 1;
       }
       return 1;
