@@ -205,7 +205,7 @@ export default function BookCategorySidebar({
     if (onCategoryClick) {
       onCategoryClick(); // 先调用回调（关闭抽屉等）
     }
-    router.push(`/articles?category=${categoryId}`);
+    router.push(`/bookcase?category=${categoryId}`);
   };
 
   /**

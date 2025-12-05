@@ -34,18 +34,15 @@ export default function BookCategorySidebar({
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   /**
-   * 构建菜单项（只显示目录）
+   * 递归构建菜单项（用于子分类）
    */
-  const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
-    // 按照 order_index 排序
-    const sortedCategories = categories.sort((a, b) => a.order_index - b.order_index);
-
-    return sortedCategories.map(category => {
+  const buildMenuItemsRecursive = (categories: Category[]): MenuProps['items'] => {
+    return categories.map(category => {
       const children: MenuProps['items'] = [];
 
       // 添加子分类（递归构建）
       if (category.children && category.children.length > 0) {
-        const subCategories = buildMenuItems(category.children);
+        const subCategories = buildMenuItemsRecursive(category.children);
         children.push(...(subCategories || []));
       }
 
@@ -53,10 +50,7 @@ export default function BookCategorySidebar({
         key: `category-${category.id}`,
         icon: <FolderOutlined />,
         label: (
-          <span
-            style={{ fontWeight: 500, cursor: 'pointer' }}
-            onClick={() => handleCategoryTextClick(category.id)}
-          >
+          <span style={{ fontWeight: 500 }}>
             {category.name}
           </span>
         ),
@@ -66,10 +60,29 @@ export default function BookCategorySidebar({
   };
 
   /**
+   * 构建菜单项（只显示目录）
+   */
+  const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
+    // 创建书橱根节点
+    const bookcaseRoot = {
+      key: 'category-cat_bookcase',
+      icon: <FolderOutlined />,
+      label: (
+        <span style={{ fontWeight: 500 }}>
+          书橱
+        </span>
+      ),
+      children: buildMenuItemsRecursive(categories),
+    };
+
+    return [bookcaseRoot];
+  };
+
+  /**
    * 收集所有应该展开的 keys
    */
   const getAllCategoryKeys = (categories: Category[]): string[] => {
-    const keys: string[] = [];
+    const keys: string[] = ['category-cat_bookcase']; // 书橱根节点
     const collect = (cats: Category[]) => {
       cats.forEach(cat => {
         keys.push(`category-${cat.id}`);
@@ -86,22 +99,10 @@ export default function BookCategorySidebar({
    * 获取根目录的 keys（禁止关闭的目录）
    */
   const getRootCategoryKeys = (categories: Category[]): string[] => {
-    return categories
-      .filter(cat => cat.parent_id === null)
-      .map(cat => `category-${cat.id}`);
+    // 书橱根节点不能被关闭
+    return ['category-cat_bookcase'];
   };
 
-  /**
-   * 处理目录文字点击
-   */
-  const handleCategoryTextClick = (categoryId: string) => {
-    if (onCategorySelect) {
-      onCategorySelect(categoryId);
-    } else {
-      // 如果没有提供回调函数，跳转到书架页面并筛选该分类
-      router.push(`/bookcase?category=${categoryId}`);
-    }
-  };
 
   /**
    * 加载书橱分类树
@@ -151,17 +152,24 @@ export default function BookCategorySidebar({
   }, []);
 
   /**
-   * 处理菜单点击
+   * 处理菜单选择（点击文字部分）
    */
-  const handleMenuClick: MenuProps['onClick'] = (e) => {
-    // 只处理目录项的点击
+  const handleMenuSelect: MenuProps['onSelect'] = (e) => {
+    // 只处理目录项的选择
     if (e.key.startsWith('category-')) {
       const categoryId = e.key.replace('category-', '');
+
       if (onCategorySelect) {
         onCategorySelect(categoryId);
       } else {
-        // 如果没有提供回调函数，跳转到书架页面并筛选该分类
-        router.push(`/bookcase?category=${categoryId}`);
+        // 如果没有提供回调函数，跳转到书架页面
+        if (categoryId === 'cat_bookcase') {
+          // 点击书橱根节点，跳转到书架首页
+          router.push('/bookcase');
+        } else {
+          // 点击书籍分类，筛选该分类
+          router.push(`/bookcase?category=${categoryId}`);
+        }
       }
     }
   };
@@ -201,7 +209,7 @@ export default function BookCategorySidebar({
             fontSize: '14px',
           }}
           items={menuItems}
-          onClick={handleMenuClick}
+          onSelect={handleMenuSelect}
         />
       ) : (
         <Empty
