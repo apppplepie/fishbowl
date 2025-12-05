@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Drawer, Menu, Spin, Empty, Button } from 'antd';
 import { UnorderedListOutlined, FolderOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import { useRouter } from 'next/navigation';
 
 /**
  * 书籍目录导航抽屉组件
@@ -31,24 +32,29 @@ export default function BookCategoryDrawer({
   onCategorySelect,
   selectedCategoryId
 }: BookCategoryDrawerProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuProps['items']>([]);
-  const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const [openKeys, setOpenKeys] = useState<string[]>(['category-cat_bookcase']);
+
+  // 确保 openKeys 始终包含书橱根节点
+  useEffect(() => {
+    if (!openKeys.includes('category-cat_bookcase')) {
+      setOpenKeys(prev => [...new Set(['category-cat_bookcase', ...prev])]);
+    }
+  }, [openKeys]);
 
   /**
-   * 构建菜单项（只显示目录）
+   * 递归构建菜单项（用于子分类）
    */
-  const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
-    // 按照 order_index 排序
-    const sortedCategories = categories.sort((a, b) => a.order_index - b.order_index);
-
-    return sortedCategories.map(category => {
+  const buildMenuItemsRecursive = (categories: Category[]): MenuProps['items'] => {
+    return categories.map(category => {
       const children: MenuProps['items'] = [];
 
       // 添加子分类（递归构建）
       if (category.children && category.children.length > 0) {
-        const subCategories = buildMenuItems(category.children);
+        const subCategories = buildMenuItemsRecursive(category.children);
         children.push(...(subCategories || []));
       }
 
@@ -58,7 +64,12 @@ export default function BookCategoryDrawer({
         label: (
           <span
             style={{ fontWeight: 500, cursor: 'pointer' }}
-            onClick={() => handleCategoryTextClick(category.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (typeof handleMenuSelect === 'function') {
+                handleMenuSelect({ key: `category-${category.id}` } as any);
+              }
+            }}
           >
             {category.name}
           </span>
@@ -69,10 +80,35 @@ export default function BookCategoryDrawer({
   };
 
   /**
+   * 构建菜单项（只显示目录）
+   */
+  const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
+    // 创建书橱根节点
+    const bookcaseRoot = {
+      key: 'category-cat_bookcase',
+      icon: <FolderOutlined />,
+      label: (
+        <span
+          style={{ fontWeight: 500, cursor: 'pointer' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMenuSelect && handleMenuSelect({ key: 'category-cat_bookcase' } as any);
+          }}
+        >
+          书橱
+        </span>
+      ),
+      children: buildMenuItemsRecursive(categories),
+    };
+
+    return [bookcaseRoot];
+  };
+
+  /**
    * 收集所有应该展开的 keys
    */
   const getAllCategoryKeys = (categories: Category[]): string[] => {
-    const keys: string[] = [];
+    const keys: string[] = ['category-cat_bookcase']; // 书橱根节点
     const collect = (cats: Category[]) => {
       cats.forEach(cat => {
         keys.push(`category-${cat.id}`);
@@ -83,6 +119,14 @@ export default function BookCategoryDrawer({
     };
     collect(categories);
     return keys;
+  };
+
+  /**
+   * 获取根目录的 keys（禁止关闭的目录）
+   */
+  const getRootCategoryKeys = (categories: Category[]): string[] => {
+    // 书橱根节点不能被关闭
+    return ['category-cat_bookcase'];
   };
 
   /**
@@ -121,45 +165,64 @@ export default function BookCategoryDrawer({
           // 默认展开所有目录（书橱目录固定展开）
           const allKeys = getAllCategoryKeys(categoriesWithChildren);
           setOpenKeys(allKeys);
+        } else {
+          // API调用成功但返回失败，仍然显示书橱根节点
+          setCategories([]);
+          const items = buildMenuItems([]);
+          setMenuItems(items);
+          setOpenKeys(['category-cat_bookcase']);
         }
       } catch (error) {
         console.error('加载书橱目录失败:', error);
+        // 即使网络错误，也要显示书橱根节点
+        setCategories([]);
+        const items = buildMenuItems([]);
+        setMenuItems(items);
+        setOpenKeys(['category-cat_bookcase']);
       } finally {
         setLoading(false);
       }
     };
 
-    if (visible) {
-      loadData();
-    }
-  }, [visible]);
+    loadData();
+  }, []);
 
   /**
-   * 处理目录文字点击
+   * 处理菜单选择（点击文字部分）
    */
-  const handleCategoryTextClick = (categoryId: string) => {
-    if (onCategorySelect) {
-      onCategorySelect(categoryId);
+  const handleMenuSelect: MenuProps['onSelect'] = (e) => {
+    // 只处理目录项的选择
+    if (e.key.startsWith('category-')) {
+      const categoryId = e.key.replace('category-', '');
+
+      if (onCategorySelect) {
+        onCategorySelect(categoryId);
+      } else {
+        // 如果没有提供回调函数，跳转到书架页面
+        if (categoryId === 'cat_bookcase') {
+          // 点击书橱根节点，跳转到书架首页
+          router.push('/bookcase');
+        } else {
+          // 点击书籍分类，筛选该分类
+          router.push(`/bookcase?category=${categoryId}`);
+        }
+      }
+      // 点击后关闭抽屉
+      onClose();
     }
-    // 点击后关闭抽屉
-    onClose();
   };
 
   return (
     <>
       <Drawer
-        title="书籍目录"
+        title={null}
         placement="left"
         open={visible}
         onClose={onClose}
         size={320}
         styles={{
           body: { padding: 0 },
-          header: {
-            padding: '20px',
-            borderBottom: '2px solid #f0f0f0',
-            background: '#fafafa',
-          },
+          header: { display: 'none' },
         }}
       >
         <div
@@ -168,10 +231,11 @@ export default function BookCategoryDrawer({
             height: '100%',
             overflowY: 'auto',
             overflowX: 'hidden',
+            paddingTop: 0,
           }}
         >
           {/* 菜单区域 */}
-          <div style={{ padding: '8px 0' }}>
+          <div style={{ padding: '0 0' }}>
             {loading ? (
               <div style={{
                 padding: '40px 0',
@@ -182,18 +246,27 @@ export default function BookCategoryDrawer({
                 </Spin>
               </div>
             ) : menuItems && menuItems.length > 0 ? (
-              <Menu
-                mode="inline"
-                selectedKeys={selectedCategoryId ? [`category-${selectedCategoryId}`] : []}
-                openKeys={openKeys}
-                onOpenChange={(keys) => setOpenKeys(keys)}
-                style={{
-                  borderInlineEnd: 'none',
-                  background: 'transparent',
-                  fontSize: '14px',
-                }}
-                items={menuItems}
-              />
+              <div style={{ paddingTop: '45px' }}>
+                <Menu
+                  mode="inline"
+                  selectedKeys={selectedCategoryId ? [`category-${selectedCategoryId}`] : []}
+                  openKeys={openKeys}
+                  onOpenChange={(keys) => {
+                    // 获取根目录的 keys，这些不能被关闭
+                    const rootKeys = getRootCategoryKeys(categories);
+                    // 确保根目录始终在展开列表中
+                    const newKeys = [...new Set([...keys, ...rootKeys])];
+                    setOpenKeys(newKeys);
+                  }}
+                  style={{
+                    borderInlineEnd: 'none',
+                    background: 'transparent',
+                    fontSize: '14px',
+                  }}
+                  items={menuItems}
+                  onSelect={handleMenuSelect}
+                />
+              </div>
             ) : (
               <Empty
                 description="暂无书籍"
@@ -205,6 +278,11 @@ export default function BookCategoryDrawer({
 
         {/* 自定义样式 */}
         <style>{`
+          /* 去掉drawer默认间距 */
+          .ant-drawer-body {
+            padding: 0 !important;
+          }
+
           /* 滚动条美化 */
           .book-category-drawer-container::-webkit-scrollbar {
             width: 6px;

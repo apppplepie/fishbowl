@@ -90,7 +90,35 @@ function BookcasePageContent() {
     loadTags();
   }, []);
 
-  // 加载书架文章数据（只显示cat_bookcase分类）
+  // 递归获取分类及其所有子分类的ID
+  const getAllCategoryIds = async (categoryId: string): Promise<string[]> => {
+    const allIds = [categoryId];
+    const visited = new Set<string>();
+
+    const collectCategoryIds = async (catId: string) => {
+      if (visited.has(catId)) return;
+      visited.add(catId);
+
+      try {
+        const response = await fetch(`/api/categories?type=children&parentId=${catId}`);
+        const result = await response.json();
+
+        if (result.success && result.categories) {
+          for (const category of result.categories) {
+            allIds.push(category.id);
+            await collectCategoryIds(category.id); // 递归获取子分类
+          }
+        }
+      } catch (error) {
+        console.error(`获取分类 ${catId} 的子分类失败:`, error);
+      }
+    };
+
+    await collectCategoryIds(categoryId);
+    return [...new Set(allIds)]; // 去重
+  };
+
+  // 加载书架文章数据
   const loadBookcaseArticles = async (currentOffset: number, append: boolean = false) => {
     try {
       if (append) {
@@ -99,70 +127,102 @@ function BookcasePageContent() {
         setLoading(true);
       }
 
-      // 构建查询参数
-      const params = new URLSearchParams({
-        status: 'published',
-        limit: ITEMS_PER_PAGE.toString(),
-        offset: currentOffset.toString(),
-        categoryId: categoryFromUrl || 'cat_bookcase', // 如果有category参数就用它，否则显示书架分类
-      });
+      let articles: any[] = [];
 
-      // 使用优化的列表 API，一次查询返回所有预览数据
-      const response = await fetch(`/api/articles/list?${params.toString()}`);
-      const result = await response.json();
+      // 根据是否有category参数决定加载逻辑
+      if (!categoryFromUrl || categoryFromUrl === 'cat_bookcase') {
+        // 书橱根目录：显示下一级目录的bookcard
+        const params = new URLSearchParams({
+          status: 'published',
+          limit: ITEMS_PER_PAGE.toString(),
+          offset: currentOffset.toString(),
+          categoryId: 'cat_bookcase',
+        });
 
-      if (response.ok && result.success) {
-        // API 已经返回了所有需要的预览数据
-        const articles = result.articles;
+        const response = await fetch(`/api/articles/list?${params.toString()}`);
+        const result = await response.json();
 
-        console.log('API 返回的文章数量:', articles.length);
-        console.log('文章列表:', articles.map((a: any) => ({
-          id: a.id,
-          title: a.title,
-          category_id: a.category_id,
-          category_name: a.category_name
-        })));
+        if (response.ok && result.success) {
+          articles = result.articles;
+          console.log('书橱根目录 - API 返回的文章数量:', articles.length);
 
-        // 将文章数据转换为书籍卡片
-        const bookCards = extractBooksFromArticles(articles);
+          // 将文章数据转换为书籍卡片
+          const bookCards = extractBooksFromArticles(articles);
+
+          if (append) {
+            setCards(prev => {
+              const existingIds = new Set(prev.map(card => card.id));
+              const newBooks = bookCards.filter(
+                (book: any) => !existingIds.has(book.id)
+              );
+              return [...prev, ...newBooks];
+            });
+          } else {
+            const uniqueBookCards = bookCards.filter((book, index, self) =>
+              index === self.findIndex(b => b.id === book.id)
+            );
+            setCards(uniqueBookCards);
+          }
+
+          setHasMore(result.articles.length === ITEMS_PER_PAGE);
+          setOffset(currentOffset + result.articles.length);
+        }
+      } else {
+        // 具体分类目录：显示该目录及其所有子目录下的所有article
+        console.log('加载分类目录:', categoryFromUrl);
+
+        const categoryIds = await getAllCategoryIds(categoryFromUrl);
+        console.log('包含的分类IDs:', categoryIds);
+
+        // 分批获取所有分类下的文章
+        const allArticles: any[] = [];
+
+        for (const catId of categoryIds) {
+          try {
+            const params = new URLSearchParams({
+              status: 'published',
+              limit: '1000', // 获取更多文章
+              offset: '0',
+              categoryId: catId,
+            });
+
+            const response = await fetch(`/api/articles/list?${params.toString()}`);
+            const result = await response.json();
+
+            if (response.ok && result.success && result.articles) {
+              allArticles.push(...result.articles);
+            }
+          } catch (error) {
+            console.error(`获取分类 ${catId} 的文章失败:`, error);
+          }
+        }
+
+        // 去重
+        const uniqueArticles = allArticles.filter((article, index, self) =>
+          index === self.findIndex(a => a.id === article.id)
+        );
+
+        console.log('分类目录 - 总文章数量:', uniqueArticles.length);
+
+        // 应用分页
+        const startIndex = currentOffset;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const paginatedArticles = uniqueArticles.slice(startIndex, endIndex);
 
         if (append) {
-          // 追加模式：添加到现有列表，并去重
-          setCards(prev => {
-            const existingIds = new Set(prev.map(card => card.id));
-            const newBooks = bookCards.filter(
-              (book: any) => !existingIds.has(book.id)
-            );
-            return [...prev, ...newBooks];
-          });
+          setCards(prev => [...prev, ...paginatedArticles]);
         } else {
-          // 初始加载模式：替换列表，但也要去重
-          const uniqueBookCards = bookCards.filter((book, index, self) =>
-            index === self.findIndex(b => b.id === book.id)
-          );
-          setCards(uniqueBookCards);
+          setCards(paginatedArticles);
         }
 
-        // 判断是否还有更多数据
-        setHasMore(result.articles.length === ITEMS_PER_PAGE);
-        setOffset(currentOffset + result.articles.length);
-      } else {
-        // API 失败
-        if (!append) {
-          console.log('API 失败，使用 mock 数据');
-          // 使用BookCard mock数据，但要与现有数据去重
-          setCards(prev => {
-            const existingIds = new Set(prev.map(card => card.id));
-            const newBooks = mockBookCards.filter(book => !existingIds.has(book.id));
-            return [...prev, ...newBooks];
-          });
-          setHasMore(false);
-        }
+        setHasMore(endIndex < uniqueArticles.length);
+        setOffset(endIndex);
       }
+
     } catch (error) {
-      console.error('加载书架文章失败:', error);
+      console.error('加载文章失败:', error);
       if (!append) {
-        // 网络错误，使用 mock 数据，但要与现有数据去重
+        // 使用 mock 数据
         setCards(prev => {
           const existingIds = new Set(prev.map(card => card.id));
           const newBooks = mockBookCards.filter(book => !existingIds.has(book.id));

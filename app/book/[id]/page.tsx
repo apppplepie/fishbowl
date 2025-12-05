@@ -450,26 +450,29 @@ export default function BookPage() {
                       </a>
                     ),
                   },
-                  // 书橱
-                  {
-                    title: (
-                      <a
-                        style={{
-                          color: 'white',
-                          textDecoration: 'none',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          padding: 0,
-                          transition: 'color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-                        onClick={() => router.push('/bookcase')}
-                      >
-                        书橱
-                      </a>
-                    ),
-                  },
+                  // 从当前文章追溯父级到 cat_bookcase 根目录
+                  ...categoryPath
+                    .filter(cat => cat.id !== 'root')
+                    .map((category, index) => ({
+                      title: (
+                        <a
+                          key={category.id}
+                          style={{
+                            color: 'white',
+                            textDecoration: 'none',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            transition: 'color 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                          onClick={() => router.push(`/bookcase?category=${category.id}`)}
+                        >
+                          {category.name}
+                        </a>
+                      ),
+                    })),
                   // 当前书籍标题
                   {
                     title: <span style={{ color: 'white' }}>{book?.title}</span>,
