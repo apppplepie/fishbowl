@@ -311,12 +311,12 @@ function BookcasePageContent() {
   // 点击卡片处理
   const handleCardClick = (card: any) => {
     console.log('点击了卡片:', card);
-    // 数据库文章直接跳转
+    // 所有文章类型都使用书籍页面的布局来显示
     if (card.type === 'text' || card.type === 'image' || card.type === 'code' || card.type === 'diary' || card.type === 'drawing') {
-      router.push(`/article/${card.id}`);
+      router.push(`/book/${card.id}`);
     } else if (card.type === 'article') {
-      // mock 数据兼容
-      router.push(`/article/${card.id}`);
+      // mock 数据兼容，也使用书籍页面布局
+      router.push(`/book/${card.id}`);
     } else if (card.type === 'book') {
       // 书籍卡片跳转到书籍详情页
       router.push(`/book/${card.mainArticleId}`);
