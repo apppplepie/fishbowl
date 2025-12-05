@@ -55,6 +55,9 @@ function BookcasePageContent() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 选中的标签
   const [searchKeyword, setSearchKeyword] = useState(''); // 搜索关键词
 
+  // 从URL参数获取category
+  const categoryFromUrl = searchParams.get('category');
+
   // 目录抽屉状态
   const [drawerVisible, setDrawerVisible] = useState(false);
 
@@ -101,7 +104,7 @@ function BookcasePageContent() {
         status: 'published',
         limit: ITEMS_PER_PAGE.toString(),
         offset: currentOffset.toString(),
-        categoryId: 'cat_bookcase', // 只显示书架分类
+        categoryId: categoryFromUrl || 'cat_bookcase', // 如果有category参数就用它，否则显示书架分类
       });
 
       // 使用优化的列表 API，一次查询返回所有预览数据
@@ -173,11 +176,11 @@ function BookcasePageContent() {
     }
   };
 
-  // 初次加载
+  // 初次加载和category变化时重新加载
   useEffect(() => {
-    console.log('加载数据库书籍数据');
+    console.log('加载数据库书籍数据，category:', categoryFromUrl);
     loadBookcaseArticles(0, false);
-  }, []);
+  }, [categoryFromUrl]);
 
   // 过滤文章
   const filteredCards = useMemo(() => {
@@ -436,7 +439,7 @@ function BookcasePageContent() {
       overflowY: 'auto',
     }}
   >
-    <BookCategorySidebar />
+    <BookCategorySidebar selectedCategoryId={categoryFromUrl} />
   </div>
 )}
 
@@ -444,7 +447,7 @@ function BookcasePageContent() {
       <BookCategoryDrawer
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
-        selectedCategoryId={selectedTags.length > 0 ? undefined : undefined} // 这里可以根据需要传递选中的分类ID
+        selectedCategoryId={categoryFromUrl} // 传递从URL获取的category参数
       />
 
       {/* 日志发布悬浮按钮 */}
