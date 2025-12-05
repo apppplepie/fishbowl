@@ -6,6 +6,8 @@ interface Category {
   name: string;
   parent_id: string | null;
   order_index: number;
+  depth: number;
+  path: string;
   children?: Category[];
 }
 
@@ -34,16 +36,16 @@ function buildCategoryTree(categories: Category[]): Category[] {
     }
   });
 
-  // 按 order_index 排序
-  const sortByOrder = (items: Category[]) => {
-    items.sort((a, b) => a.order_index - b.order_index);
+  // 按 path 排序（深度优先）
+  const sortByPath = (items: Category[]) => {
+    items.sort((a, b) => (a.path || '').localeCompare(b.path || ''));
     items.forEach(item => {
       if (item.children && item.children.length > 0) {
-        sortByOrder(item.children);
+        sortByPath(item.children);
       }
     });
   };
-  sortByOrder(roots);
+  sortByPath(roots);
 
   return roots;
 }

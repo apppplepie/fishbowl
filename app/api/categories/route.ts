@@ -12,6 +12,8 @@ interface Category {
   name: string;
   parent_id: string | null;
   order_index: number;
+  depth: number;
+  path: string;
   created_at: string;
   updated_at: string;
   children?: Category[];
@@ -42,16 +44,16 @@ function buildCategoryTree(categories: Category[]): Category[] {
     }
   });
 
-  // 按 order_index 排序
-  const sortByOrder = (items: Category[]) => {
-    items.sort((a, b) => a.order_index - b.order_index);
+  // 按 path 排序（深度优先）
+  const sortByPath = (items: Category[]) => {
+    items.sort((a, b) => (a.path || '').localeCompare(b.path || ''));
     items.forEach(item => {
       if (item.children && item.children.length > 0) {
-        sortByOrder(item.children);
+        sortByPath(item.children);
       }
     });
   };
-  sortByOrder(roots);
+  sortByPath(roots);
 
   return roots;
 }
@@ -70,15 +72,15 @@ export async function GET(request: NextRequest) {
     let categories: Category[];
 
     if (type === 'children' && parentId) {
-      // 查询指定父分类的子分类
+      // 查询指定父分类的子分类，按path排序
       categories = await query<Category[]>(
-        'SELECT * FROM categories WHERE parent_id = ? ORDER BY order_index ASC',
+        'SELECT * FROM categories WHERE parent_id = ? ORDER BY path ASC',
         [parentId]
       );
     } else {
-      // 查询所有分类
+      // 查询所有分类，按path排序
       categories = await query<Category[]>(
-        'SELECT * FROM categories ORDER BY order_index ASC'
+        'SELECT * FROM categories ORDER BY path ASC'
       );
     }
 
