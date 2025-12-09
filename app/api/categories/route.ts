@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     const format = searchParams.get('format'); // 'tree' 或 'flat'
     const type = searchParams.get('type'); // 'children'
     const parentId = searchParams.get('parentId');
+    const path = searchParams.get('path'); // 新增：按path查询
 
     let categories: Category[];
 

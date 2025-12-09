@@ -21,9 +21,12 @@ export async function PUT(
 
     // 1. 验证用户登录
     const currentUser = getCurrentUser(request);
+    console.log('PUT /api/articles/[id] - articleId:', articleId, 'currentUser:', currentUser);
+    
     if (!currentUser) {
+      console.log('PUT /api/articles/[id] - 未登录，Cookie:', request.headers.get('cookie')?.substring(0, 100));
       return NextResponse.json(
-        { success: false, error: '请先登录' },
+        { success: false, error: '请先登录。如果已登录，请刷新页面后重试。' },
         { status: 401 }
       );
     }
@@ -56,19 +59,101 @@ export async function PUT(
       );
     }
 
-    // 4. 验证必填字段
-    if (!body.title) {
-      return NextResponse.json(
-        { success: false, error: '标题不能为空' },
-        { status: 400 }
+    // 4. 如果涉及分类或顺序调整，需要先处理同级所有节点的顺序（包括分类和文章）
+    if (body.category_id !== undefined || body.order_in_category !== undefined) {
+      // 获取当前文章的分类和顺序
+      const currentArticle = await query<any[]>(
+        'SELECT category_id, order_in_category FROM articles WHERE id = ?',
+        [articleId]
       );
+
+      if (currentArticle.length > 0) {
+        const oldCategoryId = currentArticle[0].category_id;
+        const oldOrder = currentArticle[0].order_in_category;
+        const newCategoryId = body.category_id !== undefined ? body.category_id : oldCategoryId;
+        const newOrder = body.order_in_category !== undefined ? body.order_in_category : oldOrder;
+
+        const isSameCategory = oldCategoryId === newCategoryId;
+
+        // 如果是同分类移动且指定了新顺序
+        if (isSameCategory && newOrder !== oldOrder && body.order_in_category !== undefined) {
+          // 先将当前文章的顺序设为临时值
+          await query(
+            'UPDATE articles SET order_in_category = -1 WHERE id = ?',
+            [articleId]
+          );
+
+          // 调整所有同级节点的顺序（包括分类和文章）
+          if (newOrder < oldOrder) {
+            // 向前移动：将 [newOrder, oldOrder) 区间的所有节点都 +1
+            // 更新分类
+            await query(
+              `UPDATE categories 
+               SET order_index = order_index + 1 
+               WHERE ${newCategoryId ? 'parent_id = ?' : 'parent_id IS NULL'}
+               AND order_index >= ? AND order_index < ?`,
+              newCategoryId 
+                ? [newCategoryId, newOrder, oldOrder]
+                : [newOrder, oldOrder]
+            );
+            // 更新文章
+            await query(
+              `UPDATE articles 
+               SET order_in_category = order_in_category + 1 
+               WHERE category_id = ? AND order_in_category >= ? AND order_in_category < ? AND id != ?`,
+              [newCategoryId, newOrder, oldOrder, articleId]
+            );
+          } else {
+            // 向后移动：将 (oldOrder, newOrder] 区间的所有节点都 -1
+            // 更新分类
+            await query(
+              `UPDATE categories 
+               SET order_index = order_index - 1 
+               WHERE ${newCategoryId ? 'parent_id = ?' : 'parent_id IS NULL'}
+               AND order_index > ? AND order_index <= ?`,
+              newCategoryId 
+                ? [newCategoryId, oldOrder, newOrder]
+                : [oldOrder, newOrder]
+            );
+            // 更新文章
+            await query(
+              `UPDATE articles 
+               SET order_in_category = order_in_category - 1 
+               WHERE category_id = ? AND order_in_category > ? AND order_in_category <= ? AND id != ?`,
+              [newCategoryId, oldOrder, newOrder, articleId]
+            );
+          }
+        } else if (!isSameCategory && body.order_in_category !== undefined) {
+          // 不同分类移动：在目标分类中为所有节点（分类和文章）腾出空间
+          // 更新分类
+          await query(
+            `UPDATE categories 
+             SET order_index = order_index + 1 
+             WHERE ${newCategoryId ? 'parent_id = ?' : 'parent_id IS NULL'}
+             AND order_index >= ?`,
+            newCategoryId ? [newCategoryId, newOrder] : [newOrder]
+          );
+          // 更新文章
+          await query(
+            `UPDATE articles 
+             SET order_in_category = order_in_category + 1 
+             WHERE category_id = ? AND order_in_category >= ? AND id != ?`,
+            [newCategoryId, newOrder, articleId]
+          );
+        }
+      }
     }
 
+    // 5. 构建动态更新字段
     const currentDate = new Date();
+    const updateFields: string[] = ['last_modified = ?'];
+    const updateValues: any[] = [currentDate];
 
-    // 构建动态更新字段
-    const updateFields: string[] = ['title = ?', 'last_modified = ?'];
-    const updateValues: any[] = [body.title, currentDate];
+    // 如果提供了标题，更新标题
+    if (body.title !== undefined) {
+      updateFields.push('title = ?');
+      updateValues.push(body.title);
+    }
 
     // 如果提供了类型，更新类型
     if (body.type !== undefined) {
@@ -82,13 +167,27 @@ export async function PUT(
       updateValues.push(body.category_id);
     }
 
+    // 如果提供了 order_in_category，更新顺序
+    if (body.order_in_category !== undefined) {
+      updateFields.push('order_in_category = ?');
+      updateValues.push(body.order_in_category);
+    }
+
     // 如果提供了 excerpt，更新摘要
     if (body.excerpt !== undefined) {
       updateFields.push('excerpt = ?');
       updateValues.push(body.excerpt);
     }
 
-    // 更新文章基本信息
+    // 确保至少有一个字段要更新（除了 last_modified）
+    if (updateFields.length === 1) {
+      return NextResponse.json(
+        { success: false, error: '没有需要更新的字段' },
+        { status: 400 }
+      );
+    }
+
+    // 6. 更新文章基本信息
     await query(
       `UPDATE articles 
        SET ${updateFields.join(', ')}

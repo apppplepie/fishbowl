@@ -226,52 +226,82 @@ function BookcasePageContent() {
           console.error('获取分类文章失败:', result);
         }
 
-        // 获取该分类的直接子分类信息，用于混合排序
-        const childCategoriesResponse = await fetch(`/api/categories?type=children&parentId=${categoryFromUrl}`);
-        const childCategoriesResult = await childCategoriesResponse.json();
-        const childCategories = childCategoriesResult.success ? childCategoriesResult.categories : [];
+        // 深度优先遍历排序：构建完整的分类树结构
+        const buildCategoryTree = async (parentId: string): Promise<any[]> => {
+          // 获取该分类的直接子分类
+          const childCategoriesResponse = await fetch(`/api/categories?type=children&parentId=${parentId}`);
+          const childCategoriesResult = await childCategoriesResponse.json();
+          const childCategories = childCategoriesResult.success ? childCategoriesResult.categories : [];
+          
+          return childCategories;
+        };
 
-        // 创建category_id到order_index的映射
-        const categoryOrderMap = new Map<string, number>();
-        childCategories.forEach((cat: any) => {
-          categoryOrderMap.set(cat.id, cat.order_index || 0);
-        });
+        // 递归构建文章列表（深度优先）
+        const sortArticlesDFS = async (categoryId: string, articlesMap: Map<string, any[]>): Promise<any[]> => {
+          const result: any[] = [];
+          
+          // 获取当前分类的直接子分类
+          const childCategories = await buildCategoryTree(categoryId);
+          
+          // 获取当前分类的直接文章
+          const directArticles = articlesMap.get(categoryId) || [];
+          
+          // 按 order_index 排序子分类，按 orderInCategory 排序直接文章
+          const sortedCategories = childCategories.sort((a: any, b: any) => 
+            (a.order_index || 0) - (b.order_index || 0)
+          );
+          const sortedDirectArticles = directArticles.sort((a, b) => 
+            (a.orderInCategory || 0) - (b.orderInCategory || 0)
+          );
+          
+          // 合并章节和文章，按排序值混合排序
+          const mixed: Array<{type: 'category' | 'article', data: any, sortValue: number}> = [
+            ...sortedCategories.map((cat: any) => ({
+              type: 'category' as const,
+              data: cat,
+              sortValue: cat.order_index || 0
+            })),
+            ...sortedDirectArticles.map((article: any) => ({
+              type: 'article' as const,
+              data: article,
+              sortValue: article.orderInCategory || 0
+            }))
+          ];
+          
+          mixed.sort((a, b) => a.sortValue - b.sortValue);
+          
+          // 深度优先遍历
+          for (const item of mixed) {
+            if (item.type === 'category') {
+              // 递归展开子分类
+              const subArticles = await sortArticlesDFS(item.data.id, articlesMap);
+              result.push(...subArticles);
+            } else {
+              // 直接添加文章
+              result.push(item.data);
+            }
+          }
+          
+          return result;
+        };
 
         // 去重
         const uniqueArticles = allArticles.filter((article, index, self) =>
           index === self.findIndex(a => a.id === article.id)
         );
 
-        // 混合排序：同一级的子分类和文章按统一排序值排序
-        const sortedArticles = uniqueArticles.sort((a, b) => {
-          // 计算排序值：直接文章用order_in_category，子分类文章用子分类的order_index
-          const getSortValue = (article: any) => {
-            if (article.category_id === categoryFromUrl) {
-              // 直接文章
-              return article.order_in_category || 0;
-            } else {
-              // 子分类文章，用子分类的order_index
-              return categoryOrderMap.get(article.category_id) || 999;
-            }
-          };
-
-          const sortA = getSortValue(a);
-          const sortB = getSortValue(b);
-
-          if (sortA !== sortB) {
-            return sortA - sortB; // 按排序值从小到大
+        // 按 categoryId 分组文章（注意：API返回的是驼峰式 categoryId）
+        const articlesMap = new Map<string, any[]>();
+        uniqueArticles.forEach(article => {
+          const catId = article.categoryId;
+          if (!articlesMap.has(catId)) {
+            articlesMap.set(catId, []);
           }
-
-          // 相同排序值时，按order_in_category排序
-          const orderA = a.order_in_category || 0;
-          const orderB = b.order_in_category || 0;
-          if (orderA !== orderB) {
-            return orderA - orderB;
-          }
-
-          // 最后按创建时间排序
-          return new Date(a.createdAt || a.publish_date).getTime() - new Date(b.createdAt || b.publish_date).getTime();
+          articlesMap.get(catId)!.push(article);
         });
+
+        // 使用深度优先遍历排序
+        const sortedArticles = await sortArticlesDFS(categoryFromUrl, articlesMap);
 
         console.log('分类目录 - 排序后文章数量:', sortedArticles.length);
 
