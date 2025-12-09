@@ -2,6 +2,7 @@ import React from 'react';
 import { FloatButton } from 'antd';
 import { PlusOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ChapterManageFloat from './ChapterManageFloat';
 
 /**
  * 书籍/章节发布悬浮按钮
@@ -16,18 +17,23 @@ export default function BookPublishFloat() {
   const isInSpecificCategory = categoryFromUrl && categoryFromUrl !== 'cat_bookcase';
 
   if (isInSpecificCategory) {
-    // 在具体分类目录下，显示发布章节按钮
+    // 在具体分类目录下，显示发布章节按钮和章节管理按钮
     return (
-      <FloatButton
+      <FloatButton.Group
         icon={<FileTextOutlined />}
         type="primary"
-        tooltip="发布章节"
-        onClick={() => router.push(`/publish-chapter?category=${categoryFromUrl}`)}
         style={{
           right: 24,
           bottom: 24,
         }}
-      />
+      >
+        <FloatButton
+          icon={<FileTextOutlined />}
+          tooltip="发布章节"
+          onClick={() => router.push(`/publish-chapter?category=${categoryFromUrl}`)}
+        />
+        <ChapterManageFloat categoryId={categoryFromUrl} />
+      </FloatButton.Group>
     );
   } else {
     // 在书橱根目录，显示发布新书按钮
