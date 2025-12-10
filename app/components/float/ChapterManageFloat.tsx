@@ -12,6 +12,7 @@ import type { TreeDataNode, TreeProps } from 'antd';
 
 interface ChapterManageFloatProps {
   categoryId: string; // 当前书籍分类ID
+  onSuccess?: () => void; // 拖动调整成功后的回调
 }
 
 interface TreeNode {
@@ -27,67 +28,35 @@ interface TreeNode {
   children?: TreeNode[];
 }
 
-export default function ChapterManageFloat({ categoryId }: ChapterManageFloatProps) {
+export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterManageFloatProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<TreeDataNode[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [bookRootId, setBookRootId] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false); // 追踪是否有改动
 
   /**
-   * 找到书籍根节点（depth=2的祖先节点）
+   * 获取书架分类ID（cat_bookcase）
+   * cat_bookcase 本身就是固定的 ID
    */
-  const findBookRootId = async (currentCategoryId: string): Promise<string> => {
-    try {
-      // 获取当前分类的path
-      const response = await fetch(`/api/categories/${currentCategoryId}`);
-      const result = await response.json();
-
-      if (result.success && result.categories && result.categories.length > 0) {
-        const category = result.categories[0];
-        if (category.path) {
-          // path格式如：000001-000002-000003-000004
-          // depth=2的节点是path的第二段（索引1）
-          const pathParts = category.path.split('-');
-          if (pathParts.length >= 2) {
-            // 书籍根节点的path是前两段
-            const bookPath = pathParts.slice(0, 2).join('-');
-
-            // 直接查询这个path对应的分类ID
-            const bookResponse = await fetch(`/api/categories?path=${encodeURIComponent(bookPath)}`);
-            const bookResult = await bookResponse.json();
-
-            if (bookResult.success && bookResult.categories && bookResult.categories.length > 0) {
-              return bookResult.categories[0].id;
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('查找书籍根节点失败:', error);
-    }
-
-    // 如果找不到，默认返回传入的categoryId
-    return currentCategoryId;
+  const getBookcaseId = (): string => {
+    return 'cat_bookcase';
   };
 
   /**
    * 加载章节树数据
    */
   const loadChapterTree = async () => {
-    if (!categoryId) {
-      return;
-    }
-
     setLoading(true);
     try {
-      // 找到书籍根节点（depth=2）
-      const actualBookId = await findBookRootId(categoryId);
-      console.log('ChapterManageFloat: 找到书籍根节点:', actualBookId);
-      setBookRootId(actualBookId);
+      // 获取书架分类ID（固定为 cat_bookcase）
+      const bookcaseId = getBookcaseId();
+      console.log('ChapterManageFloat: 书架ID:', bookcaseId);
+      setBookRootId(bookcaseId);
 
-      // 加载书籍根节点的完整树结构
-      const response = await fetch(`/api/categories/${actualBookId}/tree-with-articles`);
+      // 加载书架的完整树结构
+      const response = await fetch(`/api/categories/${bookcaseId}/tree-with-articles`);
       const result = await response.json();
 
       console.log('ChapterManageFloat: API响应:', result);
@@ -95,12 +64,17 @@ export default function ChapterManageFloat({ categoryId }: ChapterManageFloatPro
       if (result.success && result.data) {
         const treeNodes = result.data.tree as TreeNode[];
         
+        // 不显示书架本身，直接使用其子节点
+        const childNodes = treeNodes.length > 0 && treeNodes[0].children 
+          ? treeNodes[0].children 
+          : treeNodes;
+        
         // 构建Tree组件需要的数据格式
-        const treeDataNodes = buildTreeData(treeNodes);
+        const treeDataNodes = buildTreeData(childNodes);
         setTreeData(treeDataNodes);
 
         // 默认展开所有节点
-        const allKeys = getAllKeys(treeNodes);
+        const allKeys = getAllKeys(childNodes);
         setExpandedKeys(allKeys);
       } else {
         message.error('加载章节数据失败');
@@ -295,6 +269,7 @@ export default function ChapterManageFloat({ categoryId }: ChapterManageFloatPro
         
         if (result.success) {
           message.success(newOrder !== undefined ? '章节排序成功' : '章节移动成功');
+          setHasChanges(true); // 标记有改动
           await loadChapterTree();
         } else {
           if (response.status === 401) {
@@ -385,6 +360,7 @@ export default function ChapterManageFloat({ categoryId }: ChapterManageFloatPro
         const result = await response.json();
         if (result.success) {
           message.success(newOrderIndex !== undefined ? '目录排序成功' : '目录移动成功');
+          setHasChanges(true); // 标记有改动
           await loadChapterTree();
         } else {
           message.error(result.error || '移动失败');
@@ -402,6 +378,7 @@ export default function ChapterManageFloat({ categoryId }: ChapterManageFloatPro
    */
   const showModal = () => {
     setIsModalOpen(true);
+    setHasChanges(false); // 重置改动标记
     loadChapterTree();
   };
 
@@ -410,6 +387,10 @@ export default function ChapterManageFloat({ categoryId }: ChapterManageFloatPro
    */
   const handleCancel = () => {
     setIsModalOpen(false);
+    // 如果有改动，触发刷新回调
+    if (hasChanges && onSuccess) {
+      onSuccess();
+    }
   };
 
   return (

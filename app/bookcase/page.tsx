@@ -64,11 +64,25 @@ function BookcasePageContent() {
   // 书籍分类管理模态框状态
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
 
+  // 侧边栏刷新key，用于强制重新渲染侧边栏
+  const [sidebarKey, setSidebarKey] = useState(0);
+
   // 打开目录抽屉的函数
   const openCategoryDrawer = () => setDrawerVisible(true);
 
   // 打开书籍分类管理模态框的函数
   const openCategoryModal = () => setCategoryModalVisible(true);
+
+  // 章节管理成功后的刷新函数
+  const handleChapterManageSuccess = () => {
+    console.log('章节管理成功，刷新页面和侧边栏');
+    // 刷新当前页面数据
+    setOffset(0);
+    setHasMore(true);
+    loadBookcaseArticles(0, false);
+    // 刷新侧边栏（通过更新key强制重新渲染）
+    setSidebarKey(prev => prev + 1);
+  };
 
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
@@ -600,12 +614,13 @@ function BookcasePageContent() {
       overflowY: 'auto',
     }}
   >
-    <BookCategorySidebar selectedCategoryId={categoryFromUrl} />
+    <BookCategorySidebar key={sidebarKey} selectedCategoryId={categoryFromUrl} />
   </div>
 )}
 
       {/* 目录抽屉 - 书架页面专用 */}
       <BookCategoryDrawer
+        key={sidebarKey}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         selectedCategoryId={categoryFromUrl} // 传递从URL获取的category参数
@@ -631,7 +646,7 @@ function BookcasePageContent() {
       `}</style>
 
       {/* 书籍发布悬浮按钮 */}
-      <BookPublishFloat />
+      <BookPublishFloat onChapterManageSuccess={handleChapterManageSuccess} />
 
       {/* 书籍分类管理模态框 */}
       <BookCategoryModal
