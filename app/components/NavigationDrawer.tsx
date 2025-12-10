@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Drawer, Menu, Button } from 'antd';
+import { Drawer, Menu, Button, Dropdown } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import type { MenuProps } from 'antd';
 import {
@@ -13,6 +13,9 @@ import {
   LoginOutlined,
   BookOutlined,
   UserOutlined,
+  LogoutOutlined,
+  DashboardOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
@@ -194,23 +197,68 @@ export default function NavigationDrawer({
           alignItems: 'center',
         }}>
           {isLoggedIn ? (
-            /* 已登录 - 只显示用户名，点击跳转到仪表盘 */
-            <div
-              className="username-text"
-              style={{
-                color: 'white',
-                fontSize: '15px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
+            /* 已登录 - 显示用户名下拉菜单 */
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'dashboard',
+                    label: '仪表盘',
+                    icon: <DashboardOutlined />,
+                    onClick: () => {
+                      router.push('/dashboard');
+                      onClose();
+                    },
+                  },
+                  {
+                    key: 'profile',
+                    label: '个人资料',
+                    icon: <UserOutlined />,
+                    onClick: () => {
+                      router.push('/profile');
+                      onClose();
+                    },
+                  },
+                  {
+                    type: 'divider',
+                  },
+                  {
+                    key: 'logout',
+                    label: '退出登录',
+                    icon: <LogoutOutlined />,
+                    danger: true,
+                    onClick: () => {
+                      onLogout();
+                      // 不调用 onClose()，让用户看到退出登录的效果
+                    },
+                  },
+                ],
               }}
-              onClick={() => {
-                router.push('/dashboard');
-                onClose();
-              }}
+              trigger={['click']}
+              placement="bottomLeft"
             >
-              {username}
-            </div>
+              <div
+                className="username-text"
+                style={{
+                  color: 'white',
+                  fontSize: '15px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  background: 'rgba(255,255,255,0.1)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <UserOutlined />
+                <span>{username}</span>
+                <DownOutlined style={{ fontSize: '10px' }} />
+              </div>
+            </Dropdown>
           ) : (
             /* 未登录 - 显示登录按钮 */
             <Button

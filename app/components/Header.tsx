@@ -34,7 +34,8 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
   // 退出登录处理
   const handleLogout = () => {
     logout();
-    router.push('/');
+    // 不自动跳转到主页，让用户停留在当前页面
+    // router.push('/');
   };
 
   return (

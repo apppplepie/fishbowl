@@ -49,6 +49,17 @@ export default function PublishChapterPage() {
   // 从URL参数获取category
   const categoryFromUrl = searchParams.get('category');
 
+  // 调试：在页面加载时检查登录状态
+  React.useEffect(() => {
+    console.log('=== 章节发布 - 登录状态检查 ===');
+    console.log('isLoggedIn:', isLoggedIn);
+    console.log('user:', user);
+    
+    if (!isLoggedIn || !user) {
+      message.warning('您还未登录，请先登录后再发布章节', 5);
+    }
+  }, [isLoggedIn, user]);
+
   // 初始化一个空的文字块
   const [blocks, setBlocks] = useState<Block[]>([
     {
@@ -350,6 +361,31 @@ export default function PublishChapterPage() {
             }}>
               为当前目录添加新的章节内容
             </p>
+            {user && (
+              <div style={{
+                marginTop: '12px',
+                padding: '8px 12px',
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: 'white',
+              }}>
+                👤 当前用户: {user.username} ({user.role === 'admin' ? '管理员' : user.role === 'moderator' ? '版主' : '普通用户'})
+              </div>
+            )}
+            {!isLoggedIn && (
+              <div style={{
+                marginTop: '12px',
+                padding: '8px 12px',
+                background: 'rgba(255,100,100,0.3)',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: 'white',
+                fontWeight: 500,
+              }}>
+                ⚠️ 未登录状态 - 请先登录
+              </div>
+            )}
           </div>
         }
         box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
