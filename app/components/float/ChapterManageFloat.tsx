@@ -6,8 +6,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, Tree, message, Spin, Empty } from 'antd';
-import { UnorderedListOutlined } from '@ant-design/icons';
+import { FloatButton, Modal, Tree, message, Spin, Empty, Input } from 'antd';
+import { UnorderedListOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { TreeDataNode, TreeProps } from 'antd';
 
 interface ChapterManageFloatProps {
@@ -35,6 +35,11 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [bookRootId, setBookRootId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false); // 追踪是否有改动
+  
+  // 新建目录相关状态
+  const [newCategoryModalOpen, setNewCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
 
   /**
    * 获取书架分类ID（cat_bookcase）
@@ -88,6 +93,93 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   };
 
   /**
+   * 打开新建目录对话框
+   */
+  const handleAddCategory = (parentId: string) => {
+    setNewCategoryParentId(parentId);
+    setNewCategoryName('');
+    setNewCategoryModalOpen(true);
+  };
+
+  /**
+   * 确认新建目录
+   */
+  const handleConfirmAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      message.warning('请输入目录名称');
+      return;
+    }
+
+    try {
+      // 生成新的分类ID
+      const newCategoryId = `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // 调用API创建新分类
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newCategoryId,
+          name: newCategoryName.trim(),
+          parent_id: newCategoryParentId,
+          order_index: 0, // 默认放在最前面
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('目录创建成功');
+        setNewCategoryModalOpen(false);
+        setNewCategoryName('');
+        setHasChanges(true);
+        // 重新加载树结构
+        await loadChapterTree();
+      } else {
+        message.error(result.error || '创建目录失败');
+      }
+    } catch (error) {
+      console.error('创建目录失败:', error);
+      message.error('创建目录失败');
+    }
+  };
+
+  /**
+   * 删除目录
+   */
+  const handleDeleteCategory = (categoryId: string, categoryName: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      icon: <ExclamationCircleOutlined />,
+      content: `确定要删除目录"${categoryName}"吗？只有空目录才能删除。`,
+      okText: '确认',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const response = await fetch(`/api/categories/${categoryId}`, {
+            method: 'DELETE',
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            message.success('目录删除成功');
+            setHasChanges(true);
+            // 重新加载树结构
+            await loadChapterTree();
+          } else {
+            message.error(result.error || '删除目录失败');
+          }
+        } catch (error) {
+          console.error('删除目录失败:', error);
+          message.error('删除目录失败');
+        }
+      },
+    });
+  };
+
+  /**
    * 递归构建Tree组件数据
    */
   const buildTreeData = (nodes: TreeNode[]): TreeDataNode[] => {
@@ -95,9 +187,50 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       const isCategory = node.node_type === 'category';
       const icon = isCategory ? '📁' : '📄';
       
+      // 判断是否是空目录（没有子节点）
+      const isEmpty = !node.children || node.children.length === 0;
+      
+      // 为分类节点添加操作按钮
+      const titleElement = isCategory ? (
+        <span>
+          {icon} {node.name}
+          <span style={{ marginLeft: '8px' }}>
+            <PlusOutlined 
+              style={{ 
+                color: '#52c41a', 
+                cursor: 'pointer', 
+                marginRight: '8px',
+                fontSize: '12px'
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddCategory(node.id);
+              }}
+              title="新建子目录"
+            />
+            {isEmpty && (
+              <DeleteOutlined 
+                style={{ 
+                  color: '#ff4d4f', 
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteCategory(node.id, node.name);
+                }}
+                title="删除目录"
+              />
+            )}
+          </span>
+        </span>
+      ) : (
+        `${icon} ${node.name}`
+      );
+      
       const treeNode: TreeDataNode = {
         key: `${node.node_type}-${node.id}`,
-        title: `${icon} ${node.name}`,
+        title: titleElement,
         children: node.children && node.children.length > 0 
           ? buildTreeData(node.children) 
           : undefined,
@@ -446,6 +579,30 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
               style={{ padding: '60px 0' }}
             />
           )}
+        </div>
+      </Modal>
+
+      {/* 新建目录对话框 */}
+      <Modal
+        title="新建目录"
+        open={newCategoryModalOpen}
+        onOk={handleConfirmAddCategory}
+        onCancel={() => {
+          setNewCategoryModalOpen(false);
+          setNewCategoryName('');
+        }}
+        okText="确认"
+        cancelText="取消"
+      >
+        <div style={{ padding: '20px 0' }}>
+          <Input
+            placeholder="请输入目录名称"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            onPressEnter={handleConfirmAddCategory}
+            maxLength={50}
+            autoFocus
+          />
         </div>
       </Modal>
     </>

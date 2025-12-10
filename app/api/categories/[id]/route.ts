@@ -95,6 +95,7 @@ export async function PUT(
 
 /**
  * DELETE /api/categories/:id
+ * 删除分类（仅允许删除空目录：无文章且无子分类）
  */
 export async function DELETE(
   request: NextRequest,
@@ -102,6 +103,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    
     // 检查是否有文章使用此分类
     const articles = await query<any[]>(
       'SELECT COUNT(*) as count FROM articles WHERE category_id = ?',
@@ -110,14 +112,27 @@ export async function DELETE(
 
     if (articles[0].count > 0) {
       return NextResponse.json(
-        { success: false, error: '该分类下还有文章，无法删除' },
+        { success: false, error: '该目录下还有文章，无法删除' },
+        { status: 400 }
+      );
+    }
+
+    // 检查是否有子分类
+    const childCategories = await query<any[]>(
+      'SELECT COUNT(*) as count FROM categories WHERE parent_id = ?',
+      [id]
+    );
+
+    if (childCategories[0].count > 0) {
+      return NextResponse.json(
+        { success: false, error: '该目录下还有子目录，无法删除' },
         { status: 400 }
       );
     }
 
     await query('DELETE FROM categories WHERE id = ?', [id]);
 
-    return NextResponse.json({ success: true, message: '分类删除成功' });
+    return NextResponse.json({ success: true, message: '目录删除成功' });
   } catch (error) {
     console.error('删除分类失败:', error);
     return NextResponse.json(
