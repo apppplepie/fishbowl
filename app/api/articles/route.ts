@@ -121,18 +121,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. 插入文章记录（使用当前登录用户作为作者）
+    // 2. 插入文章记录（使用当前登录用户作者）
     await query(
       `INSERT INTO articles 
-       (id, title, author, author_id, publish_date, last_modified, excerpt, type, category_id, status, likes, shares, comments) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+       (id, title, author, author_id, published_at, excerpt, type, category_id, status, likes, shares, comments) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
         body.title,
         currentUser.username,  // 使用登录用户的用户名
         currentUser.id,         // 使用登录用户的ID
-        publishDate,
-        currentDate,
+        currentDate,            // published_at - 使用完整的datetime
         excerpt,
         articleType,
         body.category_id || null,
@@ -264,11 +263,11 @@ export async function GET(request: NextRequest) {
     // 使用字符串拼接而不是参数绑定（LIMIT 和 OFFSET 不支持 ? 占位符）
     const articles = await query<any[]>(
       `SELECT 
-        id, title, author, publish_date, last_modified, 
+        id, title, author, published_at, created_at, updated_at,
         excerpt, type, status, likes, shares, comments
        FROM articles 
        WHERE status = ?
-       ORDER BY last_modified DESC, publish_date DESC
+       ORDER BY updated_at DESC, published_at DESC
        LIMIT ${limit} OFFSET ${offset}`,
       [status]
     );

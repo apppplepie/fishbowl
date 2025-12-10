@@ -8,9 +8,19 @@
  * @param dateString - 日期字符串（ISO 格式或普通日期字符串）
  * @returns 格式化后的时间字符串
  */
-export function formatRelativeTime(dateString: string): string {
+export function formatRelativeTime(dateString: string | Date | undefined | null): string {
+  if (!dateString) {
+    return '未知时间';
+  }
+
   const now = new Date();
   const date = new Date(dateString);
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    console.error('Invalid date string:', dateString);
+    return '未知时间';
+  }
   
   // 计算时间差（毫秒）
   const diffMs = now.getTime() - date.getTime();
@@ -53,8 +63,19 @@ export function formatRelativeTime(dateString: string): string {
 /**
  * 简化版：只显示到分钟
  */
-export function formatTimeToMinute(dateString: string): string {
+export function formatTimeToMinute(dateString: string | Date | undefined | null): string {
+  if (!dateString) {
+    return '未知时间';
+  }
+
   const date = new Date(dateString);
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    console.error('Invalid date string:', dateString);
+    return '未知时间';
+  }
+
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');

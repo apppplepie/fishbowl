@@ -7,7 +7,9 @@ export type CardType = 'image' | 'article' | 'diary' | 'quote' | 'video' | 'link
 export interface BaseCard {
   id: number;
   type: CardType;
-  createdAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  publishedAt?: string;
   tags?: string[];
 }
 

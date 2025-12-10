@@ -37,12 +37,6 @@ export const publicNavigationItems: NavigationItem[] = [
     path: '/archive',
   },
   {
-    key: 'publish',
-    label: '发布内容',
-    icon: 'EditOutlined',
-    path: '/publish',
-  },
-  {
     key: 'publish-article',
     label: '创作文章',
     icon: 'FormOutlined',

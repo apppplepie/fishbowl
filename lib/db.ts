@@ -34,8 +34,7 @@ export async function initDatabase() {
         title VARCHAR(255) NOT NULL,
         author VARCHAR(100) NOT NULL,
         author_id VARCHAR(36),
-        publish_date DATE NOT NULL,
-        last_modified DATETIME NOT NULL,
+        published_at DATETIME DEFAULT NULL,
         excerpt TEXT,
         type ENUM('default', 'text', 'image', 'code', 'diary', 'drawing') DEFAULT 'text',
         status ENUM('draft', 'published') DEFAULT 'published',
@@ -43,11 +42,12 @@ export async function initDatabase() {
         shares INT DEFAULT 0,
         comments INT DEFAULT 0,
         category_id VARCHAR(36),
+        order_in_category INT DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_status (status),
         INDEX idx_type (type),
-        INDEX idx_publish_date (publish_date),
+        INDEX idx_published_at (published_at),
         INDEX idx_author_id (author_id),
         INDEX idx_category_id (category_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

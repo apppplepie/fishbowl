@@ -18,8 +18,9 @@ export async function GET(request: NextRequest) {
         a.title,
         a.author,
         a.author_id,
-        a.publish_date,
-        a.last_modified,
+        a.published_at,
+        a.created_at,
+        a.updated_at,
         a.excerpt,
         a.type,
         a.likes,
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
        FROM articles a
        WHERE a.type = 'drawing'
          AND a.status = 'published'
-       ORDER BY a.last_modified DESC, a.publish_date DESC
+       ORDER BY a.updated_at DESC, a.published_at DESC
        LIMIT ${limit} OFFSET ${offset}`,
       []
     );
