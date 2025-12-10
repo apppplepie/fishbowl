@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Drawer } from 'antd';
-import ArticleTocNav from './ArticleIndexSidebar';
+import GenericIndexTree, { GenericIndexTreeConfig } from './GenericIndexTree';
+import GenericTreeDrawer from './GenericTreeDrawer';
 
 interface ArticleTocDrawerProps {
   open: boolean;
@@ -30,36 +30,25 @@ export default function ArticleTocDrawer({
     onClose(); // 点击目录跳转后关闭抽屉
   };
 
-  return (
-    <>
-      <Drawer
-        title={null}
-        placement="left"
-        onClose={onClose}
-        open={open}
-        size={280}
-        styles={{
-          body: {
-            padding: 0,
-          },
-          header: { display: 'none' },
-        }}
-      >
-        <ArticleTocNav
-          currentArticleId={currentArticleId}
-          onArticleClick={handleArticleClick}
-          onCategoryClick={handleCategoryClick}
-        />
-      </Drawer>
+  const config: GenericIndexTreeConfig = {
+    apiEndpoint: '/api/categories/tree-with-articles',
+    emptyText: '暂无文章',
+    forceOpenRootKeys: true,
+    categoryNavigationPattern: '/archive?category={categoryId}',
+    articleNavigationPattern: '/article/{articleId}',
+    stylePrefix: 'article-index-drawer',
+    showArticleCount: true,
+    dataFormat: 'tree-with-articles'
+  };
 
-      {/* 自定义样式 */}
-      <style>{`
-        /* 去掉drawer默认间距 */
-        .ant-drawer-body {
-          padding: 0 !important;
-        }
-      `}</style>
-    </>
+  return (
+    <GenericTreeDrawer open={open} onClose={onClose} size={280}>
+      <GenericIndexTree
+        config={config}
+        currentArticleId={currentArticleId}
+        onArticleClick={handleArticleClick}
+        onCategoryClick={handleCategoryClick}
+      />
+    </GenericTreeDrawer>
   );
 }
-
