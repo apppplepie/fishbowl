@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Drawer } from 'antd';
-import BookCategorySidebar from './ChapterIndexSidebar';
+import GenericIndexTree, { GenericIndexTreeConfig } from './GenericIndexTree';
+import GenericTreeDrawer from './GenericTreeDrawer';
 
 interface BookTocDrawerProps {
   open: boolean;
@@ -32,36 +32,27 @@ export default function BookTocDrawer({
     onClose(); // 点击目录跳转后关闭抽屉
   };
 
-  return (
-    <>
-      <Drawer
-        title={null}
-        placement="left"
-        onClose={onClose}
-        open={open}
-        size={280}
-        styles={{
-          body: {
-            padding: 0,
-          },
-          header: { display: 'none' },
-        }}
-      >
-        <BookCategorySidebar
-          currentArticleId={currentArticleId}
-          bookCategoryId={bookCategoryId}
-          onArticleClick={handleArticleClick}
-          onCategoryClick={handleCategoryClick}
-        />
-      </Drawer>
+  const config: GenericIndexTreeConfig = {
+    apiEndpoint: '/api/categories/{id}/tree-with-articles',
+    startCategoryId: bookCategoryId,
+    emptyText: '暂无内容',
+    forceOpenRootKeys: false,
+    categoryNavigationPattern: '/bookcase?category={categoryId}',
+    articleNavigationPattern: '/book/{articleId}',
+    stylePrefix: 'chapter-index-drawer',
+    showArticleCount: false,
+    dataFormat: 'flat-tree',
+    findBookRoot: true
+  };
 
-      {/* 自定义样式 */}
-      <style>{`
-        /* 去掉drawer默认间距 */
-        .ant-drawer-body {
-          padding: 0 !important;
-        }
-      `}</style>
-    </>
+  return (
+    <GenericTreeDrawer open={open} onClose={onClose} size={280}>
+      <GenericIndexTree
+        config={config}
+        currentArticleId={currentArticleId}
+        onArticleClick={handleArticleClick}
+        onCategoryClick={handleCategoryClick}
+      />
+    </GenericTreeDrawer>
   );
 }
