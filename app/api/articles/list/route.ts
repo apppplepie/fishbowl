@@ -11,8 +11,9 @@ interface RawArticle {
   title: string;
   author: string;
   author_id: string;
-  publish_date: Date;
-  last_modified: Date;
+  published_at: Date;
+  created_at: Date;
+  updated_at: Date;
   excerpt: string | null;
   type: 'text' | 'image' | 'drawing' | 'code';
   status: string;
@@ -36,8 +37,9 @@ interface ProcessedArticle {
   title: string;
   author: string;
   authorId: string;
-  publishDate: Date;
-  lastModified: Date;
+  publishedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
   excerpt: string | null;
   type: 'text' | 'image' | 'drawing' | 'code';
   status: string;
@@ -131,8 +133,9 @@ export async function GET(request: NextRequest) {
         a.title,
         a.author,
         a.author_id,
-        a.publish_date,
-        a.last_modified,
+        a.published_at,
+        a.created_at,
+        a.updated_at,
         a.excerpt,
         a.type,
         a.status,
@@ -223,9 +226,9 @@ export async function GET(request: NextRequest) {
        WHERE ${whereClause}
        ORDER BY
          CASE WHEN ? = 1 THEN COALESCE(c.path, '999999')
-              ELSE a.last_modified END ASC,
+              ELSE a.updated_at END DESC,
          CASE WHEN ? = 1 THEN COALESCE(c.order_index, a.order_in_category)
-              ELSE a.publish_date END ASC
+              ELSE a.published_at END DESC
        LIMIT ${limit} OFFSET ${offset}`,
       queryParams
     );
@@ -238,8 +241,9 @@ export async function GET(request: NextRequest) {
       title: article.title,
       author: article.author,
       authorId: article.author_id,
-      publishDate: article.publish_date,
-      lastModified: article.last_modified,
+      publishedAt: article.published_at,
+      createdAt: article.created_at,
+      updatedAt: article.updated_at,
       excerpt: article.excerpt,
       type: article.type,
       status: article.status,

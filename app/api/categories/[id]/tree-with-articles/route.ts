@@ -16,7 +16,7 @@ interface TreeNode {
   order_index: number;
   node_type: 'category' | 'article';
   type?: string; // article type
-  publish_date?: string; // for articles
+  published_at?: string; // for articles
   children?: TreeNode[];
 }
 
@@ -86,7 +86,7 @@ async function getTreeNodes(parentId: string): Promise<TreeNode[]> {
   //    这里通过 categories.path 做 JOIN，并在 SQL 中尽量少做字符串操作，方便索引使用
   //    我们仍然需要 article 的最终 path（category.path + '-' + LPAD(article.order_in_category,6,'0')）
   const articles = await query<any[]>(
-    `SELECT a.id, a.title, a.type, a.publish_date, a.order_in_category, a.category_id,
+    `SELECT a.id, a.title, a.type, a.published_at, a.order_in_category, a.category_id,
             c.path AS category_path, c.depth AS category_depth, c.order_index AS category_order_index
      FROM articles a
      JOIN categories c ON a.category_id = c.id
@@ -125,7 +125,7 @@ async function getTreeNodes(parentId: string): Promise<TreeNode[]> {
       order_index: article.order_in_category,
       node_type: 'article',
       type: article.type,
-      publish_date: article.publish_date,
+      published_at: article.published_at,
       children: [],
     });
   }

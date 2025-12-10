@@ -105,7 +105,7 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span>✍️ {card.author}</span>
           <span style={{ color: '#999', fontSize: '12px' }}>
-            📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt)}
+            📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>

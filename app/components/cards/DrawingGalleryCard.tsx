@@ -26,7 +26,12 @@ interface DrawingGalleryCardProps {
     title: string;
     excerpt?: string;
     author: string;
-    last_modified: string;
+    updated_at?: string;
+    updatedAt?: string;
+    published_at?: string;
+    publishedAt?: string;
+    created_at?: string;
+    createdAt?: string;
     tags?: string[]; // 标签
     likes?: number;
     comments?: number;
@@ -458,7 +463,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
               color: '#999',
             }}>
               <span style={{ fontSize: '14px' }}>📝</span>
-              {formatRelativeTime(article.last_modified)}
+              {formatRelativeTime(article.updatedAt || article.updated_at || article.publishedAt || article.published_at || article.createdAt || article.created_at)}
             </span>
           </div>
         </div>

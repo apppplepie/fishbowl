@@ -16,7 +16,7 @@ interface CategoryWithArticles {
     id: string;
     title: string;
     type: string;
-    publish_date: string;
+    published_at: string;
   }>;
 }
 
@@ -65,7 +65,7 @@ function buildTree(flatData: any[]): CategoryWithArticles[] {
       }
       if (node.articles && node.articles.length > 0) {
         node.articles.sort((a, b) =>
-          new Date(b.publish_date).getTime() - new Date(a.publish_date).getTime()
+          new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
         );
       }
     });
@@ -103,7 +103,7 @@ function attachArticlesToTree(tree: CategoryWithArticles[], articles: any[]) {
           id: article.id,
           title: article.title,
           type: article.type || 'text',
-          publish_date: article.publish_date,
+          published_at: article.published_at,
         });
       }
     }
@@ -121,11 +121,11 @@ export async function GET(req: NextRequest) {
 
     // 获取所有已发布的文章
     const articles = await query(
-      `SELECT id, title, type, category_id, publish_date
+      `SELECT id, title, type, category_id, published_at
        FROM articles 
        WHERE status = 'published' 
        AND category_id IS NOT NULL
-       ORDER BY publish_date DESC`
+       ORDER BY published_at DESC`
     ) as any[];
 
     // 构建树结构

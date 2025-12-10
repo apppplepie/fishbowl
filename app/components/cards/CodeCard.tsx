@@ -11,8 +11,8 @@ interface CodeCardProps {
     title: string;
     excerpt: string;
     author: string;
-    publish_date?: string;
-    last_modified?: string; // 最后编辑时间
+    updatedAt?: string;
+    publishedAt?: string;
     createdAt?: string;
     codePreview?: string; // 第一个代码块的预览
     codeLanguage?: string; // 第一个代码块的语言
@@ -194,7 +194,7 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
             </span>
           )}
           <span style={{ fontSize: '12px' }}>
-            📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt || new Date().toISOString())}
+            📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt || new Date().toISOString())}
           </span>
         </div>
       </div>

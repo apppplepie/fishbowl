@@ -145,9 +145,9 @@ export async function PUT(
     }
 
     // 5. 构建动态更新字段
-    const currentDate = new Date();
-    const updateFields: string[] = ['last_modified = ?'];
-    const updateValues: any[] = [currentDate];
+    // updated_at会自动更新，不需要手动设置
+    const updateFields: string[] = [];
+    const updateValues: any[] = [];
 
     // 如果提供了标题，更新标题
     if (body.title !== undefined) {
@@ -179,8 +179,8 @@ export async function PUT(
       updateValues.push(body.excerpt);
     }
 
-    // 确保至少有一个字段要更新（除了 last_modified）
-    if (updateFields.length === 1) {
+    // 确保至少有一个字段要更新
+    if (updateFields.length === 0) {
       return NextResponse.json(
         { success: false, error: '没有需要更新的字段' },
         { status: 400 }
@@ -396,7 +396,7 @@ export async function GET(
     // 1. 获取文章基本信息
     const articles = await query<any[]>(
       `SELECT 
-        id, title, author, publish_date, last_modified, 
+        id, title, author, published_at, created_at, updated_at,
         excerpt, type, category_id, status, likes, shares, comments
        FROM articles 
        WHERE id = ?`,

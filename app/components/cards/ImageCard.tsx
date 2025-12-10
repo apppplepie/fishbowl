@@ -121,7 +121,7 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12px' }}>
               {card.author && <span>👤 {card.author}</span>}
               <span style={{ color: '#999' }}>
-                📝 {formatRelativeTime(card.last_modified || card.publish_date || card.createdAt)}
+                📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

@@ -15,7 +15,6 @@ import DiaryCard from '@/app/components/cards/DiaryCard';
 import BookCard from '@/app/components/cards/BookCard';
 import DiaryPublishFloat from '@/app/components/float/DiaryPublishFloat';
 import BookCategoryDrawer, { BookCategoryDrawerButton } from '@/app/components/sidebar/BookCategoryDrawer';
-import BookCategoryModal from '@/app/components/sidebar/ChapterDragSort';
 import BookPublishFloat from '@/app/components/float/BookPublishFloat';
 import BookCategorySidebar from '@/app/components/sidebar/BookCategorySidebar'
 import { mockCards } from '@/app/data/mockCards';
@@ -61,17 +60,11 @@ function BookcasePageContent() {
   // 目录抽屉状态
   const [drawerVisible, setDrawerVisible] = useState(false);
 
-  // 书籍分类管理模态框状态
-  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
-
   // 侧边栏刷新key，用于强制重新渲染侧边栏
   const [sidebarKey, setSidebarKey] = useState(0);
 
   // 打开目录抽屉的函数
   const openCategoryDrawer = () => setDrawerVisible(true);
-
-  // 打开书籍分类管理模态框的函数
-  const openCategoryModal = () => setCategoryModalVisible(true);
 
   // 章节管理成功后的刷新函数
   const handleChapterManageSuccess = () => {
@@ -184,9 +177,9 @@ function BookcasePageContent() {
                   description: mainArticle.excerpt || '暂无简介',
                   coverImage: mainArticle.firstImageUrl || '/default-book-cover.jpg',
                   author: mainArticle.author || '未知作者',
-                  updatedAt: mainArticle.last_modified || mainArticle.publish_date || new Date().toISOString(),
+                  updatedAt: mainArticle.updatedAt || mainArticle.publishedAt || mainArticle.createdAt || new Date().toISOString(),
                   mainArticleId: mainArticle.id.toString(),
-                  createdAt: mainArticle.publish_date || new Date().toISOString(),
+                  createdAt: mainArticle.publishedAt || mainArticle.createdAt || new Date().toISOString(),
                 };
               }
             } catch (error) {
@@ -647,16 +640,6 @@ function BookcasePageContent() {
 
       {/* 书籍发布悬浮按钮 */}
       <BookPublishFloat onChapterManageSuccess={handleChapterManageSuccess} />
-
-      {/* 书籍分类管理模态框 */}
-      <BookCategoryModal
-        open={categoryModalVisible}
-        onClose={() => setCategoryModalVisible(false)}
-        onSuccess={() => {
-          // 分类调整成功后重新加载书籍列表
-          loadBookcaseArticles(0, false);
-        }}
-      />
     </>
   );
 }
