@@ -4,11 +4,15 @@ import { PlusOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ChapterManageFloat from './ChapterManageFloat';
 
+interface BookPublishFloatProps {
+  onChapterManageSuccess?: () => void; // 章节管理成功后的回调
+}
+
 /**
  * 书籍/章节发布悬浮按钮
  * 在bookcase页面显示，根据当前category参数决定显示书籍发布或章节发布按钮
  */
-export default function BookPublishFloat() {
+export default function BookPublishFloat({ onChapterManageSuccess }: BookPublishFloatProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryFromUrl = searchParams.get('category');
@@ -32,7 +36,7 @@ export default function BookPublishFloat() {
           tooltip="发布章节"
           onClick={() => router.push(`/publish-chapter?category=${categoryFromUrl}`)}
         />
-        <ChapterManageFloat categoryId={categoryFromUrl} />
+        <ChapterManageFloat categoryId={categoryFromUrl} onSuccess={onChapterManageSuccess} />
       </FloatButton.Group>
     );
   } else {
