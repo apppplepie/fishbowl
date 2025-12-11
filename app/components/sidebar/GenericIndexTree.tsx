@@ -66,7 +66,7 @@ export interface GenericIndexTreeConfig {
   /**
    * 点击分类后的跳转路径模板
    * 使用 {categoryId} 作为占位符
-   * 例如: '/articles?category={categoryId}'
+   * 例如: '/archive?category={categoryId}'
    */
   categoryNavigationPattern?: string;
   
