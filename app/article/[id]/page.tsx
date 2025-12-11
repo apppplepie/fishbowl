@@ -9,7 +9,7 @@ const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import ArticleNavigator from '@/app/components/sidebar/ArticleNavigator';
+import ArticleNavigator, { ArticleDrawerButton } from '@/app/components/sidebar/ArticleNavigator';
 import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -87,6 +87,9 @@ export default function ArticlePage() {
 
   // 评论数量状态
   const [commentsCount, setCommentsCount] = useState(0);
+
+  // 目录抽屉状态
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
   /**
    * 获取分类路径
@@ -494,16 +497,25 @@ export default function ArticlePage() {
     }
   };
 
+  // 打开目录抽屉的函数
+  const openCategoryDrawer = () => setDrawerVisible(true);
+
   return (
     <>
       {/* 统一的文章导航组件（自动适配移动端/桌面端） */}
       <ArticleNavigator
         currentArticleId={articleId}
         onArticleClick={handleArticleClick}
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
       />
 
       {/* Header 覆盖在PageLayout顶部边框上 */}
-      <Header leftContent={null} />
+      <Header
+        leftContent={
+          isMobile && <ArticleDrawerButton onClick={openCategoryDrawer} />
+        }
+      /> 
 
       {/* 编辑悬浮按钮 - 仅文章作者、管理员或版主可见 */}
       {isLoggedIn && article && user && (

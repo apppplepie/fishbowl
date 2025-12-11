@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button } from 'antd';
-import { UnorderedListOutlined } from '@ant-design/icons';
+import React from 'react';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import GenericIndexTree, { GenericIndexTreeConfig } from './GenericIndexTree';
-import GenericTreeDrawer from './GenericTreeDrawer';
+import GenericTreeDrawer, { TreeDrawerButton } from './GenericTreeDrawer';
 
 /**
  * 书籍章节导航组件（统一移动端和桌面端）
@@ -18,20 +16,23 @@ interface BookChapterNavigatorProps {
   bookCategoryId?: string;
   onArticleClick?: (articleId: string) => void;
   onCategoryClick?: () => void;
+  visible?: boolean; // 移动端使用，控制抽屉显示
+  onClose?: () => void; // 移动端使用，关闭抽屉回调
 }
 
 export default function BookChapterNavigator({
   currentArticleId,
   bookCategoryId,
   onArticleClick,
-  onCategoryClick
+  onCategoryClick,
+  visible = false,
+  onClose
 }: BookChapterNavigatorProps) {
   const { isMobile } = useResponsive();
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const config: GenericIndexTreeConfig = {
     apiEndpoint: '/api/categories/{id}/tree-with-articles',
-    startCategoryId: bookCategoryId,
+    startCategoryId: 'cat_bookcase', // 固定使用书架作为根目录
     emptyText: '暂无内容',
     forceOpenRootKeys: false,
     categoryNavigationPattern: '/bookcase?category={categoryId}',
@@ -39,21 +40,21 @@ export default function BookChapterNavigator({
     stylePrefix: isMobile ? 'chapter-index-drawer' : 'chapter-index-sidebar',
     showArticleCount: false,
     dataFormat: 'flat-tree',
-    findBookRoot: true,
+    findBookRoot: false, // 不自动查找，直接使用指定的根目录
     defaultOpenMode: 'current-article-path' // 只展开当前文章路径
   };
 
   const handleArticleClick = (articleId: string) => {
     onArticleClick?.(articleId);
-    if (isMobile) {
-      setDrawerOpen(false); // 移动端点击后关闭抽屉
+    if (isMobile && onClose) {
+      onClose(); // 移动端点击后关闭抽屉
     }
   };
 
   const handleCategoryClick = () => {
     onCategoryClick?.();
-    if (isMobile) {
-      setDrawerOpen(false); // 移动端点击后关闭抽屉
+    if (isMobile && onClose) {
+      onClose(); // 移动端点击后关闭抽屉
     }
   };
 
@@ -68,26 +69,15 @@ export default function BookChapterNavigator({
   );
 
   if (isMobile) {
-    // 移动端：返回按钮 + 抽屉
+    // 移动端：返回抽屉
     return (
-      <>
-        {/* Header 左侧按钮 */}
-        <Button
-          type="text"
-          icon={<UnorderedListOutlined style={{ fontSize: '20px', color: 'white' }} />}
-          onClick={() => setDrawerOpen(true)}
-          style={{ border: 'none' }}
-        />
-
-        {/* 抽屉 */}
-        <GenericTreeDrawer 
-          open={drawerOpen} 
-          onClose={() => setDrawerOpen(false)} 
-          size={280}
-        >
-          {renderTreeContent()}
-        </GenericTreeDrawer>
-      </>
+      <GenericTreeDrawer
+        open={visible}
+        onClose={onClose || (() => {})}
+        size={280}
+      >
+        {renderTreeContent()}
+      </GenericTreeDrawer>
     );
   }
 
@@ -109,5 +99,17 @@ export default function BookChapterNavigator({
       {renderTreeContent()}
     </div>
   );
+}
+
+/**
+ * 书籍章节抽屉按钮组件
+ * 用于移动端在 Header 左侧显示展开按钮
+ */
+export function BookChapterDrawerButton({
+  onClick
+}: {
+  onClick: () => void;
+}) {
+  return <TreeDrawerButton onClick={onClick} />;
 }
 

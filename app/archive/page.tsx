@@ -258,7 +258,7 @@ function ArticlesPageContent() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          <ArchiveCategoryDrawerButton onClick={openCategoryDrawer} />
+          isMobile && <ArchiveCategoryDrawerButton onClick={openCategoryDrawer} />
         }
       />
       
