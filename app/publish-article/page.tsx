@@ -473,7 +473,6 @@ export default function PublishArticlePage() {
               }}
             >
               <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>🧱 文章内容</h3>
                 <Space>
                   <Tag color="blue">{stats.totalBlocks} 个块</Tag>
                   <Tag color="green">{stats.textBlocks} 文字</Tag>

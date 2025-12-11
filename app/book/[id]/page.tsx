@@ -511,18 +511,22 @@ export default function BookPage() {
                   {book.tags && book.tags.length > 0 && (
                     <div style={{ marginTop: '12px' }}>
                       <Space wrap>
-                        {book.tags.map((tag: string, index: number) => (
-                          <Tag
-                            key={index}
-                            color="blue"
-                            style={{
-                              color: 'white',
-                              borderColor: 'rgba(255, 255, 255, 0.3)',
-                            }}
-                          >
-                            {tag}
-                          </Tag>
-                        ))}
+                        {book.tags.map((tag: string, index: number) => {
+                          const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
+                          const color = colors[index % colors.length];
+                          return (
+                            <Tag
+                              key={index}
+                              color={color}
+                              style={{
+                                padding: '4px 12px',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {tag}
+                            </Tag>
+                          );
+                        })}
                       </Space>
                     </div>
                   )}

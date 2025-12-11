@@ -530,9 +530,7 @@ export default function ArticlePage() {
         <PageLayout
           containerPaddingTop={isMobile ? '0px' : '45px'}
           box1Content={
-            <div style={{
-              padding: '12px 24px',
-            }}>
+            <div style={{ padding: '16px 24px' }}>
               <Breadcrumb
                 items={[
                   // 首页
@@ -608,8 +606,87 @@ export default function ArticlePage() {
                 style={{
                   color: 'white',
                   fontSize: '14px',
+                  marginBottom: '16px',
                 }}
               />
+
+              {/* 文章标题和信息区 */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: '16px',
+              }}>
+                <div style={{ flex: 1 }}>
+                  {/* 文章标题 */}
+                  {editMode === 'edit' ? (
+                    <Input
+                      value={editedArticle?.title || ''}
+                      onChange={(e) => editedArticle && setEditedArticle({ ...editedArticle, title: e.target.value })}
+                      style={{
+                        fontSize: '28px',
+                        fontWeight: 'bold',
+                        border: 'none',
+                        background: 'transparent',
+                        color: 'white',
+                        padding: 0,
+                        marginBottom: '8px',
+                      }}
+                      placeholder="请输入文章标题"
+                    />
+                  ) : (
+                    <h1 style={{
+                      fontSize: '28px',
+                      fontWeight: 'bold',
+                      color: 'white',
+                      margin: '0 0 8px 0',
+                      lineHeight: '1.2',
+                    }}>
+                      {editMode === 'preview' ? editedArticle?.title : article?.title}
+                    </h1>
+                  )}
+
+                  {/* 文章信息 */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    fontSize: '14px',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    flexWrap: 'wrap',
+                  }}>
+                    <span>作者：{editMode === 'edit' ? editedArticle?.author : (editMode === 'preview' ? editedArticle?.author : article?.author)}</span>
+                    <span>日期：{editMode === 'edit' 
+                      ? (editedArticle?.last_modified ? formatTimeToMinute(editedArticle.last_modified) : formatTimeToMinute(new Date().toISOString()))
+                      : formatTimeToMinute(editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified)}</span>
+                  </div>
+
+                  {/* 标签 */}
+                  {(editMode === 'edit' ? editedArticle?.tags : (editMode === 'preview' ? editedArticle?.tags : article?.tags))?.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <Space wrap>
+                        {(editMode === 'edit' ? editedArticle?.tags : (editMode === 'preview' ? editedArticle?.tags : article?.tags)).map((tag: string, index: number) => {
+                          const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
+                          const color = colors[index % colors.length];
+                          return (
+                            <Tag
+                              key={index}
+                              color={color}
+                              style={{
+                                padding: '4px 12px',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {tag}
+                            </Tag>
+                          );
+                        })}
+                      </Space>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           }
           box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
@@ -641,204 +718,118 @@ export default function ArticlePage() {
               </div>
             )}
 
-            {/* Part 1: 标题和元信息 */}
-            <div style={{
-              background: 'white',
-              padding: '40px',
-              borderRadius: '8px',
-              marginBottom: '24px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            }}>
-              {editMode === 'edit' ? (
-                // 编辑模式 - 可编辑标题和类型
-                <>
-                  <div style={{ marginBottom: '24px' }}>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#666',
-                    }}>
-                      文章标题
-                    </label>
-                    <Input
-                      value={editedArticle?.title || ''}
-                      onChange={(e) => editedArticle && setEditedArticle({ ...editedArticle, title: e.target.value })}
-                      placeholder="请输入文章标题"
-                      size="large"
-                      style={{
-                        fontSize: '24px',
-                        fontWeight: 700,
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: '24px' }}>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#666',
-                    }}>
-                      文章类型
-                    </label>
-                    <Select
-                      value={editedArticle?.type || 'text'}
-                      onChange={(value) => editedArticle && setEditedArticle({ ...editedArticle, type: value })}
-                      size="large"
-                      style={{ width: '300px' }}
-                    >
-                      <Option value="text">📝 普通文章</Option>
-                      <Option value="image">📷 图片内容</Option>
-                      <Option value="drawing">🎨 绘画作品</Option>
-                      <Option value="code">💻 代码片段</Option>
-                      <Option value="diary">📔 日志</Option>
-                    </Select>
-                    {(editedArticle?.type === 'drawing' || editedArticle?.type === 'image') && (
-                      <div style={{
-                        marginTop: '8px',
-                        color: '#faad14',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}>
-                        <span>⚠️</span>
-                        <span>{editedArticle?.type === 'drawing' ? '绘画' : '图片'}类型必须包含至少一张图片才能保存</span>
-                      </div>
-                    )}
-                    {editedArticle?.type === 'code' && (
-                      <div style={{
-                        marginTop: '8px',
-                        color: '#faad14',
-                        fontSize: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}>
-                        <span>⚠️</span>
-                        <span>代码类型必须包含至少一个代码块才能保存</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ marginBottom: '24px' }}>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#666',
-                    }}>
-                      文章目录
-                    </label>
-                    <CategoryTreeSelect
-                      value={editedArticle?.category_id}
-                      onChange={(value) => {
-                        if (editedArticle) {
-                          setEditedArticle({ ...editedArticle, category_id: value });
-                          // 更新面包屑路径
-                          if (value) {
-                            fetchCategoryPath(value);
-                          } else {
-                            setCategoryPath([]);
-                          }
-                        }
-                      }}
-                      placeholder="选择文章所属目录（可选）"
-                    />
-                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
-                      选择文章的分类目录，方便管理和查找
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '24px' }}>
-                    <label style={{
-                      display: 'block',
-                      marginBottom: '8px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#666',
-                    }}>
-                      文章标签
-                    </label>
-                    <TagInput
-                      value={editedArticle?.tags || []}
-                      onChange={(tags) => {
-                        if (editedArticle) {
-                          setEditedArticle({ ...editedArticle, tags });
-                        }
-                      }}
-                      placeholder="输入标签，按空格或回车添加"
-                      maxTags={10}
-                    />
-                  </div>
-
-                  <div style={{
-                    display: 'flex',
-                    gap: '24px',
-                    color: '#666',
+            {/* Part 1: 编辑模式下的编辑控件 */}
+            {editMode === 'edit' && (
+              <div style={{
+                background: 'white',
+                padding: '40px',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              }}>
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
                     fontSize: '14px',
-                    paddingTop: '24px',
-                    borderTop: '1px solid #e8e8e8',
-                  }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>作者：<strong style={{ color: '#1a1a1a' }}>{editedArticle?.author}</strong></span>
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>日期：{editedArticle?.last_modified ? formatTimeToMinute(editedArticle.last_modified) : formatTimeToMinute(new Date().toISOString())}</span>
-                    </span>
-                  </div>
-                </>
-              ) : (
-                // 浏览/预览模式 - 显示标题
-                <>
-                  <h1 style={{
-                    fontSize: '32px',
-                    fontWeight: 700,
-                    marginBottom: '24px',
-                    color: '#1a1a1a',
-                  }}>
-                    {editMode === 'preview' ? editedArticle?.title : article?.title}
-                  </h1>
-
-                  <div style={{
-                    display: 'flex',
-                    gap: '24px',
+                    fontWeight: 600,
                     color: '#666',
-                    fontSize: '14px',
-                    paddingBottom: '24px',
-                    borderBottom: '1px solid #e8e8e8',
                   }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>作者：<strong style={{ color: '#1a1a1a' }}>{editMode === 'preview' ? editedArticle?.author : article?.author}</strong></span>
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>日期：{formatTimeToMinute(editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified)}</span>
-                    </span>
-                  </div>
-
-                  {/* 显示标签 */}
-                  {(editMode === 'preview' ? editedArticle?.tags : article?.tags)?.length > 0 && (
-                    <div style={{ marginTop: '16px' }}>
-                      <Space size={[8, 8]} wrap>
-                        {(editMode === 'preview' ? editedArticle?.tags : article?.tags).map((tag: string, index: number) => {
-                          const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
-                          const color = colors[index % colors.length];
-                          return (
-                            <Tag key={index} color={color} style={{ fontSize: '14px', padding: '4px 12px' }}>
-                              {tag}
-                            </Tag>
-                          );
-                        })}
-                      </Space>
+                    文章类型
+                  </label>
+                  <Select
+                    value={editedArticle?.type || 'text'}
+                    onChange={(value) => editedArticle && setEditedArticle({ ...editedArticle, type: value })}
+                    size="large"
+                    style={{ width: '300px' }}
+                  >
+                    <Option value="text">📝 普通文章</Option>
+                    <Option value="image">📷 图片内容</Option>
+                    <Option value="drawing">🎨 绘画作品</Option>
+                    <Option value="code">💻 代码片段</Option>
+                    <Option value="diary">📔 日志</Option>
+                  </Select>
+                  {(editedArticle?.type === 'drawing' || editedArticle?.type === 'image') && (
+                    <div style={{
+                      marginTop: '8px',
+                      color: '#faad14',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      <span>⚠️</span>
+                      <span>{editedArticle?.type === 'drawing' ? '绘画' : '图片'}类型必须包含至少一张图片才能保存</span>
                     </div>
                   )}
-                </>
-              )}
-            </div>
+                  {editedArticle?.type === 'code' && (
+                    <div style={{
+                      marginTop: '8px',
+                      color: '#faad14',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      <span>⚠️</span>
+                      <span>代码类型必须包含至少一个代码块才能保存</span>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#666',
+                  }}>
+                    文章目录
+                  </label>
+                  <CategoryTreeSelect
+                    value={editedArticle?.category_id}
+                    onChange={(value) => {
+                      if (editedArticle) {
+                        setEditedArticle({ ...editedArticle, category_id: value });
+                        // 更新面包屑路径
+                        if (value) {
+                          fetchCategoryPath(value);
+                        } else {
+                          setCategoryPath([]);
+                        }
+                      }
+                    }}
+                    placeholder="选择文章所属目录（可选）"
+                  />
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
+                    选择文章的分类目录，方便管理和查找
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#666',
+                  }}>
+                    文章标签
+                  </label>
+                  <TagInput
+                    value={editedArticle?.tags || []}
+                    onChange={(tags) => {
+                      if (editedArticle) {
+                        setEditedArticle({ ...editedArticle, tags });
+                      }
+                    }}
+                    placeholder="输入标签，按空格或回车添加"
+                    maxTags={10}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Part 2: 文章主体内容 */}
             <div style={{
@@ -855,7 +846,6 @@ export default function ArticlePage() {
                 // 编辑模式 - 使用块编辑器
                 <>
                   <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontSize: '18px' }}>🧱 文章内容</h3>
                     <Space>
                       {editedArticle?.editorBlocks && (
                         <>
