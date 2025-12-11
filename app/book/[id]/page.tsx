@@ -75,6 +75,7 @@ export default function BookPage() {
 
   // 从数据源获取书籍
   const [book, setBook] = useState<any>(null);
+  const [showLoading, setShowLoading] = useState(false); // 延迟显示的加载状态
   const [categoryPath, setCategoryPath] = useState<Array<{ id: string; name: string }>>([]);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageBlockContent | null>(null);
@@ -193,6 +194,25 @@ export default function BookPage() {
       }
     }
   };
+
+  // 延迟显示加载动画，避免快速切换时的闪烁
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (!book) {
+      // 延迟500ms后才显示加载动画
+      timer = setTimeout(() => {
+        setShowLoading(true);
+      }, 500);
+    } else {
+      // 加载完成，立即隐藏
+      setShowLoading(false);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [book]);
 
   // 初始化加载
   useEffect(() => {
@@ -366,7 +386,7 @@ export default function BookPage() {
     setIsImageModalVisible(true);
   };
 
-  if (!book) {
+  if (!book && showLoading) {
     return (
       <div style={{
         display: 'flex',
@@ -379,6 +399,10 @@ export default function BookPage() {
         加载中...
       </div>
     );
+  }
+
+  if (!book) {
+    return null; // 在延迟显示期间不显示任何内容
   }
 
   return (
