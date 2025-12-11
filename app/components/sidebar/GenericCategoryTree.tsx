@@ -231,22 +231,39 @@ export default function GenericCategoryTree({
         if (result.success) {
           let categoriesData = result.data || result.categories || [];
 
-          // 如果需要为顶级分类加载子分类
+          // 如果需要为顶级分类加载子分类（递归加载所有层级）
           if (loadChildrenForTopLevel) {
-            categoriesData = await Promise.all(
-              categoriesData.map(async (category: Category) => {
-                try {
-                  const childrenRes = await fetch(`/api/categories?type=children&parentId=${category.id}`);
-                  const childrenResult = await childrenRes.json();
+            // 递归加载函数：为分类及其所有子孙分类加载子分类
+            const loadChildrenRecursive = async (category: Category): Promise<Category> => {
+              try {
+                const childrenRes = await fetch(`/api/categories?type=children&parentId=${category.id}`);
+                const childrenResult = await childrenRes.json();
+                
+                if (childrenResult.success && childrenResult.categories && childrenResult.categories.length > 0) {
+                  // 递归为每个子分类也加载其子分类
+                  const childrenWithGrandchildren = await Promise.all(
+                    childrenResult.categories.map((child: Category) => loadChildrenRecursive(child))
+                  );
+                  
                   return {
                     ...category,
-                    children: childrenResult.success ? childrenResult.categories : []
+                    children: childrenWithGrandchildren
                   };
-                } catch (error) {
-                  console.error(`加载分类 ${category.id} 的子分类失败:`, error);
-                  return { ...category, children: [] };
+                } else {
+                  return {
+                    ...category,
+                    children: []
+                  };
                 }
-              })
+              } catch (error) {
+                console.error(`加载分类 ${category.id} 的子分类失败:`, error);
+                return { ...category, children: [] };
+              }
+            };
+
+            // 为所有顶级分类递归加载子分类
+            categoriesData = await Promise.all(
+              categoriesData.map((category: Category) => loadChildrenRecursive(category))
             );
           }
 

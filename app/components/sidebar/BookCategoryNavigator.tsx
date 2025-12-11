@@ -34,7 +34,7 @@ export default function BookCategoryNavigator({
     rootNodeId: 'cat_bookcase',
     rootNodeName: '书橱',
     emptyText: '暂无书籍',
-    loadChildrenForTopLevel: true,
+    loadChildrenForTopLevel: true, // 递归加载所有层级的子分类
     forceOpenRootKeys: true,
     navigationPattern: '/bookcase?category={categoryId}',
     stylePrefix: 'book-category'
