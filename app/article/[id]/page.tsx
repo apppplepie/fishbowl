@@ -9,8 +9,7 @@ const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import ArticleTocNav from '@/app/components/sidebar/ArticleIndexSidebar';
-import ArticleTocDrawer from '@/app/components/sidebar/ArticleIndexDrawer';
+import ArticleNavigator from '@/app/components/sidebar/ArticleNavigator';
 import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -45,7 +44,6 @@ export default function ArticlePage() {
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
   const { isLoggedIn, user } = useAuth();
-  const [tocDrawerOpen, setTocDrawerOpen] = useState(false);
 
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
@@ -498,27 +496,14 @@ export default function ArticlePage() {
 
   return (
     <>
-      {/* Header 覆盖在PageLayout顶部边框上 */}
-      <Header
-        leftContent={
-          isMobile ? (
-            <Button
-              type="text"
-              icon={<UnorderedListOutlined style={{ fontSize: '20px', color: 'white' }} />}
-              onClick={() => setTocDrawerOpen(true)}
-              style={{ border: 'none' }}
-            />
-          ) : null
-        }
-      />
-
-      {/* 移动端目录抽屉 */}
-      <ArticleTocDrawer
-        open={tocDrawerOpen}
-        onClose={() => setTocDrawerOpen(false)}
+      {/* 统一的文章导航组件（自动适配移动端/桌面端） */}
+      <ArticleNavigator
         currentArticleId={articleId}
         onArticleClick={handleArticleClick}
       />
+
+      {/* Header 覆盖在PageLayout顶部边框上 */}
+      <Header leftContent={null} />
 
       {/* 编辑悬浮按钮 - 仅文章作者、管理员或版主可见 */}
       {isLoggedIn && article && user && (
@@ -539,28 +524,6 @@ export default function ArticlePage() {
             userRole={user.role}
           />
         )
-      )}
-
-      {/* 电脑端固定侧边栏 - 从 header 下方到页面底部 */}
-      {!isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: '45px', // header 的高度
-            bottom: 0,
-            width: '280px',
-            background: 'white',
-            borderRight: '1px solid #e8e8e8',
-            zIndex: 999,
-            overflowY: 'auto',
-          }}
-        >
-          <ArticleTocNav
-            currentArticleId={articleId}
-            onArticleClick={handleArticleClick}
-          />
-        </div>
       )}
 
       <div style={{ marginLeft: isMobile ? 0 : '280px' }}>

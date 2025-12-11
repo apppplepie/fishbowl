@@ -8,9 +8,7 @@ const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import ArticleTocNav from '@/app/components/sidebar/ArticleIndexSidebar';
-import BookTocDrawer from '@/app/components/sidebar/ChapterIndexDrawer';
-import BookCategorySidebar from '@/app/components/sidebar/ChapterIndexSidebar';
+import BookChapterNavigator from '@/app/components/sidebar/BookChapterNavigator';
 import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -45,7 +43,6 @@ export default function BookPage() {
   const bookId = params.id as string;
   const { isMobile } = useResponsive();
   const { isLoggedIn, user } = useAuth();
-  const [tocDrawerOpen, setTocDrawerOpen] = useState(false);
   const [bookCategoryId, setBookCategoryId] = useState<string>('');
 
   // 编辑模式状态
@@ -386,42 +383,15 @@ export default function BookPage() {
 
   return (
     <>
-      {/* Header 独立在最顶部，覆盖在边框上 */}
-      <Header
-        leftContent={
-          isMobile ? (
-            <Button
-              type="text"
-              icon={<UnorderedListOutlined style={{ fontSize: '20px', color: 'white' }} />}
-              onClick={() => setTocDrawerOpen(true)}
-              style={{ border: 'none' }}
-            />
-          ) : null
-        }
+      {/* 统一的章节导航组件（自动适配移动端/桌面端） */}
+      <BookChapterNavigator
+        currentArticleId={bookId}
+        bookCategoryId={bookCategoryId}
+        onArticleClick={handleArticleClick}
       />
 
-      {/* 电脑端固定侧边栏 - 从 header 下方到页面底部 */}
-      {!isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: '45px', // header 的高度
-            bottom: 0,
-            width: '280px',
-            background: 'white',
-            borderRight: '1px solid #e8e8e8',
-            zIndex: 999,
-            overflowY: 'auto',
-          }}
-        >
-          <BookCategorySidebar
-            currentArticleId={bookId}
-            bookCategoryId={bookCategoryId}
-            onArticleClick={handleArticleClick}
-          />
-        </div>
-      )}
+      {/* Header 独立在最顶部，覆盖在边框上 */}
+      <Header leftContent={null} />
 
       <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
         <PageLayout
@@ -742,15 +712,6 @@ export default function BookPage() {
           </div>
         </PageLayout>
       </div>
-
-      {/* 目录抽屉 */}
-      <BookTocDrawer
-        open={tocDrawerOpen}
-        onClose={() => setTocDrawerOpen(false)}
-        currentArticleId={bookId}
-        bookCategoryId={bookCategoryId}
-        onArticleClick={handleArticleClick}
-      />
 
       {/* 图片模态框 */}
       <ImageCardModal

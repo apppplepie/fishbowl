@@ -14,9 +14,8 @@ import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import BookCard from '@/app/components/cards/BookCard';
 import DiaryPublishFloat from '@/app/components/float/DiaryPublishFloat';
-import BookCategoryDrawer, { BookCategoryDrawerButton } from '@/app/components/sidebar/BookCategoryDrawer';
+import BookCategoryNavigator, { BookCategoryDrawerButton } from '@/app/components/sidebar/BookCategoryNavigator';
 import BookPublishFloat from '@/app/components/float/BookPublishFloat';
-import BookCategorySidebar from '@/app/components/sidebar/BookCategorySidebar'
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import { extractBooksFromArticles } from '@/app/utils/bookUtils';
@@ -592,31 +591,20 @@ function BookcasePageContent() {
         </PageLayout>
       </div>
 
-      {/* 电脑端固定侧边栏 - 从 header 下方到页面底部 */}
-      {!isMobile && (
-  <div
-    style={{
-      position: 'fixed',
-      left: 0,
-      top: '45px', // header 的高度
-      bottom: 0,
-      width: '280px',
-      background: 'white',
-      borderRight: '1px solid #e8e8e8',
-      zIndex: 999,
-      overflowY: 'auto',
-    }}
-  >
-    <BookCategorySidebar key={sidebarKey} selectedCategoryId={categoryFromUrl} />
-  </div>
-)}
-
-      {/* 目录抽屉 - 书架页面专用 */}
-      <BookCategoryDrawer
-        key={sidebarKey}
+      {/* 统一的书籍分类导航组件（自动适配移动端/桌面端） */}
+      <BookCategoryNavigator
+        refreshKey={sidebarKey}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
-        selectedCategoryId={categoryFromUrl} // 传递从URL获取的category参数
+        selectedCategoryId={categoryFromUrl}
+        onCategorySelect={(categoryId) => {
+          // 移动端点击分类后跳转
+          if (categoryId) {
+            router.push(`/bookcase?category=${categoryId}`);
+          } else {
+            router.push('/bookcase');
+          }
+        }}
       />
 
       {/* 日志发布悬浮按钮 */}
