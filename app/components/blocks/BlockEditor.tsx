@@ -391,7 +391,18 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
           >
             <FileTextOutlined style={{ fontSize: '48px', marginBottom: '16px', display: 'block' }} />
             <p>还没有任何内容块</p>
-            <p style={{ fontSize: '14px' }}>点击下方按钮开始创作</p>
+            <p style={{ fontSize: '14px', marginBottom: '16px' }}>点击下方按钮开始创作</p>
+            <Button
+              type="dashed"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setInsertPosition(-1); // 没有块时，添加到末尾
+                setAddBlockModalVisible(true);
+              }}
+            >
+              添加第一个块
+            </Button>
           </div>
         )}
 

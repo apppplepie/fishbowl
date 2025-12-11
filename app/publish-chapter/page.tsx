@@ -72,6 +72,7 @@ export default function PublishChapterPage() {
 
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [nextOrderInCategory, setNextOrderInCategory] = useState(1);
+  const [categoryName, setCategoryName] = useState<string>('');
 
   // 获取下一个order_in_category值
   // 需要考虑同一节点下的categories的order_index和articles的order_in_category不能重复
@@ -110,10 +111,22 @@ export default function PublishChapterPage() {
     }
   };
 
-  // 初始化时获取order_in_category
+  // 初始化时获取order_in_category和分类名称
   useEffect(() => {
     if (categoryFromUrl) {
       getNextOrderInCategory(categoryFromUrl).then(setNextOrderInCategory);
+      
+      // 获取分类名称
+      fetch(`/api/categories/${categoryFromUrl}`)
+        .then(res => res.json())
+        .then(result => {
+          if (result.success && result.category) {
+            setCategoryName(result.category.name);
+          }
+        })
+        .catch(error => {
+          console.error('获取分类名称失败:', error);
+        });
     }
   }, [categoryFromUrl]);
 
@@ -452,7 +465,7 @@ export default function PublishChapterPage() {
                   fontSize: '14px',
                   color: '#52c41a'
                 }}>
-                  <strong>📂 发布到目录：</strong>{categoryFromUrl}
+                  <strong>📂 发布到目录：</strong>{categoryName || categoryFromUrl}
                   <br />
                   <strong>🔢 章节序号：</strong>{nextOrderInCategory}
                 </div>
@@ -467,7 +480,6 @@ export default function PublishChapterPage() {
               }}
             >
               <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>🧱 章节内容</h3>
                 <Space>
                   <Tag color="blue">{stats.totalBlocks} 个块</Tag>
                   <Tag color="green">{stats.textBlocks} 文字</Tag>
