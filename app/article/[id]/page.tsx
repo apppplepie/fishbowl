@@ -164,7 +164,7 @@ export default function ArticlePage() {
             setCommentsCount(articleData.comments || 0);
           } else {
             message.error('文章不存在');
-            router.push('/articles');
+            router.push('/archive');
           }
         }
       } catch (error) {
@@ -178,7 +178,7 @@ export default function ArticlePage() {
           setCommentsCount(articleData.comments || 0);
         } else {
           message.error('加载文章失败');
-          router.push('/articles');
+          router.push('/archive');
         }
       }
     }
@@ -364,7 +364,7 @@ export default function ArticlePage() {
           setEditMode('view');
           // 跳转到归档页
           setTimeout(() => {
-            router.push('/articles');
+            router.push('/archive');
           }, 1000);
         } else {
           message.error({ content: result.error || '保存失败', key: 'save' });
@@ -424,7 +424,7 @@ export default function ArticlePage() {
         message.success('文章删除成功');
         // 跳转到归档页面
         setTimeout(() => {
-          router.push('/articles');
+          router.push('/archive');
         }, 1000);
       } else {
         message.error(data.error || '删除失败');
@@ -528,6 +528,7 @@ export default function ArticlePage() {
 
       <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
         <PageLayout
+          containerPaddingTop={isMobile ? '0px' : '45px'}
           box1Content={
             <div style={{
               padding: '12px 24px',
@@ -569,7 +570,7 @@ export default function ArticlePage() {
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
                             onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-                            onClick={() => router.push(`/articles?category=${cat.id}`)}
+                            onClick={() => router.push(`/archive?category=${cat.id}`)}
                           >
                             {cat.name}
                           </a>
@@ -590,7 +591,7 @@ export default function ArticlePage() {
                               }}
                               onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
                               onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-                              onClick={() => router.push('/articles')}
+                              onClick={() => router.push('/archive')}
                             >
                               文章归档
                             </a>

@@ -10,6 +10,7 @@ interface PageLayoutProps {
   box1Content?: ReactNode; // 盒模型1的内容（可选）
   box1Style?: CSSProperties; // 自定义盒模型1样式
   box2Style?: CSSProperties; // 自定义盒模型2样式
+  containerPaddingTop?: string; // 自定义容器顶部padding（默认45px）
 }
 
 export default function PageLayout({
@@ -19,6 +20,7 @@ export default function PageLayout({
   box1Content,
   box1Style,
   box2Style,
+  containerPaddingTop = '45px',
 }: PageLayoutProps) {
   const { isMobile } = useResponsive();
 
@@ -80,7 +82,7 @@ export default function PageLayout({
       {/* 内容区域 */}
       <div
         style={{
-          paddingTop: '45px',
+          paddingTop: containerPaddingTop,
           paddingLeft: '6px',
           paddingRight: '6px',
           paddingBottom: '6px',
