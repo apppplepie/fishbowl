@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Drawer, Menu, Button, Dropdown } from 'antd';
+import { Drawer, Menu, Modal } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import type { MenuProps } from 'antd';
 import {
@@ -15,10 +15,11 @@ import {
   UserOutlined,
   LogoutOutlined,
   DashboardOutlined,
-  DownOutlined,
 } from '@ant-design/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import UserMenu from './UserMenu';
+import LoginModal from './LoginModal';
 import '../styles/navigation.css';
 
 interface NavigationDrawerProps {
@@ -48,6 +49,8 @@ export default function NavigationDrawer({
   const pathname = usePathname();
   const router = useRouter();
   const [windowWidth, setWindowWidth] = useState<number>(0);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // 图标映射
   const getIcon = (iconName?: string) => {
@@ -76,8 +79,8 @@ export default function NavigationDrawer({
 
   // 构建菜单项 - 支持响应式显示（图标+文字 或 仅图标）
   const buildMenuItems = (): MenuProps['items'] => {
-    // 根据屏幕宽度决定是否显示文字（移动端或小屏幕只显示图标）
-    const showText = !isMobile && windowWidth > 1200;
+    // 根据屏幕宽度决定是否显示文字（移动端显示文字，大屏幕显示文字，中等屏幕只显示图标）
+    const showText = isMobile || windowWidth > 1200;
 
     // 公共菜单项
     const publicItems = publicNavigationItems.map(item => ({
@@ -195,90 +198,62 @@ export default function NavigationDrawer({
         <div className="user-info-embedded" style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: isMobile ? 'center' : 'flex-start',
         }}>
           {isLoggedIn ? (
-            /* 已登录 - 显示用户名下拉菜单 */
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'dashboard',
-                    label: '仪表盘',
-                    icon: <DashboardOutlined />,
-                    onClick: () => {
-                      router.push('/dashboard');
-                      onClose();
-                    },
-                  },
-                  {
-                    key: 'profile',
-                    label: '个人资料',
-                    icon: <UserOutlined />,
-                    onClick: () => {
-                      router.push('/profile');
-                      onClose();
-                    },
-                  },
-                  {
-                    type: 'divider',
-                  },
-                  {
-                    key: 'logout',
-                    label: '退出登录',
-                    icon: <LogoutOutlined />,
-                    danger: true,
-                    onClick: () => {
-                      onLogout();
-                      // 不调用 onClose()，让用户看到退出登录的效果
-                    },
-                  },
-                ],
+            /* 已登录 - 显示用户名，点击弹出用户菜单 */
+            <span
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 500,
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'white',
+                fontSize: '15px',
               }}
-              trigger={['click']}
-              placement="bottomLeft"
-            >
-              <div
-                className="username-text"
-                style={{
-                  color: 'white',
-                  fontSize: '15px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  background: 'rgba(255,255,255,0.1)',
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <UserOutlined />
-                <span>{username}</span>
-                <DownOutlined style={{ fontSize: '10px' }} />
-              </div>
-            </Dropdown>
-          ) : (
-            /* 未登录 - 显示登录按钮 */
-            <Button
-              type="primary"
-              icon={<LoginOutlined />}
               onClick={() => {
-                onLogin();
+                setShowUserMenu(true);
                 onClose();
               }}
-              size="small"
+            >
+              <span style={{
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <UserOutlined />
+              </span>
+              <span>{username}</span>
+            </span>
+          ) : (
+            /* 未登录 - 显示登录按钮，点击弹出登录窗口 */
+            <span
               style={{
-                fontSize: '11px',
-                padding: '2px 8px',
-                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
                 fontWeight: 500,
-                borderRadius: '4px',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'white',
+                fontSize: '15px',
+              }}
+              onClick={() => {
+                setShowLoginModal(true);
+                onClose();
               }}
             >
-              登录
-            </Button>
+              <span style={{
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <LoginOutlined />
+              </span>
+              <span>登录</span>
+            </span>
           )}
         </div>
 
@@ -302,6 +277,49 @@ export default function NavigationDrawer({
           />
         </div>
       </div>
+
+      {/* 用户菜单弹窗 */}
+      <Modal
+        open={showUserMenu}
+        onCancel={() => setShowUserMenu(false)}
+        footer={null}
+        centered
+        width={400}
+        styles={{
+          mask: {
+            backdropFilter: 'blur(10px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+          },
+        }}
+      >
+        <div style={{ padding: '24px 0' }}>
+          <UserMenu
+            isLoggedIn={isLoggedIn}
+            username={username}
+            onLogin={() => {
+              setShowUserMenu(false);
+              setShowLoginModal(true);
+            }}
+            onLogout={() => {
+              onLogout();
+              setShowUserMenu(false);
+              onClose();
+            }}
+            onClose={() => setShowUserMenu(false)}
+          />
+        </div>
+      </Modal>
+
+      {/* 登录弹窗 */}
+      <LoginModal
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={(username) => {
+          setShowLoginModal(false);
+          onClose();
+          onLogin();
+        }}
+      />
     </Drawer>
   );
 }

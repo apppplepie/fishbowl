@@ -84,12 +84,22 @@
 /* 移动端菜单项样式调整 */
 @media (max-width: 768px) {
   .custom-nav-menu .ant-menu-item {
-    margin: 4px 0 !important;
+    margin: 6px 0 !important;
     width: 100% !important;
-    justify-content: flex-start !important;
+    justify-content: center !important;
+    border-radius: 12px !important;
+    height: 48px !important;
   }
 
   .custom-nav-menu .ant-menu-item:hover {
-    transform: translateX(4px) !important;
+    transform: scale(1.02) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+  }
+
+  .custom-nav-menu .ant-menu-item-selected {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-radius: 12px !important;
+    transform: none !important;
   }
 }
