@@ -329,25 +329,67 @@ export default function TextBlock({
   ];
 
   return (
-    <div
-      draggable
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      style={{
-        position: 'relative',
-        padding: '12px',
-        border: isFocused ? '2px solid #1890ff' : '2px solid transparent',
-        borderRadius: '8px',
-        backgroundColor: isFocused ? '#fafafa' : 'transparent',
-        transition: 'all 0.2s',
-        marginBottom: '8px',
-        opacity: isDragging ? 0.5 : 1,
-        cursor: isDragging ? 'grabbing' : 'default',
-      }}
-      onMouseEnter={() => setIsFocused(true)}
-      onMouseLeave={() => setIsFocused(false)}
-    >
+    <>
+      <style>{`
+        /* 彻底隐藏所有可能的滚动条 */
+        .text-block-textarea,
+        .text-block-textarea *,
+        .text-block-textarea textarea,
+        .text-block-textarea .ant-input,
+        .text-block-textarea .ant-input-affix-wrapper,
+        .text-block-textarea .resizable-text-area,
+        .text-block-textarea .resizable-text-area textarea,
+        .text-block-textarea .ant-input-affix-wrapper textarea,
+        .text-block-textarea .ant-input-affix-wrapper .ant-input {
+          scrollbar-width: none !important; /* Firefox */
+          -ms-overflow-style: none !important; /* IE and Edge */
+          overflow: -moz-scrollbars-none !important; /* 旧版 Firefox */
+        }
+        .text-block-textarea textarea::-webkit-scrollbar,
+        .text-block-textarea .ant-input::-webkit-scrollbar,
+        .text-block-textarea .ant-input-affix-wrapper::-webkit-scrollbar,
+        .text-block-textarea .resizable-text-area::-webkit-scrollbar,
+        .text-block-textarea .resizable-text-area textarea::-webkit-scrollbar,
+        .text-block-textarea .ant-input-affix-wrapper textarea::-webkit-scrollbar,
+        .text-block-textarea .ant-input-affix-wrapper .ant-input::-webkit-scrollbar,
+        .text-block-textarea *::-webkit-scrollbar {
+          display: none !important; /* Chrome, Safari, Opera */
+          width: 0 !important;
+          height: 0 !important;
+          background: transparent !important;
+          appearance: none !important;
+          -webkit-appearance: none !important;
+        }
+        .text-block-textarea textarea::-webkit-scrollbar-track,
+        .text-block-textarea .ant-input::-webkit-scrollbar-track,
+        .text-block-textarea *::-webkit-scrollbar-track {
+          display: none !important;
+        }
+        .text-block-textarea textarea::-webkit-scrollbar-thumb,
+        .text-block-textarea .ant-input::-webkit-scrollbar-thumb,
+        .text-block-textarea *::-webkit-scrollbar-thumb {
+          display: none !important;
+        }
+      `}</style>
+      <div
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragOver={onDragOver}
+        style={{
+          position: 'relative',
+          padding: '12px',
+          border: isFocused ? '2px solid #1890ff' : '2px solid transparent',
+          borderRadius: '8px',
+          backgroundColor: isFocused ? '#fafafa' : 'transparent',
+          transition: 'all 0.2s',
+          marginBottom: '8px',
+          opacity: isDragging ? 0.5 : 1,
+          cursor: isDragging ? 'grabbing' : 'default',
+        }}
+        onMouseEnter={() => setIsFocused(true)}
+        onMouseLeave={() => setIsFocused(false)}
+      >
       {/* 工具栏 - 固定显示 */}
       <div
         style={{
@@ -541,13 +583,14 @@ export default function TextBlock({
         onChange={handleContentChange}
         onKeyDown={handleKeyDown}
         placeholder="输入文字内容，或按删除键移除此块..."
-        autoSize={{ minRows: 3, maxRows: 20 }}
+        autoSize={{ minRows: 3 }}
+        className="text-block-textarea"
         style={{
           fontSize: '16px',
           lineHeight: '1.8',
           border: 'none',
           boxShadow: 'none',
-          padding: '8px 0',
+          padding: '8px 0 86px 0', // 底部留3行空白（16px * 1.8 * 3 ≈ 86px）
         }}
         onFocus={() => setIsFocused(true)}
       />
@@ -567,7 +610,8 @@ export default function TextBlock({
         </div>
       )}
 
-    </div>
+      </div>
+    </>
   );
 }
 

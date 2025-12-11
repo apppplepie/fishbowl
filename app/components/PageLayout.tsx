@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, CSSProperties } from 'react';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -19,6 +20,8 @@ export default function PageLayout({
   box1Style,
   box2Style,
 }: PageLayoutProps) {
+  const { isMobile } = useResponsive();
+
   return (
     <>
       {/* 固定黑框 - 始终显示在视口 */}
