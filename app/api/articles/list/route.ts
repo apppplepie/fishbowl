@@ -23,6 +23,8 @@ interface RawArticle {
   category_id: string;
   order_in_category: number;
   category_name: string;
+  category_path: string | null;
+  category_depth: number | null;
   firstImageUrl: string | null;
   drawingCoverUrl: string | null;
   image_count: number | null;
@@ -145,18 +147,17 @@ export async function GET(request: NextRequest) {
         a.category_id,
         a.order_in_category,
         c.name as category_name,
-        -- 图片类型：获取第一个图片的 URL
-        CASE
-          WHEN a.type = 'image' THEN (
-            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.url'))
-            FROM blocks b
-            JOIN article_blocks ab ON b.id = ab.block_id
-            WHERE ab.article_id = a.id AND b.type = 'image'
-            ORDER BY ab.\`order\` ASC
-            LIMIT 1
-          )
-          ELSE NULL
-        END as firstImageUrl,
+        c.path as category_path,
+        c.depth as category_depth,
+        -- 获取文章中第一个图片的 URL（所有类型的文章都可以获取）
+        (
+          SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.url'))
+          FROM blocks b
+          JOIN article_blocks ab ON b.id = ab.block_id
+          WHERE ab.article_id = a.id AND b.type = 'image'
+          ORDER BY ab.\`order\` ASC
+          LIMIT 1
+        ) as firstImageUrl,
         -- 绘画类型：获取 order 最大的图片（成图）
         CASE
           WHEN a.type = 'drawing' THEN (
@@ -225,9 +226,10 @@ export async function GET(request: NextRequest) {
        LEFT JOIN categories c ON a.category_id = c.id
        WHERE ${whereClause}
        ORDER BY
-         CASE WHEN ? = 1 THEN COALESCE(c.path, '999999')
-              ELSE a.updated_at END DESC,
-         CASE WHEN ? = 1 THEN COALESCE(c.order_index, a.order_in_category)
+         CASE WHEN ? = 1 
+              THEN CONCAT(COALESCE(c.path, '999999'), '-', LPAD(a.order_in_category, 6, '0'))
+              ELSE a.updated_at END ASC,
+         CASE WHEN ? = 1 THEN a.id
               ELSE a.published_at END DESC
        LIMIT ${limit} OFFSET ${offset}`,
       queryParams

@@ -14,7 +14,8 @@ interface BookCardProps {
 /**
  * G. 书籍卡片
  * 展示书籍信息，包含封面图、书名、作者、更新日期
- * 点击跳转到主要文章
+ * 封面图来自该目录下 order_in_category 最小的文章的第一张图片
+ * 点击跳转到书籍详情页 /book/[id]
  */
 export default function BookCard({ card, onClick }: BookCardProps) {
   return (

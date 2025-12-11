@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
+import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
 
 interface TreeNode {
   id: string;
@@ -271,6 +272,12 @@ export default function GenericIndexTree({
           ? buildMenuItemsFromTree(node.children)
           : undefined;
 
+        // 格式化目录标签（添加章节号）
+        const formattedLabel = formatNodeLabel(node as any, {
+          showChapterLabel: true,
+          showArticleNumber: false,
+        });
+
         return {
           key: `category-${node.id}`,
           icon: <FolderOutlined />,
@@ -283,13 +290,19 @@ export default function GenericIndexTree({
                   handleCategoryTextClick(node.id);
                 }}
               >
-                {node.name}
+                {formattedLabel}
               </span>
             </span>
           ),
           children: children,
         };
       } else {
+        // 格式化文章标签（暂时隐藏序号）
+        const formattedLabel = formatNodeLabel(node as any, {
+          showChapterLabel: false,
+          showArticleNumber: false, // 暂时隐藏
+        });
+
         return {
           key: `article-${node.id}`,
           icon: getArticleIcon(node.type || 'article'),
@@ -306,7 +319,7 @@ export default function GenericIndexTree({
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
               }}>
-                {node.name}
+                {formattedLabel}
               </span>
             </span>
           ),
@@ -458,7 +471,11 @@ export default function GenericIndexTree({
           if (dataFormat === 'flat-tree') {
             // 新格式：{ data: { flat: TreeNode[], tree: TreeNode[] } }
             const flatNodes = result.data.flat as TreeNode[];
-            const treeNodes = result.data.tree as TreeNode[];
+            let treeNodes = result.data.tree as TreeNode[];
+            
+            // 添加章节编号
+            treeNodes = addChapterNumbers(treeNodes);
+            
             dataToStore = flatNodes;
             items = buildMenuItemsFromTree(treeNodes);
           } else {

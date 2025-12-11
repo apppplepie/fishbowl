@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, Tree, message, Spin, Empty, Input } from 'antd';
 import { UnorderedListOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { TreeDataNode, TreeProps } from 'antd';
+import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
 
 interface ChapterManageFloatProps {
   categoryId: string; // 当前书籍分类ID
@@ -42,6 +43,171 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
 
   /**
+   * 添加移动端触摸拖动支持
+   * 将触摸事件转换为拖拽事件
+   */
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    // 等待 DOM 渲染完成
+    const timer = setTimeout(() => {
+      const treeNodes = document.querySelectorAll('.chapter-tree-mobile .ant-tree-treenode');
+      
+      treeNodes.forEach((node) => {
+        const element = node as HTMLElement;
+        
+        let touchedElement: HTMLElement | null = null;
+        let touchStartY = 0;
+        let touchStartX = 0;
+        let isDragging = false;
+        let lastTouchY = 0;
+        let lastTouchX = 0;
+        
+        // 触摸开始 - 模拟 dragstart
+        const handleTouchStart = (e: TouchEvent) => {
+          const touch = e.touches[0];
+          touchStartY = touch.clientY;
+          touchStartX = touch.clientX;
+          lastTouchY = touch.clientY;
+          lastTouchX = touch.clientX;
+          touchedElement = element;
+          isDragging = false;
+          
+          // 长按判定
+          setTimeout(() => {
+            if (touchedElement === element && !isDragging) {
+              isDragging = true;
+              element.style.opacity = '0.5';
+              element.style.transform = 'scale(0.95)';
+              
+              // 触发拖拽开始事件
+              const dragStartEvent = new DragEvent('dragstart', {
+                bubbles: true,
+                cancelable: true,
+              });
+              element.dispatchEvent(dragStartEvent);
+            }
+          }, 200); // 200ms 长按判定
+        };
+        
+        // 触摸移动 - 模拟 drag
+        const handleTouchMove = (e: TouchEvent) => {
+          if (!isDragging) {
+            const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+            const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+            
+            // 移动超过阈值，取消长按判定
+            if (deltaY > 10 || deltaX > 10) {
+              touchedElement = null;
+            }
+            return;
+          }
+          
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const touch = e.touches[0];
+          lastTouchY = touch.clientY;
+          lastTouchX = touch.clientX;
+          
+          // 找到当前触摸位置下的元素
+          element.style.pointerEvents = 'none';
+          const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+          element.style.pointerEvents = '';
+          
+          if (targetElement) {
+            const targetNode = targetElement.closest('.ant-tree-treenode');
+            if (targetNode && targetNode !== element) {
+              // 触发拖拽悬停事件
+              const dragOverEvent = new DragEvent('dragover', {
+                bubbles: true,
+                cancelable: true,
+              });
+              targetNode.dispatchEvent(dragOverEvent);
+            }
+          }
+        };
+        
+        // 触摸结束 - 模拟 drop
+        const handleTouchEnd = (e: TouchEvent) => {
+          if (isDragging) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // 恢复样式
+            element.style.opacity = '';
+            element.style.transform = '';
+            
+            // 找到释放位置的元素
+            element.style.pointerEvents = 'none';
+            const targetElement = document.elementFromPoint(lastTouchX, lastTouchY);
+            element.style.pointerEvents = '';
+            
+            if (targetElement) {
+              const targetNode = targetElement.closest('.ant-tree-treenode');
+              if (targetNode && targetNode !== element) {
+                // 触发放置事件
+                const dropEvent = new DragEvent('drop', {
+                  bubbles: true,
+                  cancelable: true,
+                });
+                targetNode.dispatchEvent(dropEvent);
+              }
+            }
+            
+            // 触发拖拽结束事件
+            const dragEndEvent = new DragEvent('dragend', {
+              bubbles: true,
+              cancelable: true,
+            });
+            element.dispatchEvent(dragEndEvent);
+          }
+          
+          touchedElement = null;
+          isDragging = false;
+        };
+        
+        // 触摸取消
+        const handleTouchCancel = () => {
+          if (isDragging) {
+            element.style.opacity = '';
+            element.style.transform = '';
+          }
+          touchedElement = null;
+          isDragging = false;
+        };
+        
+        // 添加事件监听
+        element.addEventListener('touchstart', handleTouchStart, { passive: false });
+        element.addEventListener('touchmove', handleTouchMove, { passive: false });
+        element.addEventListener('touchend', handleTouchEnd, { passive: false });
+        element.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+        
+        // 保存清理函数
+        (element as any)._cleanupTouch = () => {
+          element.removeEventListener('touchstart', handleTouchStart);
+          element.removeEventListener('touchmove', handleTouchMove);
+          element.removeEventListener('touchend', handleTouchEnd);
+          element.removeEventListener('touchcancel', handleTouchCancel);
+        };
+      });
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      // 清理所有事件监听器
+      const treeNodes = document.querySelectorAll('.chapter-tree-mobile .ant-tree-treenode');
+      treeNodes.forEach((node) => {
+        const element = node as any;
+        if (element._cleanupTouch) {
+          element._cleanupTouch();
+          delete element._cleanupTouch;
+        }
+      });
+    };
+  }, [isModalOpen, treeData]);
+
+  /**
    * 获取书架分类ID（cat_bookcase）
    * cat_bookcase 本身就是固定的 ID
    */
@@ -67,12 +233,15 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       console.log('ChapterManageFloat: API响应:', result);
 
       if (result.success && result.data) {
-        const treeNodes = result.data.tree as TreeNode[];
+        let treeNodes = result.data.tree as TreeNode[];
         
         // 不显示书架本身，直接使用其子节点
-        const childNodes = treeNodes.length > 0 && treeNodes[0].children 
+        let childNodes = treeNodes.length > 0 && treeNodes[0].children 
           ? treeNodes[0].children 
           : treeNodes;
+        
+        // 添加章节编号
+        childNodes = addChapterNumbers(childNodes);
         
         // 构建Tree组件需要的数据格式
         const treeDataNodes = buildTreeData(childNodes);
@@ -187,13 +356,19 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       const isCategory = node.node_type === 'category';
       const icon = isCategory ? '📁' : '📄';
       
+      // 格式化节点标签（添加章节号）
+      const formattedLabel = formatNodeLabel(node as any, {
+        showChapterLabel: true,
+        showArticleNumber: false, // 暂时隐藏文章编号
+      });
+      
       // 判断是否是空目录（没有子节点）
       const isEmpty = !node.children || node.children.length === 0;
       
       // 为分类节点添加操作按钮
       const titleElement = isCategory ? (
         <span>
-          {icon} {node.name}
+          {icon} {formattedLabel}
           <span style={{ marginLeft: '8px' }}>
             <PlusOutlined 
               style={{ 
@@ -225,7 +400,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
           </span>
         </span>
       ) : (
-        `${icon} ${node.name}`
+        `${icon} ${formattedLabel}`
       );
       
       const treeNode: TreeDataNode = {
@@ -528,6 +703,52 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
 
   return (
     <>
+      <style>{`
+        /* 移动端触摸拖动支持 */
+        .chapter-tree-mobile .ant-tree-treenode {
+          touch-action: none;
+          -webkit-user-drag: element;
+          user-select: none;
+          -webkit-user-select: none;
+        }
+        
+        .chapter-tree-mobile .ant-tree-draggable-icon {
+          cursor: grab;
+          touch-action: none;
+        }
+        
+        .chapter-tree-mobile .ant-tree-treenode-draggable {
+          touch-action: none;
+        }
+        
+        .chapter-tree-mobile .ant-tree-node-content-wrapper {
+          user-select: none;
+          -webkit-user-select: none;
+        }
+        
+        /* 移动端优化：增大可拖拽区域 */
+        @media (max-width: 768px) {
+          .chapter-tree-mobile .ant-tree-treenode {
+            padding: 8px 0;
+          }
+          
+          .chapter-tree-mobile .ant-tree-node-content-wrapper {
+            padding: 8px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+          }
+          
+          .chapter-tree-mobile .ant-tree-draggable-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+      `}</style>
+      
       <FloatButton
         icon={<UnorderedListOutlined />}
         tooltip="章节管理"
@@ -539,12 +760,14 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         open={isModalOpen}
         onCancel={handleCancel}
         footer={null}
-        width={700}
+        width="90%"
+        style={{ maxWidth: '700px' }}
         styles={{ 
           body: { 
             minHeight: '400px', 
             maxHeight: '70vh', 
-            overflow: 'auto' 
+            overflow: 'auto',
+            WebkitOverflowScrolling: 'touch'
           } 
         }}
       >
@@ -572,6 +795,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
                 padding: '16px',
                 borderRadius: '8px',
               }}
+              className="chapter-tree-mobile"
             />
           ) : (
             <Empty
