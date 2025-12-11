@@ -13,8 +13,7 @@ import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import DiaryPublishFloat from '@/app/components/float/DiaryPublishFloat';
-import ArchiveCategoryDrawer, { CategoryDrawerButton } from '@/app/components/sidebar/ArchiveCategroyDrawer';
-import ArchiveCategorySidebar from '@/app/components/sidebar/ArchiveCategorySidebar';
+import ArchiveCategoryNavigator, { ArchiveCategoryDrawerButton } from '@/app/components/sidebar/ArchiveCategoryNavigator';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import '../styles/articles-filter.css';
@@ -259,7 +258,7 @@ function ArticlesPageContent() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          <CategoryDrawerButton onClick={openCategoryDrawer} />
+          <ArchiveCategoryDrawerButton onClick={openCategoryDrawer} />
         }
       />
       
@@ -421,30 +420,8 @@ function ArticlesPageContent() {
         </PageLayout>
       </div>
 
-      {/* 电脑端固定侧边栏 - 从 header 下方到页面底部 */}
-      {!isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: '45px', // header 的高度
-            bottom: 0,
-            width: '280px',
-            background: 'white',
-            borderRight: '1px solid #e8e8e8',
-            zIndex: 999,
-            overflowY: 'auto',
-          }}
-        >
-          <ArchiveCategorySidebar
-            selectedCategoryId={selectedCategoryId}
-            onCategorySelect={handleCategorySelect}
-          />
-        </div>
-      )}
-
-      {/* 目录抽屉 */}
-      <ArchiveCategoryDrawer
+      {/* 统一的归档分类导航组件（自动适配移动端/桌面端） */}
+      <ArchiveCategoryNavigator
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         onCategorySelect={handleCategorySelect}
