@@ -27,7 +27,8 @@ export default function ArticleTocNav({
     articleNavigationPattern: '/article/{articleId}',
     stylePrefix: 'article-index-sidebar',
     showArticleCount: true,
-    dataFormat: 'tree-with-articles'
+    dataFormat: 'tree-with-articles',
+    defaultOpenMode: 'current-article-path' // 只展开当前文章路径
   };
 
   return (

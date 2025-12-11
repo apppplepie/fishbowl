@@ -32,7 +32,7 @@ export default function ArticleCategoryDrawer({
   const config: GenericCategoryTreeConfig = {
     apiEndpoint: '/api/categories/tree',
     emptyText: '暂无目录',
-    forceOpenRootKeys: false, // 抽屉中允许全部展开
+    forceOpenRootKeys: true, // 抽屉中允许全部展开
     navigationPattern: '/archive?category={categoryId}',
     stylePrefix: 'archive-category-drawer'
   };

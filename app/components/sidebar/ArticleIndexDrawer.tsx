@@ -38,7 +38,8 @@ export default function ArticleTocDrawer({
     articleNavigationPattern: '/article/{articleId}',
     stylePrefix: 'article-index-drawer',
     showArticleCount: true,
-    dataFormat: 'tree-with-articles'
+    dataFormat: 'tree-with-articles',
+    defaultOpenMode: 'current-article-path' // 只展开当前文章路径
   };
 
   return (
