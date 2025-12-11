@@ -98,6 +98,14 @@ export interface GenericIndexTreeConfig {
    * 是否需要查找书籍根节点（用于章节索引）
    */
   findBookRoot?: boolean;
+  
+  /**
+   * 默认展开行为
+   * 'all': 展开所有分类（默认）
+   * 'current-article-path': 只展开当前文章的路径（其他折叠）
+   * 'none': 全部折叠
+   */
+  defaultOpenMode?: 'all' | 'current-article-path' | 'none';
 }
 
 interface GenericIndexTreeProps {
@@ -133,7 +141,8 @@ export default function GenericIndexTree({
     stylePrefix = 'generic-index-tree',
     showArticleCount = true,
     dataFormat = 'tree-with-articles',
-    findBookRoot = false
+    findBookRoot = false,
+    defaultOpenMode = 'current-article-path' // 默认只展开当前文章路径
   } = config;
 
   /**
@@ -153,6 +162,7 @@ export default function GenericIndexTree({
 
   /**
    * 找到书籍根节点（depth=2的祖先节点）- 用于章节索引
+   * 书籍在 cat_bookcase 下，depth=2，path有3段
    */
   const findBookRootId = async (categoryId: string): Promise<string> => {
     try {
@@ -163,8 +173,10 @@ export default function GenericIndexTree({
         const category = result.categories[0];
         if (category.path) {
           const pathParts = category.path.split('-');
-          if (pathParts.length >= 2) {
-            const bookPath = pathParts.slice(0, 2).join('-');
+          // 书籍在depth=2，path有3段（例如：000000-000004-000001）
+          // 需要取前3段来获取书籍根节点
+          if (pathParts.length >= 3) {
+            const bookPath = pathParts.slice(0, 3).join('-');
             const bookResponse = await fetch(`/api/categories?path=${encodeURIComponent(bookPath)}`);
             const bookResult = await bookResponse.json();
 
@@ -350,6 +362,55 @@ export default function GenericIndexTree({
   };
 
   /**
+   * 查找文章的所有祖先分类keys（用于只展开当前文章的路径）
+   */
+  const findArticleAncestorKeys = (data: any[], articleId: string): string[] => {
+    const ancestorKeys: string[] = [];
+
+    if (dataFormat === 'flat-tree') {
+      // flat-tree格式：通过parent_id向上追溯
+      // 1. 先找到文章节点
+      const articleNode = data.find(node => node.node_type === 'article' && node.id === articleId);
+      if (!articleNode) return ancestorKeys;
+
+      // 2. 从文章的父分类开始向上追溯
+      let currentParentId = articleNode.parent_id;
+      while (currentParentId) {
+        const parentNode = data.find(node => node.node_type === 'category' && node.id === currentParentId);
+        if (!parentNode) break;
+        
+        ancestorKeys.push(`category-${parentNode.id}`);
+        currentParentId = parentNode.parent_id;
+      }
+    } else {
+      // tree-with-articles格式：递归查找
+      const findArticleInTree = (categories: Category[], path: string[] = []): boolean => {
+        for (const category of categories) {
+          const currentPath = [...path, `category-${category.id}`];
+          
+          // 检查这个分类下的文章
+          if (category.articles?.some(article => article.id === articleId)) {
+            ancestorKeys.push(...currentPath);
+            return true;
+          }
+          
+          // 递归检查子分类
+          if (category.children && category.children.length > 0) {
+            if (findArticleInTree(category.children, currentPath)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+
+      findArticleInTree(data);
+    }
+
+    return ancestorKeys;
+  };
+
+  /**
    * 处理目录文字点击
    */
   const handleCategoryTextClick = (categoryId: string) => {
@@ -410,13 +471,31 @@ export default function GenericIndexTree({
           setMenuItems(items);
 
           // 默认展开行为
-          if (forceOpenRootKeys) {
-            const rootKeys = getRootCategoryKeys(dataToStore);
-            setOpenKeys(rootKeys);
+          let initialOpenKeys: string[] = [];
+          
+          if (defaultOpenMode === 'current-article-path' && currentArticleId) {
+            // 只展开当前文章的路径
+            initialOpenKeys = findArticleAncestorKeys(dataToStore, currentArticleId);
+          } else if (defaultOpenMode === 'all') {
+            // 展开所有分类
+            initialOpenKeys = getAllCategoryKeys(dataToStore);
+          } else if (defaultOpenMode === 'none') {
+            // 全部折叠
+            initialOpenKeys = [];
+          } else if (forceOpenRootKeys) {
+            // 向后兼容：如果配置了强制展开根节点
+            initialOpenKeys = getRootCategoryKeys(dataToStore);
           } else {
-            const allKeys = getAllCategoryKeys(dataToStore);
-            setOpenKeys(allKeys);
+            // 默认行为：如果有当前文章就展开文章路径，否则根据 defaultOpenMode
+            if (currentArticleId) {
+              initialOpenKeys = findArticleAncestorKeys(dataToStore, currentArticleId);
+            } else if (defaultOpenMode === 'current-article-path') {
+              // 没有当前文章时，全部折叠
+              initialOpenKeys = [];
+            }
           }
+
+          setOpenKeys(initialOpenKeys);
         }
       } catch (error) {
         console.error('加载目录失败:', error);
@@ -427,6 +506,22 @@ export default function GenericIndexTree({
 
     loadData();
   }, [apiEndpoint, startCategoryId]);
+
+  /**
+   * 当 currentArticleId 变化时，展开该文章的路径
+   */
+  useEffect(() => {
+    if (currentArticleId && categories.length > 0) {
+      const articlePath = findArticleAncestorKeys(categories, currentArticleId);
+      if (articlePath.length > 0) {
+        // 保留原有已展开的节点，同时添加新文章的路径
+        setOpenKeys(prevKeys => {
+          const newKeys = new Set([...prevKeys, ...articlePath]);
+          return Array.from(newKeys);
+        });
+      }
+    }
+  }, [currentArticleId, categories]);
 
   /**
    * 处理菜单点击

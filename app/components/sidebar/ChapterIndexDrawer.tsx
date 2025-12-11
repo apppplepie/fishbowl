@@ -42,7 +42,8 @@ export default function BookTocDrawer({
     stylePrefix: 'chapter-index-drawer',
     showArticleCount: false,
     dataFormat: 'flat-tree',
-    findBookRoot: true
+    findBookRoot: true,
+    defaultOpenMode: 'current-article-path' // 只展开当前文章路径
   };
 
   return (
