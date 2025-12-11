@@ -162,9 +162,10 @@ function BookcasePageContent() {
             // 使用递增的ID确保唯一性
             const bookCardId = 10000 + currentOffset + index;
 
-            // 获取该分类下的第一篇文章作为书籍信息
+            // 获取该分类下 order_in_category 最小的文章作为书籍信息
+            // 添加 orderByPath=true 参数，确保按 order_in_category 排序
             try {
-              const articleResponse = await fetch(`/api/articles/list?categoryId=${category.id}&limit=1&status=published`);
+              const articleResponse = await fetch(`/api/articles/list?categoryId=${category.id}&limit=1&status=published&orderByPath=true`);
               const articleResult = await articleResponse.json();
 
               if (articleResponse.ok && articleResult.success && articleResult.articles.length > 0) {

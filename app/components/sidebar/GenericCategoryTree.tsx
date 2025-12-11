@@ -5,6 +5,7 @@ import { Menu, Spin, Empty } from 'antd';
 import { FolderOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
+import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
 
 interface Category {
   id: string;
@@ -112,6 +113,12 @@ export default function GenericCategoryTree({
         children.push(...(subCategories || []));
       }
 
+      // 格式化分类标签（添加章节号）
+      const formattedLabel = formatNodeLabel(category as any, {
+        showChapterLabel: true,
+        showArticleNumber: false,
+      });
+
       return {
         key: `category-${category.id}`,
         icon: <FolderOutlined />,
@@ -123,7 +130,7 @@ export default function GenericCategoryTree({
               handleCategoryClick(category.id);
             }}
           >
-            {category.name}
+            {formattedLabel}
           </span>
         ),
         children: children.length > 0 ? children : undefined,
@@ -135,6 +142,9 @@ export default function GenericCategoryTree({
    * 构建菜单项（只显示目录）
    */
   const buildMenuItems = (categories: Category[]): MenuProps['items'] => {
+    // 添加章节编号（在构建菜单之前）
+    const numberedCategories = addChapterNumbers(categories);
+    
     // 如果有根节点配置，创建根节点
     if (rootNodeId && rootNodeName) {
       const rootNode = {
@@ -151,14 +161,14 @@ export default function GenericCategoryTree({
             {rootNodeName}
           </span>
         ),
-        children: buildMenuItemsRecursive(categories),
+        children: buildMenuItemsRecursive(numberedCategories),
       };
 
       return [rootNode];
     }
 
     // 否则直接返回分类列表
-    return buildMenuItemsRecursive(categories);
+    return buildMenuItemsRecursive(numberedCategories);
   };
 
   /**
