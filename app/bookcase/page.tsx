@@ -44,6 +44,7 @@ function BookcasePageContent() {
   const [columns, setColumns] = useState<number>(3);
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLoading, setShowLoading] = useState(false); // 延迟显示的加载状态
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
@@ -344,6 +345,25 @@ function BookcasePageContent() {
     }
   };
 
+  // 延迟显示加载动画，避免快速切换时的闪烁
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (loading) {
+      // 延迟500ms后才显示加载动画
+      timer = setTimeout(() => {
+        setShowLoading(true);
+      }, 500);
+    } else {
+      // 加载完成，立即隐藏
+      setShowLoading(false);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [loading]);
+
   // 初次加载和category变化时重新加载
   useEffect(() => {
     console.log('加载数据库书籍数据，category:', categoryFromUrl);
@@ -464,7 +484,7 @@ function BookcasePageContent() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          <BookCategoryDrawerButton onClick={openCategoryDrawer} />
+          isMobile && <BookCategoryDrawerButton onClick={openCategoryDrawer} />
         }
       />
 
@@ -526,7 +546,7 @@ function BookcasePageContent() {
           margin: '0 auto',
           width: '100%',
         }}>
-          {loading ? (
+          {showLoading ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
               加载中...
             </div>

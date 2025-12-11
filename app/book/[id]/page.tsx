@@ -8,7 +8,7 @@ const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import BookChapterNavigator from '@/app/components/sidebar/BookChapterNavigator';
+import BookChapterNavigator, { BookChapterDrawerButton } from '@/app/components/sidebar/BookChapterNavigator';
 import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -88,6 +88,9 @@ export default function BookPage() {
 
   // 评论数量状态
   const [commentsCount, setCommentsCount] = useState(0);
+
+  // 目录抽屉状态
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
   /**
    * 获取分类路径
@@ -405,6 +408,9 @@ export default function BookPage() {
     return null; // 在延迟显示期间不显示任何内容
   }
 
+  // 打开目录抽屉的函数
+  const openCategoryDrawer = () => setDrawerVisible(true);
+
   return (
     <>
       {/* 统一的章节导航组件（自动适配移动端/桌面端） */}
@@ -412,10 +418,16 @@ export default function BookPage() {
         currentArticleId={bookId}
         bookCategoryId={bookCategoryId}
         onArticleClick={handleArticleClick}
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
       />
 
       {/* Header 独立在最顶部，覆盖在边框上 */}
-      <Header leftContent={null} />
+      <Header
+        leftContent={
+          isMobile && <BookChapterDrawerButton onClick={openCategoryDrawer} />
+        }
+      />
 
       <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
         <PageLayout

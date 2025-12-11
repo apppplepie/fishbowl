@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button } from 'antd';
-import { UnorderedListOutlined } from '@ant-design/icons';
+import React from 'react';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import GenericIndexTree, { GenericIndexTreeConfig } from './GenericIndexTree';
-import GenericTreeDrawer from './GenericTreeDrawer';
+import GenericTreeDrawer, { TreeDrawerButton } from './GenericTreeDrawer';
 
 /**
  * 文章目录导航组件（统一移动端和桌面端）
@@ -17,15 +15,18 @@ interface ArticleNavigatorProps {
   currentArticleId?: string;
   onArticleClick?: (articleId: string) => void;
   onCategoryClick?: () => void;
+  visible?: boolean; // 移动端使用，控制抽屉显示
+  onClose?: () => void; // 移动端使用，关闭抽屉回调
 }
 
 export default function ArticleNavigator({
   currentArticleId,
   onArticleClick,
-  onCategoryClick
+  onCategoryClick,
+  visible = false,
+  onClose
 }: ArticleNavigatorProps) {
   const { isMobile } = useResponsive();
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const config: GenericIndexTreeConfig = {
     apiEndpoint: '/api/categories/tree-with-articles',
@@ -41,15 +42,15 @@ export default function ArticleNavigator({
 
   const handleArticleClick = (articleId: string) => {
     onArticleClick?.(articleId);
-    if (isMobile) {
-      setDrawerOpen(false); // 移动端点击后关闭抽屉
+    if (isMobile && onClose) {
+      onClose(); // 移动端点击后关闭抽屉
     }
   };
 
   const handleCategoryClick = () => {
     onCategoryClick?.();
-    if (isMobile) {
-      setDrawerOpen(false); // 移动端点击后关闭抽屉
+    if (isMobile && onClose) {
+      onClose(); // 移动端点击后关闭抽屉
     }
   };
 
@@ -64,26 +65,15 @@ export default function ArticleNavigator({
   );
 
   if (isMobile) {
-    // 移动端：返回按钮 + 抽屉
+    // 移动端：返回抽屉
     return (
-      <>
-        {/* Header 左侧按钮 */}
-        <Button
-          type="text"
-          icon={<UnorderedListOutlined style={{ fontSize: '20px', color: 'white' }} />}
-          onClick={() => setDrawerOpen(true)}
-          style={{ border: 'none' }}
-        />
-
-        {/* 抽屉 */}
-        <GenericTreeDrawer 
-          open={drawerOpen} 
-          onClose={() => setDrawerOpen(false)} 
-          size={280}
-        >
-          {renderTreeContent()}
-        </GenericTreeDrawer>
-      </>
+      <GenericTreeDrawer
+        open={visible}
+        onClose={onClose || (() => {})}
+        size={280}
+      >
+        {renderTreeContent()}
+      </GenericTreeDrawer>
     );
   }
 
@@ -105,5 +95,17 @@ export default function ArticleNavigator({
       {renderTreeContent()}
     </div>
   );
+}
+
+/**
+ * 文章目录抽屉按钮组件
+ * 用于移动端在 Header 左侧显示展开按钮
+ */
+export function ArticleDrawerButton({
+  onClick
+}: {
+  onClick: () => void;
+}) {
+  return <TreeDrawerButton onClick={onClick} />;
 }
 
