@@ -2,25 +2,27 @@
 
 import React, { useState } from 'react';
 import { FloatButton, Modal, Form, Input, Select, message, Button } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, BookOutlined, FileTextOutlined, VerticalAlignTopOutlined } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
-interface DiaryPublishFloatProps {
-  onSuccess?: () => void;
+interface ArchiveActionFloatProps {
+  onDiarySuccess?: () => void;
 }
 
 /**
- * 日志发布悬浮按钮
- * 点击后弹出表单，快速发布日志
+ * 归档页面操作悬浮按钮组
+ * 集成发布文章、写日志、查看归档等功能
  */
-export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps) {
+export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloatProps) {
+  const router = useRouter();
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [diaryModalOpen, setDiaryModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
+  const [diaryForm] = Form.useForm();
 
   // 生成日期标题（精确到分钟）
   const generateDateTitle = () => {
@@ -30,18 +32,28 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
     const day = String(now.getDate()).padStart(2, '0');
     const hour = String(now.getHours()).padStart(2, '0');
     const minute = String(now.getMinutes()).padStart(2, '0');
-    
+
     return `${year}年${month}月${day}日 ${hour}:${minute}`;
   };
 
-  // 提交表单
-  const handleSubmit = async (values: any) => {
+  // 跳转到发布文章页面
+  const handlePublishArticle = () => {
+    router.push('/publish-article');
+  };
+
+  // 跳转到归档页面
+  const handleGoToArchive = () => {
+    router.push('/archive');
+  };
+
+  // 提交日志表单
+  const handleDiarySubmit = async (values: any) => {
     setLoading(true);
 
     try {
       // 获取 Token
       const token = localStorage.getItem('token');
-      
+
       if (!token) {
         message.error('请先登录');
         return;
@@ -52,15 +64,15 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
 
       // 构建日志内容块（只有一个文本块，内容包含状态、地点和正文）
       const blocks: any[] = [];
-      
+
       // 将所有日志信息放入一个文本块
       let diaryContent = values.content;
-      
+
       // 添加元信息到内容前面（可选）
       const metadata: string[] = [];
       if (values.status) metadata.push(`状态：${values.status}`);
       if (values.location) metadata.push(`地点：${values.location}`);
-      
+
       if (metadata.length > 0) {
         diaryContent = metadata.join(' | ') + '\n\n' + diaryContent;
       }
@@ -92,9 +104,9 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
 
       if (data.success) {
         message.success('日志发布成功！');
-        form.resetFields();
-        setOpen(false);
-        onSuccess?.();
+        diaryForm.resetFields();
+        setDiaryModalOpen(false);
+        onDiarySuccess?.();
       } else {
         message.error(data.error || '发布失败');
       }
@@ -108,28 +120,50 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
 
   return (
     <>
-      <FloatButton
-        icon={<EditOutlined />}
+      <FloatButton.Group
+        trigger="click"
         type="primary"
         style={{ right: 24, bottom: 24 }}
-        onClick={() => setOpen(true)}
-        tooltip="写日志"
-      />
+        icon={<PlusOutlined />}
+        tooltip={{ title: "操作菜单", placement: "left" }}
+      >
+        {/* 写文章按钮 */}
+        <FloatButton
+          icon={<FileTextOutlined />}
+          tooltip={{ title: "写文章", placement: "left" }}
+          onClick={handlePublishArticle}
+        />
 
+        {/* 写日志按钮 */}
+        <FloatButton
+          icon={<EditOutlined />}
+          tooltip={{ title: "写日志", placement: "left" }}
+          onClick={() => setDiaryModalOpen(true)}
+        />
+
+        {/* 查看归档按钮 */}
+        <FloatButton
+          icon={<VerticalAlignTopOutlined />}
+          tooltip={{ title: "返回顶部", placement: "left" }}
+          onClick={handleGoToArchive}
+        />
+      </FloatButton.Group>
+
+      {/* 日志发布弹窗 */}
       <Modal
         title={`📝 写日志 - ${generateDateTitle()}`}
-        open={open}
+        open={diaryModalOpen}
         onCancel={() => {
-          setOpen(false);
-          form.resetFields();
+          setDiaryModalOpen(false);
+          diaryForm.resetFields();
         }}
         footer={null}
         width={600}
       >
         <Form
-          form={form}
+          form={diaryForm}
           layout="vertical"
-          onFinish={handleSubmit}
+          onFinish={handleDiarySubmit}
           style={{ marginTop: 24 }}
         >
           <Form.Item
@@ -137,8 +171,8 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
             label="日志内容"
             rules={[{ required: true, message: '请输入日志内容' }]}
           >
-            <TextArea 
-              rows={8} 
+            <TextArea
+              rows={8}
               placeholder="记录今天的心情..."
               showCount
               maxLength={500}
@@ -180,12 +214,11 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
             </Form.Item>
           </div>
 
-
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Button 
+            <Button
               onClick={() => {
-                setOpen(false);
-                form.resetFields();
+                setDiaryModalOpen(false);
+                diaryForm.resetFields();
               }}
               style={{ marginRight: 8 }}
             >
@@ -200,4 +233,3 @@ export default function DiaryPublishFloat({ onSuccess }: DiaryPublishFloatProps)
     </>
   );
 }
-

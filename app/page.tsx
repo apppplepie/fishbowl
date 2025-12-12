@@ -248,6 +248,9 @@ export default function Home() {
       <div>🔒 已锁定: <strong>{isLocked ? '是' : '否'}</strong></div>
       <div>📋 Header: <strong>{showHeader ? '显示' : '隐藏'}</strong></div>
     </div>
+
+    {/* 归档页面导航悬浮按钮 */}
+    {/* <ArchiveNavigateFloat /> */}
     </>
   );
 }

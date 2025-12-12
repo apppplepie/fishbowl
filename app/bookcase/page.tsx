@@ -13,9 +13,8 @@ import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import BookCard from '@/app/components/cards/BookCard';
-import DiaryPublishFloat from '@/app/components/float/DiaryPublishFloat';
 import BookCategoryNavigator, { BookCategoryDrawerButton } from '@/app/components/sidebar/BookCategoryNavigator';
-import BookPublishFloat from '@/app/components/float/BookPublishFloat';
+import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import { extractBooksFromArticles } from '@/app/utils/bookUtils';
@@ -628,15 +627,9 @@ function BookcasePageContent() {
         }}
       />
 
-      {/* 日志发布悬浮按钮 */}
-      <DiaryPublishFloat
-        onSuccess={() => {
-          message.success('日志发布成功！');
-          // 重新加载文章列表
-          setOffset(0);
-          setHasMore(true);
-          loadBookcaseArticles(0, false);
-        }}
+      {/* 书架页面操作悬浮按钮组 */}
+      <BookcaseActionFloat
+        onChapterManageSuccess={handleChapterManageSuccess}
       />
 
       {/* 添加旋转动画样式 */}
@@ -647,8 +640,6 @@ function BookcasePageContent() {
         }
       `}</style>
 
-      {/* 书籍发布悬浮按钮 */}
-      <BookPublishFloat onChapterManageSuccess={handleChapterManageSuccess} />
     </>
   );
 }

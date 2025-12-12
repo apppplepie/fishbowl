@@ -751,7 +751,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       
       <FloatButton
         icon={<UnorderedListOutlined />}
-        tooltip="章节管理"
+        tooltip={{ title: "章节管理", placement: "left" }}
         onClick={showModal}
       />
 

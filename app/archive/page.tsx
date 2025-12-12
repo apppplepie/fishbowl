@@ -12,7 +12,7 @@ import ArticleCard from '@/app/components/cards/ArticleCard';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
-import DiaryPublishFloat from '@/app/components/float/DiaryPublishFloat';
+import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import ArchiveCategoryNavigator, { ArchiveCategoryDrawerButton } from '@/app/components/sidebar/ArchiveCategoryNavigator';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
@@ -428,9 +428,9 @@ function ArticlesPageContent() {
         selectedCategoryId={selectedCategoryId}
       />
 
-      {/* 日志发布悬浮按钮 */}
-      <DiaryPublishFloat
-        onSuccess={() => {
+      {/* 归档页面操作悬浮按钮组 */}
+      <ArchiveActionFloat
+        onDiarySuccess={() => {
           message.success('日志发布成功！');
           // 重新加载文章列表
           setOffset(0);
