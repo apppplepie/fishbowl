@@ -241,6 +241,11 @@ export default function GenericCategoryTree({
         if (result.success) {
           let categoriesData = result.data || result.categories || [];
 
+          // 如果配置了rootNodeId，且API返回的是包含根节点的树，提取根节点的children
+          if (rootNodeId && categoriesData.length === 1 && categoriesData[0].id === rootNodeId) {
+            categoriesData = categoriesData[0].children || [];
+          }
+
           // 如果需要为顶级分类加载子分类（递归加载所有层级）
           if (loadChildrenForTopLevel) {
             // 递归加载函数：为分类及其所有子孙分类加载子分类

@@ -326,7 +326,6 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
           id: newCategoryId,
           name: newCategoryName.trim(),
           parent_id: newCategoryParentId,
-          order_index: 0, // 默认放在最前面
         }),
       });
 
@@ -351,7 +350,10 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   /**
    * 删除目录
    */
-  const handleDeleteCategory = (categoryId: string, categoryName: string) => {
+  const handleDeleteCategory = (categoryId: string, categoryName: string, e?: React.MouseEvent) => {
+    // 阻止事件冒泡到 FloatButton.Group
+    e?.stopPropagation();
+    
     Modal.confirm({
       title: '确认删除',
       icon: <ExclamationCircleOutlined />,
@@ -359,6 +361,8 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       okText: '确认',
       okType: 'danger',
       cancelText: '取消',
+      maskClosable: false,
+      keyboard: false,
       onOk: async () => {
         try {
           const response = await fetch(`/api/categories/${categoryId}`, {
@@ -427,7 +431,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteCategory(node.id, node.name);
+                  handleDeleteCategory(node.id, node.name, e);
                 }}
                 title="删除目录"
               />
@@ -856,20 +860,33 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       <Modal
         title="新建目录"
         open={newCategoryModalOpen}
-        onOk={handleConfirmAddCategory}
-        onCancel={() => {
+        onOk={(e) => {
+          e?.stopPropagation();
+          handleConfirmAddCategory();
+        }}
+        onCancel={(e) => {
+          e?.stopPropagation();
           setNewCategoryModalOpen(false);
           setNewCategoryName('');
         }}
         okText="确认"
         cancelText="取消"
+        maskClosable={false}
+        keyboard={false}
+        getContainer={false}
       >
-        <div style={{ padding: '20px 0' }}>
+        <div 
+          style={{ padding: '20px 0' }}
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        >
           <Input
             placeholder="请输入目录名称"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
-            onPressEnter={handleConfirmAddCategory}
+            onPressEnter={(e) => {
+              e.stopPropagation();
+              handleConfirmAddCategory();
+            }}
             maxLength={50}
             autoFocus
           />
