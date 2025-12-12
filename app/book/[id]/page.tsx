@@ -5,7 +5,7 @@ import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, B
 import type { MenuProps } from 'antd';
 
 const { Option } = Select;
-import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
 import BookChapterNavigator, { BookChapterDrawerButton } from '@/app/components/sidebar/BookChapterNavigator';
@@ -19,6 +19,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
+import { useArticleNavigation } from '@/app/hooks/useArticleNavigation';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
@@ -46,6 +47,9 @@ export default function BookPage() {
   const { isMobile } = useResponsive();
   const { isLoggedIn, user } = useAuth();
   const [bookCategoryId, setBookCategoryId] = useState<string>('');
+
+  // 文章导航
+  const navigation = useArticleNavigation(bookCategoryId, bookId);
 
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
@@ -619,7 +623,7 @@ export default function BookPage() {
                   >
                     分享
                   </Button>
-                  
+
 
                 </div>
               </div>
@@ -755,6 +759,58 @@ export default function BookPage() {
               </div>
             )}
           </div>
+
+          {/* 文章导航 */}
+          {(navigation.canGoPrev || navigation.canGoNext) && (
+            <div style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              padding: isMobile ? '20px 16px 0' : '40px 20px 0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div>
+                {navigation.canGoPrev && (
+                  <Button
+                    type="link"
+                    icon={<LeftOutlined />}
+                    onClick={() => navigation.prevArticleId && router.push(`/book/${navigation.prevArticleId}`)}
+                    style={{
+                      color: '#1890ff',
+                      padding: '4px 8px',
+                    }}
+                  >
+                    上一页
+                  </Button>
+                )}
+              </div>
+
+              <div style={{
+                fontSize: '14px',
+                color: '#666',
+                textAlign: 'center',
+              }}>
+                {navigation.currentIndex + 1} / {navigation.totalCount}
+              </div>
+
+              <div>
+                {navigation.canGoNext && (
+                  <Button
+                    type="link"
+                    icon={<RightOutlined />}
+                    onClick={() => navigation.nextArticleId && router.push(`/book/${navigation.nextArticleId}`)}
+                    style={{
+                      color: '#1890ff',
+                      padding: '4px 8px',
+                    }}
+                  >
+                    下一页
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 评论区 */}
           <div style={{

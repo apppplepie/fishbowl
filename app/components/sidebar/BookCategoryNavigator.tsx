@@ -30,11 +30,11 @@ export default function BookCategoryNavigator({
   const { isMobile } = useResponsive();
 
   const config: GenericCategoryTreeConfig = {
-    apiEndpoint: '/api/categories?type=children&parentId=cat_bookcase',
+    apiEndpoint: '/api/categories/tree?rootId=cat_bookcase',
     rootNodeId: 'cat_bookcase',
     rootNodeName: '书橱',
     emptyText: '暂无书籍',
-    loadChildrenForTopLevel: true, // 递归加载所有层级的子分类
+    loadChildrenForTopLevel: false, // ✅ 改为false，一次性获取完整树，避免N+1查询
     forceOpenRootKeys: true,
     navigationPattern: '/bookcase?category={categoryId}',
     stylePrefix: 'book-category'
