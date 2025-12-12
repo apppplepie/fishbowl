@@ -43,6 +43,41 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
 
   /**
+   * 调试：监听全局点击和触摸事件
+   */
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const dbgClick = (e: MouseEvent) => {
+      // 如果弹窗打开，打印一下点击落点
+      console.log('🔍 global click while modal open:', {
+        target: e.target,
+        targetClassName: (e.target as HTMLElement)?.className,
+        targetTagName: (e.target as HTMLElement)?.tagName,
+        eventPhase: e.eventPhase,
+        type: e.type
+      });
+    };
+
+    const dbgTouch = (e: TouchEvent) => {
+      console.log('🔍 global touch while modal open:', {
+        type: e.type,
+        target: e.target,
+        targetClassName: (e.target as HTMLElement)?.className,
+        targetTagName: (e.target as HTMLElement)?.tagName
+      });
+    };
+
+    document.addEventListener('click', dbgClick, true);   // useCapture=true 更早捕获
+    document.addEventListener('touchend', dbgTouch, true);
+
+    return () => {
+      document.removeEventListener('click', dbgClick, true);
+      document.removeEventListener('touchend', dbgTouch, true);
+    };
+  }, [isModalOpen]);
+
+  /**
    * 添加移动端触摸拖动支持
    * 将触摸事件转换为拖拽事件
    */
@@ -752,7 +787,11 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       <FloatButton
         icon={<UnorderedListOutlined />}
         tooltip={{ title: "章节管理", placement: "left" }}
-        onClick={showModal}
+        onClick={(e) => {
+          // 阻止事件冒泡到 FloatButton.Group，避免触发 Group 的收起/展开
+          e?.stopPropagation();
+          showModal();
+        }}
       />
 
       <Modal
@@ -762,16 +801,23 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         footer={null}
         width="90%"
         style={{ maxWidth: '700px' }}
-        styles={{ 
-          body: { 
-            minHeight: '400px', 
-            maxHeight: '70vh', 
+        maskClosable={false}
+        destroyOnClose={true}
+        keyboard={false}
+        styles={{
+          body: {
+            minHeight: '400px',
+            maxHeight: '70vh',
             overflow: 'auto',
             WebkitOverflowScrolling: 'touch'
-          } 
+          }
         }}
+        getContainer={false}
       >
-        <div style={{ padding: '20px 0' }}>
+        <div 
+          style={{ padding: '20px 0' }}
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        >
           <p style={{ marginBottom: '16px', color: '#666' }}>
             💡 提示：拖动章节或目录可调整结构和顺序
           </p>
@@ -832,5 +878,3 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
     </>
   );
 }
-
-
