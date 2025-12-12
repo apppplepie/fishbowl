@@ -154,7 +154,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         type="primary"
         style={{ right: 24, bottom: 24 }}
         onClick={() => setOpen(true)}
-        tooltip="发布到照片墙"
+        tooltip={{ title: "发布到照片墙", placement: "left" }}
       />
 
       <Modal
@@ -195,7 +195,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           <Form.Item
             name="category_id"
             label="分类"
-            tooltip="选择绘画作品的子分类，未选择时默认发布到【绘画作品】"
+            tooltip={{ title: "选择绘画作品的子分类，未选择时默认发布到【绘画作品】", placement: "left" }}
           >
             <CategoryTreeSelect 
               placeholder="选择分类（可选，默认：绘画作品）" 
@@ -206,7 +206,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           <Form.Item
             name="tags"
             label="标签"
-            tooltip="添加标签可以帮助读者更好地找到你的作品"
+            tooltip={{ title: "添加标签可以帮助读者更好地找到你的作品", placement: "left" }}
           >
             <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
           </Form.Item>

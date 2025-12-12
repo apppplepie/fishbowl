@@ -33,7 +33,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
       >
         <FloatButton
           icon={<FileTextOutlined />}
-          tooltip="发布章节"
+          tooltip={{ title: "发布章节", placement: "left" }}
           onClick={() => router.push(`/publish-chapter?category=${categoryFromUrl}`)}
         />
         <ChapterManageFloat categoryId={categoryFromUrl} onSuccess={onChapterManageSuccess} />
@@ -45,7 +45,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
       <FloatButton
         icon={<PlusOutlined />}
         type="primary"
-        tooltip="发布新书"
+        tooltip={{ title: "发布新书", placement: "left" }}
         onClick={() => router.push('/publish-book')}
         style={{
           right: 24,

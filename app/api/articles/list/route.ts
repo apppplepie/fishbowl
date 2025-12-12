@@ -228,9 +228,9 @@ export async function GET(request: NextRequest) {
        ORDER BY
          CASE WHEN ? = 1 
               THEN CONCAT(COALESCE(c.path, '999999'), '-', LPAD(a.order_in_category, 6, '0'))
-              ELSE a.updated_at END ASC,
+              ELSE NULL END DESC,
          CASE WHEN ? = 1 THEN a.id
-              ELSE a.published_at END DESC
+              ELSE a.updated_at END DESC
        LIMIT ${limit} OFFSET ${offset}`,
       queryParams
     );
