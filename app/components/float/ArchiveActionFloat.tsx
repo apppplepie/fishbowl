@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { FloatButton, Modal, Form, Input, Select, message, Button } from 'antd';
-import { PlusOutlined, EditOutlined, BookOutlined, FileTextOutlined, VerticalAlignTopOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, BookOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 
@@ -39,11 +39,6 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
   // 跳转到发布文章页面
   const handlePublishArticle = () => {
     router.push('/publish-article');
-  };
-
-  // 跳转到归档页面
-  const handleGoToArchive = () => {
-    router.push('/archive');
   };
 
   // 提交日志表单
@@ -141,11 +136,10 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
           onClick={() => setDiaryModalOpen(true)}
         />
 
-        {/* 查看归档按钮 */}
-        <FloatButton
-          icon={<VerticalAlignTopOutlined />}
+        {/* 返回顶部按钮 */}
+        <FloatButton.BackTop
           tooltip={{ title: "返回顶部", placement: "left" }}
-          onClick={handleGoToArchive}
+          visibilityHeight={100}
         />
       </FloatButton.Group>
 

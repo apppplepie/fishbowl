@@ -802,7 +802,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         width="90%"
         style={{ maxWidth: '700px' }}
         maskClosable={false}
-        destroyOnClose={true}
+        destroyOnHidden={true}
         keyboard={false}
         styles={{
           body: {
