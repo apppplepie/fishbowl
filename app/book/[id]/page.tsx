@@ -30,6 +30,8 @@ import {
   type ImageBlockContent,
   type CodeBlockContent
 } from '@/app/data/mockDatabase';
+import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
+import { getChapterLabel } from '@/app/utils/chapterNumbering';
 
 const { TextArea } = Input;
 
@@ -76,7 +78,7 @@ export default function BookPage() {
   // 从数据源获取书籍
   const [book, setBook] = useState<any>(null);
   const [showLoading, setShowLoading] = useState(false); // 延迟显示的加载状态
-  const [categoryPath, setCategoryPath] = useState<Array<{ id: string; name: string }>>([]);
+  const [categoryPath, setCategoryPath] = useState<Array<{ id: string; name: string; depth?: number; chapter_index?: number }>>([]);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageBlockContent | null>(null);
   // const [categoryModalOpen, setCategoryModalOpen] = useState(false); // 功能开发中
@@ -91,6 +93,9 @@ export default function BookPage() {
 
   // 目录抽屉状态
   const [drawerVisible, setDrawerVisible] = useState(false);
+
+  // 章节标签缓存
+  const chapterLabelCache = useChapterLabelCacheOptional();
 
   /**
    * 获取分类路径
@@ -460,26 +465,39 @@ export default function BookPage() {
                   // 从当前文章追溯父级到 cat_bookcase 根目录
                   ...categoryPath
                     .filter(cat => cat.id !== 'root' && cat.id !== 'cat_bookcase')
-                    .map((category, index) => ({
-                      title: (
-                        <a
-                          key={category.id}
-                          style={{
-                            color: 'white',
-                            textDecoration: 'none',
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            padding: 0,
-                            transition: 'color 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-                          onClick={() => router.push(`/bookcase?category=${category.id}`)}
-                        >
-                          {category.name}
-                        </a>
-                      ),
-                    })),
+                    .map((category, index) => {
+                      // 优先从缓存获取章节标签，没有则用 API 返回的 depth + chapter_index 计算
+                      let chapterLabel = chapterLabelCache.getLabel(category.id);
+                      if (!chapterLabel && category.depth && category.chapter_index) {
+                        chapterLabel = getChapterLabel(category.depth, category.chapter_index);
+                      }
+                      
+                      // 组合显示：章节标签 + 名称（如 "第1卷 起始篇"）
+                      const displayName = chapterLabel 
+                        ? `${chapterLabel} ${category.name}`
+                        : category.name;
+                      
+                      return {
+                        title: (
+                          <a
+                            key={category.id}
+                            style={{
+                              color: 'white',
+                              textDecoration: 'none',
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              padding: 0,
+                              transition: 'color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                            onClick={() => router.push(`/bookcase?category=${category.id}`)}
+                          >
+                            {displayName}
+                          </a>
+                        ),
+                      };
+                    }),
                   // 当前书籍标题
                   {
                     title: <span style={{ color: 'white' }}>{book?.title}</span>,

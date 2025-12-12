@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import MessageConfig from "./message-config";
+import Providers from "./providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,8 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AntdRegistry>
-          <MessageConfig />
-          {children}
+          <Providers>
+            <MessageConfig />
+            {children}
+          </Providers>
         </AntdRegistry>
       </body>
     </html>

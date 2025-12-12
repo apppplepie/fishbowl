@@ -11,6 +11,7 @@ import {
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
 import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
+import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 
 interface TreeNode {
   id: string;
@@ -131,6 +132,9 @@ export default function GenericIndexTree({
   const [categories, setCategories] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<MenuProps['items']>([]);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  
+  // 章节标签缓存
+  const chapterLabelCache = useChapterLabelCacheOptional();
   
   const {
     apiEndpoint,
@@ -475,6 +479,21 @@ export default function GenericIndexTree({
             
             // 添加章节编号
             treeNodes = addChapterNumbers(treeNodes);
+            
+            // 将章节标签存入缓存，供面包屑等其他组件使用
+            const labelsToCache: { [key: string]: string } = {};
+            const collectLabels = (nodes: TreeNode[]) => {
+              nodes.forEach(node => {
+                if (node.node_type === 'category' && (node as any).chapterLabel) {
+                  labelsToCache[node.id] = (node as any).chapterLabel;
+                }
+                if (node.children) {
+                  collectLabels(node.children);
+                }
+              });
+            };
+            collectLabels(treeNodes);
+            chapterLabelCache.setLabels(labelsToCache);
             
             dataToStore = flatNodes;
             items = buildMenuItemsFromTree(treeNodes);
