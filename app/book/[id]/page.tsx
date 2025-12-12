@@ -437,7 +437,7 @@ export default function BookPage() {
               {/* 面包屑导航 */}
               <Breadcrumb
                 items={[
-                  // 首页
+                  // 书橱
                   {
                     title: (
                       <a
@@ -451,15 +451,15 @@ export default function BookPage() {
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
                         onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-                        onClick={() => router.push('/')}
+                        onClick={() => router.push('/bookcase')}
                       >
-                        首页
+                        书橱
                       </a>
                     ),
                   },
                   // 从当前文章追溯父级到 cat_bookcase 根目录
                   ...categoryPath
-                    .filter(cat => cat.id !== 'root')
+                    .filter(cat => cat.id !== 'root' && cat.id !== 'cat_bookcase')
                     .map((category, index) => ({
                       title: (
                         <a
