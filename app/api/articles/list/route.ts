@@ -123,7 +123,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 添加ORDER BY的参数（放在最后，确保参数顺序正确）
-    queryParams.push(orderByPath ? 1 : 0, orderByPath ? 1 : 0);
+    // 当指定categoryId时，优先按该分类内的order_in_category排序
+    // 否则按路径排序
+    const orderByCategoryOrder = categoryId ? true : orderByPath;
+    queryParams.push(orderByCategoryOrder ? 1 : 0, orderByCategoryOrder ? 1 : 0);
 
     console.log('WHERE clause:', whereClause);
     console.log('Query params:', queryParams);
@@ -226,9 +229,8 @@ export async function GET(request: NextRequest) {
        LEFT JOIN categories c ON a.category_id = c.id
        WHERE ${whereClause}
        ORDER BY
-         CASE WHEN ? = 1 
-              THEN CONCAT(COALESCE(c.path, '999999'), '-', LPAD(a.order_in_category, 6, '0'))
-              ELSE NULL END DESC,
+         CASE WHEN ? = 1 THEN a.order_in_category
+              ELSE NULL END ASC,
          CASE WHEN ? = 1 THEN a.id
               ELSE a.updated_at END DESC
        LIMIT ${limit} OFFSET ${offset}`,

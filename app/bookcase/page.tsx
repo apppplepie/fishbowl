@@ -170,6 +170,8 @@ function BookcasePageContent() {
 
               if (articleResponse.ok && articleResult.success && articleResult.articles.length > 0) {
                 const mainArticle = articleResult.articles[0];
+                console.log('Main article for category', category.name, ':', mainArticle);
+                console.log('First image URL:', mainArticle.firstImageUrl);
                 return {
                   id: bookCardId,
                   type: 'book',
@@ -438,6 +440,9 @@ function BookcasePageContent() {
   // 点击卡片处理
   const handleCardClick = (card: any) => {
     console.log('点击了卡片:', card);
+    console.log('卡片类型:', card.type);
+    console.log('卡片ID:', card.id);
+    console.log('主文章ID:', card.mainArticleId);
     // 所有文章类型都使用书籍页面的布局来显示
     if (card.type === 'text' || card.type === 'image' || card.type === 'code' || card.type === 'diary' || card.type === 'drawing') {
       router.push(`/book/${card.id}`);
