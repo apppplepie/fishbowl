@@ -481,12 +481,10 @@ export default function PublishChapterPage() {
             >
               <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Space>
-                  <Tag color="blue">{stats.totalBlocks} 个块</Tag>
                   <Tag color="green">{stats.textBlocks} 文字</Tag>
                   <Tag color="orange">{stats.imageBlocks} 图片</Tag>
                   <Tag color="purple">{stats.codeBlocks} 代码</Tag>
                   <Tag>{stats.totalChars} 字</Tag>
-                  <Tag>约 {stats.estimatedReadTime} 分钟阅读</Tag>
 
                   {stats.textBlocks > 0 && !isPreviewMode && (
                     <Dropdown menu={{ items: batchFormatMenuItems }} placement="bottomRight">
@@ -495,7 +493,7 @@ export default function PublishChapterPage() {
                         size="small"
                         icon={<ThunderboltOutlined />}
                       >
-                        批量格式化
+                        格式化
                       </Button>
                     </Dropdown>
                   )}
