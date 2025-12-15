@@ -33,10 +33,11 @@ import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
-import { FloatingActions } from '@/app/components/float/PublishFloat';
+import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
 
 const { Option } = Select;
 
+// Force recompile - updated import structure
 /**
  * 块编辑器文章发布页面
  */
@@ -132,12 +133,75 @@ export default function PublishArticlePage() {
     // 获取当前用户作为作者
     const author = user?.username || '匿名';
 
+    // 设置默认分类和计算排序
+    const categoryId = values.category_id || 'cat_uncategorized';
+
+    // 计算 order_in_category：找到当前分类下最大的 order 值 + 1
+    // 需要同时考虑子分类的 order_index 和文章的 order_in_category
+    let orderInCategory = 0;
+    try {
+      const token = localStorage.getItem('token');
+
+      // 1. 查询当前分类下的所有直接子分类，获取最大的 order_index
+      let maxCategoryOrder = 0;
+      try {
+        const categoryResponse = await fetch(`/api/categories/${categoryId}/tree-with-articles`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (categoryResponse.ok) {
+          const categoryData = await categoryResponse.json();
+          if (categoryData.success && categoryData.tree && categoryData.tree.children) {
+            // 只查找直接子分类的 order_index
+            for (const child of categoryData.tree.children) {
+              if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
+                maxCategoryOrder = child.order_index;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('获取子分类排序信息失败:', error);
+      }
+
+      // 2. 查询当前分类下的所有文章，获取最大的 order_in_category
+      let maxArticleOrder = 0;
+      try {
+        const articleResponse = await fetch(`/api/articles?category=${categoryId}&limit=1000&sort=order_desc`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (articleResponse.ok) {
+          const articleData = await articleResponse.json();
+          if (articleData.articles && articleData.articles.length > 0) {
+            maxArticleOrder = Math.max(
+              ...articleData.articles.map((article: any) => article.order_in_category || 0)
+            );
+          }
+        }
+      } catch (error) {
+        console.warn('获取文章排序信息失败:', error);
+      }
+
+      // 3. 取两者中的最大值 + 1
+      orderInCategory = Math.max(maxCategoryOrder, maxArticleOrder) + 1;
+
+    } catch (error) {
+      console.warn('获取排序信息失败，使用默认排序:', error);
+      orderInCategory = 0;
+    }
+
     const articleData = {
       title: values.title,
       author: author,
       excerpt,
       tags: values.tags || [],
-      category_id: values.category_id || null,
+      category_id: categoryId,
+      order_in_category: orderInCategory,
       blocks: blocks,
       status: 'published' as const,
     };
@@ -687,6 +751,7 @@ export default function PublishArticlePage() {
         blocks={blocks}
         isPreviewMode={isPreviewMode}
         setIsPreviewMode={setIsPreviewMode}
+        exitPath="/archive"
       />
     </>
   );

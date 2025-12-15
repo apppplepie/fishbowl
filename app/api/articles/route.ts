@@ -28,6 +28,7 @@ interface CreateArticleRequest {
   blocks: Block[];
   tags?: string[];
   category_id?: string | null;
+  order_in_category?: number;
   status?: 'draft' | 'published';
   type?: 'text' | 'image' | 'code' | 'drawing';
 }
@@ -123,9 +124,9 @@ export async function POST(request: NextRequest) {
 
     // 2. 插入文章记录（使用当前登录用户作者）
     await query(
-      `INSERT INTO articles 
-       (id, title, author, author_id, published_at, excerpt, type, category_id, status, likes, shares, comments) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+      `INSERT INTO articles
+       (id, title, author, author_id, published_at, excerpt, type, category_id, order_in_category, status, likes, shares, comments)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
         body.title,
@@ -134,7 +135,8 @@ export async function POST(request: NextRequest) {
         currentDate,            // published_at - 使用完整的datetime
         excerpt,
         articleType,
-        body.category_id || null,
+        body.category_id || 'cat_uncategorized',  // 默认分类
+        body.order_in_category || 0,
         body.status || 'published',
       ]
     );
@@ -257,19 +259,38 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'published';
+    const category = searchParams.get('category');
+    const sort = searchParams.get('sort') || 'updated_desc';
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
+    // 构建查询条件
+    let whereClause = 'WHERE status = ?';
+    let params: any[] = [status];
+
+    if (category) {
+      whereClause += ' AND category_id = ?';
+      params.push(category);
+    }
+
+    // 构建排序条件
+    let orderClause = 'ORDER BY updated_at DESC, published_at DESC';
+    if (sort === 'order_desc') {
+      orderClause = 'ORDER BY order_in_category DESC, updated_at DESC';
+    } else if (sort === 'order_asc') {
+      orderClause = 'ORDER BY order_in_category ASC, updated_at DESC';
+    }
+
     // 使用字符串拼接而不是参数绑定（LIMIT 和 OFFSET 不支持 ? 占位符）
     const articles = await query<any[]>(
-      `SELECT 
+      `SELECT
         id, title, author, published_at, created_at, updated_at,
-        excerpt, type, status, likes, shares, comments
-       FROM articles 
-       WHERE status = ?
-       ORDER BY updated_at DESC, published_at DESC
+        excerpt, type, status, likes, shares, comments, category_id, order_in_category
+       FROM articles
+       ${whereClause}
+       ${orderClause}
        LIMIT ${limit} OFFSET ${offset}`,
-      [status]
+      params
     );
 
     // 获取每篇文章的标签
