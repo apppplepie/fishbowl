@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Form,
   Input,
@@ -49,6 +49,9 @@ export default function PublishBookPage() {
 
   // 为悬浮按钮提供必要的状态
   const [blocks] = useState<Block[]>([]);
+
+  // 自动保存相关
+  const lastSavedFormRef = useRef<string>('');
 
   // 保存草稿功能
   const saveDraft = () => {
@@ -112,6 +115,46 @@ export default function PublishBookPage() {
     }
     return false;
   };
+
+  // 清除草稿
+  const clearDraft = () => {
+    localStorage.removeItem('book-draft');
+    console.log('已清除书籍草稿');
+  };
+
+  // 自动保存草稿 - 每60秒检查一次
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      // 检查表单是否有实际内容且有更新
+      const values = form.getFieldsValue();
+      const hasContent = (values.title || '').trim() ||
+                        (values.description || '').trim() ||
+                        (values.tags && values.tags.length > 0) ||
+                        coverFileList.length > 0;
+
+      if (hasContent) {
+        // 比较当前表单数据与上次保存的是否不同
+        const currentFormData = {
+          ...values,
+          coverFileList: coverFileList.map(file => ({
+            uid: file.uid,
+            name: file.name,
+            status: file.status,
+            url: file.url
+          }))
+        };
+        const currentFormStr = JSON.stringify(currentFormData);
+
+        if (currentFormStr !== lastSavedFormRef.current) {
+          console.log('🔄 检测到表单变化，自动保存草稿...');
+          saveDraft();
+          lastSavedFormRef.current = currentFormStr;
+        }
+      }
+    }, 60000); // 60秒检查一次
+
+    return () => clearInterval(autoSaveInterval);
+  }, [coverFileList]); // 依赖 coverFileList 的变化
 
   // 表单提交
   const onFinish = async (values: any) => {
@@ -540,6 +583,8 @@ export default function PublishBookPage() {
       <FloatingActions
         onPublish={() => form.submit()}
         onSave={saveDraft}
+        onLoadDraft={loadDraft}
+        onClearDraft={clearDraft}
         form={form}
         blocks={blocks}
         isPreviewMode={isPreviewMode}
