@@ -33,6 +33,7 @@ import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
+import { FloatingActions } from '@/app/components/float/PublishFloat';
 
 const { Option } = Select;
 
@@ -368,13 +369,6 @@ export default function PublishArticlePage() {
             }}>
               ✍️ 创作文章
             </h2>
-            <p style={{ 
-              margin: '8px 0 0 0', 
-              color: 'rgba(255,255,255,0.8)',
-              fontSize: '14px',
-            }}>
-              使用块编辑器，自由组织你的内容
-            </p>
             {user && (
               <div style={{
                 marginTop: '12px',
@@ -426,7 +420,6 @@ export default function PublishArticlePage() {
               }}
             >
               <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>📝 文章信息</h3>
                 <Space>
                   <Button onClick={loadDraft}>加载草稿</Button>
                   <Button icon={<SaveOutlined />} onClick={saveDraft}>
@@ -453,7 +446,9 @@ export default function PublishArticlePage() {
                 name="tags"
                 tooltip="添加标签可以帮助读者更好地找到你的文章"
               >
-                <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
+                <TagInput 
+                placeholder="输入标签，按空格或回车添加" maxTags={10} 
+                />
               </Form.Item>
 
               <Form.Item
@@ -474,12 +469,10 @@ export default function PublishArticlePage() {
             >
               <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Space>
-                  <Tag color="blue">{stats.totalBlocks} 个块</Tag>
                   <Tag color="green">{stats.textBlocks} 文字</Tag>
                   <Tag color="orange">{stats.imageBlocks} 图片</Tag>
                   <Tag color="purple">{stats.codeBlocks} 代码</Tag>
                   <Tag>{stats.totalChars} 字</Tag>
-                  <Tag>约 {stats.estimatedReadTime} 分钟阅读</Tag>
                   
                   {stats.textBlocks > 0 && !isPreviewMode && (
                     <Dropdown menu={{ items: batchFormatMenuItems }} placement="bottomRight">
@@ -488,7 +481,7 @@ export default function PublishArticlePage() {
                         size="small"
                         icon={<ThunderboltOutlined />}
                       >
-                        批量格式化
+                        格式化
                       </Button>
                     </Dropdown>
                   )}
@@ -617,7 +610,7 @@ export default function PublishArticlePage() {
               )}
             </Card>
 
-            <Card
+            {/* <Card
               style={{
                 borderRadius: '12px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -682,10 +675,19 @@ export default function PublishArticlePage() {
                   <li>记得定期保存草稿，避免内容丢失</li>
                 </ul>
               </div>
-            </Card>
+            </Card> */}
           </Form>
         </div>
       </PageLayout>
+
+      <FloatingActions
+        onPublish={() => form.submit()}
+        onSave={saveDraft}
+        form={form}
+        blocks={blocks}
+        isPreviewMode={isPreviewMode}
+        setIsPreviewMode={setIsPreviewMode}
+      />
     </>
   );
 }

@@ -160,7 +160,7 @@ export default function NavigationDrawer({
       maskClosable={true}
       styles={{
         body: {
-          padding: isMobile ? '10px 0px' : '0px 24px',
+          padding: isMobile ? '15px 0px' : '0px 24px',
           background: 'rgba(0, 0, 0, 0.85)',
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
@@ -211,7 +211,7 @@ export default function NavigationDrawer({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 color: 'white',
-                fontSize: '15px',
+                fontSize: '16px',
               }}
               onClick={() => {
                 setShowUserMenu(true);
