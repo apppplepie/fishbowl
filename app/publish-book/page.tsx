@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Form,
   Input,
@@ -26,6 +26,7 @@ import TagInput from '@/app/components/TagInput';
 import type { Block } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
 
 const { TextArea } = Input;
 
@@ -40,6 +41,77 @@ export default function PublishBookPage() {
   // 封面图片状态
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+  // 组件挂载时尝试加载草稿
+  useEffect(() => {
+    loadDraft();
+  }, []);
+
+  // 为悬浮按钮提供必要的状态
+  const [blocks] = useState<Block[]>([]);
+
+  // 保存草稿功能
+  const saveDraft = () => {
+    const values = form.getFieldsValue();
+    const author = user?.username || '匿名';
+
+    // 处理封面图片数据
+    const coverImage = coverFileList.length > 0 ? coverFileList[0] : null;
+
+    const draft = {
+      id: `book-draft-${Date.now()}`,
+      title: values.title || '未命名书籍草稿',
+      description: values.description || '',
+      author: author,
+      tags: values.tags || [],
+      coverFileList: coverImage ? [{
+        uid: coverImage.uid,
+        name: coverImage.name,
+        status: coverImage.status,
+        url: coverImage.url,
+        response: coverImage.response
+      }] : [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    console.log('保存书籍草稿:', draft);
+
+    // 保存到本地存储
+    localStorage.setItem('book-draft', JSON.stringify(draft));
+
+    message.success('书籍草稿已保存到本地');
+  };
+
+  // 加载草稿
+  const loadDraft = () => {
+    const draftStr = localStorage.getItem('book-draft');
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+
+        // 恢复表单数据
+        form.setFieldsValue({
+          title: draft.title,
+          description: draft.description,
+          tags: draft.tags,
+        });
+
+        // 恢复封面图片
+        if (draft.coverFileList && draft.coverFileList.length > 0) {
+          setCoverFileList(draft.coverFileList);
+        }
+
+        message.success('已恢复上次保存的草稿');
+        return true;
+      } catch (error) {
+        console.error('加载草稿失败:', error);
+        message.error('加载草稿失败');
+        return false;
+      }
+    }
+    return false;
+  };
 
   // 表单提交
   const onFinish = async (values: any) => {
@@ -137,9 +209,10 @@ export default function PublishBookPage() {
       if (articleResponse.ok && articleResult.success) {
         console.log('成功创建书籍文章:', articleResult.article.id, '分类ID:', categoryId);
         message.success('书籍发布成功！');
-        // 清空表单
+        // 清空表单和草稿
         form.resetFields();
         setCoverFileList([]);
+        localStorage.removeItem('book-draft');
         // 跳转到bookcase页面
         setTimeout(() => {
           router.push('/bookcase');
@@ -463,6 +536,16 @@ export default function PublishBookPage() {
           </Form>
         </div>
       </PageLayout>
+
+      <FloatingActions
+        onPublish={() => form.submit()}
+        onSave={saveDraft}
+        form={form}
+        blocks={blocks}
+        isPreviewMode={isPreviewMode}
+        setIsPreviewMode={setIsPreviewMode}
+        exitPath="/bookcase"
+      />
     </>
   );
 }

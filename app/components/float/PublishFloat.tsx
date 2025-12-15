@@ -3,7 +3,7 @@
 // Force recompile - updated import structure
 
 import React, { useState } from 'react';
-import { FloatButton, message } from 'antd';
+import { FloatButton, message, Modal } from 'antd';
 import {
   PlusOutlined,
   SaveOutlined,
@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 
 export interface FloatingActionsProps {
   onPublish: () => void
-  onSave: () => void
+  onSave: () => void | Promise<void>
   form: FormInstance<any>
   blocks: Array<any>
   isPreviewMode: boolean
@@ -77,12 +77,58 @@ export default function FloatingActions({
   };
 
   const handleExit = () => {
-    if (onExit) {
-      onExit()
-    } else if (exitPath) {
-      router.push(exitPath)
+    // 检查表单是否有未保存的更改
+    const formValues = form.getFieldsValue();
+    const hasContent = blocks.length > 0 || Object.values(formValues).some(value =>
+      value !== undefined && value !== null && value !== ''
+    );
+
+    if (hasContent) {
+      // 如果有内容，显示确认对话框
+      Modal.confirm({
+        title: '退出确认',
+        content: '您有未保存的内容，是否要保存草稿后再退出？',
+        okText: '保存草稿并退出',
+        cancelText: '直接退出',
+        onOk: async () => {
+          try {
+            // 先保存草稿
+            const result = onSave();
+            if (result instanceof Promise) {
+              await result;
+            }
+            // 然后退出
+            if (onExit) {
+              onExit();
+            } else if (exitPath) {
+              router.push(exitPath);
+            } else {
+              router.back();
+            }
+          } catch (error) {
+            message.error('保存草稿失败');
+          }
+        },
+        onCancel: () => {
+          // 直接退出
+          if (onExit) {
+            onExit();
+          } else if (exitPath) {
+            router.push(exitPath);
+          } else {
+            router.back();
+          }
+        },
+      });
     } else {
-      router.back()
+      // 如果没有内容，直接退出
+      if (onExit) {
+        onExit();
+      } else if (exitPath) {
+        router.push(exitPath);
+      } else {
+        router.back();
+      }
     }
   }
 
