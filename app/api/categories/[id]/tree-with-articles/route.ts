@@ -84,14 +84,14 @@ async function getTreeNodes(parentId: string): Promise<TreeNode[]> {
 
   // 3) 一次性查询所有属于这些 categories 的 articles（只有 published）
   //    这里通过 categories.path 做 JOIN，并在 SQL 中尽量少做字符串操作，方便索引使用
-  //    我们仍然需要 article 的最终 path（category.path + '-' + LPAD(article.order_in_category,6,'0')）
+  //    我们仍然需要 article 的最终 path（category.path + '-' + LPAD(article.order_index,6,'0')）
   const articles = await query<any[]>(
-    `SELECT a.id, a.title, a.type, a.published_at, a.order_in_category, a.category_id,
+    `SELECT a.id, a.title, a.type, a.published_at, a.order_index, a.category_id,
             c.path AS category_path, c.depth AS category_depth, c.order_index AS category_order_index
      FROM articles a
      JOIN categories c ON a.category_id = c.id
      WHERE c.path LIKE ? AND a.status = 'published'
-     ORDER BY c.path ASC, a.order_in_category ASC`,
+     ORDER BY c.path ASC, a.order_index ASC`,
     [likePattern]
   );
 
@@ -114,7 +114,7 @@ async function getTreeNodes(parentId: string): Promise<TreeNode[]> {
   // 5) map articles -> TreeNode (生成 article.path = category.path + '-' + LPAD(order,6,'0'))
   for (const article of articles) {
     const catPath = article.category_path ?? parentPath; // 容错
-    const artPath = `${catPath}-${String(article.order_in_category).padStart(6, '0')}`;
+    const artPath = `${catPath}-${String(article.order_index).padStart(6, '0')}`;
 
     nodes.push({
       id: article.id,
@@ -122,7 +122,7 @@ async function getTreeNodes(parentId: string): Promise<TreeNode[]> {
       parent_id: article.category_id,
       path: artPath,
       depth: (article.category_depth ?? 0) + 1,
-      order_index: article.order_in_category,
+      order_index: article.order_index,
       node_type: 'article',
       type: article.type,
       published_at: article.published_at,

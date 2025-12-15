@@ -73,7 +73,7 @@ END;
 ```sql
 ALTER TABLE articles 
   ADD COLUMN category_id VARCHAR(36),        -- 所属分类
-  ADD COLUMN order_in_category INT DEFAULT 0; -- 分类内排序
+  ADD COLUMN order_index INT DEFAULT 0; -- 分类内排序
 ```
 
 ### 3. 默认分类树结构
@@ -262,7 +262,7 @@ WITH RECURSIVE category_tree AS (
 )
 SELECT a.* FROM articles a
 WHERE a.category_id IN (SELECT id FROM category_tree)
-ORDER BY a.order_in_category ASC;
+ORDER BY a.order_index ASC;
 ```
 
 ### 3. 获取文章的分类路径（面包屑）
@@ -289,7 +289,7 @@ npx ts-node --project tsconfig.node.json scripts/add-categories.ts
 
 **迁移内容：**
 1. 创建 `categories` 表
-2. 为 `articles` 表添加 `category_id` 和 `order_in_category` 字段
+2. 为 `articles` 表添加 `category_id` 和 `order_index` 字段
 3. 创建默认分类树
 4. 创建必要的索引
 

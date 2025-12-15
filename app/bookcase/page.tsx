@@ -247,7 +247,7 @@ function BookcasePageContent() {
           limit: '1000', // 获取该分类及其所有子分类的所有文章
           offset: '0',
           categoryId: categoryFromUrl,
-          orderByPath: 'true', // 按path和order_in_category排序
+          orderByPath: 'true', // 按path和order_index排序
         });
 
         const response = await fetch(`/api/articles/list?${params.toString()}`);

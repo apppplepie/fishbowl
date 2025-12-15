@@ -99,7 +99,7 @@ onDrop: TreeProps['onDrop'] = async (info) => {
   // 判断拖动类型
   if (isDraggingArticle) {
     // 处理文章拖动
-    // 更新 article.category_id 和 order_in_category
+    // 更新 article.category_id 和 order_index
   } else if (isDraggingCategory) {
     // 处理分类拖动
     // 更新 category.parent_id 和 order_index

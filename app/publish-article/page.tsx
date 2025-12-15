@@ -182,8 +182,8 @@ export default function PublishArticlePage() {
     // 设置默认分类和计算排序
     const categoryId = values.category_id || 'cat_uncategorized';
 
-    // 计算 order_in_category：找到当前分类下最大的 order 值 + 1
-    // 需要同时考虑子分类的 order_index 和文章的 order_in_category
+    // 计算 order_index：找到当前分类下最大的 order 值 + 1
+    // 需要同时考虑子分类的 order_index 和文章的 order_index
     let orderInCategory = 0;
     try {
       const token = localStorage.getItem('token');
@@ -212,7 +212,7 @@ export default function PublishArticlePage() {
         console.warn('获取子分类排序信息失败:', error);
       }
 
-      // 2. 查询当前分类下的所有文章，获取最大的 order_in_category
+      // 2. 查询当前分类下的所有文章，获取最大的 order_index
       let maxArticleOrder = 0;
       try {
         const articleResponse = await fetch(`/api/articles?category=${categoryId}&limit=1000&sort=order_desc`, {
@@ -225,7 +225,7 @@ export default function PublishArticlePage() {
           const articleData = await articleResponse.json();
           if (articleData.articles && articleData.articles.length > 0) {
             maxArticleOrder = Math.max(
-              ...articleData.articles.map((article: any) => article.order_in_category || 0)
+              ...articleData.articles.map((article: any) => article.order_index || 0)
             );
           }
         }
@@ -247,7 +247,7 @@ export default function PublishArticlePage() {
       excerpt,
       tags: values.tags || [],
       category_id: categoryId,
-      order_in_category: orderInCategory,
+      order_index: orderInCategory,
       blocks: blocks,
       status: 'published' as const,
     };

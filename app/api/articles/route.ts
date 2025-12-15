@@ -28,7 +28,7 @@ interface CreateArticleRequest {
   blocks: Block[];
   tags?: string[];
   category_id?: string | null;
-  order_in_category?: number;
+  order_index?: number;
   status?: 'draft' | 'published';
   type?: 'text' | 'image' | 'code' | 'drawing';
 }
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     // 2. 插入文章记录（使用当前登录用户作者）
     await query(
       `INSERT INTO articles
-       (id, title, author, author_id, published_at, excerpt, type, category_id, order_in_category, status, likes, shares, comments)
+       (id, title, author, author_id, published_at, excerpt, type, category_id, order_index, status, likes, shares, comments)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         excerpt,
         articleType,
         body.category_id || 'cat_uncategorized',  // 默认分类
-        body.order_in_category || 0,
+        body.order_index || 0,
         body.status || 'published',
       ]
     );
@@ -276,16 +276,16 @@ export async function GET(request: NextRequest) {
     // 构建排序条件
     let orderClause = 'ORDER BY updated_at DESC, published_at DESC';
     if (sort === 'order_desc') {
-      orderClause = 'ORDER BY order_in_category DESC, updated_at DESC';
+      orderClause = 'ORDER BY order_index DESC, updated_at DESC';
     } else if (sort === 'order_asc') {
-      orderClause = 'ORDER BY order_in_category ASC, updated_at DESC';
+      orderClause = 'ORDER BY order_index ASC, updated_at DESC';
     }
 
     // 使用字符串拼接而不是参数绑定（LIMIT 和 OFFSET 不支持 ? 占位符）
     const articles = await query<any[]>(
       `SELECT
         id, title, author, published_at, created_at, updated_at,
-        excerpt, type, status, likes, shares, comments, category_id, order_in_category
+        excerpt, type, status, likes, shares, comments, category_id, order_index
        FROM articles
        ${whereClause}
        ${orderClause}

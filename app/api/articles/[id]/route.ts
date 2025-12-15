@@ -60,26 +60,26 @@ export async function PUT(
     }
 
     // 4. 如果涉及分类或顺序调整，需要先处理同级所有节点的顺序（包括分类和文章）
-    if (body.category_id !== undefined || body.order_in_category !== undefined) {
+    if (body.category_id !== undefined || body.order_index !== undefined) {
       // 获取当前文章的分类和顺序
       const currentArticle = await query<any[]>(
-        'SELECT category_id, order_in_category FROM articles WHERE id = ?',
+        'SELECT category_id, order_index FROM articles WHERE id = ?',
         [articleId]
       );
 
       if (currentArticle.length > 0) {
         const oldCategoryId = currentArticle[0].category_id;
-        const oldOrder = currentArticle[0].order_in_category;
+        const oldOrder = currentArticle[0].order_index;
         const newCategoryId = body.category_id !== undefined ? body.category_id : oldCategoryId;
-        const newOrder = body.order_in_category !== undefined ? body.order_in_category : oldOrder;
+        const newOrder = body.order_index !== undefined ? body.order_index : oldOrder;
 
         const isSameCategory = oldCategoryId === newCategoryId;
 
         // 如果是同分类移动且指定了新顺序
-        if (isSameCategory && newOrder !== oldOrder && body.order_in_category !== undefined) {
+        if (isSameCategory && newOrder !== oldOrder && body.order_index !== undefined) {
           // 先将当前文章的顺序设为临时值
           await query(
-            'UPDATE articles SET order_in_category = -1 WHERE id = ?',
+            'UPDATE articles SET order_index = -1 WHERE id = ?',
             [articleId]
           );
 
@@ -99,8 +99,8 @@ export async function PUT(
             // 更新文章
             await query(
               `UPDATE articles 
-               SET order_in_category = order_in_category + 1 
-               WHERE category_id = ? AND order_in_category >= ? AND order_in_category < ? AND id != ?`,
+               SET order_index = order_index + 1 
+               WHERE category_id = ? AND order_index >= ? AND order_index < ? AND id != ?`,
               [newCategoryId, newOrder, oldOrder, articleId]
             );
           } else {
@@ -118,12 +118,12 @@ export async function PUT(
             // 更新文章
             await query(
               `UPDATE articles 
-               SET order_in_category = order_in_category - 1 
-               WHERE category_id = ? AND order_in_category > ? AND order_in_category <= ? AND id != ?`,
+               SET order_index = order_index - 1 
+               WHERE category_id = ? AND order_index > ? AND order_index <= ? AND id != ?`,
               [newCategoryId, oldOrder, newOrder, articleId]
             );
           }
-        } else if (!isSameCategory && body.order_in_category !== undefined) {
+        } else if (!isSameCategory && body.order_index !== undefined) {
           // 不同分类移动：在目标分类中为所有节点（分类和文章）腾出空间
           // 更新分类
           await query(
@@ -136,8 +136,8 @@ export async function PUT(
           // 更新文章
           await query(
             `UPDATE articles 
-             SET order_in_category = order_in_category + 1 
-             WHERE category_id = ? AND order_in_category >= ? AND id != ?`,
+             SET order_index = order_index + 1 
+             WHERE category_id = ? AND order_index >= ? AND id != ?`,
             [newCategoryId, newOrder, articleId]
           );
         }
@@ -167,10 +167,10 @@ export async function PUT(
       updateValues.push(body.category_id);
     }
 
-    // 如果提供了 order_in_category，更新顺序
-    if (body.order_in_category !== undefined) {
-      updateFields.push('order_in_category = ?');
-      updateValues.push(body.order_in_category);
+    // 如果提供了 order_index，更新顺序
+    if (body.order_index !== undefined) {
+      updateFields.push('order_index = ?');
+      updateValues.push(body.order_index);
     }
 
     // 如果提供了 excerpt，更新摘要

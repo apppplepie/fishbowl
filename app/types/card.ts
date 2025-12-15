@@ -75,11 +75,11 @@ export interface LinkCard extends BaseCard {
 export interface BookCard extends BaseCard {
   type: 'book';
   title: string; // 书名（目录名）
-  description: string; // 简介（来自 order_in_category 最小的文章的摘要）
-  coverImage: string; // 封面图（来自 order_in_category 最小的文章的第一张图片）
+  description: string; // 简介（来自 order_index 最小的文章的摘要）
+  coverImage: string; // 封面图（来自 order_index 最小的文章的第一张图片）
   author: string; // 作者
   updatedAt: string; // 更新日期
-  mainArticleId: string; // 主要文章ID（order_in_category 最小的文章）
+  mainArticleId: string; // 主要文章ID（order_index 最小的文章）
 }
 
 export type Card = ImageCard | ArticleCard | DiaryCard | QuoteCard | VideoCard | LinkCard | BookCard;

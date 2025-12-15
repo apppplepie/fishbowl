@@ -96,8 +96,8 @@ export default function PublishChapterPage() {
   // 自动保存相关
   const lastSavedBlocksRef = useRef<string>('');
 
-  // 获取下一个order_in_category值
-  // 需要考虑同一节点下的categories的order_index和articles的order_in_category不能重复
+  // 获取下一个order_index值
+  // 需要考虑同一节点下的categories的order_index和articles的order_index不能重复
   const getNextOrderInCategory = async (categoryId: string): Promise<number> => {
     try {
       let maxOrder = 0;
@@ -118,9 +118,9 @@ export default function PublishChapterPage() {
         }
       }
 
-      // 获取子文章的最大order_in_category
+      // 获取子文章的最大order_index
       if (articlesResponse.ok && articlesResult.success && articlesResult.articles) {
-        const articleOrders = articlesResult.articles.map((article: any) => article.order_in_category || 0);
+        const articleOrders = articlesResult.articles.map((article: any) => article.order_index || 0);
         if (articleOrders.length > 0) {
           maxOrder = Math.max(maxOrder, ...articleOrders);
         }
@@ -128,12 +128,12 @@ export default function PublishChapterPage() {
 
       return maxOrder + 1;
     } catch (error) {
-      console.error('获取order_in_category失败:', error);
+      console.error('获取order_index失败:', error);
       return 1;
     }
   };
 
-  // 初始化时获取order_in_category和分类名称
+  // 初始化时获取order_index和分类名称
   useEffect(() => {
     if (categoryFromUrl) {
       getNextOrderInCategory(categoryFromUrl).then(setNextOrderInCategory);
@@ -185,7 +185,7 @@ export default function PublishChapterPage() {
       excerpt,
       tags: values.tags || [],
       category_id: categoryFromUrl,
-      order_in_category: nextOrderInCategory,
+      order_index: nextOrderInCategory,
       blocks: blocks,
       status: 'published' as const,
     };
@@ -248,7 +248,7 @@ export default function PublishChapterPage() {
       author: author,
       tags: values.tags || [],
       category_id: categoryFromUrl,
-      order_in_category: nextOrderInCategory,
+      order_index: nextOrderInCategory,
       blocks: blocks,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

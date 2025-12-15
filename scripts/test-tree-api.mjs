@@ -53,12 +53,12 @@ async function testTreeAPI() {
 
     // 3. 查询这本书下的所有文章
     const [articles] = await connection.execute(`
-      SELECT a.id, a.title, a.type, a.order_in_category, a.category_id,
+      SELECT a.id, a.title, a.type, a.order_index, a.category_id,
              c.path AS category_path, c.depth AS category_depth
       FROM articles a
       JOIN categories c ON a.category_id = c.id
       WHERE c.path LIKE ? AND a.status = 'published'
-      ORDER BY c.path ASC, a.order_in_category ASC
+      ORDER BY c.path ASC, a.order_index ASC
     `, [likePattern]);
 
     console.log(`📝 找到 ${articles.length} 个文章：`);
