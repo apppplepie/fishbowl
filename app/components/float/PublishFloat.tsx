@@ -17,6 +17,8 @@ import { useRouter } from 'next/navigation';
 export interface FloatingActionsProps {
   onPublish: () => void
   onSave: () => void | Promise<void>
+  onLoadDraft?: () => void // 读取草稿的回调
+  onClearDraft?: () => void // 清除草稿的回调
   form: FormInstance<any>
   blocks: Array<any>
   isPreviewMode: boolean
@@ -36,6 +38,8 @@ export interface FloatingActionsProps {
 export default function FloatingActions({
   onPublish,
   onSave,
+  onLoadDraft,
+  onClearDraft,
   form,
   blocks,
   isPreviewMode,
@@ -110,7 +114,11 @@ export default function FloatingActions({
           }
         },
         onCancel: () => {
-          // 直接退出
+          // 直接退出前清除草稿
+          if (onClearDraft) {
+            onClearDraft();
+          }
+          // 然后退出
           if (onExit) {
             onExit();
           } else if (exitPath) {
@@ -151,11 +159,19 @@ export default function FloatingActions({
         tooltip={{ title: '发布文章', placement: 'left' }}
         onClick={onPublish}
       />
-      <FloatButton
-        icon={<SaveOutlined />}
-        tooltip={{ title: '保存草稿', placement: 'left' }}
-        onClick={onSave}
-      />
+      {/* {blocks.length > 0 ? (
+        <FloatButton
+          icon={<SaveOutlined />}
+          tooltip={{ title: '保存草稿', placement: 'left' }}
+          onClick={onSave}
+        />
+      ) : (
+        <FloatButton
+          icon={<SaveOutlined />}
+          tooltip={{ title: '读取草稿', placement: 'left' }}
+          onClick={onLoadDraft || (() => {})}
+        />
+      )} */}
       <FloatButton
         icon={<EyeOutlined />}
         tooltip={{ title: isPreviewMode ? '退出预览' : '预览', placement: 'left' }}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Form,
   Input,
@@ -61,6 +61,24 @@ export default function PublishChapterPage() {
     }
   }, [isLoggedIn, user]);
 
+  // 页面加载时自动读取草稿
+  React.useEffect(() => {
+    const draftStr = localStorage.getItem('chapter-draft');
+    if (draftStr) {
+      try {
+        const draft: Article = JSON.parse(draftStr);
+        form.setFieldsValue({
+          title: draft.title,
+          tags: draft.tags,
+        });
+        setBlocks(draft.blocks || []);
+        console.log('✅ 自动加载了章节草稿');
+      } catch (error) {
+        console.warn('自动加载章节草稿失败:', error);
+      }
+    }
+  }, []);
+
   // 初始化一个空的文字块
   const [blocks, setBlocks] = useState<Block[]>([
     {
@@ -74,6 +92,9 @@ export default function PublishChapterPage() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [nextOrderInCategory, setNextOrderInCategory] = useState(1);
   const [categoryName, setCategoryName] = useState<string>('');
+
+  // 自动保存相关
+  const lastSavedBlocksRef = useRef<string>('');
 
   // 获取下一个order_in_category值
   // 需要考虑同一节点下的categories的order_index和articles的order_in_category不能重复
@@ -261,6 +282,36 @@ export default function PublishChapterPage() {
     }
   };
 
+  // 清除草稿
+  const clearDraft = () => {
+    localStorage.removeItem('chapter-draft');
+    console.log('已清除章节草稿');
+  };
+
+  // 自动保存草稿 - 每60秒检查一次
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      // 检查 blocks 是否有实际内容且有更新
+      const hasContent = blocks.some(block => {
+        if (block.type === 'text') return (block.content || '').trim().length > 0;
+        if (block.type === 'code') return (block.code || '').trim().length > 0;
+        if (block.type === 'image') return true;
+        return false;
+      });
+
+      if (hasContent) {
+        // 比较当前 blocks 与上次保存的是否不同
+        const currentBlocksStr = JSON.stringify(blocks);
+        if (currentBlocksStr !== lastSavedBlocksRef.current) {
+          console.log('🔄 检测到内容变化，自动保存草稿...');
+          saveDraft();
+          lastSavedBlocksRef.current = currentBlocksStr;
+        }
+      }
+    }, 60000); // 60秒检查一次
+
+    return () => clearInterval(autoSaveInterval);
+  }, [blocks]);
 
   // 统计信息
   const getStatistics = () => {
@@ -622,6 +673,8 @@ export default function PublishChapterPage() {
       <FloatingActions
         onPublish={() => form.submit()}
         onSave={saveDraft}
+        onLoadDraft={loadDraft}
+        onClearDraft={clearDraft}
         form={form}
         blocks={blocks}
         isPreviewMode={isPreviewMode}

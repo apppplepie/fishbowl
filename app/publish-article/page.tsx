@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Form, 
   Input, 
@@ -99,7 +99,25 @@ export default function PublishArticlePage() {
       testTokenValidity();
     }
   }, [isLoggedIn, user]);
-  
+
+  // 页面加载时自动读取草稿
+  React.useEffect(() => {
+    const draftStr = localStorage.getItem('article-draft');
+    if (draftStr) {
+      try {
+        const draft: Article = JSON.parse(draftStr);
+        form.setFieldsValue({
+          title: draft.title,
+          tags: draft.tags,
+        });
+        setBlocks(draft.blocks || []);
+        console.log('✅ 自动加载了文章草稿');
+      } catch (error) {
+        console.warn('自动加载草稿失败:', error);
+      }
+    }
+  }, []);
+
   // 初始化一个空的文字块
   const [blocks, setBlocks] = useState<Block[]>([
     {
@@ -111,6 +129,34 @@ export default function PublishArticlePage() {
   ]);
   
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+  // 自动保存相关
+  const lastSavedBlocksRef = useRef<string>('');
+
+  // 自动保存草稿 - 每60秒检查一次
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      // 检查 blocks 是否有实际内容且有更新
+      const hasContent = blocks.some(block => {
+        if (block.type === 'text') return (block.content || '').trim().length > 0;
+        if (block.type === 'code') return (block.code || '').trim().length > 0;
+        if (block.type === 'image') return true;
+        return false;
+      });
+
+      if (hasContent) {
+        // 比较当前 blocks 与上次保存的是否不同
+        const currentBlocksStr = JSON.stringify(blocks);
+        if (currentBlocksStr !== lastSavedBlocksRef.current) {
+          console.log('🔄 检测到内容变化，自动保存草稿...');
+          saveDraft();
+          lastSavedBlocksRef.current = currentBlocksStr;
+        }
+      }
+    }, 60000); // 60秒检查一次
+
+    return () => clearInterval(autoSaveInterval);
+  }, [blocks]);
 
   // 表单提交
   const onFinish = async (values: any) => {
@@ -326,6 +372,11 @@ export default function PublishArticlePage() {
     }
   };
 
+  // 清除草稿
+  const clearDraft = () => {
+    localStorage.removeItem('article-draft');
+    console.log('已清除文章草稿');
+  };
 
   // 统计信息
   const getStatistics = () => {
@@ -747,6 +798,8 @@ export default function PublishArticlePage() {
       <FloatingActions
         onPublish={() => form.submit()}
         onSave={saveDraft}
+        onLoadDraft={loadDraft}
+        onClearDraft={clearDraft}
         form={form}
         blocks={blocks}
         isPreviewMode={isPreviewMode}
