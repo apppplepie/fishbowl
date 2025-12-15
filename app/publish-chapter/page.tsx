@@ -367,13 +367,6 @@ export default function PublishChapterPage() {
             }}>
               📄 发布章节
             </h2>
-            <p style={{
-              margin: '8px 0 0 0',
-              color: 'rgba(255,255,255,0.8)',
-              fontSize: '14px',
-            }}>
-              为当前目录添加新的章节内容
-            </p>
             {user && (
               <div style={{
                 marginTop: '12px',
@@ -620,73 +613,6 @@ export default function PublishChapterPage() {
                 // 编辑模式：显示块编辑器
                 <BlockEditor blocks={blocks} onChange={setBlocks} showAddButton={false} />
               )}
-            </Card>
-
-            <Card
-              style={{
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              }}
-            >
-              <Space size="large">
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  size="large"
-                  icon={<PlusOutlined />}
-                  style={{ minWidth: '140px' }}
-                >
-                  发布章节
-                </Button>
-
-                <Button
-                  size="large"
-                  icon={<SaveOutlined />}
-                  onClick={saveDraft}
-                  style={{ minWidth: '140px' }}
-                >
-                  保存草稿
-                </Button>
-
-                <Button
-                  size="large"
-                  icon={<EyeOutlined />}
-                  onClick={() => {
-                    const values = form.getFieldsValue();
-                    if (!values.title) {
-                      message.warning('请先输入章节标题');
-                      return;
-                    }
-                    if (blocks.length === 0 || !blocks.some(b => {
-                      if (b.type === 'text') return (b as any).content?.trim();
-                      if (b.type === 'code') return (b as any).code?.trim();
-                      if (b.type === 'image') return true;
-                      return false;
-                    })) {
-                      message.warning('请先添加一些内容');
-                      return;
-                    }
-                    setIsPreviewMode(!isPreviewMode);
-                    message.info(isPreviewMode ? '退出预览模式' : '进入预览模式');
-                  }}
-                  type={isPreviewMode ? 'primary' : 'default'}
-                >
-                  {isPreviewMode ? '退出预览' : '预览'}
-                </Button>
-              </Space>
-
-              <Divider />
-
-              <div style={{ color: '#666', fontSize: '13px' }}>
-                <p style={{ margin: '4px 0' }}>💡 <strong>使用提示：</strong></p>
-                <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                  <li>点击"添加新块"按钮创建文字、图片或代码块</li>
-                  <li>鼠标悬停在块上可以看到编辑工具（上移、下移、删除）</li>
-                  <li>在空文字/代码块中按 Backspace 可以快速删除该块</li>
-                  <li>图片块添加后无法修改图片本身，但可以编辑标题和描述</li>
-                  <li>记得定期保存草稿，避免内容丢失</li>
-                </ul>
-              </div>
             </Card>
           </Form>
         </div>
