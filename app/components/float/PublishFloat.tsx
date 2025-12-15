@@ -1,26 +1,39 @@
 'use client';
 
+// Force recompile - updated import structure
+
 import React, { useState } from 'react';
 import { FloatButton, message } from 'antd';
-import { PlusOutlined, SaveOutlined, EyeOutlined, CloseOutlined, MenuOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  SaveOutlined,
+  EyeOutlined,
+  CloseOutlined,
+  MenuOutlined
+} from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 import { useRouter } from 'next/navigation';
 
-// 类型（如果你用 JS 可删去）
 export interface FloatingActionsProps {
-  onPublish: () => void;
-  onSave: () => void;
-  form: FormInstance<any>;
-  blocks: Array<any>;
-  isPreviewMode: boolean;
-  setIsPreviewMode: (v: boolean) => void;
-  onExit?: () => void; // 退出页面的回调
-  minWidth?: number | string;      // 单个按钮的最小宽度，默认 140
-  position?: { right?: number; bottom?: number }; // 自定义位置
-  className?: string;
+  onPublish: () => void
+  onSave: () => void
+  form: FormInstance<any>
+  blocks: Array<any>
+  isPreviewMode: boolean
+  setIsPreviewMode: (v: boolean) => void
+  onExit?: () => void
+  exitPath?: string // 退出时跳转的路径，如果提供则优先使用
+  minWidth?: number | string
+  position?: { right?: number; bottom?: number }
+  className?: string
 }
 
-export const FloatingActions: React.FC<FloatingActionsProps> = ({
+/**
+ * 文章发布悬浮按钮组件
+ * 提供发布文章、保存草稿、预览和退出页面的功能
+ * 使用可展开的按钮组，默认收起状态
+ */
+export default function FloatingActions({
   onPublish,
   onSave,
   form,
@@ -28,11 +41,12 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
   isPreviewMode,
   setIsPreviewMode,
   onExit,
+  exitPath,
   position,
   className,
-}) => {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
+}: FloatingActionsProps) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
 
   const validateBeforePreview = (): boolean => {
     const values = form.getFieldsValue();
@@ -64,12 +78,13 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
 
   const handleExit = () => {
     if (onExit) {
-      onExit();
+      onExit()
+    } else if (exitPath) {
+      router.push(exitPath)
     } else {
-      // 默认返回上一页
-      router.back();
+      router.back()
     }
-  };
+  }
 
   return (
     <FloatButton.Group
@@ -78,35 +93,35 @@ export const FloatingActions: React.FC<FloatingActionsProps> = ({
       icon={<MenuOutlined />}
       trigger="click"
       style={{
-        right: position?.right ?? 24,
-        bottom: position?.bottom ?? 24,
+        insetInlineEnd: position?.right ?? 24,
+        bottom: position?.bottom ?? 24
       }}
       className={className}
+      tooltip={{ title: '操作', placement: 'left' }}
+      type="primary"
     >
       <FloatButton
         icon={<PlusOutlined />}
-        tooltip={{ title: "发布文章", placement: "left" }}
+        tooltip={{ title: '发布文章', placement: 'left' }}
         onClick={onPublish}
       />
       <FloatButton
         icon={<SaveOutlined />}
-        tooltip={{ title: "保存草稿", placement: "left" }}
+        tooltip={{ title: '保存草稿', placement: 'left' }}
         onClick={onSave}
       />
       <FloatButton
         icon={<EyeOutlined />}
-        tooltip={{ title: isPreviewMode ? "退出预览" : "预览", placement: "left" }}
+        tooltip={{ title: isPreviewMode ? '退出预览' : '预览', placement: 'left' }}
         type={isPreviewMode ? 'primary' : 'default'}
         onClick={handlePreviewToggle}
       />
       <FloatButton
         icon={<CloseOutlined />}
-        tooltip={{ title: "退出页面", placement: "left" }}
+        tooltip={{ title: '退出页面', placement: 'left' }}
         onClick={handleExit}
         style={{ backgroundColor: '#ff4d4f' }}
       />
     </FloatButton.Group>
   );
-};
-
-export default FloatingActions;
+}

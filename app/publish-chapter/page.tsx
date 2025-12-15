@@ -33,6 +33,7 @@ import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
+import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
 
 const { Option } = Select;
 
@@ -617,6 +618,16 @@ export default function PublishChapterPage() {
           </Form>
         </div>
       </PageLayout>
+
+      <FloatingActions
+        onPublish={() => form.submit()}
+        onSave={saveDraft}
+        form={form}
+        blocks={blocks}
+        isPreviewMode={isPreviewMode}
+        setIsPreviewMode={setIsPreviewMode}
+        exitPath="/bookcase"
+      />
     </>
   );
 }
