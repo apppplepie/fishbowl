@@ -627,91 +627,10 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         }
       }
 
-      // 处理分类拖拽
+      // 禁用分类拖拽 - 不允许移动目录顺序
       else if (dragNode.node_type === 'category') {
-        const categoryId = dragNode.id;
-        let newParentId: string | null;
-        let newOrderIndex: number | undefined;
-
-        if (!info.dropToGap) {
-          // 放到分类内部，成为子分类（不同级）
-          if (!isDropOnCategory) {
-            message.warning('目录只能放到其他目录下');
-            return;
-          }
-          if (dropNode.id === categoryId) {
-            message.warning('不能将目录移动到自己下面');
-            return;
-          }
-          newParentId = dropNode.id;
-          newOrderIndex = undefined; // 不同级，不指定顺序
-        } else {
-          // 放到节点之间
-          if (dropNode.node_type === 'article') {
-            // 在混排情况下，目录可以拖到文章之间
-            // 使用文章的父分类作为目标父节点
-            newParentId = dropNode.parent_id || bookRootId || '';
-            
-            // 判断是否同级
-            const isSameLevel = dragNode.parent_id === newParentId;
-            if (isSameLevel) {
-              // 同级：使用文章的顺序
-              if (dropPosition === -1) {
-                newOrderIndex = dropNode.order_index;
-              } else {
-                newOrderIndex = dropNode.order_index + 1;
-              }
-            } else {
-              // 不同级：不指定顺序
-              newOrderIndex = undefined;
-            }
-          } else {
-            // 放到分类之间
-            newParentId = dropNode.parent_id;
-
-            // 判断是否同级
-            const isSameLevel = dragNode.parent_id === dropNode.parent_id;
-            if (isSameLevel) {
-              // 同级：计算精确位置
-              if (dropPosition === -1) {
-                // 放在目标上面
-                newOrderIndex = dropNode.order_index;
-              } else {
-                // 放在目标下面
-                newOrderIndex = dropNode.order_index + 1;
-              }
-            } else {
-              // 不同级：不指定顺序
-              newOrderIndex = undefined;
-            }
-          }
-        }
-
-        // 从 localStorage 获取 token（分类移动也可能需要权限）
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        const headers: HeadersInit = { 'Content-Type': 'application/json' };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        // 使用专门的移动 API
-        const response = await fetch(`/api/categories/${categoryId}/move`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            new_parent_id: newParentId,
-            new_order_index: newOrderIndex !== undefined ? newOrderIndex : 0,
-          }),
-        });
-
-        const result = await response.json();
-        if (result.success) {
-          message.success(newOrderIndex !== undefined ? '目录排序成功' : '目录移动成功');
-          setHasChanges(true); // 标记有改动
-          await loadChapterTree();
-        } else {
-          message.error(result.error || '移动失败');
-        }
+        message.warning('目录顺序不允许修改');
+        return;
       }
 
     } catch (error) {
