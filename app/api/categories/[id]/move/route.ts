@@ -99,9 +99,9 @@ async function adjustSiblingsOrder(
     // 更新文章
     await query(
       `UPDATE articles 
-       SET order_in_category = order_in_category - 1 
+       SET order_index = order_index - 1 
        WHERE ${parentId ? 'category_id = ?' : 'category_id IS NULL'}
-       AND order_in_category > ? AND order_in_category <= ?
+       AND order_index > ? AND order_index <= ?
        ${!movedItemIsCategory ? 'AND id != ?' : ''}`,
       parentId 
         ? (!movedItemIsCategory ? [parentId, oldPosition, newPosition, movedItemId] : [parentId, oldPosition, newPosition])
@@ -124,9 +124,9 @@ async function adjustSiblingsOrder(
     // 更新文章
     await query(
       `UPDATE articles 
-       SET order_in_category = order_in_category + 1 
+       SET order_index = order_index + 1 
        WHERE ${parentId ? 'category_id = ?' : 'category_id IS NULL'}
-       AND order_in_category >= ? AND order_in_category < ?
+       AND order_index >= ? AND order_index < ?
        ${!movedItemIsCategory ? 'AND id != ?' : ''}`,
       parentId 
         ? (!movedItemIsCategory ? [parentId, newPosition, oldPosition, movedItemId] : [parentId, newPosition, oldPosition])
@@ -153,9 +153,9 @@ async function makeSpaceForInsertion(
 
   await query(
     `UPDATE articles 
-     SET order_in_category = order_in_category + 1 
+     SET order_index = order_index + 1 
      WHERE ${parentId ? 'category_id = ?' : 'category_id IS NULL'}
-     AND order_in_category >= ?`,
+     AND order_index >= ?`,
     parentId ? [parentId, insertPosition] : [insertPosition]
   );
 }

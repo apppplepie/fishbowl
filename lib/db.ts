@@ -42,7 +42,7 @@ export async function initDatabase() {
         shares INT DEFAULT 0,
         comments INT DEFAULT 0,
         category_id VARCHAR(36),
-        order_in_category INT DEFAULT 0,
+        order_index INT DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_status (status),

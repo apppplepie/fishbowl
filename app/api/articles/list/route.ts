@@ -21,7 +21,7 @@ interface RawArticle {
   shares: number;
   comments: number;
   category_id: string;
-  order_in_category: number;
+  order_index: number;
   category_name: string;
   category_path: string | null;
   category_depth: number | null;
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 添加ORDER BY的参数（放在最后，确保参数顺序正确）
-    // 当指定categoryId时，优先按该分类内的order_in_category排序
+    // 当指定categoryId时，优先按该分类内的order_index排序
     // 否则按路径排序
     const orderByCategoryOrder = categoryId ? true : orderByPath;
     queryParams.push(orderByCategoryOrder ? 1 : 0, orderByCategoryOrder ? 1 : 0);
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
         a.shares,
         a.comments,
         a.category_id,
-        a.order_in_category,
+        a.order_index,
         c.name as category_name,
         c.path as category_path,
         c.depth as category_depth,
@@ -229,7 +229,7 @@ export async function GET(request: NextRequest) {
        LEFT JOIN categories c ON a.category_id = c.id
        WHERE ${whereClause}
        ORDER BY
-         CASE WHEN ? = 1 THEN a.order_in_category
+         CASE WHEN ? = 1 THEN a.order_index
               ELSE NULL END ASC,
          CASE WHEN ? = 1 THEN a.id
               ELSE a.updated_at END DESC
@@ -255,7 +255,7 @@ export async function GET(request: NextRequest) {
       shares: article.shares,
       comments: article.comments,
       categoryId: article.category_id,
-      orderInCategory: article.order_in_category,
+      orderInCategory: article.order_index,
       categoryName: article.category_name,
       // 预览数据（已由SQL处理）
       firstImageUrl: article.firstImageUrl || article.drawingCoverUrl,

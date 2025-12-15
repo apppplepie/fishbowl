@@ -592,7 +592,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         // 更新文章的分类
         const updateData: any = { category_id: newCategoryId };
         if (newOrder !== undefined) {
-          updateData.order_in_category = newOrder;
+          updateData.order_index = newOrder;
         }
 
         // 从 localStorage 获取 token

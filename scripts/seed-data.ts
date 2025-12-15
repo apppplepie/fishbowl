@@ -46,16 +46,16 @@ async function seedData() {
     console.log('分类数量:', categories.length);
     categories.forEach(cat => console.log('分类:', cat.id, cat.name, cat.parent_id));
 
-    const articles = await query<any[]>('SELECT id, title, category_id, order_in_category FROM articles ORDER BY id');
+    const articles = await query<any[]>('SELECT id, title, category_id, order_index FROM articles ORDER BY id');
     console.log('文章数量:', articles.length);
-    articles.forEach(article => console.log('文章:', article.id, article.title, article.category_id, article.order_in_category));
+    articles.forEach(article => console.log('文章:', article.id, article.title, article.category_id, article.order_index));
 
     // 特别检查我们的测试文章
-    const testArticles = await query<any[]>('SELECT id, title, category_id, order_in_category FROM articles WHERE id IN (?, ?)', ['article_1', 'article_2']);
+    const testArticles = await query<any[]>('SELECT id, title, category_id, order_index FROM articles WHERE id IN (?, ?)', ['article_1', 'article_2']);
     console.log('测试文章:', testArticles);
 
     // 检查最后插入的文章
-    const lastArticles = await query<any[]>('SELECT id, title, category_id, order_in_category FROM articles ORDER BY id DESC LIMIT 5');
+    const lastArticles = await query<any[]>('SELECT id, title, category_id, order_index FROM articles ORDER BY id DESC LIMIT 5');
     console.log('最后5篇文章:', lastArticles);
     // 文章1: 关于写作的一些思考（只有一个文字块）
     const article1Id = 'article_1';
@@ -68,7 +68,7 @@ async function seedData() {
 
     await query(
       `INSERT INTO articles
-       (id, title, author, published_at, updated_at, excerpt, type, status, likes, shares, comments, category_id, order_in_category)
+       (id, title, author, published_at, updated_at, excerpt, type, status, likes, shares, comments, category_id, order_index)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         article1Id,
@@ -83,7 +83,7 @@ async function seedData() {
         15,
         8,
         'book_cat_1', // 书籍分类ID
-        1, // order_in_category
+        1, // order_index
       ]
     );
 
@@ -120,7 +120,7 @@ async function seedData() {
 
     await query(
       `INSERT INTO articles
-       (id, title, author, published_at, updated_at, excerpt, type, status, likes, shares, comments, category_id, order_in_category)
+       (id, title, author, published_at, updated_at, excerpt, type, status, likes, shares, comments, category_id, order_index)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         article2Id,
@@ -135,7 +135,7 @@ async function seedData() {
         67,
         34,
         'book_cat_2', // 书籍分类ID
-        1, // order_in_category
+        1, // order_index
       ]
     );
 

@@ -3,7 +3,7 @@
  * 
  * 功能：
  * 1. 创建 categories 表（分类表）
- * 2. 修改 articles 表，添加 category_id 和 order_in_category 字段
+ * 2. 修改 articles 表，添加 category_id 和 order_index 字段
  * 3. 创建默认分类
  */
 
@@ -46,17 +46,17 @@ async function migrate() {
       }
     }
 
-    // 3. 检查并添加 order_in_category 字段
+    // 3. 检查并添加 order_index 字段
     try {
       await query(`
         ALTER TABLE articles 
-        ADD COLUMN order_in_category INT DEFAULT 0,
-        ADD INDEX idx_order_in_category (order_in_category)
+        ADD COLUMN order_index INT DEFAULT 0,
+        ADD INDEX idx_order_index (order_index)
       `);
-      console.log('✓ articles 表添加 order_in_category 字段');
+      console.log('✓ articles 表添加 order_index 字段');
     } catch (error: any) {
       if (error.code === 'ER_DUP_FIELDNAME') {
-        console.log('⚠ order_in_category 字段已存在，跳过');
+        console.log('⚠ order_index 字段已存在，跳过');
       } else {
         throw error;
       }

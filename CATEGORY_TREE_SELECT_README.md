@@ -192,7 +192,7 @@ Form 收集 category_id
   title: "...",
   author: "...",
   category_id: "cat_drawing_character",  // 分类ID
-  order_in_category: 0,                   // 分类内排序
+  order_index: 0,                   // 分类内排序
   ...
 }
     ↓

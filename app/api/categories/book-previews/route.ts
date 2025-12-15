@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     const placeholders = categoryIds.map(() => '?').join(',');
 
     // 一次性查询所有分类的第一篇文章
-    // 使用窗口函数按分类分组，取每个分类中order_in_category最小的文章
+    // 使用窗口函数按分类分组，取每个分类中order_index最小的文章
     const articles = await query(`
       SELECT *
       FROM (
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
           a.shares,
           a.comments,
           a.category_id,
-          a.order_in_category,
+          a.order_index,
           c.name as category_name,
           -- 获取文章中第一个图片的 URL
           (
@@ -140,8 +140,8 @@ export async function GET(request: NextRequest) {
             WHERE at.article_id = a.id
             ORDER BY t.name ASC
           ) as tags,
-          -- 按分类和order_in_category排序，用于选择第一篇文章
-          ROW_NUMBER() OVER (PARTITION BY a.category_id ORDER BY a.order_in_category ASC, a.updated_at DESC) as rn
+          -- 按分类和order_index排序，用于选择第一篇文章
+          ROW_NUMBER() OVER (PARTITION BY a.category_id ORDER BY a.order_index ASC, a.updated_at DESC) as rn
         FROM articles a
         LEFT JOIN categories c ON a.category_id = c.id
         WHERE a.status = 'published'
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
           shares: article.shares,
           comments: article.comments,
           categoryId: article.category_id,
-          orderInCategory: article.order_in_category,
+          orderInCategory: article.order_index,
           categoryName: article.category_name,
           firstImageUrl: article.firstImageUrl,
           imageCount: article.image_count,
