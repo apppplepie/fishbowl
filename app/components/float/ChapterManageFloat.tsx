@@ -607,7 +607,10 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       });
 
       // 根据拖拽类型生成请求数据
-      const requestData = activeParentId === overParentId
+      // 如果目标节点是目录，优先处理为跨级拖拽（拖入目录）
+      const requestData = dropNode.node_type === 'category'
+        ? handleCrossLevelDrag(dragNode, dropNode, activeParentId, overParentId)
+        : activeParentId === overParentId
         ? handleSameLevelDrag(active.id as string, over.id as string, activeParentId)
         : handleCrossLevelDrag(dragNode, dropNode, activeParentId, overParentId);
 
