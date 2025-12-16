@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, Breadcrumb } from 'antd';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, Breadcrumb, Skeleton } from 'antd';
 import type { MenuProps } from 'antd';
 
 const { Option } = Select;
@@ -38,6 +38,42 @@ import { getChapterLabel } from '@/app/utils/chapterNumbering';
 const { TextArea } = Input;
 
 /**
+ * 文章内容骨架屏组件
+ */
+const ArticleContentSkeleton: React.FC = () => (
+  <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+    {/* 标题骨架 */}
+    <div style={{ marginBottom: '24px' }}>
+      <Skeleton active title={{ width: '60%' }} paragraph={false} />
+      <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+        <Skeleton.Button active size="small" style={{ width: '80px' }} />
+        <Skeleton.Button active size="small" style={{ width: '60px' }} />
+        <Skeleton.Button active size="small" style={{ width: '70px' }} />
+      </div>
+    </div>
+
+    {/* 内容骨架 */}
+    <div style={{ marginBottom: '32px' }}>
+      <Skeleton active paragraph={{ rows: 6, width: ['100%', '95%', '90%', '85%', '100%', '80%'] }} />
+      <div style={{ height: '16px' }} /> {/* 段落间距 */}
+      <Skeleton active paragraph={{ rows: 4, width: ['90%', '100%', '85%', '95%'] }} />
+      <div style={{ height: '16px' }} />
+      <Skeleton active paragraph={{ rows: 8, width: ['100%', '88%', '92%', '85%', '100%', '90%', '95%', '80%'] }} />
+    </div>
+
+    {/* 操作区域骨架 */}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0', borderTop: '1px solid #f0f0f0' }}>
+      <div style={{ display: 'flex', gap: '16px' }}>
+        <Skeleton.Button active size="small" style={{ width: '60px' }} />
+        <Skeleton.Button active size="small" style={{ width: '60px' }} />
+        <Skeleton.Button active size="small" style={{ width: '60px' }} />
+      </div>
+      <Skeleton.Button active size="small" style={{ width: '40px' }} />
+    </div>
+  </div>
+);
+
+/**
  * 书籍详情页面
  * 展示单本书籍的完整内容
  */
@@ -52,8 +88,6 @@ export default function BookPage() {
   const urlCategory = searchParams.get('category');
   const [bookCategoryId, setBookCategoryId] = useState<string>(urlCategory || '');
 
-  // 文章导航
-  const navigation = useArticleNavigation(bookCategoryId, bookId);
 
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
@@ -83,15 +117,24 @@ export default function BookPage() {
     };
   }, [editMode]);
 
-  // 从数据源获取书籍
-  const [book, setBook] = useState<any>(null);
-  const [showLoading, setShowLoading] = useState(false); // 延迟显示的加载状态
+  // UI状态（翻页时保持不变）
   const [categoryPath, setCategoryPath] = useState<Array<{ id: string; name: string; depth?: number; chapter_index?: number }>>([]);
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageBlockContent | null>(null);
   // const [categoryModalOpen, setCategoryModalOpen] = useState(false); // 功能开发中
 
-  // 点赞相关状态
+  // 内容状态（翻页时更新）
+  const [currentArticleId, setCurrentArticleId] = useState<string>(bookId);
+  const [book, setBook] = useState<any>(null);
+  const [contentLoadingState, setContentLoadingState] = useState<'loading' | 'loaded' | 'error'>('loading');
+
+  // 文章内容缓存
+  const [articleCache, setArticleCache] = useState<Map<string, any>>(new Map());
+
+  // 文章导航 - 使用当前文章ID，支持虚拟翻页
+  const navigation = useArticleNavigation(bookCategoryId, currentArticleId);
+
+  // 点赞相关状态（内容状态）
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
@@ -122,7 +165,124 @@ export default function BookPage() {
   };
 
   /**
-   * 加载书籍数据
+   * 缓存管理：限制缓存大小
+   */
+  const manageCacheSize = useCallback(() => {
+    if (articleCache.size > 10) {
+      // 删除最旧的缓存项
+      const firstKey = articleCache.keys().next().value;
+      if (firstKey) {
+        setArticleCache(prev => {
+          const newCache = new Map(prev);
+          newCache.delete(firstKey);
+          return newCache;
+        });
+      }
+    }
+  }, [articleCache.size]);
+
+  /**
+   * 轻量级内容获取（只获取文章内容，不重新加载整个页面）
+   */
+  const fetchArticleContent = useCallback(async (articleId: string): Promise<any> => {
+    try {
+      // 检查缓存
+      if (articleCache.has(articleId)) {
+        return articleCache.get(articleId);
+      }
+
+      // 从API获取内容
+      const response = await fetch(`/api/articles/${articleId}`);
+      const result = await response.json();
+
+      if (response.ok && result.success && result.article) {
+        // 处理blocks数据
+        const processedBlocks = result.article.blocks.map((block: any) => {
+          if (block.type === 'image' && block.parsedContent?.url) {
+            return {
+              ...block,
+              imageUrl: block.parsedContent.url,
+              title: block.parsedContent.title || block.title || '',
+              description: block.parsedContent.description || block.description || '',
+            };
+          } else if (block.type === 'text' && block.parsedContent?.content) {
+            return {
+              ...block,
+              content: block.parsedContent.content,
+            };
+          } else if (block.type === 'code' && block.parsedContent) {
+            return {
+              ...block,
+              language: block.parsedContent.language || 'javascript',
+              code: block.parsedContent.code || '',
+              title: block.parsedContent.title || block.title || '',
+            };
+          }
+          return block;
+        });
+
+        const processedArticle = {
+          ...result.article,
+          blocks: processedBlocks,
+        };
+
+        // 添加到缓存
+        setArticleCache(prev => new Map(prev).set(articleId, processedArticle));
+        manageCacheSize();
+
+        return processedArticle;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('获取文章内容失败:', error);
+      return null;
+    }
+  }, [articleCache, manageCacheSize]);
+
+  /**
+   * 虚拟翻页：只更新内容，不重新加载页面
+   */
+  const virtualNavigate = useCallback(async (targetArticleId: string, targetCategory?: string) => {
+    // 显示骨架屏
+    setContentLoadingState('loading');
+
+    try {
+      // 获取文章内容
+      const articleContent = await fetchArticleContent(targetArticleId);
+
+      if (articleContent) {
+        // 更新内容状态
+        setCurrentArticleId(targetArticleId);
+        setBook(articleContent);
+        setIsLiked(false); // 重置点赞状态
+        setLikesCount(articleContent.likes || 0);
+        setCommentsCount(articleContent.comments || 0);
+        setContentLoadingState('loaded');
+
+        // 更新URL（可选，不触发重新加载）
+        const newUrl = targetCategory ? `/book/${targetArticleId}?category=${targetCategory}` : `/book/${targetArticleId}`;
+        window.history.replaceState({}, '', newUrl);
+
+        // 如果有指定分类，更新分类ID
+        if (targetCategory) {
+          setBookCategoryId(targetCategory);
+        }
+
+        console.log('虚拟翻页成功:', targetArticleId);
+      } else {
+        setContentLoadingState('error');
+        message.error('加载文章失败');
+      }
+    } catch (error) {
+      console.error('虚拟翻页失败:', error);
+      setContentLoadingState('error');
+      message.error('加载文章失败');
+    }
+  }, [fetchArticleContent]);
+
+  /**
+   * 加载书籍数据（完整加载，用于初始页面）
    */
   const loadBook = async (id: string) => {
     try {
@@ -164,9 +324,15 @@ export default function BookPage() {
         };
 
         setBook(processedArticle);
+        setContentLoadingState('loaded');
+        setCurrentArticleId(id);
         setIsLiked(false); // 暂时设为 false
         setLikesCount(result.article.likes || 0);
         setCommentsCount(result.article.comments || 0);
+
+        // 添加到缓存
+        setArticleCache(prev => new Map(prev).set(id, processedArticle));
+        manageCacheSize();
 
         // 设置书籍分类ID
         // 如果URL中没有指定分类，则使用文章本身的分类ID
@@ -183,9 +349,15 @@ export default function BookPage() {
         const mockBook = getArticleWithBlocks(id);
         if (mockBook) {
           setBook(mockBook);
+          setContentLoadingState('loaded');
+          setCurrentArticleId(id);
           setIsLiked(false);
           setLikesCount(mockBook.likes || 0);
           setCommentsCount(mockBook.comments || 0);
+
+          // 添加到缓存
+          setArticleCache(prev => new Map(prev).set(id, mockBook));
+          manageCacheSize();
 
           // 获取分类路径（暂时使用默认分类）
           await fetchCategoryPath('cat_bookcase');
@@ -200,9 +372,15 @@ export default function BookPage() {
       const mockBook = getArticleWithBlocks(id);
       if (mockBook) {
         setBook(mockBook);
+        setContentLoadingState('loaded');
+        setCurrentArticleId(id);
         setIsLiked(false);
         setLikesCount(mockBook.likes || 0);
         setCommentsCount(mockBook.comments || 0);
+
+        // 添加到缓存
+        setArticleCache(prev => new Map(prev).set(id, mockBook));
+        manageCacheSize();
 
         // 获取分类路径（暂时使用默认分类）
         await fetchCategoryPath('cat_bookcase');
@@ -213,24 +391,6 @@ export default function BookPage() {
     }
   };
 
-  // 延迟显示加载动画，避免快速切换时的闪烁
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    
-    if (!book) {
-      // 延迟500ms后才显示加载动画
-      timer = setTimeout(() => {
-        setShowLoading(true);
-      }, 500);
-    } else {
-      // 加载完成，立即隐藏
-      setShowLoading(false);
-    }
-
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [book]);
 
   // 初始化加载
   useEffect(() => {
@@ -238,6 +398,16 @@ export default function BookPage() {
       loadBook(bookId);
     }
   }, [bookId]);
+
+  // 预加载下一篇文章
+  useEffect(() => {
+    if (navigation.nextArticleId && !articleCache.has(navigation.nextArticleId)) {
+      // 后台预加载下一篇文章
+      fetchArticleContent(navigation.nextArticleId).catch(error => {
+        console.log('预加载失败:', error); // 不显示错误，只记录日志
+      });
+    }
+  }, [navigation.nextArticleId, articleCache, fetchArticleContent]);
 
   // 点赞处理
   const handleLike = async () => {
@@ -404,7 +574,12 @@ export default function BookPage() {
     setIsImageModalVisible(true);
   };
 
-  if (!book && showLoading) {
+  // 显示骨架屏或加载状态
+  if (!book || contentLoadingState === 'loading') {
+    return <ArticleContentSkeleton />;
+  }
+
+  if (contentLoadingState === 'error') {
     return (
       <div style={{
         display: 'flex',
@@ -414,13 +589,9 @@ export default function BookPage() {
         fontSize: '16px',
         color: '#999'
       }}>
-        加载中...
+        加载失败，请刷新重试
       </div>
     );
-  }
-
-  if (!book) {
-    return null; // 在延迟显示期间不显示任何内容
   }
 
   // 打开目录抽屉的函数
@@ -783,9 +954,8 @@ export default function BookPage() {
                     icon={<LeftOutlined />}
                     onClick={() => {
                       if (navigation.prevArticleId) {
-                        const targetCategory = getArticleCategory(navigation.prevArticleId);
-                        const url = targetCategory ? `/book/${navigation.prevArticleId}?category=${targetCategory}` : `/book/${navigation.prevArticleId}`;
-                        router.push(url);
+                        const targetCategory = getArticleCategory(navigation.prevArticleId) || undefined;
+                        virtualNavigate(navigation.prevArticleId, targetCategory);
                       }
                     }}
                     style={{
@@ -813,9 +983,8 @@ export default function BookPage() {
                     icon={<RightOutlined />}
                     onClick={() => {
                       if (navigation.nextArticleId) {
-                        const targetCategory = getArticleCategory(navigation.nextArticleId);
-                        const url = targetCategory ? `/book/${navigation.nextArticleId}?category=${targetCategory}` : `/book/${navigation.nextArticleId}`;
-                        router.push(url);
+                        const targetCategory = getArticleCategory(navigation.nextArticleId) || undefined;
+                        virtualNavigate(navigation.nextArticleId, targetCategory);
                       }
                     }}
                     style={{
