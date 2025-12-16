@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Menu, Spin, Empty } from 'antd';
+import { Menu, Spin, Empty, Skeleton } from 'antd';
 import {
   FileTextOutlined,
   FolderOutlined,
@@ -12,6 +12,36 @@ import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
 import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
+
+/**
+ * 侧边栏骨架屏组件
+ */
+const SidebarSkeleton: React.FC = () => (
+  <div style={{ padding: '16px' }}>
+    {/* 第一级目录 */}
+    <div style={{ marginBottom: '16px' }}>
+      <Skeleton active title={false} paragraph={{ rows: 1, width: '80%' }} />
+    </div>
+
+    {/* 第二级项目们 */}
+    <div style={{ marginLeft: '16px' }}>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} style={{ marginBottom: '8px' }}>
+          <Skeleton active title={false} paragraph={{ rows: 1, width: index % 2 === 0 ? '70%' : '60%' }} />
+        </div>
+      ))}
+    </div>
+
+    {/* 第三级项目们 */}
+    <div style={{ marginLeft: '32px', marginTop: '12px' }}>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} style={{ marginBottom: '6px' }}>
+          <Skeleton active title={false} paragraph={{ rows: 1, width: '50%' }} />
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 interface TreeNode {
   id: string;
@@ -586,14 +616,7 @@ export default function GenericIndexTree({
       }}
     >
       {loading ? (
-        <div style={{
-          padding: '40px 0',
-          textAlign: 'center',
-        }}>
-          <Spin tip="加载中...">
-            <div style={{ minHeight: '50px' }} />
-          </Spin>
-        </div>
+        <SidebarSkeleton />
       ) : menuItems && menuItems.length > 0 ? (
         <Menu
           mode="inline"

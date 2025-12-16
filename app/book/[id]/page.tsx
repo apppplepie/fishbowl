@@ -601,7 +601,7 @@ export default function BookPage() {
     <>
       {/* 统一的章节导航组件（自动适配移动端/桌面端） */}
       <BookChapterNavigator
-        currentArticleId={bookId}
+        currentArticleId={currentArticleId}
         bookCategoryId={bookCategoryId}
         onArticleClick={handleArticleClick}
         visible={drawerVisible}
