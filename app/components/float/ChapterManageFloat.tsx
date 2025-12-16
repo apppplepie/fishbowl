@@ -24,6 +24,7 @@ import {
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -180,8 +181,23 @@ const SortableItem: React.FC<{
           alignItems: 'center',
           padding: '6px 8px',
           cursor: 'grab',
+          minHeight: '44px', // 移动端最小触摸区域
         }}
         onClick={() => hasChildren && onToggleExpand(node.id)}
+        onTouchStart={(e) => {
+          // 防止触摸时页面滚动和默认行为
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onTouchMove={(e) => {
+          // 防止拖拽过程中触发滚动
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onTouchEnd={(e) => {
+          // 确保触摸结束事件也被拦截
+          e.stopPropagation();
+        }}
       >
         {isCategory && hasChildren && (
           <span style={{ marginRight: '6px', cursor: 'pointer' }}>
@@ -290,10 +306,19 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   // activeId for DragOverlay preview
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // sensors
+  // 检测是否为移动设备
+  const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  // sensors - 支持桌面和移动端拖拽
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 300, // 增加触摸延迟，确保拖拽优先级高于滚动
+        tolerance: 5, // 减少容忍距离，提高精确度
+      },
     })
   );
 
@@ -549,6 +574,12 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   // handleDragStart to set activeId for overlay
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+
+    // 移动端：拖拽开始时禁用页面滚动
+    if (isMobile && typeof document !== 'undefined') {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    }
   };
 
   // handleDragEnd: update local tree immediately, post update in background
@@ -657,6 +688,12 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
     } catch (error) {
       console.error('拖拽失败:', error);
       message.error('操作失败');
+    } finally {
+      // 无论成功失败都要恢复页面滚动
+      if (isMobile && typeof document !== 'undefined') {
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
+      }
     }
   };
 
@@ -677,7 +714,29 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   return (
     <>
       <style>{`
-        .chapter-tree-mobile .sortable-tree-node { user-select: none; -webkit-user-select:none; }
+        .chapter-tree-mobile .sortable-tree-node {
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+          touch-action: none; /* 完全禁用默认触摸行为，优先处理拖拽 */
+        }
+
+        .chapter-tree-mobile .sortable-tree-node:active {
+          background: rgba(24, 144, 255, 0.1);
+        }
+
+        /* 移动端拖拽提示 */
+        @media (max-width: 768px) {
+          .chapter-tree-mobile .sortable-tree-node {
+            min-height: 44px; /* iOS 推荐的最小触摸区域 */
+          }
+        }
+
+        /* 拖拽激活时的全局禁用滚动 */
+        .chapter-tree-mobile[data-dragging="true"] {
+          overflow: hidden !important;
+          touch-action: none !important;
+        }
       `}</style>
 
       <FloatButton
@@ -699,7 +758,13 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         getContainer={false}
       >
         <div style={{ padding: '20px 0' }} onClick={(e) => e.stopPropagation()}>
-          <p style={{ marginBottom: 16, color: '#666' }}>💡 提示：拖动章节或目录可调整结构和顺序</p>
+          <p style={{ marginBottom: 16, color: '#666' }}>
+            💡 提示：
+            {isMobile
+              ? '长按0.3秒拖动章节或目录可调整结构和顺序（不会触发页面滚动）'
+              : '拖动章节或目录可调整结构和顺序'
+            }
+          </p>
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 0' }}>
@@ -711,9 +776,32 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
               collisionDetection={collisionDetection}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
-              onDragCancel={() => setActiveId(null)}
+              onDragCancel={() => {
+                setActiveId(null);
+                // 恢复页面滚动
+                if (isMobile && typeof document !== 'undefined') {
+                  document.body.style.overflow = '';
+                  document.body.style.touchAction = '';
+                }
+              }}
             >
-              <div style={{ background: '#fafafa', padding: 16, borderRadius: 8 }} className="chapter-tree-mobile">
+              <div
+                style={{ background: '#fafafa', padding: 16, borderRadius: 8 }}
+                className="chapter-tree-mobile"
+                onTouchStart={(e) => {
+                  // 在拖拽容器级别阻止默认触摸行为
+                  if (isMobile) {
+                    e.stopPropagation();
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // 防止拖拽过程中的页面滚动
+                  if (isMobile) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                }}
+              >
                 <SortableTree
                   nodes={treeData}
                   expandedKeys={expandedKeys}
