@@ -306,6 +306,13 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   // activeId for DragOverlay preview
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  // 乐观更新相关状态
+  const [rollbackTreeData, setRollbackTreeData] = useState<TreeNode[]>([]);
+  const [isOptimisticUpdate, setIsOptimisticUpdate] = useState(false);
+
+  // 控制弹窗保持状态的标志
+  const [shouldKeepModalOpen, setShouldKeepModalOpen] = useState(false);
+
   // 检测是否为移动设备
   const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
@@ -371,20 +378,28 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         // 添加章节编号
         childNodes = addChapterNumbers(childNodes);
 
+        // 保存当前的展开状态，避免刷新时弹窗消失
+        const currentExpandedKeys = new Set(expandedKeys);
+
         setTreeData(childNodes);
 
-        // 默认展开所有节点
-        const allExpandedKeys = new Set<string>();
-        const collectKeys = (nodes: TreeNode[]) => {
-          nodes.forEach(node => {
-            if (node.children && node.children.length > 0) {
-              allExpandedKeys.add(node.id);
-              collectKeys(node.children);
-            }
-          });
-        };
-        collectKeys(childNodes);
-        setExpandedKeys(allExpandedKeys);
+        // 保持当前的展开状态，而不是重置为全部展开
+        // 只有在初次加载时才展开所有节点
+        if (currentExpandedKeys.size === 0) {
+          // 初次加载：默认展开所有节点
+          const allExpandedKeys = new Set<string>();
+          const collectKeys = (nodes: TreeNode[]) => {
+            nodes.forEach(node => {
+              if (node.children && node.children.length > 0) {
+                allExpandedKeys.add(node.id);
+                collectKeys(node.children);
+              }
+            });
+          };
+          collectKeys(childNodes);
+          setExpandedKeys(allExpandedKeys);
+        }
+        // 刷新时保持当前的展开状态，不做任何改变
       } else {
         message.error('加载章节数据失败');
       }
@@ -480,6 +495,44 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   };
 
 
+  // ---------- Optimistic update utilities ----------
+
+  // 执行乐观更新（立即更新本地状态）
+  const performOptimisticUpdate = (updater: (currentTree: TreeNode[]) => TreeNode[]) => {
+    setRollbackTreeData([...treeData]); // 保存当前状态用于回滚
+    setTreeData(currentTree => updater(currentTree));
+    setIsOptimisticUpdate(true);
+    setShouldKeepModalOpen(true); // 标记需要保持弹窗打开
+  };
+
+  // 回滚到之前的状态
+  const rollbackOptimisticUpdate = () => {
+    if (rollbackTreeData.length > 0) {
+      setTreeData(rollbackTreeData);
+      setRollbackTreeData([]);
+      setIsOptimisticUpdate(false);
+      setShouldKeepModalOpen(false); // 清除保持弹窗标志
+    }
+  };
+
+  // 确认乐观更新成功
+  const confirmOptimisticUpdate = () => {
+    setRollbackTreeData([]);
+    setIsOptimisticUpdate(false);
+    setShouldKeepModalOpen(false); // 清除保持弹窗标志
+    setHasChanges(true);
+
+    // 延迟同步服务器状态，但不重新加载整个树结构（保持弹窗打开）
+    // 只在必要时进行轻量级同步，比如更新一些服务器计算的字段
+    setTimeout(() => {
+      // 可以选择不刷新，或者只刷新特定数据
+      // loadChapterTree(); // 暂时注释掉，避免刷新时弹窗消失
+
+      // 如果需要同步，可以调用更轻量的API
+      // 比如只同步 order_index 或其他服务器生成的字段
+    }, 1000);
+  };
+
   // ---------- Drag handling utilities ----------
 
   // 处理同级拖拽（同一父节点内的排序）
@@ -504,14 +557,18 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       order_index: i + 1,
     }));
 
+    // 同时返回新的树结构和API请求数据
     return {
-      moves: [
-        {
-          parent_id: parentId || '',
-          children: payload,
-        },
-      ],
-      moved: null, // 同级拖拽，不涉及 parent_id 变更
+      newTreeData: setChildrenForParent(treeData, parentId, newOrder),
+      apiPayload: {
+        moves: [
+          {
+            parent_id: parentId || '',
+            children: payload,
+          },
+        ],
+        moved: null, // 同级拖拽，不涉及 parent_id 变更
+      }
     };
   };
 
@@ -549,21 +606,28 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       order_index: i + 1,
     }));
 
+    // 生成新的树结构
+    let newTreeData = setChildrenForParent(treeData, oldParentId, newOldList.map(n => findNodeRecursive(treeData, n.id)!).filter(Boolean));
+    newTreeData = setChildrenForParent(newTreeData, newParentId, newNewList.map(n => n.id === dragNode.id ? { ...dragNode, parent_id: newParentId } : findNodeRecursive(newTreeData, n.id)!).filter(Boolean));
+
     return {
-      moves: [
-        {
-          parent_id: oldParentId,
-          children: newOldList,
+      newTreeData,
+      apiPayload: {
+        moves: [
+          {
+            parent_id: oldParentId,
+            children: newOldList,
+          },
+          {
+            parent_id: newParentId,
+            children: newNewList,
+          },
+        ],
+        moved: {
+          id: dragNode.id,
+          new_parent_id: newParentId,
         },
-        {
-          parent_id: newParentId,
-          children: newNewList,
-        },
-      ],
-      moved: {
-        id: dragNode.id,
-        new_parent_id: newParentId,
-      },
+      }
     };
   };
 
@@ -637,20 +701,25 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         dropNodeParent: dropNode.parent_id,
       });
 
-      // 根据拖拽类型生成请求数据
+      // 根据拖拽类型生成请求数据和新的树结构
       // 如果目标节点是目录，优先处理为跨级拖拽（拖入目录）
-      const requestData = dropNode.node_type === 'category'
+      const dragResult = dropNode.node_type === 'category'
         ? handleCrossLevelDrag(dragNode, dropNode, activeParentId, overParentId)
         : activeParentId === overParentId
         ? handleSameLevelDrag(active.id as string, over.id as string, activeParentId)
         : handleCrossLevelDrag(dragNode, dropNode, activeParentId, overParentId);
 
-      if (!requestData) {
+      if (!dragResult) {
         console.error('无法生成拖拽请求数据');
         return;
       }
 
-      console.log('发送请求数据:', requestData);
+      const { newTreeData, apiPayload } = dragResult;
+
+      // 执行乐观更新：立即更新本地状态
+      performOptimisticUpdate(() => newTreeData);
+
+      console.log('发送请求数据:', apiPayload);
 
       // 调用新的拖拽排序 API
       const response = await fetch('/api/tree/reorder', {
@@ -659,7 +728,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify(apiPayload),
       });
 
       // 异步处理响应，不要阻塞动画
@@ -667,13 +736,13 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         console.log('拖拽排序响应:', { status: response.status, result });
 
         if (result.success) {
+          // 乐观更新成功，确认状态并延迟同步
+          confirmOptimisticUpdate();
           message.success('操作成功');
-          setHasChanges(true); // 标记有改动
-          // 延迟一点时间再刷新，避免打断动画
-          setTimeout(() => {
-            loadChapterTree();
-          }, 300);
         } else {
+          // 乐观更新失败，回滚到之前的状态
+          rollbackOptimisticUpdate();
+
           if (response.status === 401) {
             message.error('您还未登录或登录已过期，请刷新页面后重新登录');
           } else {
@@ -682,6 +751,8 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         }
       }).catch(error => {
         console.error('解析响应失败:', error);
+        // 网络错误也回滚
+        rollbackOptimisticUpdate();
         message.error('操作失败');
       });
 
@@ -764,6 +835,11 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
               ? '长按0.3秒拖动章节或目录可调整结构和顺序（不会触发页面滚动）'
               : '拖动章节或目录可调整结构和顺序'
             }
+            {isOptimisticUpdate && (
+              <span style={{ color: '#1890ff', marginLeft: 8 }}>
+                🔄 正在保存更改...
+              </span>
+            )}
           </p>
 
           {loading ? (
