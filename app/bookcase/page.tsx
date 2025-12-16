@@ -35,11 +35,33 @@ const calculateColumns = (width: number) => {
 const ARTICLE_LIST_CACHE_PREFIX = 'book-articles-cache-';
 const CACHE_EXPIRY_HOURS = 24; // 缓存24小时
 
-// 缓存文章列表
-const cacheArticleList = (bookId: string, articleIds: string[]) => {
+// 获取完整的分类树结构
+const loadCategoryTree = async (): Promise<any[]> => {
+  try {
+    const response = await fetch('/api/categories/tree');
+    const result = await response.json();
+
+    if (result.success && result.data) {
+      return result.data;
+    }
+    return [];
+  } catch (error) {
+    console.error('获取分类树失败:', error);
+    return [];
+  }
+};
+
+// 缓存文章列表和文章到分类的映射
+const cacheArticleList = (bookId: string, articleIds: string[], articleCategoryMap?: Map<string, string>) => {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
   const cacheKey = `${ARTICLE_LIST_CACHE_PREFIX}${bookId}`;
   const cacheData = {
     articleIds,
+    articleCategoryMap: articleCategoryMap ? Object.fromEntries(articleCategoryMap) : null,
     timestamp: Date.now(),
     expiry: Date.now() + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
   };
@@ -49,6 +71,11 @@ const cacheArticleList = (bookId: string, articleIds: string[]) => {
 
 // 获取缓存的文章列表
 const getCachedArticleList = (bookId: string): string[] | null => {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+
   const cacheKey = `${ARTICLE_LIST_CACHE_PREFIX}${bookId}`;
   const cached = localStorage.getItem(cacheKey);
 
@@ -69,15 +96,205 @@ const getCachedArticleList = (bookId: string): string[] | null => {
   }
 };
 
+// 获取文章对应的分类ID
+const getArticleCategory = (articleId: string): string | null => {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+
+  // 遍历所有缓存，找到包含该文章的分类
+  const keys = Object.keys(localStorage);
+  for (const key of keys) {
+    if (key.startsWith(ARTICLE_LIST_CACHE_PREFIX)) {
+      try {
+        const cached = localStorage.getItem(key);
+        if (!cached) continue;
+
+        const cacheData = JSON.parse(cached);
+        if (Date.now() > cacheData.expiry) {
+          // 缓存过期，删除
+          localStorage.removeItem(key);
+          continue;
+        }
+
+        // 检查文章是否在缓存中
+        if (cacheData.articleIds && cacheData.articleIds.includes(articleId)) {
+          const bookId = key.replace(ARTICLE_LIST_CACHE_PREFIX, '');
+          return bookId;
+        }
+
+        // 如果有映射表，也检查映射表
+        if (cacheData.articleCategoryMap && cacheData.articleCategoryMap[articleId]) {
+          return cacheData.articleCategoryMap[articleId];
+        }
+      } catch (error) {
+        console.error('解析缓存失败:', error);
+        localStorage.removeItem(key);
+      }
+    }
+  }
+
+  return null;
+};
+
 // 清除指定书籍的缓存
 const clearBookCache = (bookId: string) => {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
   const cacheKey = `${ARTICLE_LIST_CACHE_PREFIX}${bookId}`;
   localStorage.removeItem(cacheKey);
   console.log(`已清除书籍 ${bookId} 的缓存`);
 };
 
+// 预缓存所有书籍的文章列表
+const preloadAllBookArticleLists = async () => {
+  try {
+    console.log('开始预缓存所有书籍的文章列表...');
+
+    // 获取所有书籍分类（不包括根分类）
+    const response = await fetch('/api/categories/book-previews?parentId=cat_bookcase');
+    const result = await response.json();
+
+    if (!result.success || !result.books) {
+      console.warn('获取书籍列表失败，无法预缓存');
+      return;
+    }
+
+    const books = result.books;
+    console.log(`发现 ${books.length} 本书籍，开始后台预缓存...`);
+
+    // 限制并发数量，避免同时请求太多
+    const BATCH_SIZE = 3;
+    for (let i = 0; i < books.length; i += BATCH_SIZE) {
+      const batch = books.slice(i, i + BATCH_SIZE);
+
+      // 并行处理一批书籍
+      const promises = batch.map(async (book: any) => {
+        try {
+          const categoryId = book.categoryId;
+
+          // 检查是否已经缓存且未过期
+          const existing = getCachedArticleList(categoryId);
+          if (existing) {
+            console.log(`书籍 ${categoryId} 已缓存，跳过`);
+            return;
+          }
+
+          // 获取该书籍的所有文章
+          const params = new URLSearchParams({
+            status: 'published',
+            limit: '1000',
+            offset: '0',
+            categoryId: categoryId,
+            orderByPath: 'true',
+          });
+
+          const articleResponse = await fetch(`/api/articles/list?${params.toString()}`);
+          const articleResult = await articleResponse.json();
+
+          if (articleResponse.ok && articleResult.success && articleResult.articles) {
+            const articles = articleResult.articles;
+
+            // 去重
+            const uniqueArticles = articles.filter((article: any, index: number, self: any[]) =>
+              index === self.findIndex(a => a.id === article.id)
+            );
+
+            // 排序文章
+            const categoryTree = await loadCategoryTree();
+            const categoryMap = new Map<string, any>();
+            const buildCategoryMap = (categories: any[]) => {
+              categories.forEach(category => {
+                categoryMap.set(category.id, category);
+                if (category.children) {
+                  buildCategoryMap(category.children);
+                }
+              });
+            };
+            buildCategoryMap(categoryTree);
+
+            // 按 categoryId 分组文章
+            const articlesMap = new Map<string, any[]>();
+            uniqueArticles.forEach((article: any) => {
+              const catId = article.category_id;
+              if (!articlesMap.has(catId)) {
+                articlesMap.set(catId, []);
+              }
+              articlesMap.get(catId)!.push(article);
+            });
+
+            // 深度优先遍历排序
+            const sortArticlesDFS = (catId: string): any[] => {
+              const result: any[] = [];
+              const category = categoryMap.get(catId);
+
+              if (!category) return result;
+
+              const directArticles = articlesMap.get(catId) || [];
+              const sortedDirectArticles = directArticles.sort((a: any, b: any) =>
+                (a.orderInCategory || 0) - (b.orderInCategory || 0)
+              );
+
+              const sortedChildren = (category.children || []).sort((a: any, b: any) =>
+                (a.order_index || 0) - (b.order_index || 0)
+              );
+
+              const mixed = [
+                ...sortedChildren.map((child: any) => ({ type: 'category' as const, data: child, sortValue: child.order_index || 0 })),
+                ...sortedDirectArticles.map((article: any) => ({ type: 'article' as const, data: article, sortValue: article.orderInCategory || 0 }))
+              ].sort((a, b) => a.sortValue - b.sortValue);
+
+              for (const item of mixed) {
+                if (item.type === 'category') {
+                  const subArticles = sortArticlesDFS(item.data.id);
+                  result.push(...subArticles);
+                } else {
+                  result.push(item.data);
+                }
+              }
+
+              return result;
+            };
+
+            const sortedArticles = sortArticlesDFS(categoryId);
+            const articleIds = sortedArticles.map((article: any) => article.id.toString());
+
+            // 创建文章到分类的映射
+            const articleCategoryMap = new Map<string, string>();
+            sortedArticles.forEach((article: any) => {
+              articleCategoryMap.set(article.id.toString(), article.category_id || categoryId);
+            });
+
+            // 缓存
+            cacheArticleList(categoryId, articleIds, articleCategoryMap);
+            console.log(`预缓存完成：书籍 ${categoryId}，${articleIds.length} 篇文章`);
+          }
+        } catch (error) {
+          console.error(`预缓存书籍失败:`, error);
+        }
+      });
+
+      // 等待这一批完成
+      await Promise.all(promises);
+
+      // 小延迟避免请求过于频繁
+      if (i + BATCH_SIZE < books.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    console.log('所有书籍文章列表预缓存完成！');
+  } catch (error) {
+    console.error('预缓存过程中出错:', error);
+  }
+};
+
 // 导出缓存函数供其他组件使用
-export { getCachedArticleList, clearBookCache };
+export { getCachedArticleList, getArticleCategory, clearBookCache, preloadAllBookArticleLists };
 
 /**
  * 书架页面
@@ -132,7 +349,7 @@ function BookcasePageContent() {
 
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
-  // 加载所有可用标签
+  // 加载所有可用标签和预缓存书籍文章列表
   useEffect(() => {
     async function loadTags() {
       try {
@@ -148,23 +365,14 @@ function BookcasePageContent() {
     }
 
     loadTags();
+
+    // 后台预缓存所有书籍的文章列表，提升用户体验
+    // 使用 setTimeout 避免阻塞页面初次加载
+    setTimeout(() => {
+      preloadAllBookArticleLists();
+    }, 2000); // 2秒后开始预缓存，给页面加载让路
   }, []);
 
-  // 获取完整的分类树结构
-  const loadCategoryTree = async (): Promise<any[]> => {
-    try {
-      const response = await fetch('/api/categories/tree');
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        return result.data;
-      }
-      return [];
-    } catch (error) {
-      console.error('获取分类树失败:', error);
-      return [];
-    }
-  };
 
   // 加载书架文章数据
   const loadBookcaseArticles = async (currentOffset: number, append: boolean = false) => {
