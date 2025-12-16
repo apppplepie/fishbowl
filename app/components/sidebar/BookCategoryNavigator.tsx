@@ -37,7 +37,8 @@ export default function BookCategoryNavigator({
     loadChildrenForTopLevel: false, // ✅ 改为false，一次性获取完整树，避免N+1查询
     forceOpenRootKeys: true,
     navigationPattern: '/bookcase?category={categoryId}',
-    stylePrefix: 'book-category'
+    stylePrefix: 'book-category',
+    showChapterLabels: true // 书籍导航显示章节编号
   };
 
   const handleCategorySelect = (categoryId: string | null) => {

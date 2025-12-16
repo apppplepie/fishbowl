@@ -23,46 +23,52 @@ export interface GenericCategoryTreeConfig {
    * 例如: '/api/categories/tree' 或 '/api/categories?type=children&parentId=xxx'
    */
   apiEndpoint: string;
-  
+
   /**
    * 根节点ID（可选）
    * 如果提供，会在顶部创建一个根节点（如"书橱"）
    */
   rootNodeId?: string;
-  
+
   /**
    * 根节点显示名称
    */
   rootNodeName?: string;
-  
+
   /**
    * 空状态提示文字
    */
   emptyText?: string;
-  
+
   /**
    * 是否需要加载根节点的子分类
    * 如果为true，会为每个一级分类加载其子分类
    */
   loadChildrenForTopLevel?: boolean;
-  
+
   /**
    * 禁止关闭的根节点keys
    * 例如: ['category-cat_bookcase']
    */
   forceOpenRootKeys?: boolean;
-  
+
   /**
    * 点击分类后的跳转路径模板
    * 使用 {categoryId} 作为占位符
    * 例如: '/bookcase?category={categoryId}'
    */
   navigationPattern?: string;
-  
+
   /**
    * CSS类名前缀，用于样式隔离
    */
   stylePrefix?: string;
+
+  /**
+   * 是否显示章节编号（如第1卷、第2章等）
+   * 默认值为 true，适用于书籍导航；归档导航应该设为 false
+   */
+  showChapterLabels?: boolean;
 }
 
 interface GenericCategoryTreeProps {
@@ -94,7 +100,8 @@ export default function GenericCategoryTree({
     loadChildrenForTopLevel = false,
     forceOpenRootKeys = false,
     navigationPattern,
-    stylePrefix = 'generic-category-tree'
+    stylePrefix = 'generic-category-tree',
+    showChapterLabels = true
   } = config;
 
   /**
@@ -115,7 +122,7 @@ export default function GenericCategoryTree({
 
       // 格式化分类标签（添加章节号）
       const formattedLabel = formatNodeLabel(category as any, {
-        showChapterLabel: true,
+        showChapterLabel: showChapterLabels,
         showArticleNumber: false,
       });
 

@@ -123,10 +123,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 添加ORDER BY的参数（放在最后，确保参数顺序正确）
-    // 当指定categoryId时，优先按该分类内的order_index排序
-    // 否则按路径排序
-    const orderByCategoryOrder = categoryId ? true : orderByPath;
-    queryParams.push(orderByCategoryOrder ? 1 : 0, orderByCategoryOrder ? 1 : 0);
+    // 归档页面始终按updated_at降序排序，无论是否指定categoryId
+    queryParams.push(0, 0);
 
     console.log('WHERE clause:', whereClause);
     console.log('Query params:', queryParams);

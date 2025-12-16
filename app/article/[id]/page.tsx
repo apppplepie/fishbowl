@@ -801,9 +801,71 @@ export default function ArticlePage() {
                   </label>
                   <CategoryTreeSelect
                     value={editedArticle?.category_id}
-                    onChange={(value) => {
+                    onChange={async (value) => {
                       if (editedArticle) {
-                        setEditedArticle({ ...editedArticle, category_id: value });
+                        // 计算新的 order_index：找到新分类下最大的 order 值 + 1
+                        // 需要同时考虑子分类的 order_index 和文章的 order_index
+                        let newOrderIndex = editedArticle.order_index || 0;
+
+                        if (value && value !== editedArticle.category_id) {
+                          try {
+                            const token = localStorage.getItem('token');
+
+                            // 1. 查询新分类下的所有直接子分类，获取最大的 order_index
+                            let maxCategoryOrder = 0;
+                            try {
+                              const categoryResponse = await fetch(`/api/categories/${value}/tree-with-articles`, {
+                                headers: {
+                                  'Authorization': `Bearer ${token}`,
+                                },
+                              });
+
+                              if (categoryResponse.ok) {
+                                const categoryData = await categoryResponse.json();
+                                if (categoryData.success && categoryData.tree && categoryData.tree.children) {
+                                  // 只查找直接子分类的 order_index
+                                  for (const child of categoryData.tree.children) {
+                                    if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
+                                      maxCategoryOrder = child.order_index;
+                                    }
+                                  }
+                                }
+                              }
+                            } catch (error) {
+                              console.warn('获取子分类排序信息失败:', error);
+                            }
+
+                            // 2. 查询新分类下的所有文章，获取最大的 order_index
+                            let maxArticleOrder = 0;
+                            try {
+                              const articleResponse = await fetch(`/api/articles?category=${value}&limit=1000&sort=order_desc`, {
+                                headers: {
+                                  'Authorization': `Bearer ${token}`,
+                                },
+                              });
+
+                              if (articleResponse.ok) {
+                                const articleData = await articleResponse.json();
+                                if (articleData.articles && articleData.articles.length > 0) {
+                                  maxArticleOrder = Math.max(
+                                    ...articleData.articles.map((article: any) => article.order_index || 0)
+                                  );
+                                }
+                              }
+                            } catch (error) {
+                              console.warn('获取文章排序信息失败:', error);
+                            }
+
+                            // 3. 取两者中的最大值 + 1
+                            newOrderIndex = Math.max(maxCategoryOrder, maxArticleOrder) + 1;
+                          } catch (error) {
+                            console.warn('获取排序信息失败，使用原有排序:', error);
+                            newOrderIndex = editedArticle.order_index || 0;
+                          }
+                        }
+
+                        setEditedArticle({ ...editedArticle, category_id: value, order_index: newOrderIndex });
+
                         // 更新面包屑路径
                         if (value) {
                           fetchCategoryPath(value);

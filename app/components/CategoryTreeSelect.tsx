@@ -181,9 +181,66 @@ export default function CategoryTreeSelect({
       // 生成新的分类ID
       const newId = `cat_${Date.now()}`;
 
-      // 获取父分类下的子分类数量，用于设置 order_index
-      const parentCategory = findCategoryById(categories, parentCategoryId);
-      const orderIndex = parentCategory?.children?.length || 0;
+      // 计算新的 order_index：找到父分类下最大的 order 值 + 1
+      // 需要同时考虑子分类的 order_index 和文章的 order_index
+      let orderIndex = 0;
+
+      try {
+        const token = localStorage.getItem('token');
+
+        // 1. 查询父分类下的所有直接子分类，获取最大的 order_index
+        let maxCategoryOrder = 0;
+        try {
+          const categoryResponse = await fetch(`/api/categories/${parentCategoryId}/tree-with-articles`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (categoryResponse.ok) {
+            const categoryData = await categoryResponse.json();
+            if (categoryData.success && categoryData.tree && categoryData.tree.children) {
+              // 只查找直接子分类的 order_index
+              for (const child of categoryData.tree.children) {
+                if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
+                  maxCategoryOrder = child.order_index;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('获取子分类排序信息失败:', error);
+        }
+
+        // 2. 查询父分类下的所有文章，获取最大的 order_index
+        let maxArticleOrder = 0;
+        try {
+          const articleResponse = await fetch(`/api/articles?category=${parentCategoryId}&limit=1000&sort=order_desc`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (articleResponse.ok) {
+            const articleData = await articleResponse.json();
+            if (articleData.articles && articleData.articles.length > 0) {
+              maxArticleOrder = Math.max(
+                ...articleData.articles.map((article: any) => article.order_index || 0)
+              );
+            }
+          }
+        } catch (error) {
+          console.warn('获取文章排序信息失败:', error);
+        }
+
+        // 3. 取两者中的最大值 + 1
+        orderIndex = Math.max(maxCategoryOrder, maxArticleOrder) + 1;
+      } catch (error) {
+        console.warn('获取排序信息失败，使用默认排序:', error);
+        // 降级方案：使用子分类数量 + 1
+        const parentCategory = findCategoryById(categories, parentCategoryId);
+        orderIndex = (parentCategory?.children?.length || 0) + 1;
+      }
 
       const response = await fetch('/api/categories', {
         method: 'POST',
@@ -192,7 +249,7 @@ export default function CategoryTreeSelect({
           id: newId,
           name: newCategoryName,
           parent_id: parentCategoryId,
-          order_index: orderIndex + 1,
+          order_index: orderIndex,
         }),
       });
 
@@ -204,6 +261,10 @@ export default function CategoryTreeSelect({
         setNewCategoryName('');
         // 重新加载分类树
         loadCategories();
+        // 触发 onChange 回调，选中新创建的分类
+        if (onChange) {
+          onChange(newId);
+        }
       } else {
         message.error(result.error || '创建失败');
       }
