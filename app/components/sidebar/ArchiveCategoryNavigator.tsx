@@ -32,7 +32,8 @@ export default function ArchiveCategoryNavigator({
     emptyText: '暂无目录',
     forceOpenRootKeys: true, // 抽屉中允许全部展开
     navigationPattern: '/archive?category={categoryId}',
-    stylePrefix: 'archive-category'
+    stylePrefix: 'archive-category',
+    showChapterLabels: false // 归档目录不显示章节编号
   };
 
   const handleCategorySelect = (categoryId: string | null) => {
