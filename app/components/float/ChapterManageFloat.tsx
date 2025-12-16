@@ -5,11 +5,27 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, Tree, message, Spin, Empty, Input } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { FloatButton, Modal, message, Spin, Empty, Input } from 'antd';
 import { UnorderedListOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import type { TreeDataNode, TreeProps } from 'antd';
 import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
+
+// @dnd-kit 导入
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  closestCenter,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ChapterManageFloatProps {
   categoryId: string; // 当前书籍分类ID
@@ -29,18 +45,174 @@ interface TreeNode {
   children?: TreeNode[];
 }
 
+// SortableItem 组件 - 使用 @dnd-kit
+const SortableItem: React.FC<{
+  node: TreeNode;
+  expandedKeys: Set<string>;
+  onToggleExpand: (nodeId: string) => void;
+  onAddCategory: (parentId: string) => void;
+  onDeleteCategory: (categoryId: string, categoryName: string) => void;
+}> = ({ node, expandedKeys, onToggleExpand, onAddCategory, onDeleteCategory }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: node.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const isCategory = node.node_type === 'category';
+  const icon = isCategory ? '📁' : '📄';
+  const isExpanded = expandedKeys.has(node.id);
+  const hasChildren = node.children && node.children.length > 0;
+  const isEmpty = !node.children || node.children.length === 0;
+
+  // 格式化节点标签（添加章节号）
+  const formattedLabel = formatNodeLabel(node as any, {
+    showChapterLabel: true,
+    showArticleNumber: false,
+  });
+
+  // 为分类节点添加操作按钮
+  const titleElement = isCategory ? (
+    <span>
+      {icon} {formattedLabel}
+      <span style={{ marginLeft: '8px' }}>
+        <PlusOutlined
+          style={{
+            color: '#52c41a',
+            cursor: 'pointer',
+            marginRight: '8px',
+            fontSize: '12px'
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddCategory(node.id);
+          }}
+          title="新建子目录"
+        />
+        {isEmpty && (
+          <DeleteOutlined
+            style={{
+              color: '#ff4d4f',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteCategory(node.id, node.name);
+            }}
+            title="删除目录"
+          />
+        )}
+      </span>
+    </span>
+  ) : (
+    `${icon} ${formattedLabel}`
+  );
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="sortable-tree-node"
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '4px 8px',
+          cursor: 'grab',
+          borderRadius: '4px',
+          background: isDragging ? '#f0f0f0' : 'transparent',
+        }}
+        onClick={() => hasChildren && onToggleExpand(node.id)}
+      >
+        {isCategory && hasChildren && (
+          <span style={{ marginRight: '4px', cursor: 'pointer' }}>
+            {isExpanded ? '📂' : '📁'}
+          </span>
+        )}
+        <span style={{ flex: 1 }}>{titleElement}</span>
+      </div>
+
+      {isCategory && isExpanded && hasChildren && (
+        <div style={{ marginLeft: '20px' }}>
+          <SortableTree
+            nodes={node.children || []}
+            expandedKeys={expandedKeys}
+            onToggleExpand={onToggleExpand}
+            onAddCategory={onAddCategory}
+            onDeleteCategory={onDeleteCategory}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// SortableTree 组件 - 递归渲染树结构
+const SortableTree: React.FC<{
+  nodes: TreeNode[];
+  expandedKeys: Set<string>;
+  onToggleExpand: (nodeId: string) => void;
+  onAddCategory: (parentId: string) => void;
+  onDeleteCategory: (categoryId: string, categoryName: string) => void;
+}> = ({ nodes, expandedKeys, onToggleExpand, onAddCategory, onDeleteCategory }) => {
+  return (
+    <SortableContext
+      items={nodes.map(n => n.id)}
+      strategy={verticalListSortingStrategy}
+    >
+      {nodes.map(node => (
+        <SortableItem
+          key={node.id}
+          node={node}
+          expandedKeys={expandedKeys}
+          onToggleExpand={onToggleExpand}
+          onAddCategory={onAddCategory}
+          onDeleteCategory={onDeleteCategory}
+        />
+      ))}
+    </SortableContext>
+  );
+};
+
 export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterManageFloatProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [treeData, setTreeData] = useState<TreeDataNode[]>([]);
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [treeData, setTreeData] = useState<TreeNode[]>([]);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [bookRootId, setBookRootId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false); // 追踪是否有改动
-  
+
+  const dragCounterRef = useRef(0);
+
+  /**
+   * 自定义树节点组件
+   */
   // 新建目录相关状态
   const [newCategoryModalOpen, setNewCategoryModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
+
+  // @dnd-kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 防止误触
+      },
+    })
+  );
 
   /**
    * 调试：监听全局点击和触摸事件
@@ -269,22 +441,29 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
 
       if (result.success && result.data) {
         let treeNodes = result.data.tree as TreeNode[];
-        
+
         // 不显示书架本身，直接使用其子节点
-        let childNodes = treeNodes.length > 0 && treeNodes[0].children 
-          ? treeNodes[0].children 
+        let childNodes = treeNodes.length > 0 && treeNodes[0].children
+          ? treeNodes[0].children
           : treeNodes;
-        
+
         // 添加章节编号
         childNodes = addChapterNumbers(childNodes);
-        
-        // 构建Tree组件需要的数据格式
-        const treeDataNodes = buildTreeData(childNodes);
-        setTreeData(treeDataNodes);
+
+        setTreeData(childNodes);
 
         // 默认展开所有节点
-        const allKeys = getAllKeys(childNodes);
-        setExpandedKeys(allKeys);
+        const allExpandedKeys = new Set<string>();
+        const collectKeys = (nodes: TreeNode[]) => {
+          nodes.forEach(node => {
+            if (node.children && node.children.length > 0) {
+              allExpandedKeys.add(node.id);
+              collectKeys(node.children);
+            }
+          });
+        };
+        collectKeys(childNodes);
+        setExpandedKeys(allExpandedKeys);
       } else {
         message.error('加载章节数据失败');
       }
@@ -387,254 +566,232 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
     });
   };
 
-  /**
-   * 递归构建Tree组件数据
-   */
-  const buildTreeData = (nodes: TreeNode[]): TreeDataNode[] => {
-    return nodes.map(node => {
-      const isCategory = node.node_type === 'category';
-      const icon = isCategory ? '📁' : '📄';
-      
-      // 格式化节点标签（添加章节号）
-      const formattedLabel = formatNodeLabel(node as any, {
-        showChapterLabel: true,
-        showArticleNumber: false, // 暂时隐藏文章编号
-      });
-      
-      // 判断是否是空目录（没有子节点）
-      const isEmpty = !node.children || node.children.length === 0;
-      
-      // 为分类节点添加操作按钮
-      const titleElement = isCategory ? (
-        <span>
-          {icon} {formattedLabel}
-          <span style={{ marginLeft: '8px' }}>
-            <PlusOutlined 
-              style={{ 
-                color: '#52c41a', 
-                cursor: 'pointer', 
-                marginRight: '8px',
-                fontSize: '12px'
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddCategory(node.id);
-              }}
-              title="新建子目录"
-            />
-            {isEmpty && (
-              <DeleteOutlined 
-                style={{ 
-                  color: '#ff4d4f', 
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteCategory(node.id, node.name, e);
-                }}
-                title="删除目录"
-              />
-            )}
-          </span>
-        </span>
-      ) : (
-        `${icon} ${formattedLabel}`
-      );
-      
-      const treeNode: TreeDataNode = {
-        key: `${node.node_type}-${node.id}`,
-        title: titleElement,
-        children: node.children && node.children.length > 0 
-          ? buildTreeData(node.children) 
-          : undefined,
-        // 存储原始数据用于拖拽时的处理
-        // @ts-ignore
-        data: node,
-      };
-
-      return treeNode;
-    });
-  };
-
-  /**
-   * 获取所有节点的keys
-   */
-  const getAllKeys = (nodes: TreeNode[]): string[] => {
-    const keys: string[] = [];
-    const collect = (nodeList: TreeNode[]) => {
-      nodeList.forEach(node => {
-        keys.push(`${node.node_type}-${node.id}`);
-        if (node.children && node.children.length > 0) {
-          collect(node.children);
-        }
-      });
-    };
-    collect(nodes);
-    return keys;
-  };
 
   /**
    * 获取节点的所有同级兄弟节点（从树数据中查找）
    */
   const getSiblings = (nodes: TreeNode[], targetParentId: string | null): TreeNode[] => {
-    const siblings: TreeNode[] = [];
-    
-    const findSiblings = (nodeList: TreeNode[]) => {
+    // 递归获取所有节点
+    const getAllNodes = (nodeList: TreeNode[]): TreeNode[] => {
+      const result: TreeNode[] = [];
       for (const node of nodeList) {
-        // 找到同父节点的节点
-        if (node.parent_id === targetParentId) {
-          siblings.push(node);
-        }
-        // 递归查找子节点
+        result.push(node);
         if (node.children && node.children.length > 0) {
-          findSiblings(node.children);
+          result.push(...getAllNodes(node.children));
         }
       }
+      return result;
     };
 
-    // 从API返回的原始树数据中查找
-    const response = treeData;
-    if (response.length > 0 && (response[0] as any).data) {
-      // 从TreeDataNode提取原始数据
-      const extractNodes = (dataNodes: TreeDataNode[]): TreeNode[] => {
-        const result: TreeNode[] = [];
-        for (const dn of dataNodes) {
-          // @ts-ignore
-          if (dn.data) {
-            // @ts-ignore
-            result.push(dn.data);
-            if (dn.children) {
-              result.push(...extractNodes(dn.children));
-            }
-          }
-        }
-        return result;
-      };
-      const allNodes = extractNodes(treeData);
-      return allNodes.filter(n => n.parent_id === targetParentId);
-    }
-    
-    return siblings;
+    // 获取所有节点，然后按 parent_id 过滤
+    const allNodes = getAllNodes(treeData);
+    const siblings = allNodes.filter(n => n.parent_id === targetParentId);
+
+    // 按 order_index 排序
+    return siblings.sort((a, b) => a.order_index - b.order_index);
   };
 
   /**
-   * 处理拖拽放置
+   * 处理拖拽结束 - @dnd-kit 版本
    */
-  const onDrop: TreeProps['onDrop'] = async (info) => {
-    const dropPos = info.node.pos.split('-');
-    const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1]);
+  /**
+   * 处理拖拽结束 - @dnd-kit 版本
+   * @dnd-kit 只告诉你：active.id（拖谁） 和 over.id（放到谁上面）
+   */
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
 
-    console.log('拖拽信息:', {
-      dragKey: info.dragNode.key,
-      dropKey: info.node.key,
-      dropPosition,
-      dropToGap: info.dropToGap,
+    // 如果没有有效的拖拽目标，直接返回
+    if (!over || active.id === over.id) return;
+
+    console.log('拖拽结束:', {
+      activeId: active.id,
+      overId: over.id,
     });
 
     try {
-      // @ts-ignore
-      const dragNode = info.dragNode.data as TreeNode;
-      // @ts-ignore
-      const dropNode = info.node.data as TreeNode;
-
-      const isDraggingArticle = dragNode.node_type === 'article';
-      const isDropOnCategory = dropNode.node_type === 'category';
-
-      // 处理文章拖拽
-      if (isDraggingArticle) {
-        const articleId = dragNode.id;
-        let newCategoryId: string;
-        let newOrder: number | undefined;
-
-        if (!info.dropToGap) {
-          // 放到节点内部（不同级）
-          if (!isDropOnCategory) {
-            message.warning('章节只能放置到目录内部');
-            return;
-          }
-          newCategoryId = dropNode.id;
-          newOrder = undefined; // 不同级，不指定顺序
-        } else {
-          // 放到节点之间
-          if (dropNode.node_type === 'article') {
-            // 放到文章旁边
-            newCategoryId = dropNode.parent_id || bookRootId || '';
-            
-            // 判断是否同级
-            const isSameLevel = dragNode.parent_id === dropNode.parent_id;
-            if (isSameLevel) {
-              // 同级：计算精确位置
-              const siblings = getSiblings([], newCategoryId);
-              const targetIndex = siblings.findIndex(s => s.id === dropNode.id);
-              
-              if (targetIndex !== -1) {
-                // 根据 dropPosition 决定放在目标前面还是后面
-                if (dropPosition === -1) {
-                  // 放在目标上面
-                  newOrder = dropNode.order_index;
-                } else {
-                  // 放在目标下面
-                  newOrder = dropNode.order_index + 1;
-                }
-              }
-            } else {
-              // 不同级：不指定顺序
-              newOrder = undefined;
-            }
-          } else {
-            // 放到分类旁边 - 视为放入该分类（不同级）
-            newCategoryId = dropNode.id;
-            newOrder = undefined;
-          }
-        }
-
-        // 更新文章的分类
-        const updateData: any = { category_id: newCategoryId };
-        if (newOrder !== undefined) {
-          updateData.order_index = newOrder;
-        }
-
-        // 从 localStorage 获取 token
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        if (!token) {
-          message.error('未登录，请先登录');
-          return;
-        }
-
-        const response = await fetch(`/api/articles/${articleId}`, {
-          method: 'PUT',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(updateData),
-        });
-
-        const result = await response.json();
-        console.log('文章移动响应:', { status: response.status, result });
-        
-        if (result.success) {
-          message.success(newOrder !== undefined ? '章节排序成功' : '章节移动成功');
-          setHasChanges(true); // 标记有改动
-          await loadChapterTree();
-        } else {
-          if (response.status === 401) {
-            message.error('您还未登录或登录已过期，请刷新页面后重新登录');
-          } else {
-            message.error(result.error || '移动失败');
-          }
-        }
+      // 从 localStorage 获取 token
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) {
+        message.error('未登录，请先登录');
+        return;
       }
 
-      // 禁用分类拖拽 - 不允许移动目录顺序
-      else if (dragNode.node_type === 'category') {
+      // 找到被拖拽的节点和目标节点
+      const findNode = (nodes: TreeNode[], id: string): TreeNode | null => {
+        for (const node of nodes) {
+          if (node.id === id) return node;
+          if (node.children) {
+            const found = findNode(node.children, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const dragNode = findNode(treeData, active.id as string);
+      const dropNode = findNode(treeData, over.id as string);
+
+      if (!dragNode) {
+        console.error('找不到拖拽节点:', active.id);
+        return;
+      }
+
+      if (!dropNode) {
+        console.error('找不到目标节点:', over.id);
+        return;
+      }
+
+      // 只有文章允许拖拽
+      if (dragNode.node_type !== 'article') {
         message.warning('目录顺序不允许修改');
         return;
       }
 
+      // 获取节点的父级ID
+      const getParentId = (nodeId: string): string | null => {
+        const findParent = (nodes: TreeNode[], targetId: string, parentId: string | null = null): string | null => {
+          for (const node of nodes) {
+            if (node.id === targetId) return parentId;
+            if (node.children) {
+              const found = findParent(node.children, targetId, node.id);
+              if (found !== null) return found;
+            }
+          }
+          return null;
+        };
+        return findParent(treeData, nodeId);
+      };
+
+      const activeParentId = getParentId(active.id as string);
+      const overParentId = getParentId(over.id as string);
+
+      console.log('父级信息:', {
+        activeParentId,
+        overParentId,
+        dragNodeParent: dragNode.parent_id,
+        dropNodeParent: dropNode.parent_id,
+      });
+
+      let requestData: any;
+
+      if (activeParentId === overParentId) {
+        // 同级拖拽：同一个 parent 内的排序
+        console.log('同级拖拽');
+
+        const parentId = activeParentId || bookRootId || '';
+        const siblings = getSiblings([], parentId);
+
+        const oldIndex = siblings.findIndex(n => n.id === active.id);
+        const newIndex = siblings.findIndex(n => n.id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) {
+          console.error('找不到节点索引');
+          return;
+        }
+
+        // 使用 @dnd-kit 的 arrayMove 生成新顺序
+        const newOrder = arrayMove(siblings, oldIndex, newIndex);
+
+        // 生成 payload（从 1 开始编号）
+        const payload = newOrder.map((n, i) => ({
+          id: n.id,
+          type: n.node_type,
+          order_index: i + 1,
+        }));
+
+        requestData = {
+          moves: [
+            {
+              parent_id: parentId,
+              children: payload,
+            },
+          ],
+          moved: null, // 同级拖拽，不涉及 parent_id 变更
+        };
+      } else {
+        // 不同级拖拽：跨 parent 移动
+        console.log('不同级拖拽');
+
+        const oldParentId = activeParentId || bookRootId || '';
+        const newParentId = dropNode.node_type === 'category' ? dropNode.id : (overParentId || bookRootId || '');
+
+        // 1. 处理 oldParent：删除节点并重排
+        const oldSiblings = getSiblings([], oldParentId);
+        const newOldList = oldSiblings
+          .filter(n => n.id !== dragNode.id)
+          .map((n, i) => ({
+            id: n.id,
+            type: n.node_type,
+            order_index: i + 1,
+          }));
+
+        // 2. 处理 newParent：插入到目标位置并重排
+        const newSiblings = getSiblings([], newParentId)
+          .filter(n => n.id !== dragNode.id); // 防御性过滤
+
+        // 找到目标节点在新列表中的位置，然后插入
+        const targetIndex = newSiblings.findIndex(n => n.id === over.id);
+        const insertIndex = targetIndex !== -1 ? targetIndex : newSiblings.length;
+
+        newSiblings.splice(insertIndex, 0, {
+          ...dragNode,
+          parent_id: newParentId,
+        });
+
+        const newNewList = newSiblings.map((n, i) => ({
+          id: n.id,
+          type: n.node_type,
+          order_index: i + 1,
+        }));
+
+        requestData = {
+          moves: [
+            {
+              parent_id: oldParentId,
+              children: newOldList,
+            },
+            {
+              parent_id: newParentId,
+              children: newNewList,
+            },
+          ],
+          moved: {
+            id: dragNode.id,
+            new_parent_id: newParentId,
+          },
+        };
+      }
+
+      console.log('发送请求数据:', requestData);
+
+      // 调用新的拖拽排序 API
+      const response = await fetch('/api/tree/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      const result = await response.json();
+      console.log('拖拽排序响应:', { status: response.status, result });
+
+      if (result.success) {
+        message.success('操作成功');
+        setHasChanges(true); // 标记有改动
+        await loadChapterTree();
+      } else {
+        if (response.status === 401) {
+          message.error('您还未登录或登录已过期，请刷新页面后重新登录');
+        } else {
+          message.error(result.error || '操作失败');
+        }
+      }
+
     } catch (error) {
-      console.error('移动失败:', error);
+      console.error('拖拽失败:', error);
       message.error('操作失败');
     }
   };
@@ -687,12 +844,12 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         /* 移动端优化：增大可拖拽区域 */
         @media (max-width: 768px) {
           .chapter-tree-mobile .ant-tree-treenode {
-            padding: 8px 0;
+            padding: 0px 0;
           }
           
           .chapter-tree-mobile .ant-tree-node-content-wrapper {
             padding: 8px;
-            min-height: 44px;
+            min-height: 32px;
             display: flex;
             align-items: center;
           }
@@ -752,20 +909,36 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
               </Spin>
             </div>
           ) : treeData.length > 0 ? (
-            <Tree
-              draggable
-              blockNode
-              expandedKeys={expandedKeys}
-              onExpand={(keys) => setExpandedKeys(keys)}
-              onDrop={onDrop}
-              treeData={treeData}
-              style={{
-                background: '#fafafa',
-                padding: '16px',
-                borderRadius: '8px',
-              }}
-              className="chapter-tree-mobile"
-            />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <div
+                style={{
+                  background: '#fafafa',
+                  padding: '16px',
+                  borderRadius: '8px',
+                }}
+                className="chapter-tree-mobile"
+              >
+                <SortableTree
+                  nodes={treeData}
+                  expandedKeys={expandedKeys}
+                  onToggleExpand={(nodeId) => {
+                    const newKeys = new Set(expandedKeys);
+                    if (newKeys.has(nodeId)) {
+                      newKeys.delete(nodeId);
+                    } else {
+                      newKeys.add(nodeId);
+                    }
+                    setExpandedKeys(newKeys);
+                  }}
+                  onAddCategory={handleAddCategory}
+                  onDeleteCategory={handleDeleteCategory}
+                />
+              </div>
+            </DndContext>
           ) : (
             <Empty
               description="暂无章节数据"

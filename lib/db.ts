@@ -4,7 +4,7 @@
 import mysql from 'mysql2/promise';
 
 // 创建连接池
-const pool = mysql.createPool({
+export const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
   password: 'root',
