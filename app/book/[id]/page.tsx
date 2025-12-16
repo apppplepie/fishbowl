@@ -15,11 +15,12 @@ import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
 import CommentSection from '@/app/components/CommentSection';
 import ImageCardModal from '@/app/components/ImageCardModal';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useArticleNavigation } from '@/app/hooks/useArticleNavigation';
+import { getArticleCategory } from '@/app/bookcase/page';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
@@ -43,10 +44,13 @@ const { TextArea } = Input;
 export default function BookPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const bookId = params.id as string;
   const { isMobile } = useResponsive();
   const { isLoggedIn, user } = useAuth();
-  const [bookCategoryId, setBookCategoryId] = useState<string>('');
+  // 从URL参数获取分类信息，优先使用URL参数中的category
+  const urlCategory = searchParams.get('category');
+  const [bookCategoryId, setBookCategoryId] = useState<string>(urlCategory || '');
 
   // 文章导航
   const navigation = useArticleNavigation(bookCategoryId, bookId);
@@ -165,10 +169,12 @@ export default function BookPage() {
         setCommentsCount(result.article.comments || 0);
 
         // 设置书籍分类ID
-        if (result.article.category_id) {
-          console.log('书籍分类ID:', result.article.category_id);
-          setBookCategoryId(result.article.category_id);
-          await fetchCategoryPath(result.article.category_id);
+        // 如果URL中没有指定分类，则使用文章本身的分类ID
+        const finalCategoryId = urlCategory || result.article.category_id;
+        if (finalCategoryId) {
+          console.log('书籍分类ID:', finalCategoryId, urlCategory ? '(来自URL)' : '(来自文章数据)');
+          setBookCategoryId(finalCategoryId);
+          await fetchCategoryPath(finalCategoryId);
         } else {
           console.log('书籍没有分类ID');
         }
@@ -775,7 +781,13 @@ export default function BookPage() {
                   <Button
                     type="link"
                     icon={<LeftOutlined />}
-                    onClick={() => navigation.prevArticleId && router.push(`/book/${navigation.prevArticleId}`)}
+                    onClick={() => {
+                      if (navigation.prevArticleId) {
+                        const targetCategory = getArticleCategory(navigation.prevArticleId);
+                        const url = targetCategory ? `/book/${navigation.prevArticleId}?category=${targetCategory}` : `/book/${navigation.prevArticleId}`;
+                        router.push(url);
+                      }
+                    }}
                     style={{
                       color: '#1890ff',
                       padding: '4px 8px',
@@ -799,7 +811,13 @@ export default function BookPage() {
                   <Button
                     type="link"
                     icon={<RightOutlined />}
-                    onClick={() => navigation.nextArticleId && router.push(`/book/${navigation.nextArticleId}`)}
+                    onClick={() => {
+                      if (navigation.nextArticleId) {
+                        const targetCategory = getArticleCategory(navigation.nextArticleId);
+                        const url = targetCategory ? `/book/${navigation.nextArticleId}?category=${targetCategory}` : `/book/${navigation.nextArticleId}`;
+                        router.push(url);
+                      }
+                    }}
                     style={{
                       color: '#1890ff',
                       padding: '4px 8px',
