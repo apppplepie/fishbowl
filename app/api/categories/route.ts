@@ -101,6 +101,57 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * 递归更新节点及其所有子节点的 depth 和 path
+ */
+async function updateNodeAndChildren(
+  nodeId: string,
+  newParentId: string | null,
+  newOrderIndex: number
+): Promise<void> {
+  // 1. 获取新父节点的信息（如果有父节点）
+  let parentDepth = 0;
+  let parentPath = '';
+
+  if (newParentId) {
+    const parentResult = await query<Category[]>(
+      'SELECT depth, path FROM categories WHERE id = ?',
+      [newParentId]
+    );
+
+    if (parentResult.length === 0) {
+      throw new Error('父分类不存在');
+    }
+
+    parentDepth = parentResult[0].depth;
+    parentPath = parentResult[0].path;
+  }
+
+  // 2. 计算当前节点的新 depth 和 path
+  const newDepth = parentDepth + 1;
+  const newPath = parentPath
+    ? `${parentPath}-${String(newOrderIndex).padStart(6, '0')}`
+    : String(newOrderIndex).padStart(6, '0');
+
+  // 3. 更新当前节点
+  await query(
+    `UPDATE categories
+     SET parent_id = ?, order_index = ?, depth = ?, path = ?
+     WHERE id = ?`,
+    [newParentId, newOrderIndex, newDepth, newPath, nodeId]
+  );
+
+  // 4. 递归更新所有子节点
+  const children = await query<Category[]>(
+    'SELECT id, order_index FROM categories WHERE parent_id = ? ORDER BY order_index',
+    [nodeId]
+  );
+
+  for (const child of children) {
+    await updateNodeAndChildren(child.id, nodeId, child.order_index);
+  }
+}
+
+/**
  * POST /api/categories
  * 创建新分类
  */
@@ -116,15 +167,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 使用提供的 order_index，如果没有则默认为 0（稍后会被正确设置）
+    const finalOrderIndex = order_index || 0;
+
+    // 先创建分类（不设置 path 等字段）
     await query(
       'INSERT INTO categories (id, name, parent_id, order_index) VALUES (?, ?, ?, ?)',
-      [id, name, parent_id || null, order_index || 0]
+      [id, name, parent_id || null, finalOrderIndex]
     );
+
+    // 然后更新 path 和其他相关字段
+    await updateNodeAndChildren(id, parent_id || null, finalOrderIndex);
 
     return NextResponse.json({
       success: true,
       message: '分类创建成功',
-      category: { id, name, parent_id, order_index }
+      category: { id, name, parent_id, order_index: finalOrderIndex }
     });
   } catch (error) {
     console.error('创建分类失败:', error);

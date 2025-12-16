@@ -28,6 +28,58 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, pool } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
+/**
+ * 递归更新节点及其所有子节点的 depth 和 path
+ */
+async function updateNodeAndChildren(
+  connection: any,
+  nodeId: string,
+  newParentId: string | null,
+  newOrderIndex: number
+): Promise<void> {
+  // 1. 获取新父节点的信息（如果有父节点）
+  let parentDepth = 0;
+  let parentPath = '';
+
+  if (newParentId) {
+    const [parentResult] = await connection.execute(
+      'SELECT depth, path FROM categories WHERE id = ?',
+      [newParentId]
+    );
+
+    if (parentResult.length === 0) {
+      throw new Error('父分类不存在');
+    }
+
+    parentDepth = parentResult[0].depth;
+    parentPath = parentResult[0].path;
+  }
+
+  // 2. 计算当前节点的新 depth 和 path
+  const newDepth = parentDepth + 1;
+  const newPath = parentPath
+    ? `${parentPath}-${String(newOrderIndex).padStart(6, '0')}`
+    : String(newOrderIndex).padStart(6, '0');
+
+  // 3. 更新当前节点
+  await connection.execute(
+    `UPDATE categories
+     SET parent_id = ?, order_index = ?, depth = ?, path = ?
+     WHERE id = ?`,
+    [newParentId, newOrderIndex, newDepth, newPath, nodeId]
+  );
+
+  // 4. 递归更新所有子节点
+  const [children] = await connection.execute(
+    'SELECT id, order_index FROM categories WHERE parent_id = ? ORDER BY order_index',
+    [nodeId]
+  );
+
+  for (const child of children) {
+    await updateNodeAndChildren(connection, child.id, nodeId, child.order_index);
+  }
+}
+
 interface ReorderRequest {
   moves: Array<{
     parent_id: string;
@@ -123,11 +175,8 @@ export async function POST(request: NextRequest) {
 
         for (const child of children) {
           if (child.type === 'category') {
-            // 更新分类的 order_index
-            await connection.execute(
-              'UPDATE categories SET order_index = ? WHERE id = ? AND parent_id = ?',
-              [child.order_index, child.id, parent_id]
-            );
+            // 更新分类的 order_index 和 path
+            await updateNodeAndChildren(connection, child.id, parent_id, child.order_index);
           } else if (child.type === 'article') {
             // 更新文章的 order_index
             await connection.execute(
@@ -138,12 +187,27 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 4.2 处理 moved（更新 parent_id）
+      // 4.2 处理 moved（更新 parent_id 或 path）
       if (moved) {
-        await connection.execute(
-          'UPDATE articles SET category_id = ? WHERE id = ?',
-          [moved.new_parent_id, moved.id]
+        // 检查是否是 category 移动（通过查询 categories 表）
+        const [movedResult] = await connection.execute(
+          'SELECT id FROM categories WHERE id = ?',
+          [moved.id]
         );
+
+        if (movedResult && Array.isArray(movedResult) && movedResult.length > 0) {
+          // 是 category，需要更新整个子树
+          // 找到这个 category 在新 parent 中的 order_index
+          const targetMove = moves.find(m => m.parent_id === moved.new_parent_id);
+          const categoryOrderIndex = targetMove?.children.find(c => c.id === moved.id)?.order_index || 0;
+          await updateNodeAndChildren(connection, moved.id, moved.new_parent_id, categoryOrderIndex);
+        } else {
+          // 是 article，只需要更新 category_id
+          await connection.execute(
+            'UPDATE articles SET category_id = ? WHERE id = ?',
+            [moved.new_parent_id, moved.id]
+          );
+        }
       }
 
       // 提交事务
