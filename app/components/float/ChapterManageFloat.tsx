@@ -8,11 +8,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, message, Spin, Empty, Input } from 'antd';
-import { UnorderedListOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, CaretDownOutlined, CaretRightOutlined } from '@ant-design/icons';
-import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
 
-// @dnd-kit imports
+// UI imports
+import { FloatButton, Modal, message, Spin, Empty, Input } from 'antd';
+import {
+  UnorderedListOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+  CaretDownOutlined,
+  CaretRightOutlined
+} from '@ant-design/icons';
+
+// Drag & drop imports
 import {
   DndContext,
   PointerSensor,
@@ -33,6 +41,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// Utilities
+import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
+
 interface ChapterManageFloatProps {
   categoryId: string; // 当前书籍分类ID
   onSuccess?: () => void; // 拖动调整成功后的回调
@@ -52,31 +63,31 @@ interface TreeNode {
   children?: TreeNode[];
 }
 
-// ---------- Helpers for tree manipulation ----------
+  // ---------- Tree manipulation utilities ----------
 
-// Find node by id (recursive)
-function findNode(nodes: TreeNode[], id: string): TreeNode | null {
-  for (const node of nodes) {
-    if (node.id === id) return node;
-    if (node.children) {
-      const found = findNode(node.children, id);
-      if (found) return found;
+  // Find node by id (recursive)
+  const findNodeRecursive = (nodes: TreeNode[], id: string): TreeNode | null => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNodeRecursive(node.children, id);
+        if (found) return found;
+      }
     }
-  }
-  return null;
-}
+    return null;
+  };
 
-// Find parent id of a node
-function findParentId(nodes: TreeNode[], targetId: string, parentId: string | null = null): string | null {
-  for (const node of nodes) {
-    if (node.id === targetId) return parentId;
-    if (node.children) {
-      const found = findParentId(node.children, targetId, node.id);
-      if (found !== null) return found;
+  // Find parent id of a node
+  const findParentIdRecursive = (nodes: TreeNode[], targetId: string, parentId: string | null = null): string | null => {
+    for (const node of nodes) {
+      if (node.id === targetId) return parentId;
+      if (node.children) {
+        const found = findParentIdRecursive(node.children, targetId, node.id);
+        if (found !== null) return found;
+      }
     }
-  }
-  return null;
-}
+    return null;
+  };
 
 // Replace children of a parent (parentId === null means root level)
 function setChildrenForParent(nodes: TreeNode[], parentId: string | null, newChildren: TreeNode[]): TreeNode[] {
@@ -108,7 +119,7 @@ function getSiblingsFromTree(treeData: TreeNode[], parentId: string | null): Tre
     const tops = treeData.map(n => ({ ...n }));
     return tops.sort((a, b) => a.order_index - b.order_index);
   }
-  const parentNode = findNode(treeData, parentId);
+  const parentNode = findNodeRecursive(treeData, parentId);
   if (!parentNode) return [];
   const children = (parentNode.children || []).map(n => ({ ...n }));
   return children.sort((a, b) => a.order_index - b.order_index);
@@ -125,7 +136,7 @@ const SortableItem: React.FC<{
   onToggleExpand: (nodeId: string) => void;
   onAddCategory: (parentId: string) => void;
   onDeleteCategory: (categoryId: string, categoryName: string) => void;
-}> = ({ node, expandedKeys, onToggleExpand, onAddCategory, onDeleteCategory }) => {
+}> = React.memo(({ node, expandedKeys, onToggleExpand, onAddCategory, onDeleteCategory }) => {
   const {
     attributes,
     listeners,
@@ -213,7 +224,7 @@ const SortableItem: React.FC<{
       )}
     </div>
   );
-};
+});
 
 // SortableTree component
 const SortableTree: React.FC<{
@@ -222,7 +233,7 @@ const SortableTree: React.FC<{
   onToggleExpand: (nodeId: string) => void;
   onAddCategory: (parentId: string) => void;
   onDeleteCategory: (categoryId: string, categoryName: string) => void;
-}> = ({ nodes, expandedKeys, onToggleExpand, onAddCategory, onDeleteCategory }) => {
+}> = React.memo(({ nodes, expandedKeys, onToggleExpand, onAddCategory, onDeleteCategory }) => {
   return (
     <SortableContext
       items={nodes.map(n => n.id)}
@@ -240,10 +251,10 @@ const SortableTree: React.FC<{
       ))}
     </SortableContext>
   );
-};
+});
 
 // Drag preview used inside DragOverlay
-const DragPreview: React.FC<{ node: TreeNode | null }> = ({ node }) => {
+const DragPreview: React.FC<{ node: TreeNode | null }> = React.memo(({ node }) => {
   if (!node) return null;
   const formattedLabel = formatNodeLabel(node as any, {
     showChapterLabel: true,
@@ -264,7 +275,7 @@ const DragPreview: React.FC<{ node: TreeNode | null }> = ({ node }) => {
       {formattedLabel}
     </div>
   );
-};
+});
 
 // ---------- Main component ----------
 
@@ -444,76 +455,96 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
   };
 
 
+  // ---------- Drag handling utilities ----------
+
+  // 处理同级拖拽（同一父节点内的排序）
+  const handleSameLevelDrag = (activeId: string, overId: string, parentId: string | null) => {
+    const siblings = getSiblingsFromTree(treeData, parentId || bookRootId || '');
+
+    const oldIndex = siblings.findIndex((n: TreeNode) => n.id === activeId);
+    const newIndex = siblings.findIndex((n: TreeNode) => n.id === overId);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error('找不到节点索引');
+      return null;
+    }
+
+    // 使用 @dnd-kit 的 arrayMove 生成新顺序
+    const newOrder = arrayMove(siblings, oldIndex, newIndex);
+
+    // 生成 payload（从 1 开始编号）
+    const payload = newOrder.map((n: TreeNode, i: number) => ({
+      id: n.id,
+      type: n.node_type,
+      order_index: i + 1,
+    }));
+
+    return {
+      moves: [
+        {
+          parent_id: parentId || '',
+          children: payload,
+        },
+      ],
+      moved: null, // 同级拖拽，不涉及 parent_id 变更
+    };
+  };
+
+  // 处理跨级拖拽（移动到不同父节点）
+  const handleCrossLevelDrag = (dragNode: TreeNode, dropNode: TreeNode, activeParentId: string | null, overParentId: string | null) => {
+    const oldParentId = activeParentId || bookRootId || '';
+    const newParentId = dropNode.node_type === 'category' ? dropNode.id : (overParentId || bookRootId || '');
+
+    // 1. 处理 oldParent：删除节点并重排
+    const oldSiblings = getSiblingsFromTree(treeData, oldParentId);
+    const newOldList = oldSiblings
+      .filter((n: TreeNode) => n.id !== dragNode.id)
+      .map((n: TreeNode, i: number) => ({
+        id: n.id,
+        type: n.node_type,
+        order_index: i + 1,
+      }));
+
+    // 2. 处理 newParent：插入到目标位置并重排
+    const newSiblings = getSiblingsFromTree(treeData, newParentId)
+      .filter((n: TreeNode) => n.id !== dragNode.id); // 防御性过滤
+
+    // 找到目标节点在新列表中的位置，然后插入
+    const targetIndex = newSiblings.findIndex((n: TreeNode) => n.id === dropNode.id);
+    const insertIndex = targetIndex !== -1 ? targetIndex : newSiblings.length;
+
+    newSiblings.splice(insertIndex, 0, {
+      ...dragNode,
+      parent_id: newParentId,
+    });
+
+    const newNewList = newSiblings.map((n: TreeNode, i: number) => ({
+      id: n.id,
+      type: n.node_type,
+      order_index: i + 1,
+    }));
+
+    return {
+      moves: [
+        {
+          parent_id: oldParentId,
+          children: newOldList,
+        },
+        {
+          parent_id: newParentId,
+          children: newNewList,
+        },
+      ],
+      moved: {
+        id: dragNode.id,
+        new_parent_id: newParentId,
+      },
+    };
+  };
+
   // ---------- Core DnD logic ----------
 
-  // Utility to get parent id for a node id
-  const getParentId = (nodeId: string): string | null => {
-    return findParentId(treeData, nodeId, null);
-  };
 
-  // Utility to update treeData locally for a single parent
-  const updateTreeLocalForParent = (parentId: string | null, newChildren: TreeNode[]) => {
-    const updated = setChildrenForParent(treeData, parentId, newChildren);
-    setTreeData(updated);
-  };
-
-  // Post reorder to backend (single parent)
-  const postReorder = async (parentId: string | null, children: TreeNode[]) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) {
-        message.error('未登录，请先登录');
-        return;
-      }
-      const payload = {
-        moves: [
-          {
-            parent_id: parentId || '',
-            children: children.map((n, i) => ({ id: n.id, type: n.node_type, order_index: i + 1 }))
-          }
-        ],
-        moved: null,
-      };
-      const res = await fetch('/api/tree/reorder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      });
-      const result = await res.json();
-      if (!result.success) {
-        message.error(result.error || '保存排序失败');
-      }
-    } catch (err) {
-      console.error('postReorder error', err);
-      message.error('保存排序失败');
-    }
-  };
-
-  // Post reorder for multiple parents
-  const postReorderMulti = async (moves: { parent_id: string | null; children: TreeNode[] }[]) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) {
-        message.error('未登录，请先登录');
-        return;
-      }
-      const payload = {
-        moves: moves.map(m => ({
-          parent_id: m.parent_id || '',
-          children: m.children.map((n, i) => ({ id: n.id, type: n.node_type, order_index: i + 1 }))
-        })),
-        moved: moves.length === 2 ? { id: moves[0].children.find(c => c.parent_id && c.parent_id !== moves[0].parent_id)?.id || '' , new_parent_id: moves[1].parent_id || '' } : null
-      };
-      await fetch('/api/tree/reorder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      });
-    } catch (err) {
-      console.error('postReorderMulti error', err);
-      message.error('保存排序失败');
-    }
-  };
 
   // handleDragStart to set activeId for overlay
   const handleDragStart = (event: DragStartEvent) => {
@@ -545,19 +576,8 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       }
 
       // 找到被拖拽的节点和目标节点
-      const findNode = (nodes: TreeNode[], id: string): TreeNode | null => {
-        for (const node of nodes) {
-          if (node.id === id) return node;
-          if (node.children) {
-            const found = findNode(node.children, id);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
-      const dragNode = findNode(treeData, active.id as string);
-      const dropNode = findNode(treeData, over.id as string);
+      const dragNode = findNodeRecursive(treeData, active.id as string);
+      const dropNode = findNodeRecursive(treeData, over.id as string);
 
       if (!dragNode) {
         console.error('找不到拖拽节点:', active.id);
@@ -576,22 +596,8 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
       }
 
       // 获取节点的父级ID
-      const getParentId = (nodeId: string): string | null => {
-        const findParent = (nodes: TreeNode[], targetId: string, parentId: string | null = null): string | null => {
-          for (const node of nodes) {
-            if (node.id === targetId) return parentId;
-            if (node.children) {
-              const found = findParent(node.children, targetId, node.id);
-              if (found !== null) return found;
-            }
-          }
-          return null;
-        };
-        return findParent(treeData, nodeId);
-      };
-
-      const activeParentId = getParentId(active.id as string);
-      const overParentId = getParentId(over.id as string);
+      const activeParentId = findParentIdRecursive(treeData, active.id as string);
+      const overParentId = findParentIdRecursive(treeData, over.id as string);
 
       console.log('父级信息:', {
         activeParentId,
@@ -600,94 +606,14 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
         dropNodeParent: dropNode.parent_id,
       });
 
-      let requestData: any;
+      // 根据拖拽类型生成请求数据
+      const requestData = activeParentId === overParentId
+        ? handleSameLevelDrag(active.id as string, over.id as string, activeParentId)
+        : handleCrossLevelDrag(dragNode, dropNode, activeParentId, overParentId);
 
-      if (activeParentId === overParentId) {
-        // 同级拖拽：同一个 parent 内的排序
-        console.log('同级拖拽');
-
-        const parentId = activeParentId || bookRootId || '';
-        const siblings = getSiblingsFromTree(treeData, parentId);
-
-        const oldIndex = siblings.findIndex((n: TreeNode) => n.id === active.id);
-        const newIndex = siblings.findIndex((n: TreeNode) => n.id === over.id);
-
-        if (oldIndex === -1 || newIndex === -1) {
-          console.error('找不到节点索引');
-          return;
-        }
-
-        // 使用 @dnd-kit 的 arrayMove 生成新顺序
-        const newOrder = arrayMove(siblings, oldIndex, newIndex);
-
-        // 生成 payload（从 1 开始编号）
-        const payload = newOrder.map((n: TreeNode, i: number) => ({
-          id: n.id,
-          type: n.node_type,
-          order_index: i + 1,
-        }));
-
-        requestData = {
-          moves: [
-            {
-              parent_id: parentId,
-              children: payload,
-            },
-          ],
-          moved: null, // 同级拖拽，不涉及 parent_id 变更
-        };
-      } else {
-        // 不同级拖拽：跨 parent 移动
-        console.log('不同级拖拽');
-
-        const oldParentId = activeParentId || bookRootId || '';
-        const newParentId = dropNode.node_type === 'category' ? dropNode.id : (overParentId || bookRootId || '');
-
-        // 1. 处理 oldParent：删除节点并重排
-        const oldSiblings = getSiblingsFromTree(treeData, oldParentId);
-        const newOldList = oldSiblings
-          .filter((n: TreeNode) => n.id !== dragNode.id)
-          .map((n: TreeNode, i: number) => ({
-            id: n.id,
-            type: n.node_type,
-            order_index: i + 1,
-          }));
-
-        // 2. 处理 newParent：插入到目标位置并重排
-        const newSiblings = getSiblingsFromTree(treeData, newParentId)
-          .filter((n: TreeNode) => n.id !== dragNode.id); // 防御性过滤
-
-        // 找到目标节点在新列表中的位置，然后插入
-        const targetIndex = newSiblings.findIndex((n: TreeNode) => n.id === over.id);
-        const insertIndex = targetIndex !== -1 ? targetIndex : newSiblings.length;
-
-        newSiblings.splice(insertIndex, 0, {
-          ...dragNode,
-          parent_id: newParentId,
-        });
-
-        const newNewList = newSiblings.map((n: TreeNode, i: number) => ({
-          id: n.id,
-          type: n.node_type,
-          order_index: i + 1,
-        }));
-
-        requestData = {
-          moves: [
-            {
-              parent_id: oldParentId,
-              children: newOldList,
-            },
-            {
-              parent_id: newParentId,
-              children: newNewList,
-            },
-          ],
-          moved: {
-            id: dragNode.id,
-            new_parent_id: newParentId,
-          },
-        };
+      if (!requestData) {
+        console.error('无法生成拖拽请求数据');
+        return;
       }
 
       console.log('发送请求数据:', requestData);
@@ -800,7 +726,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
               </div>
 
               <DragOverlay dropAnimation={{ duration: 220 }}>
-                {activeId ? <DragPreview node={findNode(treeData, activeId)} /> : null}
+                {activeId ? <DragPreview node={findNodeRecursive(treeData, activeId)} /> : null}
               </DragOverlay>
             </DndContext>
           ) : (
