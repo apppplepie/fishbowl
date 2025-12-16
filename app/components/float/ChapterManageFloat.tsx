@@ -48,6 +48,7 @@ import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering
 interface ChapterManageFloatProps {
   categoryId: string; // 当前书籍分类ID
   onSuccess?: () => void; // 拖动调整成功后的回调
+  rootDepth?: number; // 从哪个深度开始显示树结构，默认显示所有
 }
 
 interface TreeNode {
@@ -63,6 +64,32 @@ interface TreeNode {
   publish_date?: string;
   children?: TreeNode[];
 }
+
+  // ---------- Tree manipulation utilities ----------
+
+  // 查找指定深度的祖宗节点
+  const findAncestorByDepth = (nodes: TreeNode[], targetId: string, targetDepth: number): TreeNode | null => {
+    const targetNode = findNodeRecursive(nodes, targetId);
+    if (!targetNode) return null;
+
+    // 如果目标节点的深度就是目标深度，直接返回
+    if (targetNode.depth === targetDepth) {
+      return targetNode;
+    }
+
+    // 否则向上查找祖宗节点
+    let currentNode = targetNode;
+    while (currentNode && currentNode.depth !== undefined && currentNode.depth > targetDepth) {
+      if (!currentNode.parent_id) break;
+
+      const parentNode = findNodeRecursive(nodes, currentNode.parent_id);
+      if (!parentNode) break;
+
+      currentNode = parentNode;
+    }
+
+    return currentNode.depth === targetDepth ? currentNode : null;
+  };
 
   // ---------- Tree manipulation utilities ----------
 
@@ -295,7 +322,7 @@ const DragPreview: React.FC<{ node: TreeNode | null }> = React.memo(({ node }) =
 
 // ---------- Main component ----------
 
-export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterManageFloatProps) {
+export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }: ChapterManageFloatProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
@@ -369,19 +396,36 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
 
       if (result.success && result.data) {
         let treeNodes = result.data.tree as TreeNode[];
+        let displayNodes: TreeNode[] = [];
 
-        // 不显示书架本身，直接使用其子节点
-        let childNodes = treeNodes.length > 0 && treeNodes[0].children
-          ? treeNodes[0].children
-          : treeNodes;
+        if (rootDepth !== undefined && rootDepth >= 0) {
+          // 查找指定深度的祖宗节点
+          const ancestorNode = findAncestorByDepth(treeNodes, categoryId, rootDepth);
+          if (ancestorNode && ancestorNode.children) {
+            // 只显示祖宗节点的子节点
+            displayNodes = ancestorNode.children;
+            console.log(`ChapterManageFloat: 显示深度${rootDepth}的祖宗节点"${ancestorNode.name}"的子节点`);
+          } else {
+            // 如果找不到指定的祖宗节点，回退到默认行为
+            console.warn(`ChapterManageFloat: 找不到深度${rootDepth}的祖宗节点，使用默认显示`);
+            displayNodes = treeNodes.length > 0 && treeNodes[0].children
+              ? treeNodes[0].children
+              : treeNodes;
+          }
+        } else {
+          // 默认行为：不显示书架本身，直接使用其子节点
+          displayNodes = treeNodes.length > 0 && treeNodes[0].children
+            ? treeNodes[0].children
+            : treeNodes;
+        }
 
         // 添加章节编号
-        childNodes = addChapterNumbers(childNodes);
+        displayNodes = addChapterNumbers(displayNodes);
 
         // 保存当前的展开状态，避免刷新时弹窗消失
         const currentExpandedKeys = new Set(expandedKeys);
 
-        setTreeData(childNodes);
+        setTreeData(displayNodes);
 
         // 保持当前的展开状态，而不是重置为全部展开
         // 只有在初次加载时才展开所有节点
@@ -396,7 +440,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess }: ChapterMan
               }
             });
           };
-          collectKeys(childNodes);
+          collectKeys(displayNodes);
           setExpandedKeys(allExpandedKeys);
         }
         // 刷新时保持当前的展开状态，不做任何改变

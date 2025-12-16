@@ -51,7 +51,10 @@ export default function BookcaseActionFloat({ onChapterManageSuccess }: Bookcase
         />
 
         {/* 章节管理按钮 */}
-        <ChapterManageFloat categoryId={categoryFromUrl} onSuccess={onChapterManageSuccess} />
+        <ChapterManageFloat 
+        categoryId={categoryFromUrl} 
+        rootDepth={2}
+        onSuccess={onChapterManageSuccess} />
       </FloatButton.Group>
     );
   } else {
