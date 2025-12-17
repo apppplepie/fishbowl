@@ -35,6 +35,7 @@ import {
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 import { getChapterLabel } from '@/app/utils/chapterNumbering';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/apiClient';
+import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
 
 const { TextArea } = Input;
 
@@ -830,7 +831,7 @@ export default function BookPage() {
             ) : (
               // 渲染书籍内容
               <div>
-                {book.blocks && book.blocks.map((block: Block & { parsedContent: any }, index: number) => {
+                {book.blocks && book.blocks.map((block: any, index: number) => {
                   switch (block.type) {
                     case 'text':
                       const textContent = block.parsedContent as any;
@@ -1004,6 +1005,9 @@ export default function BookPage() {
                           </div>
                         </div>
                       );
+
+                    case 'placeholder':
+                      return <PlaceholderBlock key={block.id || index} block={block as any} />;
 
                     default:
                       return null;
