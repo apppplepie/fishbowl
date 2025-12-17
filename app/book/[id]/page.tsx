@@ -19,7 +19,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
-import { useArticleNavigation, getArticleCategory } from '@/app/hooks/useArticleNavigation';
+import { useArticleNavigation, getArticleCategory, clearBookCache } from '@/app/hooks/useArticleNavigation';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
@@ -131,9 +131,9 @@ export default function BookPage() {
   // 文章内容缓存
   const [articleCache, setArticleCache] = useState<Map<string, any>>(new Map());
 
-  // 文章导航 - 通过文章ID自动找到对应的书籍，支持DFS顺序翻页
-  console.log('导航参数:', { articleId, bookId, bookCategoryId });
-  const navigation = useArticleNavigation(articleId);
+  // 文章导航 - 直接用书籍ID从缓存拿文章列表，支持DFS顺序翻页
+  console.log('导航参数:', { bookCategoryId, currentArticleId });
+  const navigation = useArticleNavigation(bookCategoryId, currentArticleId);
 
   // 点赞相关状态（内容状态）
   const [isLiked, setIsLiked] = useState(false);
@@ -521,6 +521,14 @@ export default function BookPage() {
       if (result.success) {
         message.success('保存成功');
         setEditMode('view');
+
+        // 清除相关书籍的缓存，因为文章内容可能发生变化
+        const articleCategoryId = getArticleCategory(articleId);
+        if (articleCategoryId) {
+          clearBookCache(articleCategoryId);
+          console.log('已清除文章所属书籍的缓存:', articleCategoryId);
+        }
+
         // 重新加载数据
         loadBook(articleId);
       } else {
@@ -558,6 +566,14 @@ export default function BookPage() {
           const result = await response.json();
           if (result.success) {
             message.success('删除成功');
+
+            // 清除相关书籍的缓存，因为文章被删除了
+            const articleCategoryId = getArticleCategory(articleId);
+            if (articleCategoryId) {
+              clearBookCache(articleCategoryId);
+              console.log('已清除文章所属书籍的缓存:', articleCategoryId);
+            }
+
             router.push('/bookcase');
           } else {
             message.error(result.error || '删除失败');

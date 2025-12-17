@@ -33,7 +33,7 @@ const calculateColumns = (width: number) => {
  * 缓存工具函数
  */
 const ARTICLE_LIST_CACHE_PREFIX = 'book-articles-cache-';
-const CACHE_EXPIRY_HOURS = 24; // 缓存24小时
+const CACHE_EXPIRY_HOURS = 1; // 缓存1小时，更及时更新
 
 // 获取完整的分类树结构
 const loadCategoryTree = async (): Promise<any[]> => {

@@ -6,9 +6,23 @@
 
 import { useState, useEffect } from 'react';
 
-// 从bookcase页面导入缓存函数
+// 缓存相关常量
 const ARTICLE_LIST_CACHE_PREFIX = 'book-articles-cache-';
-const CACHE_EXPIRY_HOURS = 24;
+const CACHE_EXPIRY_HOURS = 1; // 改为1小时过期，更及时更新
+
+/**
+ * 清除指定书籍的缓存
+ */
+export function clearBookCache(bookId: string) {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
+  const cacheKey = `${ARTICLE_LIST_CACHE_PREFIX}${bookId}`;
+  localStorage.removeItem(cacheKey);
+  console.log(`已清除书籍 ${bookId} 的缓存`);
+}
 
 export interface ArticleNavigationResult {
   prevArticleId: string | null;
@@ -49,45 +63,6 @@ function getCachedArticleList(bookId: string): string[] | null {
   }
 }
 
-/**
- * 通过文章ID找到对应的书籍ID
- */
-function findBookIdByArticleId(articleId: string): string | null {
-  // 检查是否在客户端环境
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return null;
-  }
-
-  // 遍历所有缓存，找到包含该文章的书籍
-  const keys = Object.keys(localStorage);
-  for (const key of keys) {
-    if (key.startsWith(ARTICLE_LIST_CACHE_PREFIX)) {
-      try {
-        const cached = localStorage.getItem(key);
-        if (!cached) continue;
-
-        const cacheData = JSON.parse(cached);
-        if (Date.now() > cacheData.expiry) {
-          // 缓存过期，删除
-          localStorage.removeItem(key);
-          continue;
-        }
-
-        // 检查文章是否在这个书籍的缓存中
-        if (cacheData.articleIds && cacheData.articleIds.includes(articleId)) {
-          // 提取书籍ID (book-articles-cache-${bookId})
-          const bookId = key.replace(ARTICLE_LIST_CACHE_PREFIX, '');
-          return bookId;
-        }
-      } catch (error) {
-        console.error('解析缓存失败:', error);
-        localStorage.removeItem(key);
-      }
-    }
-  }
-
-  return null;
-}
 
 /**
  * 获取文章对应的分类ID（复用bookcase的缓存逻辑）
@@ -134,42 +109,31 @@ export function getArticleCategory(articleId: string): string | null {
 
 /**
  * 获取文章导航信息
- * @param articleId 当前文章ID（用于找到对应的书籍）
+ * @param bookId 书籍ID
+ * @param currentArticleId 当前文章ID
  * @returns 导航信息
  */
-export function useArticleNavigation(articleId: string): ArticleNavigationResult {
+export function useArticleNavigation(bookId: string, currentArticleId: string): ArticleNavigationResult {
   const [articleIds, setArticleIds] = useState<string[]>([]);
-  const [bookId, setBookId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!articleId) {
+    if (!bookId) {
       setLoading(false);
       return;
     }
 
-    // 1. 通过文章ID找到对应的书籍ID
-    const foundBookId = findBookIdByArticleId(articleId);
-    if (!foundBookId) {
-      console.log('未找到文章对应的书籍缓存:', articleId);
-      setLoading(false);
-      return;
-    }
-
-    console.log('找到文章对应的书籍:', articleId, '->', foundBookId);
-    setBookId(foundBookId);
-
-    // 2. 获取书籍的文章列表（直接从缓存读取）
-    const cachedArticleIds = getCachedArticleList(foundBookId);
+    // 直接从缓存读取书籍的文章列表
+    const cachedArticleIds = getCachedArticleList(bookId);
     if (cachedArticleIds) {
-      console.log('使用书籍缓存数据:', foundBookId, cachedArticleIds.length, '篇文章');
+      console.log('使用书籍缓存数据:', bookId, cachedArticleIds.length, '篇文章');
       setArticleIds(cachedArticleIds);
-      setLoading(false);
     } else {
-      console.log('书籍缓存未命中:', foundBookId);
-      setLoading(false);
+      console.log('书籍缓存未命中:', bookId);
+      setArticleIds([]);
     }
-  }, [articleId]);
+    setLoading(false);
+  }, [bookId]);
 
   if (loading) {
     return {
@@ -184,7 +148,7 @@ export function useArticleNavigation(articleId: string): ArticleNavigationResult
   }
 
   if (articleIds.length === 0) {
-    console.log('文章列表为空:', bookId, articleId);
+    console.log('文章列表为空:', bookId, currentArticleId);
     return {
       prevArticleId: null,
       nextArticleId: null,
@@ -196,12 +160,12 @@ export function useArticleNavigation(articleId: string): ArticleNavigationResult
     };
   }
 
-  const currentIndex = articleIds.indexOf(articleId);
+  const currentIndex = articleIds.indexOf(currentArticleId);
   const totalCount = articleIds.length;
 
   console.log('导航计算:', {
     bookId,
-    articleId,
+    currentArticleId,
     totalCount,
     currentIndex,
     canGoPrev: currentIndex > 0,
@@ -210,7 +174,7 @@ export function useArticleNavigation(articleId: string): ArticleNavigationResult
 
   if (currentIndex === -1) {
     // 当前文章不在列表中
-    console.log('当前文章不在列表中:', articleId, '不在', articleIds);
+    console.log('当前文章不在列表中:', currentArticleId, '不在', articleIds);
     return {
       prevArticleId: null,
       nextArticleId: null,

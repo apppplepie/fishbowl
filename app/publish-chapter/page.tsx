@@ -216,6 +216,14 @@ export default function PublishChapterPage() {
 
       if (response.ok && result.success) {
         message.success('章节发布成功！');
+
+        // 清除相关书籍的缓存，因为新增了文章
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const { clearBookCache } = await import('@/app/hooks/useArticleNavigation');
+          clearBookCache(categoryFromUrl);
+          console.log('已清除新文章所属书籍的缓存:', categoryFromUrl);
+        }
+
         // 清空表单和块
         form.resetFields();
         setBlocks([{
