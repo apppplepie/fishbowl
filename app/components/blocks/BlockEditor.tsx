@@ -3,15 +3,35 @@
 import React, { useState } from 'react';
 import { Button, Space, Modal, Input, Upload, message, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { 
-  PlusOutlined, 
-  FileTextOutlined, 
-  PictureOutlined, 
+import {
+  PlusOutlined,
+  FileTextOutlined,
+  PictureOutlined,
   CodeOutlined,
   ThunderboltOutlined,
   FormatPainterOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
+import {
+  DndContext,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import TextBlock from './TextBlock';
 import ImageBlock from './ImageBlock';
 import CodeBlock from './CodeBlock';
@@ -24,13 +44,146 @@ interface BlockEditorProps {
   showAddButton?: boolean; // 是否显示底部的添加新块按钮
 }
 
+interface SortableItemProps {
+  id: string;
+  index: number;
+  block: Block;
+  onChange: (updated: Block) => void;
+  onDelete: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  canDelete: boolean;
+}
+
+interface SortableHandleProps {
+  listeners: any;
+  attributes: any;
+}
+
+function SortableItem({
+  id,
+  index,
+  block,
+  onChange,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+  canDelete,
+}: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const commonProps = {
+    onMoveUp,
+    onMoveDown,
+    canMoveUp,
+    canMoveDown,
+    canDelete,
+    isDragging,
+  };
+
+  const sortableHandleProps = {
+    ...attributes,
+    ...listeners,
+  };
+
+  const renderBlock = () => {
+    switch (block.type) {
+      case 'text':
+        return (
+          <TextBlock
+            key={block.id}
+            block={block}
+            onChange={onChange}
+            onDelete={onDelete}
+            sortableHandleProps={sortableHandleProps}
+            {...commonProps}
+          />
+        );
+      case 'image':
+        return (
+          <ImageBlock
+            key={block.id}
+            block={block}
+            onChange={onChange}
+            onDelete={onDelete}
+            sortableHandleProps={sortableHandleProps}
+            {...commonProps}
+          />
+        );
+      case 'code':
+        return (
+          <CodeBlock
+            key={block.id}
+            block={block}
+            onChange={onChange}
+            onDelete={onDelete}
+            sortableHandleProps={sortableHandleProps}
+            {...commonProps}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div ref={setNodeRef} style={{
+      transform: CSS.Transform.toString(transform),
+      transition,
+    }}>
+      {renderBlock()}
+    </div>
+  );
+}
+
 export default function BlockEditor({ blocks, onChange, showAddButton = true }: BlockEditorProps) {
   const [addBlockModalVisible, setAddBlockModalVisible] = useState(false);
   const [addImageModalVisible, setAddImageModalVisible] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [insertPosition, setInsertPosition] = useState<number>(-1); // 记录要插入的位置，-1表示末尾
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+        delay: 100,
+        tolerance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 100,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = blocks.findIndex((block) => block.id === active.id);
+      const newIndex = blocks.findIndex((block) => block.id === over.id);
+
+      const reorderedBlocks = arrayMove(blocks, oldIndex, newIndex);
+      onChange(reorderedBlocks);
+    }
+  };
 
   // 生成唯一ID
   const generateId = () => {
@@ -221,37 +374,6 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     onChange(reorderedBlocks);
   };
 
-  // 拖拽开始
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  // 拖拽结束
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-  };
-
-  // 拖拽经过
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    
-    if (draggedIndex === null || draggedIndex === index) return;
-    
-    // 交换位置
-    const newBlocks = [...blocks];
-    const draggedBlock = newBlocks[draggedIndex];
-    newBlocks.splice(draggedIndex, 1);
-    newBlocks.splice(index, 0, draggedBlock);
-    
-    // 重新排序
-    const reorderedBlocks = newBlocks.map((block, i) => ({
-      ...block,
-      order: i,
-    }));
-    
-    onChange(reorderedBlocks);
-    setDraggedIndex(index);
-  };
 
   // 批量格式化所有文字块
   const batchFormat = (option: FormatOption) => {
@@ -323,53 +445,6 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     },
   ];
 
-  // 渲染块
-  const renderBlock = (block: Block, index: number) => {
-    const commonProps = {
-      onDelete: () => deleteBlock(index),
-      onMoveUp: () => moveBlockUp(index),
-      onMoveDown: () => moveBlockDown(index),
-      canMoveUp: index > 0,
-      canMoveDown: index < blocks.length - 1,
-      canDelete: blocks.length > 1, // 只有多于一个块时才能删除
-      onDragStart: () => handleDragStart(index),
-      onDragEnd: handleDragEnd,
-      onDragOver: (e: React.DragEvent) => handleDragOver(e, index),
-      isDragging: draggedIndex === index,
-    };
-
-    switch (block.type) {
-      case 'text':
-        return (
-          <TextBlock
-            key={block.id}
-            block={block}
-            onChange={(updated) => updateBlock(index, updated)}
-            {...commonProps}
-          />
-        );
-      case 'image':
-        return (
-          <ImageBlock
-            key={block.id}
-            block={block}
-            onChange={(updated) => updateBlock(index, updated)}
-            {...commonProps}
-          />
-        );
-      case 'code':
-        return (
-          <CodeBlock
-            key={block.id}
-            block={block}
-            onChange={(updated) => updateBlock(index, updated)}
-            {...commonProps}
-          />
-        );
-      default:
-        return null;
-    }
-  };
 
   return (
     <div style={{ position: 'relative' }}>
@@ -406,39 +481,58 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
           </div>
         )}
 
-        {blocks.map((block, index) => (
-          <div key={block.id}>
-            {renderBlock(block, index)}
-            
-            {/* 块之间的添加按钮 */}
-            <div
-              style={{
-                textAlign: 'center',
-                margin: '8px 0',
-                opacity: 0.5,
-                transition: 'opacity 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '1';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.5';
-              }}
-            >
-              <Button
-                type="dashed"
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  setInsertPosition(index); // 记录要在这个块后面插入
-                  setAddBlockModalVisible(true);
-                }}
-              >
-                在此处添加块
-              </Button>
-            </div>
-          </div>
-        ))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={blocks.map(block => block.id)} strategy={verticalListSortingStrategy}>
+            {blocks.map((block, index) => (
+              <div key={block.id}>
+                <SortableItem
+                  id={block.id}
+                  index={index}
+                  block={block}
+                  onChange={(updated) => updateBlock(index, updated)}
+                  onDelete={() => deleteBlock(index)}
+                  onMoveUp={() => moveBlockUp(index)}
+                  onMoveDown={() => moveBlockDown(index)}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < blocks.length - 1}
+                  canDelete={blocks.length > 1}
+                />
+
+                {/* 块之间的添加按钮 */}
+                <div
+                  style={{
+                    textAlign: 'center',
+                    margin: '8px 0',
+                    opacity: 0.5,
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '0.5';
+                  }}
+                >
+                  <Button
+                    type="dashed"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      setInsertPosition(index); // 记录要在这个块后面插入
+                      setAddBlockModalVisible(true);
+                    }}
+                  >
+                    在此处添加块
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* 添加块类型选择弹窗 */}
