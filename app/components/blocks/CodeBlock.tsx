@@ -18,10 +18,8 @@ interface CodeBlockProps {
   canMoveUp: boolean;
   canMoveDown: boolean;
   canDelete: boolean;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
-  onDragOver?: (e: React.DragEvent) => void;
   isDragging?: boolean;
+  sortableHandleProps?: any;
 }
 
 const LANGUAGES = [
@@ -54,10 +52,8 @@ export default function CodeBlock({
   canMoveUp,
   canMoveDown,
   canDelete,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
   isDragging,
+  sortableHandleProps,
 }: CodeBlockProps) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -107,10 +103,6 @@ export default function CodeBlock({
 
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
       style={{
         position: 'relative',
         padding: '12px',
@@ -120,7 +112,6 @@ export default function CodeBlock({
         transition: 'all 0.2s',
         marginBottom: '8px',
         opacity: isDragging ? 0.5 : 1,
-        cursor: isDragging ? 'grabbing' : 'default',
       }}
       onMouseEnter={() => setIsFocused(true)}
       onMouseLeave={() => setIsFocused(false)}
@@ -139,15 +130,18 @@ export default function CodeBlock({
         }}
       >
         <div
+          {...sortableHandleProps}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '24px',
-            height: '24px',
+            width: '32px',
+            height: '32px',
             cursor: 'grab',
             color: '#999',
             fontSize: '16px',
+            userSelect: 'none',
+            touchAction: 'none',
           }}
           title="按住拖动排序"
         >
@@ -245,7 +239,7 @@ export default function CodeBlock({
       <div
         style={{
           position: 'absolute',
-          bottom: '-10px',
+          bottom: '-15px',
           right: '12px',
           display: 'flex',
           gap: '4px',

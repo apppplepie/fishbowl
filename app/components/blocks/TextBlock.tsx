@@ -32,10 +32,8 @@ interface TextBlockProps {
   canMoveUp: boolean;
   canMoveDown: boolean;
   canDelete: boolean;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
-  onDragOver?: (e: React.DragEvent) => void;
   isDragging?: boolean;
+  sortableHandleProps?: any;
 }
 
 export default function TextBlock({
@@ -47,10 +45,8 @@ export default function TextBlock({
   canMoveUp,
   canMoveDown,
   canDelete,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
   isDragging,
+  sortableHandleProps,
 }: TextBlockProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [previousContent, setPreviousContent] = useState<string>(''); // 用于撤销
@@ -384,10 +380,6 @@ export default function TextBlock({
 
       `}</style>
       <div
-        draggable
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        onDragOver={onDragOver}
         style={{
           position: 'relative',
           padding: '12px',
@@ -397,7 +389,6 @@ export default function TextBlock({
           transition: 'all 0.2s',
           marginBottom: '8px',
           opacity: isDragging ? 0.5 : 1,
-          cursor: isDragging ? 'grabbing' : 'default',
         }}
         onMouseEnter={() => setIsFocused(true)}
         onMouseLeave={() => setIsFocused(false)}
@@ -416,15 +407,18 @@ export default function TextBlock({
         }}
       >
         <div
+          {...sortableHandleProps}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '24px',
-            height: '24px',
+            width: '32px',
+            height: '32px',
             cursor: 'grab',
             color: '#999',
             fontSize: '16px',
+            userSelect: 'none',
+            touchAction: 'none',
           }}
           title="按住拖动排序"
         >
@@ -612,7 +606,7 @@ export default function TextBlock({
       <div
         style={{
           position: 'absolute',
-          bottom: '-10px',
+          bottom: '-15px',
           right: '12px',
           display: 'flex',
           gap: '4px',
