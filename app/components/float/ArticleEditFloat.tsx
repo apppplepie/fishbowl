@@ -4,14 +4,16 @@ import React from 'react';
 import { FloatButton, Modal } from 'antd';
 import { 
   EditOutlined, 
-  CheckOutlined, 
   CloseOutlined, 
   EyeOutlined,
   SaveOutlined,
   DeleteOutlined,
   ExclamationCircleOutlined,
-  FolderOutlined
+  FileTextOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
 
 export type EditMode = 'view' | 'edit' | 'preview';
 
@@ -23,6 +25,7 @@ interface ArticleEditFloatProps {
   onCancel: () => void;
   onDelete?: () => void;
   onAdjustCategory?: () => void; // 新增：调整章节
+  categoryId?: string;
   articleAuthor?: string;
   currentUser?: string;
   userRole?: 'admin' | 'moderator' | 'user'; // 新增：用户角色
@@ -43,10 +46,15 @@ export default function ArticleEditFloat({
   onCancel,
   onDelete,
   onAdjustCategory,
+  categoryId,
   articleAuthor,
   currentUser,
   userRole,
 }: ArticleEditFloatProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   // 检查是否有编辑权限
   // 1. 作者本人
   // 2. 管理员
@@ -55,6 +63,25 @@ export default function ArticleEditFloat({
   const isAdmin = userRole === 'admin';
   const isModerator = userRole === 'moderator';
   const canEdit = isAuthor || isAdmin || isModerator;
+
+  // 路由判断
+  const isBookPage = pathname?.startsWith('/book/');
+  const isArticlePage = pathname?.startsWith('/article/');
+
+  // 复用 BookcaseActionFloat 发布章节按钮逻辑
+  // 优先使用组件参数传入的 categoryId，保证从 /book/[id] 页面跳转时带上当前目录
+  // 如果 URL 上已经有 category（如虚拟翻页后），可以作为备用
+  const categoryFromUrl = searchParams.get('category');
+  const handlePublishChapter = () => {
+    const targetCategory = categoryId || categoryFromUrl;
+    const query = targetCategory ? `?category=${targetCategory}` : '';
+    router.push(`/publish-chapter${query}`);
+  };
+
+  // 复用 ArchiveActionFloat 写文章按钮逻辑
+  const handlePublishArticle = () => {
+    router.push('/publish-article');
+  };
   
   // 调试信息
   console.log('ArticleEditFloat 权限检查:', {
@@ -92,7 +119,7 @@ export default function ArticleEditFloat({
         <FloatButton.Group
           trigger="click"
           style={{ insetInlineEnd: 24 }}
-          icon={<EditOutlined />}
+          icon={<MenuOutlined />}
           tooltip={{ title: '操作', placement: 'left' }}
           type="primary"
         >
@@ -101,11 +128,18 @@ export default function ArticleEditFloat({
             tooltip={{ title: '编辑文章', placement: 'left' }}
             onClick={onEdit}
           />
-          {onAdjustCategory && (
+          {isBookPage && (
             <FloatButton
-              icon={<FolderOutlined />}
-              tooltip={{ title: '调整章节', placement: 'left' }}
-              onClick={onAdjustCategory}
+              icon={<FileTextOutlined />}
+              tooltip={{ title: '发布章节', placement: 'left' }}
+              onClick={handlePublishChapter}
+            />
+          )}
+          {isArticlePage && (
+            <FloatButton
+              icon={<FileTextOutlined />}
+              tooltip={{ title: '写文章', placement: 'left' }}
+              onClick={handlePublishArticle}
             />
           )}
           {onDelete && (

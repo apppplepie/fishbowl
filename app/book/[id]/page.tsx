@@ -19,8 +19,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
-import { useArticleNavigation } from '@/app/hooks/useArticleNavigation';
-import { getArticleCategory } from '@/app/bookcase/page';
+import { useArticleNavigation, getArticleCategory } from '@/app/hooks/useArticleNavigation';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
@@ -81,7 +80,7 @@ export default function BookPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const bookId = params.id as string;
+  const articleId = params.id as string;
   const { isMobile } = useResponsive();
   const { isLoggedIn, user } = useAuth();
   // 从URL参数获取分类信息，优先使用URL参数中的category
@@ -124,15 +123,17 @@ export default function BookPage() {
   // const [categoryModalOpen, setCategoryModalOpen] = useState(false); // 功能开发中
 
   // 内容状态（翻页时更新）
-  const [currentArticleId, setCurrentArticleId] = useState<string>(bookId);
+  const [currentArticleId, setCurrentArticleId] = useState<string>(articleId);
+  const [bookId, setBookId] = useState<string | null>(null);
   const [book, setBook] = useState<any>(null);
   const [contentLoadingState, setContentLoadingState] = useState<'loading' | 'loaded' | 'error'>('loading');
 
   // 文章内容缓存
   const [articleCache, setArticleCache] = useState<Map<string, any>>(new Map());
 
-  // 文章导航 - 使用当前文章ID，支持虚拟翻页
-  const navigation = useArticleNavigation(bookCategoryId, currentArticleId);
+  // 文章导航 - 通过文章ID自动找到对应的书籍，支持DFS顺序翻页
+  console.log('导航参数:', { articleId, bookId, bookCategoryId });
+  const navigation = useArticleNavigation(articleId);
 
   // 点赞相关状态（内容状态）
   const [isLiked, setIsLiked] = useState(false);
@@ -334,12 +335,13 @@ export default function BookPage() {
         setArticleCache(prev => new Map(prev).set(id, processedArticle));
         manageCacheSize();
 
-        // 设置书籍分类ID
+        // 设置书籍分类ID和书籍ID
         // 如果URL中没有指定分类，则使用文章本身的分类ID
         const finalCategoryId = urlCategory || result.article.category_id;
         if (finalCategoryId) {
           console.log('书籍分类ID:', finalCategoryId, urlCategory ? '(来自URL)' : '(来自文章数据)');
           setBookCategoryId(finalCategoryId);
+          setBookId(finalCategoryId); // 设置用于DFS导航的书籍ID
           await fetchCategoryPath(finalCategoryId);
         } else {
           console.log('书籍没有分类ID');
@@ -394,10 +396,10 @@ export default function BookPage() {
 
   // 初始化加载
   useEffect(() => {
-    if (bookId) {
-      loadBook(bookId);
+    if (articleId) {
+      loadBook(articleId);
     }
-  }, [bookId]);
+  }, [articleId]);
 
   // 预加载下一篇文章
   useEffect(() => {
@@ -420,7 +422,7 @@ export default function BookPage() {
 
     setIsLiking(true);
     try {
-      const response = await fetch(`/api/articles/${bookId}/like`, {
+      const response = await fetch(`/api/articles/${articleId}/like`, {
         method: isLiked ? 'DELETE' : 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -499,7 +501,7 @@ export default function BookPage() {
       // 根据当前blocks重新生成excerpt
       const updatedExcerpt = generateExcerptFromBlocks(book.blocks) || '暂无简介';
 
-      const response = await fetch(`/api/articles/${bookId}`, {
+      const response = await fetch(`/api/articles/${articleId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -520,7 +522,7 @@ export default function BookPage() {
         message.success('保存成功');
         setEditMode('view');
         // 重新加载数据
-        loadBook(bookId);
+        loadBook(articleId);
       } else {
         message.error(result.error || '保存失败');
       }
@@ -546,7 +548,7 @@ export default function BookPage() {
             return;
           }
 
-          const response = await fetch(`/api/articles/${bookId}`, {
+          const response = await fetch(`/api/articles/${articleId}`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -938,7 +940,7 @@ export default function BookPage() {
           </div>
 
           {/* 文章导航 */}
-          {(navigation.canGoPrev || navigation.canGoNext) && (
+          {!navigation.loading && (navigation.canGoPrev || navigation.canGoNext) && (
             <div style={{
               maxWidth: '800px',
               margin: '0 auto',
@@ -1006,7 +1008,7 @@ export default function BookPage() {
             padding: isMobile ? '0 16px 40px' : '0 20px 40px',
           }}>
             <CommentSection
-              articleId={bookId}
+              articleId={articleId}
               isLoggedIn={isLoggedIn}
               currentUser={user}
               onCommentCountChange={setCommentsCount}
@@ -1031,9 +1033,10 @@ export default function BookPage() {
           onSave={handleSave}
           onCancel={() => {
             setEditMode('view');
-            loadBook(bookId);
+            loadBook(articleId);
           }}
           onDelete={handleDelete}
+          categoryId={bookCategoryId}
           articleAuthor={book?.author}
           currentUser={user?.username}
         />
