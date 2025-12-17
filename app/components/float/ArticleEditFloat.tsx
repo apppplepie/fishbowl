@@ -13,6 +13,7 @@ import {
   MenuOutlined,
 } from '@ant-design/icons';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import ChapterManageFloat from './ChapterManageFloat';
 
 
 export type EditMode = 'view' | 'edit' | 'preview';
@@ -115,6 +116,10 @@ export default function ArticleEditFloat({
   // 浏览模式：显示编辑按钮（如果有权限，显示按钮组）
   if (mode === 'view') {
     if (canEdit) {
+      function onChapterManageSuccess(): void {
+        throw new Error('Function not implemented.');
+      }
+
       return (
         <FloatButton.Group
           trigger="click"
@@ -135,6 +140,13 @@ export default function ArticleEditFloat({
               onClick={handlePublishChapter}
             />
           )}
+          {/* {isBookPage && (categoryId || categoryFromUrl) && (
+            <ChapterManageFloat
+              categoryId={categoryId || categoryFromUrl!}
+              rootDepth={2}
+              onSuccess={onChapterManageSuccess}
+            />
+          )} */}
           {isArticlePage && (
             <FloatButton
               icon={<FileTextOutlined />}
