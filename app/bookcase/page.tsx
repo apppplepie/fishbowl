@@ -18,6 +18,7 @@ import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import { extractBooksFromArticles } from '@/app/utils/bookUtils';
+import { apiGet } from '@/lib/apiClient';
 import { mockBookCards } from '@/app/utils/bookMocks';
 import '../styles/articles-filter.css';
 
@@ -38,7 +39,7 @@ const CACHE_EXPIRY_HOURS = 1; // 缓存1小时，更及时更新
 // 获取完整的分类树结构
 const loadCategoryTree = async (): Promise<any[]> => {
   try {
-    const response = await fetch('/api/categories/tree');
+    const response = await apiGet('/api/categories/tree', { requiresAuth: false });
     const result = await response.json();
 
     if (result.success && result.data) {
@@ -156,7 +157,7 @@ const preloadAllBookArticleLists = async () => {
     console.log('开始预缓存所有书籍的文章列表...');
 
     // 获取所有书籍分类（不包括根分类）
-    const response = await fetch('/api/categories/book-previews?parentId=cat_bookcase');
+    const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: false });
     const result = await response.json();
 
     if (!result.success || !result.books) {
@@ -193,7 +194,7 @@ const preloadAllBookArticleLists = async () => {
             orderByPath: 'true',
           });
 
-          const articleResponse = await fetch(`/api/articles/list?${params.toString()}`);
+          const articleResponse = await apiGet(`/api/articles/list?${params.toString()}`, { requiresAuth: false });
           const articleResult = await articleResponse.json();
 
           if (articleResponse.ok && articleResult.success && articleResult.articles) {
@@ -353,7 +354,7 @@ function BookcasePageContent() {
   useEffect(() => {
     async function loadTags() {
       try {
-        const response = await fetch('/api/tags');
+        const response = await apiGet('/api/tags', { requiresAuth: false });
         const result = await response.json();
 
         if (result.success) {
@@ -388,7 +389,7 @@ function BookcasePageContent() {
       // 根据是否有category参数决定加载逻辑
       if (!categoryFromUrl || categoryFromUrl === 'cat_bookcase') {
         // 书橱根目录：一次性获取所有书籍分类及其第一篇文章
-        const response = await fetch('/api/categories/book-previews?parentId=cat_bookcase');
+        const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: false });
         const result = await response.json();
 
         if (response.ok && result.success) {
@@ -458,7 +459,7 @@ function BookcasePageContent() {
           orderByPath: 'true', // 按path和order_index排序
         });
 
-        const response = await fetch(`/api/articles/list?${params.toString()}`);
+        const response = await apiGet(`/api/articles/list?${params.toString()}`, { requiresAuth: false });
         const result = await response.json();
 
         let allArticles: any[] = [];

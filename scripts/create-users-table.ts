@@ -24,6 +24,7 @@ async function main() {
         role ENUM('admin', 'moderator', 'user') DEFAULT 'user',
         status ENUM('active', 'suspended', 'deleted') DEFAULT 'active',
         email_verified BOOLEAN DEFAULT FALSE,
+        max_access_level TINYINT NOT NULL DEFAULT '3' COMMENT '用户最大可访问内容等级',
         last_login_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -108,9 +109,9 @@ async function main() {
     if (existingAdmin.length === 0) {
       await query(`
         INSERT INTO users (
-          id, username, email, password_hash, display_name, 
-          role, status, email_verified
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          id, username, email, password_hash, display_name,
+          role, status, email_verified, max_access_level
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         adminId,
         'admin',
@@ -119,7 +120,8 @@ async function main() {
         '管理员',
         'admin',
         'active',
-        true
+        true,
+        5  // 管理员最高权限
       ]);
 
       // 创建管理员的设置
@@ -147,9 +149,9 @@ async function main() {
     if (existingTest.length === 0) {
       await query(`
         INSERT INTO users (
-          id, username, email, password_hash, display_name, 
-          role, status, email_verified
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          id, username, email, password_hash, display_name,
+          role, status, email_verified, max_access_level
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         testUserId,
         'testuser',
@@ -158,7 +160,8 @@ async function main() {
         '测试用户',
         'user',
         'active',
-        true
+        true,
+        3  // 普通用户默认权限
       ]);
 
       await query(`

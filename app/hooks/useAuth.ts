@@ -33,6 +33,7 @@ export function useAuth() {
           setIsLoggedIn(true);
           setToken(storedToken);
           setUser(storedUser);
+
           return true;
         } catch (error) {
           console.error('解析用户信息失败:', error);

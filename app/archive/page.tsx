@@ -13,6 +13,7 @@ import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
+import { apiGet } from '@/lib/apiClient';
 import ArchiveCategoryNavigator, { ArchiveCategoryDrawerButton } from '@/app/components/sidebar/ArchiveCategoryNavigator';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
@@ -69,7 +70,7 @@ function ArticlesPageContent() {
   useEffect(() => {
     async function loadTags() {
       try {
-        const response = await fetch('/api/tags');
+        const response = await apiGet('/api/tags', { requiresAuth: false });
         const result = await response.json();
         
         if (result.success) {
@@ -104,7 +105,7 @@ function ArticlesPageContent() {
       }
 
       // 使用优化的列表 API，一次查询返回所有预览数据
-      const response = await fetch(`/api/articles/list?${params.toString()}`);
+      const response = await apiGet(`/api/articles/list?${params.toString()}`, { requiresAuth: false });
       const result = await response.json();
       
       if (response.ok && result.success) {

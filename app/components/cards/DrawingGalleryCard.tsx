@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, Tag } from 'antd';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
+import type { PlaceholderBlock as PlaceholderBlockType } from '@/app/types/block';
+import PlaceholderDisplay from '@/app/components/blocks/PlaceholderDisplay';
 
 // 注入 CSS 动画
 if (typeof document !== 'undefined') {
@@ -40,7 +42,7 @@ interface DrawingGalleryCardProps {
       type: string;
       order: number;
       parsedContent: any;
-    }>;
+    } | PlaceholderBlockType>;
   };
   onClick?: () => void;
   onTitleClick?: () => void;
@@ -60,12 +62,14 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
   // 从文章块中提取所有图片块，按 order 降序排列（成图在前）
   const images = useMemo(() => {
     return article.blocks
-      .filter((block) => block.type === 'image')
+      .filter((block) => block.type === 'image' || block.type === 'placeholder')
       .sort((a, b) => b.order - a.order) // 降序，order 最大的在最前
       .map((block) => ({
         id: block.id,
-        url: block.parsedContent.url,
-        description: block.parsedContent.description,
+        type: block.type,
+        url: block.type === 'image' ? block.parsedContent.url : null,
+        description: block.type === 'image' ? block.parsedContent.description : null,
+        placeholderData: block.type === 'placeholder' ? block : null,
         order: block.order,
       }));
   }, [article.blocks]);
@@ -265,7 +269,17 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
             </div>
           </div>
         )}
-        {currentImage.url ? (
+        {currentImage.type === 'placeholder' ? (
+          <PlaceholderDisplay
+            block={(currentImage as any).placeholderData}
+            style={{
+              maxWidth: '100%',
+              maxHeight: 'calc(100vh - 111px - 200px)',
+              width: 'auto',
+              height: 'auto',
+            }}
+          />
+        ) : currentImage.url ? (
           <img
             key={currentImage.id}
             src={currentImage.url}

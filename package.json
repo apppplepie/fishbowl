@@ -12,6 +12,7 @@
     "db:migrate:drawing": "ts-node --project tsconfig.node.json scripts/add-drawing-type.ts",
     "db:migrate:tags": "ts-node --project tsconfig.node.json scripts/add-tags-table.ts",
     "db:migrate:author": "ts-node --project tsconfig.node.json scripts/add-author-id-field.ts",
+    "db:migrate:access-level": "ts-node --project tsconfig.node.json scripts/update-users-table.ts",
     "db:rollback:galleries": "ts-node --project tsconfig.node.json scripts/remove-galleries-tables.ts",
     "db:fix:blocks": "ts-node --project tsconfig.node.json scripts/fix-blocks-content-size.ts"
   },

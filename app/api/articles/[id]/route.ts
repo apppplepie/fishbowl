@@ -24,6 +24,8 @@ export async function PUT(
     const { id: articleId } = await params;
     const body = await request.json();
 
+    console.log('PUT /api/articles/[id] - Received body:', JSON.stringify(body, null, 2));
+
     // 1. 验证用户登录
     const currentUser = getCurrentUser(request);
     console.log('PUT /api/articles/[id] - articleId:', articleId, 'currentUser:', currentUser);
@@ -407,7 +409,7 @@ export async function GET(
 
     // 1. 获取当前用户（用于权限检查）
     const currentUser = getCurrentUser(request);
-    const userAccessLevel = currentUser?.max_access_level || 2; // 游客默认2级权限
+    const userAccessLevel = currentUser ? (currentUser.max_access_level || 3) : 2; // 登录用户默认3级，游客2级
 
     // 2. 获取文章基本信息
     const articles = await query<any[]>(

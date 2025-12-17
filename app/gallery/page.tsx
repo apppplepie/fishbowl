@@ -7,6 +7,7 @@ import PageLayout from '../components/PageLayout';
 import Header from '../components/Header';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
 import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
+import { apiGet } from '@/lib/apiClient';
 
 // 根据屏幕宽度计算列数
 const calculateColumns = (width: number) => {
@@ -91,8 +92,9 @@ export default function GalleryPage() {
       }
 
       // 使用优化的绘画作品 API，一次查询返回所有需要的数据
-      const response = await fetch(
-        `/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`
+      const response = await apiGet(
+        `/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`,
+        { requiresAuth: false }
       );
       const data = await response.json();
       
@@ -181,7 +183,7 @@ export default function GalleryPage() {
 
     // 否则，需要获取完整的文章数据（包含所有 blocks）
     try {
-      const detailRes = await fetch(`/api/articles/${article.id}`);
+      const detailRes = await apiGet(`/api/articles/${article.id}`);
       const detailData = await detailRes.json();
       
       if (detailData.success) {
