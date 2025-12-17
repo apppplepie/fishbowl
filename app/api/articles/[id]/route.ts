@@ -8,6 +8,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser, canModerate } from '@/lib/auth';
 
+// 权限检查函数
+function checkAccess(userAccessLevel: number, blockAccessLevel: number): boolean {
+  return userAccessLevel >= blockAccessLevel;
+}
+
 /**
  * PUT - 更新文章（需要权限验证）
  */
@@ -400,7 +405,11 @@ export async function GET(
   try {
     const { id: articleId } = await params;
 
-    // 1. 获取文章基本信息
+    // 1. 获取当前用户（用于权限检查）
+    const currentUser = getCurrentUser(request);
+    const userAccessLevel = currentUser?.max_access_level || 2; // 游客默认2级权限
+
+    // 2. 获取文章基本信息
     const articles = await query<any[]>(
       `SELECT 
         id, title, author, published_at, created_at, updated_at,
@@ -431,12 +440,27 @@ export async function GET(
       [articleId]
     );
 
-    // 3. 解析块的 content（JSON 字符串 -> 对象）
+    // 3. 解析块的 content 并检查权限
     const parsedBlocks = blocks.map(block => {
       try {
+        // 权限检查
+        if (!checkAccess(userAccessLevel, block.access_level || 1)) {
+          // 权限不足，返回占位块
+          return {
+            id: block.id,
+            type: 'placeholder',
+            order: block.order,
+            original_type: block.type,
+            required_access_level: block.access_level || 1,
+            user_access_level: userAccessLevel,
+            message: `需要等级${block.access_level || 1}及以上权限才能查看此内容`,
+          };
+        }
+
+        // 权限足够，返回真实内容
         return {
           ...block,
-          order: block.order, // 保留 order 字段
+          order: block.order,
           parsedContent: JSON.parse(block.content),
         };
       } catch (parseError) {

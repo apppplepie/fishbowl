@@ -9,6 +9,7 @@ interface User {
   display_name: string;
   avatar_url?: string;
   role: 'admin' | 'moderator' | 'user';
+  max_access_level?: number;
 }
 
 /**

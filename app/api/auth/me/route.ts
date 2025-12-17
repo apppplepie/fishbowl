@@ -19,9 +19,9 @@ export async function GET(req: NextRequest) {
 
     // 2. 从数据库获取最新用户信息
     const users = await query(
-      `SELECT id, username, email, display_name, avatar_url, bio, role, status, 
-              email_verified, last_login_at, created_at 
-       FROM users 
+      `SELECT id, username, email, display_name, avatar_url, bio, role, status,
+              email_verified, last_login_at, created_at, max_access_level
+       FROM users
        WHERE id = ?`,
       [currentUser.id]
     ) as any[];
@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
         email_verified: user.email_verified,
         last_login_at: user.last_login_at,
         created_at: user.created_at,
+        max_access_level: user.max_access_level || 2, // 默认游客权限
       },
     });
 

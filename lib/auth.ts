@@ -9,6 +9,7 @@ export interface JWTPayload {
   username: string;
   email: string;
   role: 'admin' | 'moderator' | 'user';
+  max_access_level?: number;
 }
 
 /**

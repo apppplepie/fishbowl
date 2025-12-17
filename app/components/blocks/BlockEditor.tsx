@@ -35,7 +35,8 @@ import { CSS } from '@dnd-kit/utilities';
 import TextBlock from './TextBlock';
 import ImageBlock from './ImageBlock';
 import CodeBlock from './CodeBlock';
-import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, CodeBlock as CodeBlockType } from '@/app/types/block';
+import PlaceholderBlock from './PlaceholderBlock';
+import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, CodeBlock as CodeBlockType, PlaceholderBlock as PlaceholderBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useResponsive } from '@/app/hooks/useResponsive';
 
@@ -131,6 +132,13 @@ function SortableItem({
             onDelete={onDelete}
             sortableHandleProps={sortableHandleProps}
             {...commonProps}
+          />
+        );
+      case 'placeholder':
+        return (
+          <PlaceholderBlock
+            key={block.id}
+            block={block as PlaceholderBlockType}
           />
         );
       default:
