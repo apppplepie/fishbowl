@@ -75,6 +75,7 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
       blocks.push({
         type: 'text',
         content: diaryContent,
+        access_level: 2, // 日记内容为会员级别
       });
 
       // 调用文章 API 创建日志类型文章
@@ -92,6 +93,7 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
           status: 'published',
           type: 'diary', // 指定为日志类型
           category_id: 'cat_diary', // 自动归类到日志分类
+          max_access_level: 2, // 日记文章为会员级别
         }),
       });
 
