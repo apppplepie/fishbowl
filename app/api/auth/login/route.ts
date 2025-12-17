@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
 
     // 2. 查询用户（支持用户名或邮箱登录）
     const users = await query(
-      `SELECT id, username, email, password_hash, display_name, avatar_url, role, status 
-       FROM users 
+      `SELECT id, username, email, password_hash, display_name, avatar_url, role, status, max_access_level
+       FROM users
        WHERE username = ? OR email = ?`,
       [username, username]
     ) as any[];
@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       username: user.username,
       email: user.email,
       role: user.role,
+      max_access_level: user.max_access_level || 2,
     });
 
     // 7. 返回用户信息和token
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
         display_name: user.display_name,
         avatar_url: user.avatar_url,
         role: user.role,
+        max_access_level: user.max_access_level || 2,
       },
     });
 

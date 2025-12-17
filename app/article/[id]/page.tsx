@@ -21,6 +21,7 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
+import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
@@ -1129,6 +1130,9 @@ export default function ArticlePage() {
                           </pre>
                           </div>
                         </div>
+                      ) : block.type === 'placeholder' ? (
+                        // 占位块
+                        <PlaceholderBlock block={block as any} />
                       ) : null}
                     </div>
                   ))}
