@@ -430,6 +430,14 @@ export default function TextBlock({
           onClick={onMoveUp}
           disabled={!canMoveUp}
           title="上移"
+          style={{
+            width: '32px',
+            height: '32px',
+            color: '#999',
+            border: 'none',
+            background: 'transparent',
+            boxShadow: 'none',
+          }}
         />
         <Button
           size="small"
@@ -437,6 +445,14 @@ export default function TextBlock({
           onClick={onMoveDown}
           disabled={!canMoveDown}
           title="下移"
+          style={{
+            width: '32px',
+            height: '32px',
+            color: '#999',
+            border: 'none',
+            background: 'transparent',
+            boxShadow: 'none',
+          }}
         />
         <Button
           size="small"
@@ -445,6 +461,14 @@ export default function TextBlock({
           onClick={onDelete}
           disabled={!canDelete}
           title={canDelete ? "删除块" : "至少需要保留一个块"}
+          style={{
+            width: '32px',
+            height: '32px',
+            color: '#999',
+            border: 'none',
+            background: 'transparent',
+            boxShadow: 'none',
+          }}
         />
       </div>
 
@@ -588,8 +612,8 @@ export default function TextBlock({
         ref={textAreaRef}
         value={block.content}
         onChange={handleContentChange}
-        onKeyDown={handleKeyDown}
-        placeholder="输入文字内容，或按删除键移除此块..."
+        // onKeyDown={handleKeyDown}
+        placeholder="输入文字内容.."
         autoSize={{ minRows: 3 }}
         className="text-block-textarea"
         style={{
@@ -603,13 +627,11 @@ export default function TextBlock({
       />
 
       {/* 访问等级选择器 */}
-      <div
+      <Space.Compact
         style={{
           position: 'absolute',
           bottom: '-15px',
           right: '12px',
-          display: 'flex',
-          gap: '4px',
         }}
       >
         {ACCESS_LEVELS.map(level => (
@@ -628,7 +650,7 @@ export default function TextBlock({
             {level.label}
           </Button>
         ))}
-      </div>
+      </Space.Compact>
 
       {/* 空块提示 */}
       {/* {block.content === '' && isFocused && canDelete && (

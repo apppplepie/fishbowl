@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Input, Button, Select, Segmented } from 'antd';
+import { Input, Button, Select, Segmented, Space } from 'antd';
 import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, CodeOutlined, CopyOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 import type { CodeBlock as CodeBlockType } from '@/app/types/block';
@@ -153,6 +153,14 @@ export default function CodeBlock({
           onClick={onMoveUp}
           disabled={!canMoveUp}
           title="上移"
+          style={{
+            width: '32px',
+            height: '32px',
+            color: '#999',
+            border: 'none',
+            boxShadow: 'none',
+            background: 'transparent',
+          }}
         />
         <Button
           size="small"
@@ -160,6 +168,14 @@ export default function CodeBlock({
           onClick={onMoveDown}
           disabled={!canMoveDown}
           title="下移"
+          style={{
+            width: '32px',
+            height: '32px',
+            color: '#999',
+            border: 'none',
+            boxShadow: 'none',
+            background: 'transparent',
+          }}
         />
         <Button
           size="small"
@@ -168,6 +184,14 @@ export default function CodeBlock({
           onClick={onDelete}
           disabled={!canDelete}
           title={canDelete ? "删除块" : "至少需要保留一个块"}
+          style={{
+            width: '32px',
+            height: '32px',
+            color: '#999',
+            border: 'none',
+            boxShadow: 'none',
+            background: 'transparent',
+          }}
         />
       </div>
 
@@ -211,7 +235,6 @@ export default function CodeBlock({
             onClick={handleCopy}
             title="复制代码"
           >
-            复制
           </Button>
         )}
       </div>
@@ -220,8 +243,8 @@ export default function CodeBlock({
       <TextArea
         value={block.code}
         onChange={handleCodeChange}
-        onKeyDown={handleKeyDown}
-        placeholder="输入代码，或按删除键移除此块..."
+        // onKeyDown={handleKeyDown}
+        placeholder="输入代码..."
         autoSize={{ minRows: 5, maxRows: 30 }}
         style={{
           fontFamily: "'Fira Code', 'Monaco', 'Consolas', monospace",
@@ -236,13 +259,11 @@ export default function CodeBlock({
       />
 
       {/* 访问等级选择器 */}
-      <div
+      <Space.Compact
         style={{
           position: 'absolute',
           bottom: '-15px',
           right: '12px',
-          display: 'flex',
-          gap: '4px',
         }}
       >
         {ACCESS_LEVELS.map(level => (
@@ -261,7 +282,7 @@ export default function CodeBlock({
             {level.label}
           </Button>
         ))}
-      </div>
+      </Space.Compact>
 
       {/* 空块提示 */}
       {/* {block.code === '' && isFocused && canDelete && (

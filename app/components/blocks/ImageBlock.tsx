@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Input, Image as AntImage, Segmented } from 'antd';
+import { Button, Input, Image as AntImage, Segmented, Space } from 'antd';
 import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, EyeOutlined } from '@ant-design/icons';
 import ImageCardModal from '../ImageCardModal';
 import type { ImageBlock as ImageBlockType } from '@/app/types/block';
@@ -59,7 +59,7 @@ export default function ImageBlock({
         style={{
           position: 'relative',
           padding: '12px',
-          border: isHovered ? '2px solid #1890ff' : '2px solid transparent',
+          border: isHovered ? '2px solid rgb(82, 196, 26)' : '2px solid transparent',
           borderRadius: '8px',
           backgroundColor: isHovered ? '#fafafa' : 'transparent',
           transition: 'all 0.2s',
@@ -107,6 +107,14 @@ export default function ImageBlock({
             onClick={onMoveUp}
             disabled={!canMoveUp}
             title="上移"
+            style={{
+              width: '32px',
+              height: '32px',
+              color: '#999',
+              border: 'none',
+              boxShadow: 'none',
+              background: 'transparent',
+            }}
           />
           <Button
             size="small"
@@ -114,6 +122,14 @@ export default function ImageBlock({
             onClick={onMoveDown}
             disabled={!canMoveDown}
             title="下移"
+            style={{
+              width: '32px',
+              height: '32px',
+              color: '#999',
+              border: 'none',
+              boxShadow: 'none',
+              background: 'transparent',
+            }}
           />
           <Button
             size="small"
@@ -122,6 +138,14 @@ export default function ImageBlock({
             onClick={onDelete}
             disabled={!canDelete}
             title={canDelete ? "删除块" : "至少需要保留一个块"}
+            style={{
+              width: '32px',
+              height: '32px',
+              color: '#999',
+              border: 'none',
+              background: 'transparent',
+              boxShadow: 'none',
+            }}
           />
         </div>
 
@@ -212,18 +236,16 @@ export default function ImageBlock({
             placeholder="图片描述（可选）"
             value={block.description}
             onChange={handleDescriptionChange}
-            style={{ fontSize: '14px' }}
+            style={{ fontSize: '14px' ,border: 'none',boxShadow: 'none'}}
           />
         </div>
 
         {/* 访问等级选择器 */}
-        <div
+        <Space.Compact
           style={{
             position: 'absolute',
             bottom: '-15px',
             right: '12px',
-            display: 'flex',
-            gap: '4px',
           }}
         >
           {ACCESS_LEVELS.map(level => (
@@ -242,7 +264,7 @@ export default function ImageBlock({
               {level.label}
             </Button>
           ))}
-        </div>
+        </Space.Compact>
 
         {/* 提示 */}
         {/* <div

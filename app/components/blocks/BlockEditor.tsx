@@ -37,6 +37,7 @@ import ImageBlock from './ImageBlock';
 import CodeBlock from './CodeBlock';
 import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, CodeBlock as CodeBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -148,6 +149,7 @@ function SortableItem({
 }
 
 export default function BlockEditor({ blocks, onChange, showAddButton = true }: BlockEditorProps) {
+  const { isMobile } = useResponsive();
   const [addBlockModalVisible, setAddBlockModalVisible] = useState(false);
   const [addImageModalVisible, setAddImageModalVisible] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
@@ -506,7 +508,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
                 <div
                   style={{
                     textAlign: 'center',
-                    margin: '8px 0',
+                    marginTop: isMobile ? '24px' : '8px',
                     opacity: 0.5,
                     transition: 'opacity 0.2s',
                   }}
