@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FloatButton, Modal, Form, Input, Upload, message, Button } from 'antd';
+import { FloatButton, Modal, Form, Input, Upload, message, Button, Segmented } from 'antd';
 import { PlusOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
 import CategoryTreeSelect from '../CategoryTreeSelect';
 import TagInput from '../TagInput';
+import { ACCESS_LEVELS } from '@/app/types/block';
 
 interface GalleryPublishFloatProps {
   onSuccess?: () => void;
@@ -22,6 +23,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [accessLevel, setAccessLevel] = useState<number>(2); // 默认General级别
 
   // 处理图片上传
   const handleUploadChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
@@ -86,15 +88,17 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         blocks.push({
           type: 'text',
           content: values.description,
+          access_level: accessLevel, // 使用选中的访问等级
         });
       }
-      
+
       // 添加图片块
       imageUrls.forEach((url, index) => {
         blocks.push({
           type: 'image',
           imageUrl: url,
           description: '',
+          access_level: accessLevel, // 使用选中的访问等级
         });
         console.log(`图片块 ${index + 1} 添加成功，URL:`, url);
       });
@@ -124,6 +128,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           status: 'published',
           type: 'drawing', // 明确指定为绘画类型
           category_id: values.category_id || 'cat_drawing', // 未选择时默认发到绘画作品分类
+          max_access_level: accessLevel, // 使用选中的访问等级
         }),
       });
 
@@ -186,11 +191,109 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
             name="description"
             label="描述"
           >
-            <Input.TextArea 
-              placeholder="描述你的创作过程或想法（会作为文字块显示在文章开头）..." 
+            <Input.TextArea
+              placeholder="描述你的创作过程或想法（会作为文字块显示在文章开头）..."
               rows={4}
             />
           </Form.Item>
+
+          <Form.Item
+            label="访问等级"
+            tooltip={{ title: "设置作品的访问权限，所有图片和文字都将使用此等级", placement: "left" }}
+          >
+            <div style={{
+              padding: '8px',
+              border: '1px solid #d9d9d9',
+              borderRadius: '8px',
+              backgroundColor: '#fafafa'
+            }}>
+              <Segmented<string>
+                size="large"
+                options={ACCESS_LEVELS.map(level => ({
+                  label: (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontWeight: 500
+                    }}>
+                      <div style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: level.color,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        border: '2px solid rgba(255,255,255,0.8)'
+                      }} />
+                      {level.label}
+                    </div>
+                  ),
+                  value: level.label,
+                  style: {
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    border: `2px solid ${level.color}`,
+                    color: level.color,
+                    fontWeight: 600,
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                    backdropFilter: 'blur(4px)',
+                    margin: '2px'
+                  }
+                }))}
+                value={ACCESS_LEVELS.find(level => level.value === accessLevel)?.label || 'G'}
+                onChange={(value) => {
+                  const level = ACCESS_LEVELS.find(l => l.label === value);
+                  if (level) setAccessLevel(level.value);
+                }}
+                style={{
+                  backgroundColor: 'transparent',
+                  padding: '4px'
+                }}
+              />
+              <div style={{
+                marginTop: '12px',
+                padding: '8px',
+                backgroundColor: 'white',
+                borderRadius: '6px',
+                border: `2px solid ${ACCESS_LEVELS.find(level => level.value === accessLevel)?.color || '#1890ff'}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  backgroundColor: ACCESS_LEVELS.find(level => level.value === accessLevel)?.color || '#1890ff',
+                  boxShadow: '0 3px 6px rgba(0,0,0,0.2)',
+                  border: '2px solid rgba(255,255,255,0.9)'
+                }} />
+                <div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: ACCESS_LEVELS.find(level => level.value === accessLevel)?.color || '#1890ff'
+                  }}>
+                    {ACCESS_LEVELS.find(level => level.value === accessLevel)?.label}级权限
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#666',
+                    marginTop: '2px'
+                  }}>
+                    {ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#52c41a' ? '所有人都能查看' :
+                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#1890ff' ? '注册用户可查看' :
+                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#faad14' ? '仅会员用户可查看' :
+                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#f5222d' ? '仅成人内容用户可查看' : '仅管理员可查看'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Form.Item>
+
+
+          
 
           <Form.Item
             name="category_id"
