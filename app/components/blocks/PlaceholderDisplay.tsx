@@ -19,7 +19,13 @@ interface PlaceholderDisplayProps {
  */
 export default function PlaceholderDisplay({ block, style = {} }: PlaceholderDisplayProps) {
   const requiredLevel = ACCESS_LEVELS.find(level => level.value === Number(block.required_access_level));
-  const userLevel = ACCESS_LEVELS.find(level => level.value === Number(block.user_access_level));
+
+  // 用户权限直接使用数值，不使用ACCESS_LEVELS映射
+  const userLevelValue = Number(block.user_access_level);
+  const userLevelColor = userLevelValue <= 2 ? '#52c41a' :
+                        userLevelValue === 3 ? '#faad14' :
+                        userLevelValue === 4 ? '#f5222d' :
+                        userLevelValue >= 5 ? '#722ed1' : '#666';
 
   return (
     <div
@@ -50,8 +56,8 @@ export default function PlaceholderDisplay({ block, style = {} }: PlaceholderDis
         </div>
         <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
           您的权限等级：
-          <Text strong style={{ color: userLevel?.color, marginLeft: '4px' }}>
-            {userLevel?.label} ({block.user_access_level})
+          <Text strong style={{ color: userLevelColor, marginLeft: '4px' }}>
+            等级{userLevelValue}
           </Text>
         </div>
       </div>
