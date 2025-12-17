@@ -179,6 +179,12 @@ export async function PUT(
       updateValues.push(body.excerpt);
     }
 
+    // 如果提供了 max_access_level，更新最大访问等级
+    if (body.max_access_level !== undefined) {
+      updateFields.push('max_access_level = ?');
+      updateValues.push(body.max_access_level);
+    }
+
     // 确保至少有一个字段要更新
     if (updateFields.length === 0) {
       return NextResponse.json(
@@ -231,14 +237,15 @@ export async function PUT(
 
         // 插入或更新块
         await query(
-          `INSERT INTO blocks (id, type, content, author) 
-           VALUES (?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE content = VALUES(content)`,
+          `INSERT INTO blocks (id, type, content, author, access_level)
+           VALUES (?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE content = VALUES(content), access_level = VALUES(access_level)`,
           [
             blockId,
             block.type,
             JSON.stringify(blockContent),
             'system', // 编辑时使用系统作为作者
+            block.access_level || 1, // 添加 access_level，默认值为1
           ]
         );
 
@@ -414,8 +421,8 @@ export async function GET(
 
     // 2. 获取文章的所有块（按 order 排序）
     const blocks = await query<any[]>(
-      `SELECT 
-        b.id, b.type, b.content, b.author, b.created_at,
+      `SELECT
+        b.id, b.type, b.content, b.author, b.created_at, b.access_level,
         ab.\`order\` as \`order\`
        FROM blocks b
        INNER JOIN article_blocks ab ON b.id = ab.block_id

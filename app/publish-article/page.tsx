@@ -241,6 +241,11 @@ export default function PublishArticlePage() {
       orderInCategory = 0;
     }
 
+    // 计算所有 blocks 中 access_level 的最小值
+    const maxAccessLevel = blocks.length > 0
+      ? Math.min(...blocks.map(block => block.access_level || 1))
+      : 1;
+
     const articleData = {
       title: values.title,
       author: author,
@@ -249,6 +254,7 @@ export default function PublishArticlePage() {
       category_id: categoryId,
       order_index: orderInCategory,
       blocks: blocks,
+      max_access_level: maxAccessLevel,
       status: 'published' as const,
     };
 

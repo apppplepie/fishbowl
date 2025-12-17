@@ -29,6 +29,7 @@ export interface Block {
   content: string; // JSON格式存储，根据type解析不同结构
   author: string;
   created_at: string;
+  access_level?: number; // 内容访问等级：1-10，默认为1
 }
 
 /**

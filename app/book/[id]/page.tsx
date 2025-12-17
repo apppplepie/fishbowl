@@ -24,6 +24,7 @@ import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import type { Block as BlockType } from '@/app/types/block';
+import { ACCESS_LEVELS } from '@/app/types/block';
 import {
   getArticleWithBlocks,
   type Block,
@@ -846,17 +847,40 @@ export default function BookPage() {
                     case 'text':
                       const textContent = block.parsedContent as any;
                       return (
-                        <div
-                          key={block.id || index}
-                          style={{
-                            marginBottom: '24px',
-                            lineHeight: '1.8',
-                            fontSize: '16px',
-                            color: '#333',
-                            whiteSpace: 'pre-wrap',
-                          }}
-                        >
-                          {textContent.content}
+                        <div key={block.id || index}>
+                          {/* Access Level 显示 */}
+                          <div style={{
+                            position: 'relative',
+                            marginBottom: '8px',
+                          }}>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '-10px',
+                                right: '12px',
+                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                zIndex: 10,
+                              }}
+                            >
+                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              marginBottom: '24px',
+                              lineHeight: '1.8',
+                              fontSize: '16px',
+                              color: '#333',
+                              whiteSpace: 'pre-wrap',
+                            }}
+                          >
+                            {textContent.content}
+                          </div>
                         </div>
                       );
 
@@ -865,13 +889,35 @@ export default function BookPage() {
                       // 优先使用原始的imageUrl，如果parsedContent.url不存在的话
                       const displayUrl = (imageContent && imageContent.url) || (block as any).imageUrl;
                       return (
-                        <div
-                          key={block.id || index}
-                          style={{
-                            marginBottom: '24px',
-                            textAlign: 'center',
-                          }}
-                        >
+                        <div key={block.id || index}>
+                          {/* Access Level 显示 */}
+                          <div style={{
+                            position: 'relative',
+                            marginBottom: '8px',
+                          }}>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '-10px',
+                                right: '12px',
+                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                zIndex: 10,
+                              }}
+                            >
+                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              marginBottom: '24px',
+                              textAlign: 'center',
+                            }}
+                          >
                           {displayUrl ? (
                             <img
                               src={displayUrl}
@@ -912,25 +958,48 @@ export default function BookPage() {
                               {imageContent?.title}
                             </div>
                           )}
+                          </div>
                         </div>
                       );
 
                     case 'code':
                       const codeContent = block.parsedContent as any;
                       return (
-                        <div
-                          key={block.id || index}
-                          style={{
-                            marginBottom: '24px',
-                            backgroundColor: '#f6f8fa',
-                            borderRadius: '6px',
-                            padding: '16px',
-                            fontFamily: 'monospace',
-                            fontSize: '14px',
-                            color: '#24292f',
-                            overflow: 'auto',
-                          }}
-                        >
+                        <div key={block.id || index}>
+                          {/* Access Level 显示 */}
+                          <div style={{
+                            position: 'relative',
+                            marginBottom: '8px',
+                          }}>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '-10px',
+                                right: '12px',
+                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                zIndex: 10,
+                              }}
+                            >
+                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              marginBottom: '24px',
+                              backgroundColor: '#f6f8fa',
+                              borderRadius: '6px',
+                              padding: '16px',
+                              fontFamily: 'monospace',
+                              fontSize: '14px',
+                              color: '#24292f',
+                              overflow: 'auto',
+                            }}
+                          >
                           <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
                             {codeContent.code}
                           </pre>
@@ -944,6 +1013,7 @@ export default function BookPage() {
                               {codeContent.language}
                             </div>
                           )}
+                          </div>
                         </div>
                       );
 
