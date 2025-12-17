@@ -214,6 +214,7 @@ export default function PublishBookPage() {
           id: `block-cover-${Date.now()}`,
           type: 'image',
           order: 0,
+          access_level: 1, // 书籍简介所有内容都是公开的
           imageUrl: coverFileList[0].response.url,
           title: `${values.title}封面`,
           description: '',
@@ -225,6 +226,7 @@ export default function PublishBookPage() {
         id: `block-intro-${Date.now()}`,
         type: 'text',
         order: blocks.length,
+        access_level: 1, // 书籍简介所有内容都是公开的
         content: values.description,
       });
 
@@ -235,6 +237,7 @@ export default function PublishBookPage() {
         tags: values.tags || [],
         category_id: categoryId,
         blocks: blocks,
+        max_access_level: 1, // 书籍简介都是公开内容
         status: 'published' as const,
       };
 

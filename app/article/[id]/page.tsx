@@ -18,6 +18,7 @@ import CommentSection from '@/app/components/CommentSection';
 import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { ACCESS_LEVELS } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
@@ -948,30 +949,79 @@ export default function ArticlePage() {
                     <div key={block.id} style={{ marginBottom: '32px' }}>
                       {block.type === 'text' ? (
                         // 文字块
-                        <div style={{
-                          whiteSpace: 'pre-wrap',
-                          lineHeight: '1.8',
-                          fontSize: '16px',
-                          color: '#333',
-                        }}>
-                          {(block.parsedContent as TextBlockContent).content}
+                        <div>
+                          {/* Access Level 显示 */}
+                          <div style={{
+                            position: 'relative',
+                            marginBottom: '8px',
+                          }}>
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '-10px',
+                                right: '12px',
+                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                zIndex: 10,
+                              }}
+                            >
+                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+                            </div>
+                          </div>
+                          <div style={{
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: '1.8',
+                            fontSize: '16px',
+                            color: '#333',
+                          }}>
+                            {(block.parsedContent as TextBlockContent).content}
+                          </div>
                         </div>
                       ) : block.type === 'image' ? (
                         // 图片块
-                        <div
-                          style={{
-                            cursor: 'pointer',
-                            textAlign: 'center',
-                            transition: 'transform 0.2s',
-                          }}
-                          onClick={() => handleImageClick(block.parsedContent as ImageBlockContent)}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.02)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }}
-                        >
+                        <div>
+                          {/* Access Level 显示 */}
+                          <div
+                            style={{
+                              position: 'relative',
+                              marginBottom: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '-10px',
+                                right: '12px',
+                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                zIndex: 10,
+                              }}
+                            >
+                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              transition: 'transform 0.2s',
+                            }}
+                            onClick={() => handleImageClick(block.parsedContent as ImageBlockContent)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.02)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                          >
                           {(() => {
                             const parsedContent = block.parsedContent as ImageBlockContent;
                             // 优先使用原始的imageUrl，如果parsedContent.url不存在的话
@@ -1015,15 +1065,41 @@ export default function ArticlePage() {
                               {(block.parsedContent as ImageBlockContent).description}
                             </div>
                           )}
+                          </div>
                         </div>
                       ) : block.type === 'code' ? (
                         // 代码块
-                        <div style={{
-                          background: '#282c34',
-                          borderRadius: '8px',
-                          padding: '20px',
-                          overflow: 'auto',
-                        }}>
+                        <div>
+                          {/* Access Level 显示 */}
+                          <div
+                            style={{
+                              position: 'relative',
+                              marginBottom: '8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '-10px',
+                                right: '12px',
+                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                zIndex: 10,
+                              }}
+                            >
+                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+                            </div>
+                          </div>
+                          <div style={{
+                            background: '#282c34',
+                            borderRadius: '8px',
+                            padding: '20px',
+                            overflow: 'auto',
+                          }}>
                           {(block.parsedContent as CodeBlockContent).title && (
                             <div style={{
                               color: '#61dafb',
@@ -1051,6 +1127,7 @@ export default function ArticlePage() {
                           }}>
                             <code>{(block.parsedContent as CodeBlockContent).code}</code>
                           </pre>
+                          </div>
                         </div>
                       ) : null}
                     </div>

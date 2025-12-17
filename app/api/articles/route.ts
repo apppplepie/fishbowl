@@ -19,6 +19,7 @@ interface Block {
   description?: string;
   author?: string;
   order: number;
+  access_level?: number;
 }
 
 interface CreateArticleRequest {
@@ -29,6 +30,7 @@ interface CreateArticleRequest {
   tags?: string[];
   category_id?: string | null;
   order_index?: number;
+  max_access_level?: number;
   status?: 'draft' | 'published';
   type?: 'text' | 'image' | 'code' | 'drawing';
 }
@@ -125,8 +127,8 @@ export async function POST(request: NextRequest) {
     // 2. 插入文章记录（使用当前登录用户作者）
     await query(
       `INSERT INTO articles
-       (id, title, author, author_id, published_at, excerpt, type, category_id, order_index, status, likes, shares, comments)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+       (id, title, author, author_id, published_at, excerpt, type, category_id, order_index, status, max_access_level, likes, shares, comments)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
         body.title,
@@ -138,6 +140,7 @@ export async function POST(request: NextRequest) {
         body.category_id || 'cat_uncategorized',  // 默认分类
         body.order_index || 0,
         body.status || 'published',
+        body.max_access_level || 1,  // 添加 max_access_level，默认值为1
       ]
     );
 
@@ -174,14 +177,15 @@ export async function POST(request: NextRequest) {
 
       // 插入块
       await query(
-        `INSERT INTO blocks (id, type, content, author) 
-         VALUES (?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE content = VALUES(content)`,
+        `INSERT INTO blocks (id, type, content, author, access_level)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE content = VALUES(content), access_level = VALUES(access_level)`,
         [
           blockId,
           block.type,
           JSON.stringify(blockContent),
           body.author || '匿名',
+          block.access_level || 1,  // 添加 access_level，默认值为1
         ]
       );
 

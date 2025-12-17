@@ -180,6 +180,11 @@ export default function PublishChapterPage() {
     // 获取当前用户作为作者
     const author = user?.username || '匿名';
 
+    // 计算所有 blocks 中 access_level 的最小值
+    const maxAccessLevel = blocks.length > 0
+      ? Math.min(...blocks.map(block => block.access_level || 1))
+      : 1;
+
     const articleData = {
       title: values.title,
       author: author,
@@ -188,6 +193,7 @@ export default function PublishChapterPage() {
       category_id: categoryFromUrl,
       order_index: nextOrderInCategory,
       blocks: blocks,
+      max_access_level: maxAccessLevel,
       status: 'published' as const,
     };
 
