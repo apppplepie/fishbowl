@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Input, Button, Space, Dropdown, message, Modal } from 'antd';
+import { Input, Button, Space, Dropdown, message, Modal, Segmented } from 'antd';
 import type { MenuProps } from 'antd';
-import { 
-  DeleteOutlined, 
-  MenuOutlined, 
-  ArrowUpOutlined, 
+import {
+  DeleteOutlined,
+  MenuOutlined,
+  ArrowUpOutlined,
   ArrowDownOutlined,
   ToolOutlined,
   FormatPainterOutlined,
@@ -18,6 +18,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import type { TextBlock as TextBlockType } from '@/app/types/block';
+import { ACCESS_LEVELS } from '@/app/types/block';
 import { applyFormat, type FormatOption, findReplace } from '@/app/utils/textFormatter';
 
 const { TextArea } = Input;
@@ -68,6 +69,16 @@ export default function TextBlock({
       ...block,
       content: e.target.value,
     });
+  };
+
+  const handleAccessLevelChange = (value: string | number) => {
+    const level = ACCESS_LEVELS.find(level => level.label === value || level.value === value);
+    if (level) {
+      onChange({
+        ...block,
+        access_level: level.value,
+      });
+    }
   };
 
   // 应用格式化
@@ -370,6 +381,7 @@ export default function TextBlock({
         .text-block-textarea *::-webkit-scrollbar-thumb {
           display: none !important;
         }
+
       `}</style>
       <div
         draggable
@@ -549,9 +561,10 @@ export default function TextBlock({
           >
             文字块
           </div>
-          
+
+
           {/* 格式化菜单 */}
-          <div
+          {/* <div
             style={{
               position: 'absolute',
               top: '-10px',
@@ -572,7 +585,7 @@ export default function TextBlock({
                 格式化
               </Button>
             </Dropdown>
-          </div>
+          </div> */}
         </>
       )}
 
@@ -595,8 +608,36 @@ export default function TextBlock({
         onFocus={() => setIsFocused(true)}
       />
 
+      {/* 访问等级选择器 */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '-10px',
+          right: '12px',
+          display: 'flex',
+          gap: '4px',
+        }}
+      >
+        {ACCESS_LEVELS.map(level => (
+          <Button
+            key={level.value}
+            size="small"
+            type={(block.access_level || 1) === level.value ? 'primary' : 'default'}
+            variant={(block.access_level || 1) === level.value ? 'solid' : 'filled'}
+            style={{
+              backgroundColor: (block.access_level || 1) === level.value ? level.color : undefined,
+              borderColor: level.color,
+              color: (block.access_level || 1) === level.value ? 'white' : level.color,
+            }}
+            onClick={() => handleAccessLevelChange(level.label)}
+          >
+            {level.label}
+          </Button>
+        ))}
+      </div>
+
       {/* 空块提示 */}
-      {block.content === '' && isFocused && canDelete && (
+      {/* {block.content === '' && isFocused && canDelete && (
         <div
           style={{
             position: 'absolute',
@@ -608,7 +649,7 @@ export default function TextBlock({
         >
           按 Backspace 删除此块
         </div>
-      )}
+      )} */}
 
       </div>
     </>
