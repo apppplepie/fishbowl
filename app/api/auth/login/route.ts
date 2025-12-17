@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       username: user.username,
       email: user.email,
       role: user.role,
-      max_access_level: user.max_access_level || 2,
+      max_access_level: user.max_access_level || 3,
     });
 
     // 7. 返回用户信息和token
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
         display_name: user.display_name,
         avatar_url: user.avatar_url,
         role: user.role,
-        max_access_level: user.max_access_level || 2,
+        max_access_level: user.max_access_level || 3,
       },
     });
 

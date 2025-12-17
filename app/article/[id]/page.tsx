@@ -26,6 +26,7 @@ import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import type { Block as BlockType } from '@/app/types/block';
+import { apiGet } from '@/lib/apiClient';
 import {
   getArticleWithBlocks,
   type Block,
@@ -45,7 +46,7 @@ export default function ArticlePage() {
   const router = useRouter();
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, user, getToken } = useAuth();
 
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
@@ -98,7 +99,7 @@ export default function ArticlePage() {
    */
   const fetchCategoryPath = async (categoryId: string) => {
     try {
-      const response = await fetch(`/api/categories/${categoryId}/path`);
+      const response = await apiGet(`/api/categories/${categoryId}/path`, { requiresAuth: false });
       const result = await response.json();
 
       if (result.success && result.path) {
@@ -114,7 +115,7 @@ export default function ArticlePage() {
     async function loadArticle() {
       try {
         // 先尝试从 API 加载
-        const response = await fetch(`/api/articles/${articleId}`);
+        const response = await apiGet(`/api/articles/${articleId}`);
         const result = await response.json();
 
         if (response.ok && result.success && result.article) {
@@ -195,7 +196,7 @@ export default function ArticlePage() {
   useEffect(() => {
     async function checkLikeStatus() {
       try {
-        const response = await fetch(`/api/articles/${articleId}/like`);
+        const response = await apiGet(`/api/articles/${articleId}/like`);
         const result = await response.json();
 
         if (result.success) {

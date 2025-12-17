@@ -13,8 +13,9 @@ interface PlaceholderBlockProps {
 }
 
 export default function PlaceholderBlock({ block }: PlaceholderBlockProps) {
-  const requiredLevel = ACCESS_LEVELS.find(level => level.value === block.required_access_level);
-  const userLevel = ACCESS_LEVELS.find(level => level.value === block.user_access_level);
+  // 使用数字转换的结果
+  const requiredLevel = ACCESS_LEVELS.find(level => level.value === Number(block.required_access_level));
+  const userLevel = ACCESS_LEVELS.find(level => level.value === Number(block.user_access_level));
 
   return (
     <Card
@@ -26,7 +27,7 @@ export default function PlaceholderBlock({ block }: PlaceholderBlockProps) {
       }}
     >
       <Alert
-        message={
+        title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <LockOutlined />
             <Text strong>内容受限</Text>
@@ -35,14 +36,14 @@ export default function PlaceholderBlock({ block }: PlaceholderBlockProps) {
         description={
           <div>
             <div>此{block.original_type === 'text' ? '文本' : block.original_type === 'image' ? '图片' : '代码'}块需要
-              <Text strong style={{ color: requiredLevel?.color }}>
-                {requiredLevel?.label} ({block.required_access_level})
+              <Text strong style={{ color: requiredLevel?.color || '#666' }}>
+                {requiredLevel?.label || `等级${block.required_access_level}`} ({block.required_access_level})
               </Text> 权限
             </div>
             <div style={{ marginTop: '4px' }}>
               您的权限等级：
-              <Text strong style={{ color: userLevel?.color }}>
-                {userLevel?.label} ({block.user_access_level})
+              <Text strong style={{ color: userLevel?.color || '#666' }}>
+                {userLevel?.label || `等级${block.user_access_level}`} ({block.user_access_level})
               </Text>
             </div>
           </div>

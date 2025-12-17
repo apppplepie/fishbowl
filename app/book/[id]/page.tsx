@@ -34,6 +34,7 @@ import {
 } from '@/app/data/mockDatabase';
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 import { getChapterLabel } from '@/app/utils/chapterNumbering';
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/apiClient';
 
 const { TextArea } = Input;
 
@@ -155,7 +156,7 @@ export default function BookPage() {
    */
   const fetchCategoryPath = async (categoryId: string) => {
     try {
-      const response = await fetch(`/api/categories/${categoryId}/path`);
+      const response = await apiGet(`/api/categories/${categoryId}/path`, { requiresAuth: false });
       const result = await response.json();
 
       if (result.success && result.path) {
@@ -194,7 +195,7 @@ export default function BookPage() {
       }
 
       // 从API获取内容
-      const response = await fetch(`/api/articles/${articleId}`);
+      const response = await apiGet(`/api/articles/${articleId}`);
       const result = await response.json();
 
       if (response.ok && result.success && result.article) {
@@ -289,7 +290,7 @@ export default function BookPage() {
   const loadBook = async (id: string) => {
     try {
       // 先尝试从 API 加载
-      const response = await fetch(`/api/articles/${id}`);
+      const response = await apiGet(`/api/articles/${id}`);
       const result = await response.json();
 
       if (response.ok && result.success && result.article) {
@@ -423,12 +424,7 @@ export default function BookPage() {
 
     setIsLiking(true);
     try {
-      const response = await fetch(`/api/articles/${articleId}/like`, {
-        method: isLiked ? 'DELETE' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await (isLiked ? apiDelete(`/api/articles/${articleId}/like`) : apiPost(`/api/articles/${articleId}/like`));
 
       const result = await response.json();
       if (result.success) {
@@ -502,21 +498,18 @@ export default function BookPage() {
       // 根据当前blocks重新生成excerpt
       const updatedExcerpt = generateExcerptFromBlocks(book.blocks) || '暂无简介';
 
-      const response = await fetch(`/api/articles/${articleId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: book.title,
-          author: book.author,
-          excerpt: updatedExcerpt, // 使用重新生成的excerpt
-          category_id: book.category_id,
-          blocks: book.blocks,
-          tags: book.tags,
-        }),
-      });
+      const updateData = {
+        title: book.title,
+        author: book.author,
+        excerpt: updatedExcerpt, // 使用重新生成的excerpt
+        category_id: book.category_id,
+        blocks: book.blocks,
+        tags: book.tags,
+      };
+
+      console.log('Book save - Sending data:', JSON.stringify(updateData, null, 2));
+
+      const response = await apiPut(`/api/articles/${articleId}`, updateData);
 
       const result = await response.json();
       if (result.success) {
@@ -557,12 +550,7 @@ export default function BookPage() {
             return;
           }
 
-          const response = await fetch(`/api/articles/${articleId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
+          const response = await apiDelete(`/api/articles/${articleId}`);
 
           const result = await response.json();
           if (result.success) {
