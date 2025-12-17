@@ -119,8 +119,9 @@ export default function PublishChapterPage() {
       }
 
       // 获取子文章的最大order_index
+      // 注意：/api/articles/list 返回的字段名是 orderInCategory，而不是 order_index
       if (articlesResponse.ok && articlesResult.success && articlesResult.articles) {
-        const articleOrders = articlesResult.articles.map((article: any) => article.order_index || 0);
+        const articleOrders = articlesResult.articles.map((article: any) => article.orderInCategory || 0);
         if (articleOrders.length > 0) {
           maxOrder = Math.max(maxOrder, ...articleOrders);
         }

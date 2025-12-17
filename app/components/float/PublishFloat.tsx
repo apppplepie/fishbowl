@@ -9,7 +9,9 @@ import {
   SaveOutlined,
   EyeOutlined,
   CloseOutlined,
-  MenuOutlined
+  MenuOutlined,
+  CheckOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 import { useRouter } from 'next/navigation';
@@ -155,7 +157,7 @@ export default function FloatingActions({
       type="primary"
     >
       <FloatButton
-        icon={<PlusOutlined />}
+        icon={<CheckOutlined />}
         tooltip={{ title: '发布文章', placement: 'left' }}
         onClick={onPublish}
       />
@@ -179,7 +181,7 @@ export default function FloatingActions({
         onClick={handlePreviewToggle}
       />
       <FloatButton
-        icon={<CloseOutlined />}
+        icon={<DeleteOutlined />}
         tooltip={{ title: '退出页面', placement: 'left' }}
         onClick={handleExit}
         style={{ backgroundColor: '#ff4d4f' }}

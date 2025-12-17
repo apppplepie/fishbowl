@@ -531,6 +531,7 @@ export default function ArticlePage() {
             onCancel={editMode === 'preview' ? handleBackToEdit : handleCancel}
             onDelete={handleDelete}
             onAdjustCategory={handleAdjustCategory}
+            categoryId={article.category_id}
             articleAuthor={article.author}
             currentUser={user.username}
             userRole={user.role}
