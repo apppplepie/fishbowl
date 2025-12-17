@@ -401,10 +401,10 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
         if (rootDepth !== undefined && rootDepth >= 0) {
           // 查找指定深度的祖宗节点
           const ancestorNode = findAncestorByDepth(treeNodes, categoryId, rootDepth);
-          if (ancestorNode && ancestorNode.children) {
-            // 只显示祖宗节点的子节点
-            displayNodes = ancestorNode.children;
-            console.log(`ChapterManageFloat: 显示深度${rootDepth}的祖宗节点"${ancestorNode.name}"的子节点`);
+          if (ancestorNode) {
+            // 显示祖宗节点本身（作为根节点显示）
+            displayNodes = [ancestorNode];
+            console.log(`ChapterManageFloat: 显示深度${rootDepth}的祖宗节点"${ancestorNode.name}"及其子节点`);
           } else {
             // 如果找不到指定的祖宗节点，回退到默认行为
             console.warn(`ChapterManageFloat: 找不到深度${rootDepth}的祖宗节点，使用默认显示`);
