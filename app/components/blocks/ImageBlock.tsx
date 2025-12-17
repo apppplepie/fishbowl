@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Input, Image as AntImage } from 'antd';
+import { Button, Input, Image as AntImage, Segmented } from 'antd';
 import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, EyeOutlined } from '@ant-design/icons';
 import ImageCardModal from '../ImageCardModal';
 import type { ImageBlock as ImageBlockType } from '@/app/types/block';
+import { ACCESS_LEVELS } from '@/app/types/block';
 
 interface ImageBlockProps {
   block: ImageBlockType;
@@ -43,6 +44,16 @@ export default function ImageBlock({
       ...block,
       description: e.target.value,
     });
+  };
+
+  const handleAccessLevelChange = (value: string | number) => {
+    const level = ACCESS_LEVELS.find(level => level.label === value || level.value === value);
+    if (level) {
+      onChange({
+        ...block,
+        access_level: level.value,
+      });
+    }
   };
 
 
@@ -211,8 +222,36 @@ export default function ImageBlock({
           />
         </div>
 
-        {/* 提示 */}
+        {/* 访问等级选择器 */}
         <div
+          style={{
+            position: 'absolute',
+            bottom: '-10px',
+            right: '12px',
+            display: 'flex',
+            gap: '4px',
+          }}
+        >
+          {ACCESS_LEVELS.map(level => (
+            <Button
+              key={level.value}
+              size="small"
+              type={(block.access_level || 1) === level.value ? 'primary' : 'default'}
+              variant={(block.access_level || 1) === level.value ? 'solid' : 'filled'}
+              style={{
+                backgroundColor: (block.access_level || 1) === level.value ? level.color : undefined,
+                borderColor: level.color,
+                color: (block.access_level || 1) === level.value ? 'white' : level.color,
+              }}
+              onClick={() => handleAccessLevelChange(level.label)}
+            >
+              {level.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* 提示 */}
+        {/* <div
           style={{
             marginTop: '8px',
             fontSize: '12px',
@@ -221,7 +260,7 @@ export default function ImageBlock({
           }}
         >
           图片内容不可编辑，如需更换请删除后重新添加
-        </div>
+        </div> */}
       </div>
 
       {/* 图片查看弹窗 */}
