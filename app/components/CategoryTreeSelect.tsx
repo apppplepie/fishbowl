@@ -178,6 +178,13 @@ export default function CategoryTreeSelect({
     }
 
     try {
+      // 获取 token（提前获取，在计算 order_index 和创建分类时都需要）
+      const token = localStorage.getItem('token');
+      if (!token) {
+        message.error('请先登录');
+        return;
+      }
+
       // 生成新的分类ID
       const newId = `cat_${Date.now()}`;
 
@@ -186,7 +193,6 @@ export default function CategoryTreeSelect({
       let orderIndex = 0;
 
       try {
-        const token = localStorage.getItem('token');
 
         // 1. 查询父分类下的所有直接子分类，获取最大的 order_index
         let maxCategoryOrder = 0;
@@ -244,7 +250,10 @@ export default function CategoryTreeSelect({
 
       const response = await fetch('/api/categories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id: newId,
           name: newCategoryName,

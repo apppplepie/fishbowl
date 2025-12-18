@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/hooks/useAuth';
 
 export interface FloatingActionsProps {
   onPublish: () => void
@@ -52,7 +53,13 @@ export default function FloatingActions({
   className,
 }: FloatingActionsProps) {
   const router = useRouter()
+  const { canModerate } = useAuth()
   const [open, setOpen] = useState(false)
+
+  // 权限检查：只允许管理员和版主看到此按钮
+  if (!canModerate()) {
+    return null;
+  }
 
   const validateBeforePreview = (): boolean => {
     const values = form.getFieldsValue();

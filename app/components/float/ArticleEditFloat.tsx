@@ -56,14 +56,16 @@ export default function ArticleEditFloat({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // 检查是否有编辑权限
-  // 1. 作者本人
-  // 2. 管理员
-  // 3. 版主
-  const isAuthor = articleAuthor && currentUser && articleAuthor === currentUser;
+  // 权限检查：只允许管理员和版主看到此按钮
+  // 注意：这里不再允许作者本人编辑，只有管理员和版主可以编辑
   const isAdmin = userRole === 'admin';
   const isModerator = userRole === 'moderator';
-  const canEdit = isAuthor || isAdmin || isModerator;
+  const canEdit = isAdmin || isModerator;
+  
+  // 如果没有权限，不显示任何按钮
+  if (!canEdit) {
+    return null;
+  }
 
   // 路由判断
   const isBookPage = pathname?.startsWith('/book/');
@@ -89,7 +91,6 @@ export default function ArticleEditFloat({
     articleAuthor,
     currentUser,
     userRole,
-    isAuthor,
     isAdmin,
     isModerator,
     canEdit,
