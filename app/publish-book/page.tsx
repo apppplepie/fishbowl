@@ -267,7 +267,7 @@ export default function PublishBookPage() {
 
       const articleResult = await articleResponse.json();
 
-      if (articleResponse.ok && articleResult.success) {
+      if (articleResponse.ok && articleResult.success && articleResult.article) {
         console.log('成功创建书籍文章:', articleResult.article.id, '分类ID:', categoryId);
         message.success('书籍发布成功！');
         // 清空表单和草稿
@@ -279,7 +279,13 @@ export default function PublishBookPage() {
           router.push('/bookcase');
         }, 1000);
       } else {
-        message.error(articleResult.error || '发布失败，请重试');
+        console.error('发布书籍失败: API返回成功但文章数据缺失', {
+          responseOk: articleResponse.ok,
+          resultSuccess: articleResult.success,
+          hasArticle: !!articleResult.article,
+          fullResult: articleResult
+        });
+        message.error(articleResult.error || '发布失败：服务器返回数据异常');
       }
     } catch (error) {
       console.error('发布书籍失败:', error);
