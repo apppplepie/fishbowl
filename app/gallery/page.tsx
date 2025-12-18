@@ -92,9 +92,10 @@ export default function GalleryPage() {
       }
 
       // 使用优化的绘画作品 API，一次查询返回所有需要的数据
+      // 传递 token 以正确识别用户权限（即使未登录也会返回游客权限）
       const response = await apiGet(
         `/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`,
-        { requiresAuth: false }
+        { requiresAuth: true }
       );
       const data = await response.json();
       
@@ -182,8 +183,9 @@ export default function GalleryPage() {
     }
 
     // 否则，需要获取完整的文章数据（包含所有 blocks）
+    // 传递 token 以正确识别用户权限
     try {
-      const detailRes = await apiGet(`/api/articles/${article.id}`);
+      const detailRes = await apiGet(`/api/articles/${article.id}`, { requiresAuth: true });
       const detailData = await detailRes.json();
       
       if (detailData.success) {
