@@ -278,8 +278,14 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
         const formData = new FormData();
         formData.append('file', fileList[0].originFileObj);
 
+        // 获取token用于身份验证
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
         const response = await fetch('/api/upload', {
           method: 'POST',
+          headers: token ? {
+            'Authorization': `Bearer ${token}`,
+          } : {},
           body: formData,
         });
 

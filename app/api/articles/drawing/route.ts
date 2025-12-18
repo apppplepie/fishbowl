@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,9 +12,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // 优化查询：使用子查询直接获取封面图片和图片数量
+    // 获取当前用户权限
+    const currentUser = getCurrentUser(request);
+    const userAccessLevel = currentUser ? (currentUser.max_access_level || 3) : 2; // 登录用户默认3级，游客2级
+
+    // 查询绘画作品：使用预设封面而非动态查询blocks
     const articles = await query<any[]>(
-      `SELECT 
+      `SELECT
         a.id,
         a.title,
         a.author,
@@ -26,35 +31,40 @@ export async function GET(request: NextRequest) {
         a.likes,
         a.comments,
         a.shares,
-        -- 获取 order 最大的图片（最后一张/成图）
-        (SELECT JSON_EXTRACT(content, '$.url')
-         FROM blocks b
-         JOIN article_blocks ab ON b.id = ab.block_id
-         WHERE ab.article_id = a.id 
-           AND b.type = 'image'
-         ORDER BY ab.\`order\` DESC
-         LIMIT 1) as cover_image_url,
-        -- 统计图片数量
-        (SELECT COUNT(*)
-         FROM blocks b
-         JOIN article_blocks ab ON b.id = ab.block_id
-         WHERE ab.article_id = a.id 
-           AND b.type = 'image') as image_count
+        -- 封面图片处理：根据权限返回真实封面或占位符
+        CASE
+          WHEN a.cover_image IS NOT NULL AND a.cover_access_level <= ? THEN
+            JSON_OBJECT(
+              'url', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.url')),
+              'title', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.title')),
+              'description', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.description'))
+            )
+          WHEN a.cover_image IS NOT NULL THEN
+            JSON_OBJECT(
+              'url', '/static/covers/locked.svg',
+              'title', '内容受限',
+              'description', CONCAT('需要', a.cover_access_level, '级权限')
+            )
+          ELSE NULL
+        END as cover_image,
+        -- 是否为占位符封面
+        CASE
+          WHEN a.cover_image IS NOT NULL AND a.cover_access_level > ? THEN true
+          ELSE false
+        END as cover_is_placeholder
        FROM articles a
        WHERE a.type = 'drawing'
          AND a.status = 'published'
        ORDER BY a.updated_at DESC, a.published_at DESC
-       LIMIT ${limit} OFFSET ${offset}`,
-      []
+       LIMIT ? OFFSET ?`,
+      [userAccessLevel, userAccessLevel, limit, offset]
     );
 
-    // 处理 JSON_EXTRACT 返回的带引号字符串
+    // 处理封面数据
     const processedArticles = articles.map(article => ({
       ...article,
-      cover_image_url: article.cover_image_url 
-        ? article.cover_image_url.replace(/^"|"$/g, '') // 移除引号
-        : null,
-      image_count: article.image_count || 0,
+      cover_image: article.cover_image,
+      cover_is_placeholder: article.cover_is_placeholder || false,
     }));
 
     // 获取每篇文章的标签

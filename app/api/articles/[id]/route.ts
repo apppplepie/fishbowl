@@ -312,6 +312,38 @@ export async function PUT(
           }
         }
       }
+
+      // 处理封面图片：优先使用前端指定的值，否则自动计算
+      let coverImage = body.cover_image || null;
+      let coverAccessLevel = body.cover_access_level || 1;
+
+      // 如果前端没有指定封面，则自动计算
+      if (coverImage === null || coverImage === undefined) {
+        if (body.blocks && body.blocks.length > 0) {
+          // 找到所有图片block
+          const imageBlocks = body.blocks.filter((block: any) => block.type === 'image');
+
+          if (imageBlocks.length > 0) {
+            // 按access_level升序排序，找到权限最低的图片
+            const lowestAccessImage = imageBlocks.sort((a: any, b: any) => (a.access_level || 1) - (b.access_level || 1))[0];
+
+            if (lowestAccessImage && lowestAccessImage.imageUrl) {
+              coverImage = {
+                url: lowestAccessImage.imageUrl,
+                title: lowestAccessImage.title || '',
+                description: lowestAccessImage.description || ''
+              };
+              coverAccessLevel = lowestAccessImage.access_level || 1;
+            }
+          }
+        }
+      }
+
+      // 更新封面信息
+      await query(
+        'UPDATE articles SET cover_image = ?, cover_access_level = ? WHERE id = ?',
+        [coverImage ? JSON.stringify(coverImage) : null, coverAccessLevel, articleId]
+      );
     }
 
     return NextResponse.json({

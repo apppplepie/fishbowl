@@ -18,6 +18,7 @@ interface BookCardProps {
  * 点击跳转到书籍详情页 /book/[id]
  */
 export default function BookCard({ card, onClick }: BookCardProps) {
+
   return (
     <Card
       hoverable
@@ -36,10 +37,10 @@ export default function BookCard({ card, onClick }: BookCardProps) {
           overflow: 'hidden',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         }}>
-          {card.coverImage ? (
+          {card.coverImage && card.coverImage.url ? (
             <img
-              src={card.coverImage}
-              alt={card.title}
+              src={card.coverImage.url}
+              alt={card.coverImage.title || card.title}
               style={{
                 width: '100%',
                 height: '100%',
@@ -51,6 +52,9 @@ export default function BookCard({ card, onClick }: BookCardProps) {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
+              }}
+              onError={() => {
+                console.error('BookCard 封面图片加载失败:', card.coverImage.url);
               }}
             />
           ) : (

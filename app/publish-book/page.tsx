@@ -230,6 +230,19 @@ export default function PublishBookPage() {
         content: values.description,
       });
 
+      // 设置封面图片（书籍封面永远是公开的，access_level=1）
+      let coverImage = null;
+      let coverAccessLevel = 1;
+
+      if (coverFileList.length > 0 && coverFileList[0].response?.url) {
+        coverImage = {
+          url: coverFileList[0].response.url,
+          title: `${values.title}封面`,
+          description: ''
+        };
+        coverAccessLevel = 1; // 书籍封面永远公开
+      }
+
       const articleData = {
         title: '简介',
         author: user?.username || '匿名',
@@ -238,6 +251,8 @@ export default function PublishBookPage() {
         category_id: categoryId,
         blocks: blocks,
         max_access_level: 1, // 书籍简介都是公开内容
+        cover_image: coverImage,
+        cover_access_level: coverAccessLevel,
         status: 'published' as const,
       };
 

@@ -7,9 +7,26 @@ import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { getCurrentUser, canModerate } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    // 权限校验：仅管理员或版主可以上传文件
+    const currentUser = getCurrentUser(request);
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
+    if (!canModerate(currentUser)) {
+      return NextResponse.json(
+        { error: '无权上传文件，仅管理员或版主可操作' },
+        { status: 403 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 

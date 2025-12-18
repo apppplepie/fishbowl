@@ -53,10 +53,10 @@ export function extractBooksFromArticles(articles: any[]): BookCard[] {
     // 使用文章摘要作为书籍简介
     const description = mainArticle.excerpt || '暂无简介';
 
-    // 使用第一张图片作为封面（如果有的话）
+    // 使用封面图片（如果有的话）
     let coverImage = '/default-book-cover.jpg'; // 默认封面
-    if (mainArticle.firstImageUrl) {
-      coverImage = mainArticle.firstImageUrl;
+    if (mainArticle.coverImage && mainArticle.coverImage.url) {
+      coverImage = mainArticle.coverImage.url;
     }
 
     // 创建BookCard - 生成唯一ID (从10000开始，避免与mock数据1-6冲突)

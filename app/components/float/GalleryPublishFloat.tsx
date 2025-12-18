@@ -61,8 +61,13 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           formData.append('file', file.originFileObj);
 
           // 上传到服务器
+          const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
           const uploadResponse = await fetch('/api/upload', {
             method: 'POST',
+            headers: token ? {
+              'Authorization': `Bearer ${token}`,
+            } : {},
             body: formData,
           });
 

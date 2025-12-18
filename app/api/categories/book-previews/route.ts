@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
+
+const PLACEHOLDER_IMG = '/static/covers/locked.svg';
 
 interface BookPreview {
   categoryId: string;
@@ -22,11 +25,8 @@ interface BookPreview {
     categoryId: string;
     orderInCategory: number;
     categoryName: string;
-    firstImageUrl: string | null;
-    imageCount: number | null;
-    codePreview: string | null;
-    codeLanguage: string | null;
-    codeBlockCount: number | null;
+    coverImage: any | null;
+    coverIsPlaceholder: boolean;
     tags: string[];
   };
 }
@@ -40,6 +40,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const parentId = searchParams.get('parentId') || 'cat_bookcase';
+
+    // 1. 获取当前用户（用于权限检查）
+    const currentUser = getCurrentUser(request);
+    const userAccessLevel = currentUser ? (currentUser.max_access_level || 3) : 2; // 登录用户默认3级，游客2级
 
     // 获取指定父分类的直接子分类
     const categories = await query(
@@ -79,15 +83,22 @@ export async function GET(request: NextRequest) {
           a.category_id,
           a.order_index,
           c.name as category_name,
-          -- 获取文章中第一个图片的 URL
-          (
-            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.url'))
-            FROM blocks b
-            JOIN article_blocks ab ON b.id = ab.block_id
-            WHERE ab.article_id = a.id AND b.type = 'image'
-            ORDER BY ab.\`order\` ASC
-            LIMIT 1
-          ) as firstImageUrl,
+          -- 封面图片处理：根据权限返回真实封面或占位符
+          CASE
+            WHEN a.cover_image IS NOT NULL AND a.cover_access_level <= ? THEN
+              JSON_OBJECT(
+                'url', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.url')),
+                'title', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.title')),
+                'description', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.description'))
+              )
+            WHEN a.cover_image IS NOT NULL THEN
+              JSON_OBJECT(
+                'url', '/static/covers/locked.svg',
+                'title', '内容受限',
+                'description', CONCAT('需要', a.cover_access_level, '级权限')
+              )
+            ELSE NULL
+          END as cover_image,
           -- 绘画类型：统计图片数量
           CASE
             WHEN a.type = 'drawing' THEN (
@@ -148,11 +159,14 @@ export async function GET(request: NextRequest) {
           AND a.category_id IN (${placeholders})
       ) ranked
       WHERE rn = 1
-    `, categoryIds) as any[];
+    `, [userAccessLevel, ...categoryIds]) as any[];
+
+    // 封面权限已在SQL中处理，这里直接使用查询结果
+    const processedArticles: any[] = articles;
 
     // 构建结果
     const books: BookPreview[] = categories.map(category => {
-      const article = articles.find(a => a.category_id === category.id);
+      const article = processedArticles.find(a => a.category_id === category.id);
 
       const book: BookPreview = {
         categoryId: category.id,
@@ -178,11 +192,8 @@ export async function GET(request: NextRequest) {
           categoryId: article.category_id,
           orderInCategory: article.order_index,
           categoryName: article.category_name,
-          firstImageUrl: article.firstImageUrl,
-          imageCount: article.image_count,
-          codePreview: article.codePreview,
-          codeLanguage: article.codeLanguage,
-          codeBlockCount: article.codeBlockCount,
+          coverImage: article.cover_image,
+          coverIsPlaceholder: article.cover_image && article.cover_image.url === '/static/covers/locked.svg',
           tags: article.tags || [],
         };
       }

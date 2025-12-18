@@ -43,9 +43,13 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
           </div>
         )}
         <img
-          src={card.imageUrl || card.firstImageUrl}
-          alt={card.title}
+          src={card.coverImage?.url || card.imageUrl || card.firstImageUrl}
+          alt={card.coverImage?.title || card.title}
           onLoad={() => setImgLoaded(true)}
+          onError={() => {
+            console.error('ImageCard 图片加载失败:', card.coverImage?.url || card.imageUrl || card.firstImageUrl);
+            setImgLoaded(true); // 即使加载失败也隐藏加载状态
+          }}
           style={{
             width: '100%',
             display: imgLoaded ? 'block' : 'none',

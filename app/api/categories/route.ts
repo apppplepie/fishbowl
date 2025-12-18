@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getCurrentUser, canModerate } from '@/lib/auth';
 
 interface Category {
   id: string;
@@ -157,6 +158,22 @@ async function updateNodeAndChildren(
  */
 export async function POST(request: NextRequest) {
   try {
+    // 权限校验：仅管理员或版主可以创建分类
+    const currentUser = getCurrentUser(request);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
+    if (!canModerate(currentUser)) {
+      return NextResponse.json(
+        { success: false, error: '无权创建分类，仅管理员或版主可操作' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { id, name, parent_id, order_index } = body;
 
