@@ -21,7 +21,6 @@ import { extractBooksFromArticles } from '@/app/utils/bookUtils';
 import { apiGet } from '@/lib/apiClient';
 import { mockBookCards } from '@/app/utils/bookMocks';
 import { cacheArticleList, getCachedArticleList, getArticleCategory, clearBookCache } from '@/app/utils/bookCache';
-import { sortArticlesDFS, type CategoryNode, type ArticleNode } from '@/app/utils/bookDFS';
 import '../styles/articles-filter.css';
 
 // 根据屏幕宽度计算列数
@@ -30,22 +29,6 @@ const calculateColumns = (width: number) => {
   if (width >= 1200) return 3;
   if (width >= 768) return 2;
   return 1;
-};
-
-// 获取完整的分类树结构
-const loadCategoryTree = async (): Promise<any[]> => {
-  try {
-    const response = await apiGet('/api/categories/tree', { requiresAuth: false });
-    const result = await response.json();
-
-    if (result.success && result.data) {
-      return result.data;
-    }
-    return [];
-  } catch (error) {
-    console.error('获取分类树失败:', error);
-    return [];
-  }
 };
 
 // 预缓存所有书籍的文章列表
@@ -95,44 +78,14 @@ const preloadAllBookArticleLists = async () => {
           const articleResult = await articleResponse.json();
 
           if (articleResponse.ok && articleResult.success && articleResult.articles) {
+            // 后端已排序，直接使用
             const articles = articleResult.articles;
-
-            // 去重
-            const uniqueArticles = articles.filter((article: any, index: number, self: any[]) =>
-              index === self.findIndex(a => a.id === article.id)
-            );
-
-            // 排序文章
-            const categoryTree = await loadCategoryTree();
-            const categoryMap = new Map<string, CategoryNode>();
-            const buildCategoryMap = (categories: any[]) => {
-              categories.forEach(category => {
-                categoryMap.set(category.id, category);
-                if (category.children) {
-                  buildCategoryMap(category.children);
-                }
-              });
-            };
-            buildCategoryMap(categoryTree);
-
-            // 按 categoryId 分组文章
-            const articlesMap = new Map<string, ArticleNode[]>();
-            uniqueArticles.forEach((article: any) => {
-              const catId = article.category_id;
-              if (!articlesMap.has(catId)) {
-                articlesMap.set(catId, []);
-              }
-              articlesMap.get(catId)!.push(article);
-            });
-
-            // 使用统一的 DFS 排序函数
-            const sortedArticles = sortArticlesDFS(categoryId, categoryMap, articlesMap);
-            const articleIds = sortedArticles.map((article: any) => article.id.toString());
-
+            const articleIds = articles.map((article: any) => article.id.toString());
+            
             // 创建文章到分类的映射
             const articleCategoryMap = new Map<string, string>();
-            sortedArticles.forEach((article: any) => {
-              articleCategoryMap.set(article.id.toString(), article.category_id || categoryId);
+            articles.forEach((article: any) => {
+              articleCategoryMap.set(article.id.toString(), article.categoryId || categoryId);
             });
 
             // 缓存
@@ -334,55 +287,21 @@ function BookcasePageContent() {
 
         let allArticles: any[] = [];
         if (response.ok && result.success) {
+          // 后端已排序，直接使用
           allArticles = result.articles;
           console.log('分类目录 - API返回文章数量:', allArticles.length);
         } else {
           console.error('获取分类文章失败:', result);
         }
 
-        // 获取完整的分类树
-        const categoryTree = await loadCategoryTree();
-
-        // 构建分类ID到节点的映射
-        const categoryMap = new Map<string, any>();
-        const buildCategoryMap = (categories: any[]) => {
-          categories.forEach(category => {
-            categoryMap.set(category.id, category);
-            if (category.children) {
-              buildCategoryMap(category.children);
-            }
-          });
-        };
-        buildCategoryMap(categoryTree);
-
-        // 去重文章
-        const uniqueArticles = allArticles.filter((article, index, self) =>
-          index === self.findIndex(a => a.id === article.id)
-        );
-
-        // 按 categoryId 分组文章
-        const articlesMap = new Map<string, any[]>();
-        uniqueArticles.forEach(article => {
-          const catId = article.categoryId;
-          if (!articlesMap.has(catId)) {
-            articlesMap.set(catId, []);
-          }
-          articlesMap.get(catId)!.push(article);
-        });
-
-        // 使用统一的 DFS 排序函数
-        const sortedArticles = sortArticlesDFS(categoryFromUrl, categoryMap, articlesMap);
-
-        console.log('分类目录 - 排序后文章数量:', sortedArticles.length);
-
         // 缓存有序的文章ID列表，用于文章切换功能
-        const articleIds = sortedArticles.map(article => article.id.toString());
+        const articleIds = allArticles.map(article => article.id.toString());
         cacheArticleList(categoryFromUrl, articleIds);
 
         // 应用分页
         const startIndex = currentOffset;
         const endIndex = startIndex + ITEMS_PER_PAGE;
-        const paginatedArticles = sortedArticles.slice(startIndex, endIndex);
+        const paginatedArticles = allArticles.slice(startIndex, endIndex);
 
         if (append) {
           setCards(prev => [...prev, ...paginatedArticles]);
@@ -390,7 +309,7 @@ function BookcasePageContent() {
           setCards(paginatedArticles);
         }
 
-        setHasMore(endIndex < uniqueArticles.length);
+        setHasMore(endIndex < allArticles.length);
         setOffset(endIndex);
       }
 
