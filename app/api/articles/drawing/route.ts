@@ -56,14 +56,15 @@ export async function GET(request: NextRequest) {
        WHERE a.type = 'drawing'
          AND a.status = 'published'
        ORDER BY a.updated_at DESC, a.published_at DESC
-       LIMIT ? OFFSET ?`,
-      [userAccessLevel, userAccessLevel, limit, offset]
+       LIMIT ${limit} OFFSET ${offset}`,
+      [userAccessLevel, userAccessLevel]
     );
 
     // 处理封面数据
     const processedArticles = articles.map(article => ({
       ...article,
       cover_image: article.cover_image,
+      cover_image_url: article.cover_image?.url || null, // 提取封面图片URL供前端使用
       cover_is_placeholder: article.cover_is_placeholder || false,
     }));
 
