@@ -734,10 +734,21 @@ function BookcasePageContent() {
             onClick={handleClick}
             showDeleteIcon={deleteMode}
             onDeleteSuccess={() => {
-              // 删除成功后刷新页面
+              // 删除成功后刷新页面和侧边栏
+              console.log('书籍删除成功，刷新页面和侧边栏');
+              // 清除当前书籍的文章列表缓存
+              const bookCategoryId = (article as any).categoryId;
+              if (bookCategoryId) {
+                clearBookCache(bookCategoryId);
+              }
+              // 刷新当前页面数据
               setOffset(0);
               setHasMore(true);
               loadBookcaseArticles(0, false);
+              // 刷新侧边栏（通过更新key强制重新渲染）
+              setSidebarKey(prev => prev + 1);
+              // 退出删除模式
+              setDeleteMode(false);
             }}
           />
         );

@@ -59,11 +59,11 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  // 从文章块中提取所有图片块，按 order 降序排列（成图在前）
+  // 从文章块中提取所有图片块，按 order 升序排列（order 最小的在前）
   const images = useMemo(() => {
     return article.blocks
       .filter((block) => block.type === 'image' || block.type === 'placeholder')
-      .sort((a, b) => b.order - a.order) // 降序，order 最大的在最前
+      .sort((a, b) => a.order - b.order) // 升序，order 最小的在最前
       .map((block) => ({
         id: block.id,
         type: block.type,
@@ -130,7 +130,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
     preloadImage(prevIndex);
   }, [currentIndex, images, loadedImages]);
 
-  // 处理图片区域点击（左侧1/3下一张，右侧1/3上一张）
+  // 处理图片区域点击（左侧1/3上一张，右侧1/3下一张）
   const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -139,9 +139,9 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
     const rightThird = rect.width * 2 / 3;
 
     if (clickX < leftThird) {
-      handleNext(e);
+      handlePrevious(e); // 点击左侧显示上一张
     } else if (clickX > rightThird) {
-      handlePrevious(e);
+      handleNext(e); // 点击右侧显示下一张
     }
     // 中间1/3不触发切换
   };
