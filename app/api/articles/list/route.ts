@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 // 类型定义
 interface RawArticle {
@@ -25,12 +26,8 @@ interface RawArticle {
   category_name: string;
   category_path: string | null;
   category_depth: number | null;
-  firstImageUrl: string | null;
-  drawingCoverUrl: string | null;
-  image_count: number | null;
-  codePreview: string | null;
-  codeLanguage: string | null;
-  code_block_count: number | null;
+  cover_image: any | null; // 封面图片对象或null
+  cover_is_placeholder: boolean; // 是否为占位符封面
   tags: string[] | null;
 }
 
@@ -51,11 +48,8 @@ interface ProcessedArticle {
   categoryId: string;
   orderInCategory: number;
   categoryName: string;
-  firstImageUrl: string | null;
-  imageCount: number | null;
-  codePreview: string | null;
-  codeLanguage: string | null;
-  codeBlockCount: number | null;
+  coverImage: any | null; // 封面图片对象
+  coverIsPlaceholder: boolean; // 是否为占位符封面
   tags: string[];
 }
 
@@ -87,6 +81,10 @@ async function getCategoryAndChildrenIds(categoryId: string): Promise<string[]> 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // 获取当前用户权限
+    const currentUser = getCurrentUser(request);
+    const userAccessLevel = currentUser ? (currentUser.max_access_level || 3) : 2; // 登录用户默认3级，游客2级
 
     // 参数验证和清理
     const status = searchParams.get('status') || 'published';
@@ -122,6 +120,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 在前面添加封面权限参数
+    queryParams.unshift(userAccessLevel, userAccessLevel);
+
     // 添加ORDER BY的参数（放在最后，确保参数顺序正确）
     // 归档页面始终按updated_at降序排序，无论是否指定categoryId
     queryParams.push(0, 0);
@@ -150,71 +151,27 @@ export async function GET(request: NextRequest) {
         c.name as category_name,
         c.path as category_path,
         c.depth as category_depth,
-        -- 获取文章中第一个图片的 URL（所有类型的文章都可以获取）
-        (
-          SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.url'))
-          FROM blocks b
-          JOIN article_blocks ab ON b.id = ab.block_id
-          WHERE ab.article_id = a.id AND b.type = 'image'
-          ORDER BY ab.\`order\` ASC
-          LIMIT 1
-        ) as firstImageUrl,
-        -- 绘画类型：获取 order 最大的图片（成图）
+        -- 封面图片处理：根据权限返回真实封面或占位符
         CASE
-          WHEN a.type = 'drawing' THEN (
-            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.url'))
-            FROM blocks b
-            JOIN article_blocks ab ON b.id = ab.block_id
-            WHERE ab.article_id = a.id AND b.type = 'image'
-            ORDER BY ab.\`order\` DESC
-            LIMIT 1
-          )
+          WHEN a.cover_image IS NOT NULL AND a.cover_access_level <= ? THEN
+            JSON_OBJECT(
+              'url', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.url')),
+              'title', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.title')),
+              'description', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.description'))
+            )
+          WHEN a.cover_image IS NOT NULL THEN
+            JSON_OBJECT(
+              'url', '/static/covers/locked.svg',
+              'title', '内容受限',
+              'description', CONCAT('需要', a.cover_access_level, '级权限')
+            )
           ELSE NULL
-        END as drawingCoverUrl,
-        -- 绘画类型：统计图片数量
+        END as cover_image,
+        -- 是否为占位符封面
         CASE
-          WHEN a.type = 'drawing' THEN (
-            SELECT COUNT(*)
-            FROM blocks b
-            JOIN article_blocks ab ON b.id = ab.block_id
-            WHERE ab.article_id = a.id AND b.type = 'image'
-          )
-          ELSE NULL
-        END as image_count,
-        -- 代码类型：获取第一个代码块的代码
-        CASE
-          WHEN a.type = 'code' THEN (
-            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.code'))
-            FROM blocks b
-            JOIN article_blocks ab ON b.id = ab.block_id
-            WHERE ab.article_id = a.id AND b.type = 'code'
-            ORDER BY ab.\`order\` ASC
-            LIMIT 1
-          )
-          ELSE NULL
-        END as codePreview,
-        -- 代码类型：获取第一个代码块的语言
-        CASE
-          WHEN a.type = 'code' THEN (
-            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.language'))
-            FROM blocks b
-            JOIN article_blocks ab ON b.id = ab.block_id
-            WHERE ab.article_id = a.id AND b.type = 'code'
-            ORDER BY ab.\`order\` ASC
-            LIMIT 1
-          )
-          ELSE NULL
-        END as codeLanguage,
-        -- 代码类型：统计代码块数量
-        CASE
-          WHEN a.type = 'code' THEN (
-            SELECT COUNT(*)
-            FROM blocks b
-            JOIN article_blocks ab ON b.id = ab.block_id
-            WHERE ab.article_id = a.id AND b.type = 'code'
-          )
-          ELSE NULL
-        END as codeBlockCount,
+          WHEN a.cover_image IS NOT NULL AND a.cover_access_level > ? THEN true
+          ELSE false
+        END as cover_is_placeholder,
         -- 获取文章标签（JSON数组格式）
         (
           SELECT JSON_ARRAYAGG(t.name)
@@ -255,12 +212,9 @@ export async function GET(request: NextRequest) {
       categoryId: article.category_id,
       orderInCategory: article.order_index,
       categoryName: article.category_name,
-      // 预览数据（已由SQL处理）
-      firstImageUrl: article.firstImageUrl || article.drawingCoverUrl,
-      imageCount: article.image_count,
-      codePreview: article.codePreview,
-      codeLanguage: article.codeLanguage,
-      codeBlockCount: article.code_block_count,
+      // 封面数据（已由SQL处理）
+      coverImage: article.cover_image,
+      coverIsPlaceholder: article.cover_is_placeholder,
       // 标签（JSON数组）
       tags: article.tags || [],
     }));

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, Tag } from 'antd';
 import { ClockCircleOutlined, EyeOutlined, MessageOutlined } from '@ant-design/icons';
 import type { ArticleCard as ArticleCardType } from '@/app/types/card';
@@ -16,6 +16,8 @@ interface ArticleCardProps {
  * 标题+摘要+封面图，适合博客文章、长篇内容
  */
 export default function ArticleCard({ card, onClick }: ArticleCardProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
   return (
     <Card
       hoverable
@@ -25,25 +27,7 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
       }}
       styles={{ body: { padding: '20px' } }}
       onClick={onClick}
-      cover={
-        card.coverImage ? (
-          <div style={{ 
-            height: '200px', 
-            overflow: 'hidden',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          }}>
-            <img
-              src={card.coverImage}
-              alt={card.title}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
-            />
-          </div>
-        ) : undefined
-      }
+      cover={undefined}
     >
       {/* 标签 */}
       {card.tags && card.tags.length > 0 && (

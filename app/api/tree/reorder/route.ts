@@ -26,7 +26,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { query, pool } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, canModerate } from '@/lib/auth';
 
 /**
  * 递归更新节点及其所有子节点的 depth 和 path
@@ -109,6 +109,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 仅管理员或版主可以进行树形结构排序
+    if (!canModerate(currentUser)) {
+      return NextResponse.json(
+        { success: false, error: '无权调整树形结构排序，仅管理员或版主可操作' },
+        { status: 403 }
+      );
+    }
+
     const body: ReorderRequest = await request.json();
     const { moves, moved } = body;
 
@@ -120,47 +128,6 @@ export async function POST(request: NextRequest) {
         { success: false, error: '缺少 moves 参数' },
         { status: 400 }
       );
-    }
-
-    // 3. 权限验证：检查用户是否有权操作涉及的所有文章
-    if (moved) {
-      // 检查被移动的文章
-      const movedArticle = await query<any[]>(
-        'SELECT author_id FROM articles WHERE id = ?',
-        [moved.id]
-      );
-
-      if (movedArticle.length > 0) {
-        const isAuthor = movedArticle[0].author_id === currentUser.id;
-        if (!isAuthor) {
-          return NextResponse.json(
-            { success: false, error: '无权操作此文章' },
-            { status: 403 }
-          );
-        }
-      }
-    }
-
-    // 检查所有涉及的文章权限
-    for (const move of moves) {
-      for (const child of move.children) {
-        if (child.type === 'article') {
-          const article = await query<any[]>(
-            'SELECT author_id FROM articles WHERE id = ?',
-            [child.id]
-          );
-
-          if (article.length > 0) {
-            const isAuthor = article[0].author_id === currentUser.id;
-            if (!isAuthor) {
-              return NextResponse.json(
-                { success: false, error: '无权操作某些文章' },
-                { status: 403 }
-              );
-            }
-          }
-        }
-      }
     }
 
     // 4. 在事务中执行所有更新操作

@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getCurrentUser, canModerate } from '@/lib/auth';
 
 /**
  * GET /api/categories/:id
@@ -48,6 +49,22 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 权限校验：仅管理员或版主可以更新分类
+    const currentUser = getCurrentUser(request);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
+    if (!canModerate(currentUser)) {
+      return NextResponse.json(
+        { success: false, error: '无权更新分类，仅管理员或版主可操作' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { name, parent_id, order_index } = body;
@@ -102,6 +119,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 权限校验：仅管理员或版主可以删除分类
+    const currentUser = getCurrentUser(request);
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
+    if (!canModerate(currentUser)) {
+      return NextResponse.json(
+        { success: false, error: '无权删除分类，仅管理员或版主可操作' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     
     // 检查是否有文章使用此分类

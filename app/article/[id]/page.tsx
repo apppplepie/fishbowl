@@ -244,35 +244,43 @@ export default function ArticlePage() {
   const handleEdit = () => {
     if (article) {
       // 转换块数据格式为编辑器格式
-      const editorBlocks = article.blocks.map((b: any, index: number) => {
-        if (b.type === 'text') {
-          return {
-            id: b.id,
-            type: 'text',
-            order: index,
-            content: b.parsedContent.content,
-          };
-        } else if (b.type === 'image') {
-          return {
-            id: b.id,
-            type: 'image',
-            order: index,
-            imageUrl: b.parsedContent.url,
-            title: b.parsedContent.title,
-            description: b.parsedContent.description,
-          };
-        } else if (b.type === 'code') {
-          return {
-            id: b.id,
-            type: 'code',
-            order: index,
-            language: b.parsedContent.language,
-            code: b.parsedContent.code,
-            title: b.parsedContent.title,
-          };
-        }
-        return b;
-      });
+      const editorBlocks = article.blocks
+        .map((b: any, index: number) => {
+          if (b.type === 'text') {
+            return {
+              id: b.id,
+              type: 'text',
+              order: index,
+              content: b.parsedContent.content,
+              access_level: b.access_level || 1,
+            };
+          } else if (b.type === 'image') {
+            return {
+              id: b.id,
+              type: 'image',
+              order: index,
+              imageUrl: b.parsedContent.url,
+              title: b.parsedContent.title,
+              description: b.parsedContent.description,
+              access_level: b.access_level || 1,
+            };
+          } else if (b.type === 'code') {
+            return {
+              id: b.id,
+              type: 'code',
+              order: index,
+              language: b.parsedContent.language,
+              code: b.parsedContent.code,
+              title: b.parsedContent.title,
+              access_level: b.access_level || 1,
+            };
+          } else if (b.type === 'placeholder') {
+            // placeholder块在编辑模式下应该被过滤掉，因为用户没有权限编辑这些块
+            return null;
+          }
+          return b;
+        })
+        .filter((block: any) => block !== null);
 
       setEditedArticle({
         ...article,
@@ -343,6 +351,7 @@ export default function ArticlePage() {
           tags: editedArticle.tags || [],
           blocks: editedArticle.editorBlocks || [],
           excerpt: updatedExcerpt, // 添加重新生成的excerpt
+          // 封面图片由后端自动计算，无需前端提供
         };
 
         // 获取 Token

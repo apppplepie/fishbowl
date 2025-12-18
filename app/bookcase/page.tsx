@@ -157,7 +157,7 @@ const preloadAllBookArticleLists = async () => {
     console.log('开始预缓存所有书籍的文章列表...');
 
     // 获取所有书籍分类（不包括根分类）
-    const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: false });
+    const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: true });
     const result = await response.json();
 
     if (!result.success || !result.books) {
@@ -389,7 +389,7 @@ function BookcasePageContent() {
       // 根据是否有category参数决定加载逻辑
       if (!categoryFromUrl || categoryFromUrl === 'cat_bookcase') {
         // 书橱根目录：一次性获取所有书籍分类及其第一篇文章
-        const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: false });
+        const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: true });
         const result = await response.json();
 
         if (response.ok && result.success) {
@@ -415,7 +415,7 @@ function BookcasePageContent() {
                 type: 'book',
                 title: book.categoryName,
                 description: mainArticle.excerpt || '暂无简介',
-                coverImage: mainArticle.firstImageUrl || '/default-book-cover.jpg',
+                coverImage: mainArticle.coverImage?.url || '/default-book-cover.jpg',
                 author: mainArticle.author || '未知作者',
                 updatedAt: mainArticle.updatedAt || mainArticle.publishedAt || mainArticle.createdAt || new Date().toISOString(),
                 mainArticleId: mainArticle.id.toString(),

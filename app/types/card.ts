@@ -27,7 +27,7 @@ export interface ArticleCard extends BaseCard {
   type: 'article';
   title: string;
   excerpt: string;
-  coverImage?: string;
+  coverImage?: string | any; // 封面图 - 支持字符串或对象格式
   author: string;
   readTime: number; // 阅读时间（分钟）
   views?: number;
@@ -76,7 +76,7 @@ export interface BookCard extends BaseCard {
   type: 'book';
   title: string; // 书名（目录名）
   description: string; // 简介（来自 order_index 最小的文章的摘要）
-  coverImage: string; // 封面图（来自 order_index 最小的文章的第一张图片）
+  coverImage: string | any; // 封面图（来自 order_index 最小的文章的第一张图片）- 支持字符串或对象格式
   author: string; // 作者
   updatedAt: string; // 更新日期
   mainArticleId: string; // 主要文章ID（order_index 最小的文章）

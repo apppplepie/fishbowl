@@ -31,6 +31,8 @@ interface CreateArticleRequest {
   category_id?: string | null;
   order_index?: number;
   max_access_level?: number;
+  cover_image?: any | null; // 封面图片对象，由前端指定或后端自动计算
+  cover_access_level?: number; // 封面访问等级，默认为1
   status?: 'draft' | 'published';
   type?: 'text' | 'image' | 'code' | 'drawing';
 }
@@ -40,14 +42,21 @@ interface CreateArticleRequest {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. 验证用户登录
-    const { getCurrentUser } = await import('@/lib/auth');
+    // 1. 验证用户登录 & 角色（仅管理员或版主可以发布文章）
+    const { getCurrentUser, canModerate } = await import('@/lib/auth');
     const currentUser = getCurrentUser(request);
     
     if (!currentUser) {
       return NextResponse.json(
         { success: false, error: '请先登录' },
         { status: 401 }
+      );
+    }
+
+    if (!canModerate(currentUser)) {
+      return NextResponse.json(
+        { success: false, error: '无权发布文章，仅管理员或版主可操作' },
+        { status: 403 }
       );
     }
 
@@ -124,11 +133,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 处理封面图片：优先使用前端指定的值，否则自动计算
+    let coverImage = body.cover_image || null;
+    let coverAccessLevel = body.cover_access_level || 1;
+
+    // 如果前端没有指定封面，则自动计算
+    if (coverImage === null || coverImage === undefined) {
+      if (body.blocks && body.blocks.length > 0) {
+        // 找到所有图片block
+        const imageBlocks = body.blocks.filter(block => block.type === 'image');
+
+        if (imageBlocks.length > 0) {
+          // 按access_level升序排序，找到权限最低的图片
+          const lowestAccessImage = imageBlocks.sort((a, b) => (a.access_level || 1) - (b.access_level || 1))[0];
+
+          if (lowestAccessImage && lowestAccessImage.imageUrl) {
+            coverImage = {
+              url: lowestAccessImage.imageUrl,
+              title: lowestAccessImage.title || '',
+              description: lowestAccessImage.description || ''
+            };
+            coverAccessLevel = lowestAccessImage.access_level || 1;
+          }
+        }
+      }
+    }
+
     // 2. 插入文章记录（使用当前登录用户作者）
     await query(
       `INSERT INTO articles
-       (id, title, author, author_id, published_at, excerpt, type, category_id, order_index, status, max_access_level, likes, shares, comments)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+       (id, title, author, author_id, published_at, excerpt, type, category_id, order_index, status, max_access_level, cover_image, cover_access_level, likes, shares, comments)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
         body.title,
@@ -141,6 +176,8 @@ export async function POST(request: NextRequest) {
         body.order_index || 0,
         body.status || 'published',
         body.max_access_level || 1,  // 添加 max_access_level，默认值为1
+        coverImage ? JSON.stringify(coverImage) : null,  // 封面图片JSON
+        coverAccessLevel,  // 封面访问等级
       ]
     );
 

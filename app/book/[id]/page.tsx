@@ -201,29 +201,34 @@ export default function BookPage() {
 
       if (response.ok && result.success && result.article) {
         // 处理blocks数据
-        const processedBlocks = result.article.blocks.map((block: any) => {
-          if (block.type === 'image' && block.parsedContent?.url) {
-            return {
-              ...block,
-              imageUrl: block.parsedContent.url,
-              title: block.parsedContent.title || block.title || '',
-              description: block.parsedContent.description || block.description || '',
-            };
-          } else if (block.type === 'text' && block.parsedContent?.content) {
-            return {
-              ...block,
-              content: block.parsedContent.content,
-            };
-          } else if (block.type === 'code' && block.parsedContent) {
-            return {
-              ...block,
-              language: block.parsedContent.language || 'javascript',
-              code: block.parsedContent.code || '',
-              title: block.parsedContent.title || block.title || '',
-            };
-          }
-          return block;
-        });
+        const processedBlocks = result.article.blocks
+          .map((block: any) => {
+            if (block.type === 'image' && block.parsedContent?.url) {
+              return {
+                ...block,
+                imageUrl: block.parsedContent.url,
+                title: block.parsedContent.title || block.title || '',
+                description: block.parsedContent.description || block.description || '',
+              };
+            } else if (block.type === 'text' && block.parsedContent?.content) {
+              return {
+                ...block,
+                content: block.parsedContent.content,
+              };
+            } else if (block.type === 'code' && block.parsedContent) {
+              return {
+                ...block,
+                language: block.parsedContent.language || 'javascript',
+                code: block.parsedContent.code || '',
+                title: block.parsedContent.title || block.title || '',
+              };
+            } else if (block.type === 'placeholder') {
+              // placeholder块应该被过滤掉，因为用户没有权限查看这些块
+              return null;
+            }
+            return block;
+          })
+          .filter((block: any) => block !== null);
 
         const processedArticle = {
           ...result.article,
@@ -296,31 +301,36 @@ export default function BookPage() {
 
       if (response.ok && result.success && result.article) {
         // 处理blocks数据，为编辑器准备正确的属性
-        const processedBlocks = result.article.blocks.map((block: any) => {
-          if (block.type === 'image' && block.parsedContent?.url) {
-            return {
-              ...block,
-              imageUrl: block.parsedContent.url,
-              title: block.parsedContent.title || block.title || '',
-              description: block.parsedContent.description || block.description || '',
-            };
-          } else if (block.type === 'text' && block.parsedContent?.content) {
-            // 为文字块设置content属性，确保编辑器能正确显示文本
-            return {
-              ...block,
-              content: block.parsedContent.content,
-            };
-          } else if (block.type === 'code' && block.parsedContent) {
-            // 为代码块设置language和code属性
-            return {
-              ...block,
-              language: block.parsedContent.language || 'javascript',
-              code: block.parsedContent.code || '',
-              title: block.parsedContent.title || block.title || '',
-            };
-          }
-          return block;
-        });
+        const processedBlocks = result.article.blocks
+          .map((block: any) => {
+            if (block.type === 'image' && block.parsedContent?.url) {
+              return {
+                ...block,
+                imageUrl: block.parsedContent.url,
+                title: block.parsedContent.title || block.title || '',
+                description: block.parsedContent.description || block.description || '',
+              };
+            } else if (block.type === 'text' && block.parsedContent?.content) {
+              // 为文字块设置content属性，确保编辑器能正确显示文本
+              return {
+                ...block,
+                content: block.parsedContent.content,
+              };
+            } else if (block.type === 'code' && block.parsedContent) {
+              // 为代码块设置language和code属性
+              return {
+                ...block,
+                language: block.parsedContent.language || 'javascript',
+                code: block.parsedContent.code || '',
+                title: block.parsedContent.title || block.title || '',
+              };
+            } else if (block.type === 'placeholder') {
+              // placeholder块应该被过滤掉，因为用户没有权限查看这些块
+              return null;
+            }
+            return block;
+          })
+          .filter((block: any) => block !== null);
 
         const processedArticle = {
           ...result.article,
@@ -506,6 +516,7 @@ export default function BookPage() {
         category_id: book.category_id,
         blocks: book.blocks,
         tags: book.tags,
+        // 封面图片由后端自动计算，无需前端提供
       };
 
       console.log('Book save - Sending data:', JSON.stringify(updateData, null, 2));

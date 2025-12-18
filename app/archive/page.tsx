@@ -105,7 +105,7 @@ function ArticlesPageContent() {
       }
 
       // 使用优化的列表 API，一次查询返回所有预览数据
-      const response = await apiGet(`/api/articles/list?${params.toString()}`, { requiresAuth: false });
+      const response = await apiGet(`/api/articles/list?${params.toString()}`, { requiresAuth: true });
       const result = await response.json();
       
       if (response.ok && result.success) {

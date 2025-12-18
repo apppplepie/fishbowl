@@ -194,6 +194,7 @@ export default function PublishChapterPage() {
       order_index: nextOrderInCategory,
       blocks: blocks,
       max_access_level: maxAccessLevel,
+      // 封面图片由后端自动计算，无需前端提供
       status: 'published' as const,
     };
 
