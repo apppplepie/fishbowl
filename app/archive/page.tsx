@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Masonry, Input, Tag, Select, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import CardRenderer from '@/app/components/cards/CardRenderer';
@@ -37,6 +37,7 @@ function ArticlesPageContent() {
   const { isMobile } = useResponsive();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [columns, setColumns] = useState<number>(3);
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,8 +151,33 @@ function ArticlesPageContent() {
     }
   };
 
-  // 初次加载
+  // 初次加载 - 检查是否有保存的状态
   useEffect(() => {
+    const savedState = sessionStorage.getItem('archiveState');
+    
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        // 检查分类是否匹配（如果不匹配，清除保存的状态并重新加载）
+        if (state.selectedCategoryId === selectedCategoryId) {
+          // 恢复保存的状态
+          setCards(state.cards || []);
+          setOffset(state.offset || 0);
+          setHasMore(state.hasMore !== undefined ? state.hasMore : true);
+          setLoading(false);
+          // 滚动位置会在下面的 useEffect 中恢复
+          return;
+        } else {
+          // 分类不匹配，清除保存的状态
+          sessionStorage.removeItem('archiveState');
+        }
+      } catch (error) {
+        console.error('恢复归档状态失败:', error);
+        sessionStorage.removeItem('archiveState');
+      }
+    }
+    
+    // 没有保存的状态或分类不匹配，正常加载
     loadArticles(0, false, selectedCategoryId);
   }, [selectedCategoryId]);
 
@@ -173,6 +199,28 @@ function ArticlesPageContent() {
       return matchTags && matchSearch;
     });
   }, [cards, selectedTags, searchKeyword]);
+
+  // 恢复滚动位置（在 filteredCards 定义之后）
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('archiveState');
+    if (savedState && !loading && filteredCards.length > 0) {
+      try {
+        const state = JSON.parse(savedState);
+        if (state.scrollPosition !== undefined) {
+          // 等待内容渲染完成后再恢复滚动位置
+          const timer = setTimeout(() => {
+            window.scrollTo(0, state.scrollPosition);
+            // 恢复后清除保存的状态
+            sessionStorage.removeItem('archiveState');
+          }, 200);
+          return () => clearTimeout(timer);
+        }
+      } catch (error) {
+        console.error('恢复滚动位置失败:', error);
+        sessionStorage.removeItem('archiveState');
+      }
+    }
+  }, [loading, filteredCards.length]);
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -214,11 +262,24 @@ function ArticlesPageContent() {
     // 重置标签和搜索筛选
     setSelectedTags([]);
     setSearchKeyword('');
+    // 清除保存的状态（因为分类变了）
+    sessionStorage.removeItem('archiveState');
   };
 
   // 点击卡片处理
   const handleCardClick = (card: any) => {
     console.log('点击了卡片:', card);
+    // 保存完整状态：滚动位置、cards、offset、hasMore、selectedCategoryId
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const archiveState = {
+      scrollPosition: scrollTop,
+      cards: cards,
+      offset: offset,
+      hasMore: hasMore,
+      selectedCategoryId: selectedCategoryId,
+    };
+    sessionStorage.setItem('archiveState', JSON.stringify(archiveState));
+    
     // 数据库文章直接跳转
     if (card.type === 'text' || card.type === 'image' || card.type === 'code' || card.type === 'diary' || card.type === 'drawing') {
       router.push(`/article/${card.id}`);
