@@ -19,7 +19,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
-import { useArticleNavigation, getArticleCategory, clearBookCache } from '@/app/hooks/useArticleNavigation';
+import { useBookStore } from '@/app/stores/useBookStore';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
@@ -88,8 +88,24 @@ export default function BookPage() {
   const { isLoggedIn, user } = useAuth();
   // 从URL参数获取分类信息，优先使用URL参数中的category
   const urlCategory = searchParams.get('category');
-  const [bookCategoryId, setBookCategoryId] = useState<string>(urlCategory || '');
 
+  // 使用 BookStore 管理书籍状态
+  const {
+    bookCategoryId,
+    currentArticleId: storeCurrentArticleId,
+    navigation,
+    loading: navigationLoading,
+    initializeBookCategoryId,
+    setBookIdFromArticle,
+    setCurrentArticle,
+    goToNext,
+    goToPrev,
+    getArticleCategory,
+    clearCache,
+  } = useBookStore();
+
+  // 使用 Store 的 currentArticleId，如果没有则使用 URL 中的 articleId
+  const currentArticleId = storeCurrentArticleId || articleId;
 
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
@@ -126,17 +142,12 @@ export default function BookPage() {
   // const [categoryModalOpen, setCategoryModalOpen] = useState(false); // 功能开发中
 
   // 内容状态（翻页时更新）
-  const [currentArticleId, setCurrentArticleId] = useState<string>(articleId);
   const [bookId, setBookId] = useState<string | null>(null);
   const [book, setBook] = useState<any>(null);
   const [contentLoadingState, setContentLoadingState] = useState<'loading' | 'loaded' | 'error'>('loading');
 
   // 文章内容缓存
   const [articleCache, setArticleCache] = useState<Map<string, any>>(new Map());
-
-  // 文章导航 - 直接用书籍ID从缓存拿文章列表，支持DFS顺序翻页
-  console.log('导航参数:', { bookCategoryId, currentArticleId });
-  const navigation = useArticleNavigation(bookCategoryId, currentArticleId);
 
   // 点赞相关状态（内容状态）
   const [isLiked, setIsLiked] = useState(false);
@@ -257,26 +268,31 @@ export default function BookPage() {
     setContentLoadingState('loading');
 
     try {
-      // 获取文章内容
+      // 获取文章内容（优先从缓存读取，如果缓存中有则不会发送请求）
       const articleContent = await fetchArticleContent(targetArticleId);
 
       if (articleContent) {
         // 更新内容状态
-        setCurrentArticleId(targetArticleId);
         setBook(articleContent);
         setIsLiked(false); // 重置点赞状态
         setLikesCount(articleContent.likes || 0);
         setCommentsCount(articleContent.comments || 0);
         setContentLoadingState('loaded');
 
-        // 更新URL（可选，不触发重新加载）
-        const newUrl = targetCategory ? `/book/${targetArticleId}?category=${targetCategory}` : `/book/${targetArticleId}`;
-        window.history.replaceState({}, '', newUrl);
+        // 更新 BookStore 的当前文章（会自动计算导航信息）
+        setCurrentArticle(targetArticleId);
 
-        // 如果有指定分类，更新分类ID
-        if (targetCategory) {
-          setBookCategoryId(targetCategory);
+        // 只在 bookCategoryId 未设置且文章有 category_id 时才设置（避免重复请求）
+        // 注意：翻页时 bookCategoryId 应该已经设置，所以这里通常不会执行
+        const storeState = useBookStore.getState();
+        if (!storeState.bookCategoryId && articleContent.category_id) {
+          await setBookIdFromArticle(articleContent);
         }
+
+        // 更新URL（使用传入的 targetCategory 或已设置的 bookCategoryId，避免额外查找）
+        const finalCategory = targetCategory || useBookStore.getState().bookCategoryId;
+        const newUrl = finalCategory ? `/book/${targetArticleId}?category=${finalCategory}` : `/book/${targetArticleId}`;
+        window.history.replaceState({}, '', newUrl);
 
         console.log('虚拟翻页成功:', targetArticleId);
       } else {
@@ -288,7 +304,7 @@ export default function BookPage() {
       setContentLoadingState('error');
       message.error('加载文章失败');
     }
-  }, [fetchArticleContent]);
+  }, [fetchArticleContent, setCurrentArticle, setBookIdFromArticle]);
 
   /**
    * 加载书籍数据（完整加载，用于初始页面）
@@ -339,7 +355,6 @@ export default function BookPage() {
 
         setBook(processedArticle);
         setContentLoadingState('loaded');
-        setCurrentArticleId(id);
         setIsLiked(false); // 暂时设为 false
         setLikesCount(result.article.likes || 0);
         setCommentsCount(result.article.comments || 0);
@@ -348,13 +363,23 @@ export default function BookPage() {
         setArticleCache(prev => new Map(prev).set(id, processedArticle));
         manageCacheSize();
 
-        // 设置书籍分类ID和书籍ID
-        // 如果URL中没有指定分类，则使用文章本身的分类ID
-        const finalCategoryId = urlCategory || result.article.category_id;
+        // 初始化 BookStore
+        // 注意：先设置当前文章ID，这样 loadArticleListCache 中的 calculateNavigation 才能正确计算
+        setCurrentArticle(id);
+        
+        // 然后初始化书籍分类ID（会加载缓存并触发 calculateNavigation）
+        const categoryId = await initializeBookCategoryId(id, urlCategory);
+        
+        // 如果初始化失败，从文章数据中获取（也会加载缓存并触发 calculateNavigation）
+        if (!categoryId) {
+          await setBookIdFromArticle(result.article);
+        }
+
+        // 设置书籍分类ID和书籍ID（用于其他逻辑）
+        const finalCategoryId = bookCategoryId || urlCategory || result.article.category_id;
         if (finalCategoryId) {
           console.log('书籍分类ID:', finalCategoryId, urlCategory ? '(来自URL)' : '(来自文章数据)');
-          setBookCategoryId(finalCategoryId);
-          setBookId(finalCategoryId); // 设置用于DFS导航的书籍ID
+          setBookId(finalCategoryId); // 设置用于其他逻辑的书籍ID
           await fetchCategoryPath(finalCategoryId);
         } else {
           console.log('书籍没有分类ID');
@@ -365,10 +390,12 @@ export default function BookPage() {
         if (mockBook) {
           setBook(mockBook);
           setContentLoadingState('loaded');
-          setCurrentArticleId(id);
           setIsLiked(false);
           setLikesCount(mockBook.likes || 0);
           setCommentsCount(mockBook.comments || 0);
+          // 先设置当前文章，再初始化（如果有分类信息）
+          setCurrentArticle(id);
+          await initializeBookCategoryId(id, urlCategory);
 
           // 添加到缓存
           setArticleCache(prev => new Map(prev).set(id, mockBook));
@@ -388,10 +415,12 @@ export default function BookPage() {
       if (mockBook) {
         setBook(mockBook);
         setContentLoadingState('loaded');
-        setCurrentArticleId(id);
         setIsLiked(false);
         setLikesCount(mockBook.likes || 0);
         setCommentsCount(mockBook.comments || 0);
+        // 先设置当前文章，再初始化（如果有分类信息）
+        setCurrentArticle(id);
+        await initializeBookCategoryId(id, urlCategory);
 
         // 添加到缓存
         setArticleCache(prev => new Map(prev).set(id, mockBook));
@@ -414,15 +443,16 @@ export default function BookPage() {
     }
   }, [articleId]);
 
-  // 预加载下一篇文章
+  // 预加载下一篇文章（只在导航信息变化且缓存中没有时预加载）
   useEffect(() => {
-    if (navigation.nextArticleId && !articleCache.has(navigation.nextArticleId)) {
-      // 后台预加载下一篇文章
+    if (navigation && navigation.nextArticleId && !articleCache.has(navigation.nextArticleId)) {
+      // 后台预加载下一篇文章（如果缓存中没有）
+      // 注意：fetchArticleContent 内部会检查缓存，所以这里即使调用也不会重复请求
       fetchArticleContent(navigation.nextArticleId).catch(error => {
         console.log('预加载失败:', error); // 不显示错误，只记录日志
       });
     }
-  }, [navigation.nextArticleId, articleCache, fetchArticleContent]);
+  }, [navigation?.nextArticleId, articleCache, fetchArticleContent]);
 
   // 点赞处理
   const handleLike = async () => {
@@ -531,7 +561,7 @@ export default function BookPage() {
         // 清除相关书籍的缓存，因为文章内容可能发生变化
         const articleCategoryId = getArticleCategory(articleId);
         if (articleCategoryId) {
-          clearBookCache(articleCategoryId);
+          clearCache(articleCategoryId);
           console.log('已清除文章所属书籍的缓存:', articleCategoryId);
         }
 
@@ -571,7 +601,7 @@ export default function BookPage() {
             // 清除相关书籍的缓存，因为文章被删除了
             const articleCategoryId = getArticleCategory(articleId);
             if (articleCategoryId) {
-              clearBookCache(articleCategoryId);
+              clearCache(articleCategoryId);
               console.log('已清除文章所属书籍的缓存:', articleCategoryId);
             }
 
@@ -620,8 +650,8 @@ export default function BookPage() {
     <>
       {/* 统一的章节导航组件（自动适配移动端/桌面端） */}
       <BookChapterNavigator
-        currentArticleId={currentArticleId}
-        bookCategoryId={bookCategoryId}
+        currentArticleId={storeCurrentArticleId || articleId}
+        bookCategoryId={bookCategoryId || undefined}
         onArticleClick={handleArticleClick}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
@@ -1029,7 +1059,7 @@ export default function BookPage() {
           </div>
 
           {/* 文章导航 */}
-          {!navigation.loading && (navigation.canGoPrev || navigation.canGoNext) && (
+          {navigation && !navigationLoading && (navigation.canGoPrev || navigation.canGoNext) && (
             <div style={{
               maxWidth: '800px',
               margin: '0 auto',
@@ -1043,10 +1073,13 @@ export default function BookPage() {
                   <Button
                     type="link"
                     icon={<LeftOutlined />}
-                    onClick={() => {
-                      if (navigation.prevArticleId) {
-                        const targetCategory = getArticleCategory(navigation.prevArticleId) || undefined;
-                        virtualNavigate(navigation.prevArticleId, targetCategory);
+                    onClick={async () => {
+                      const prevId = goToPrev();
+                      if (prevId) {
+                        // 从 BookStore 获取分类（优先使用已设置的 bookCategoryId，避免额外查找）
+                        const { bookCategoryId } = useBookStore.getState();
+                        const targetCategory = bookCategoryId || getArticleCategory(prevId) || undefined;
+                        await virtualNavigate(prevId, targetCategory);
                       }
                     }}
                     style={{
@@ -1072,10 +1105,13 @@ export default function BookPage() {
                   <Button
                     type="link"
                     icon={<RightOutlined />}
-                    onClick={() => {
-                      if (navigation.nextArticleId) {
-                        const targetCategory = getArticleCategory(navigation.nextArticleId) || undefined;
-                        virtualNavigate(navigation.nextArticleId, targetCategory);
+                    onClick={async () => {
+                      const nextId = goToNext();
+                      if (nextId) {
+                        // 从 BookStore 获取分类（优先使用已设置的 bookCategoryId，避免额外查找）
+                        const { bookCategoryId } = useBookStore.getState();
+                        const targetCategory = bookCategoryId || getArticleCategory(nextId) || undefined;
+                        await virtualNavigate(nextId, targetCategory);
                       }
                     }}
                     style={{
@@ -1097,7 +1133,7 @@ export default function BookPage() {
             padding: isMobile ? '0 16px 40px' : '0 20px 40px',
           }}>
             <CommentSection
-              articleId={articleId}
+              articleId={currentArticleId}
               isLoggedIn={isLoggedIn}
               currentUser={user}
               onCommentCountChange={setCommentsCount}
@@ -1125,7 +1161,7 @@ export default function BookPage() {
             loadBook(articleId);
           }}
           onDelete={handleDelete}
-          categoryId={bookCategoryId}
+          categoryId={bookCategoryId || undefined}
           articleAuthor={book?.author}
           currentUser={user?.username}
         />

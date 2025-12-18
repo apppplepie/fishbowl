@@ -226,7 +226,7 @@ export default function PublishChapterPage() {
 
         // 清除相关书籍的缓存，因为新增了文章
         if (typeof window !== 'undefined' && window.localStorage) {
-          const { clearBookCache } = await import('@/app/hooks/useArticleNavigation');
+          const { clearBookCache } = await import('@/app/utils/bookCache');
           clearBookCache(categoryFromUrl);
           console.log('已清除新文章所属书籍的缓存:', categoryFromUrl);
         }

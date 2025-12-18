@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Avatar, message, Space, Tooltip, Modal } from 'antd';
 import { MessageOutlined, UserOutlined, DeleteOutlined, LikeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
@@ -36,9 +36,14 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
   const [isLoading, setIsLoading] = useState(true);
   const [replyingTo, setReplyingTo] = useState<{ id: string; username: string; content: string } | null>(null);
 
-  // 加载评论列表
+  // 加载评论列表（只在 articleId 真正变化时加载）
+  const lastArticleIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    loadComments();
+    // 只有当 articleId 真正变化时才加载
+    if (articleId && articleId !== lastArticleIdRef.current) {
+      lastArticleIdRef.current = articleId;
+      loadComments();
+    }
   }, [articleId]);
 
   // 通知父组件评论数量变化
@@ -66,6 +71,11 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
   };
 
   const loadComments = async () => {
+    // 如果 articleId 未设置，不加载
+    if (!articleId) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       const response = await fetch(`/api/articles/${articleId}/comments`);

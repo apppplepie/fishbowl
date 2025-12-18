@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Menu, Spin, Empty, Skeleton } from 'antd';
 import {
   FileTextOutlined,
@@ -163,6 +163,12 @@ export default function GenericIndexTree({
   const [menuItems, setMenuItems] = useState<MenuProps['items']>([]);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   
+  // 用于跟踪上一次处理的 currentArticleId，避免重复更新
+  const lastProcessedArticleIdRef = useRef<string | undefined>(undefined);
+  
+  // 用于跟踪数据是否已加载，避免重复加载
+  const dataLoadedRef = useRef<boolean>(false);
+  
   // 章节标签缓存
   const chapterLabelCache = useChapterLabelCacheOptional();
   
@@ -246,12 +252,15 @@ export default function GenericIndexTree({
           key: `article-${article.id}`,
           icon: getArticleIcon(article.type),
           label: (
-            <span style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '8px',
-            }}>
+            <span 
+              data-menu-key={`article-${article.id}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+              }}
+            >
               <span style={{
                 flex: 1,
                 overflow: 'hidden',
@@ -341,12 +350,15 @@ export default function GenericIndexTree({
           key: `article-${node.id}`,
           icon: getArticleIcon(node.type || 'article'),
           label: (
-            <span style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '8px',
-            }}>
+            <span 
+              data-menu-key={`article-${node.id}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+              }}
+            >
               <span style={{
                 flex: 1,
                 overflow: 'hidden',
@@ -481,6 +493,21 @@ export default function GenericIndexTree({
         return;
       }
 
+      // 如果数据已加载且配置未变化，不重复加载
+      if (dataLoadedRef.current && categories.length > 0) {
+        // 只更新展开状态，不重新加载数据
+        if (currentArticleId) {
+          const articlePath = findArticleAncestorKeys(categories, currentArticleId);
+          if (articlePath.length > 0) {
+            setOpenKeys(prevKeys => {
+              const newKeys = new Set([...prevKeys, ...articlePath]);
+              return Array.from(newKeys);
+            });
+          }
+        }
+        return;
+      }
+
       setLoading(true);
       try {
         // 如果需要查找书籍根节点
@@ -536,6 +563,9 @@ export default function GenericIndexTree({
           setCategories(dataToStore);
           setMenuItems(items);
 
+          // 标记数据已加载
+          dataLoadedRef.current = true;
+
           // 默认展开行为
           let initialOpenKeys: string[] = [];
           
@@ -574,20 +604,76 @@ export default function GenericIndexTree({
   }, [apiEndpoint, startCategoryId]);
 
   /**
-   * 当 currentArticleId 变化时，展开该文章的路径
+   * 当 currentArticleId 变化时，展开该文章的路径并滚动到当前位置
    */
   useEffect(() => {
-    if (currentArticleId && categories.length > 0) {
+    // 只有当 currentArticleId 真正变化时才处理，避免重复更新
+    if (currentArticleId && currentArticleId !== lastProcessedArticleIdRef.current && categories.length > 0) {
+      lastProcessedArticleIdRef.current = currentArticleId;
+      
       const articlePath = findArticleAncestorKeys(categories, currentArticleId);
       if (articlePath.length > 0) {
         // 保留原有已展开的节点，同时添加新文章的路径
         setOpenKeys(prevKeys => {
           const newKeys = new Set([...prevKeys, ...articlePath]);
-          return Array.from(newKeys);
+          const newKeysArray = Array.from(newKeys);
+          // 只有当 keys 真正变化时才更新，避免无限循环
+          if (JSON.stringify(newKeysArray.sort()) !== JSON.stringify(prevKeys.sort())) {
+            return newKeysArray;
+          }
+          return prevKeys;
         });
       }
+
+      // 延迟滚动，确保菜单项已渲染和展开动画完成
+      const scrollTimeout = setTimeout(() => {
+        const articleKey = `article-${currentArticleId}`;
+        // 尝试多种选择器来找到菜单项
+        let articleElement: HTMLElement | null = null;
+        
+        // 方法1：通过 data-menu-key 属性查找（我们添加的自定义属性）
+        articleElement = document.querySelector(`[data-menu-key="${articleKey}"]`) as HTMLElement;
+        
+        // 方法2：通过 Ant Design Menu 的 data-menu-id 属性查找
+        if (!articleElement) {
+          const allMenuItems = document.querySelectorAll('.ant-menu-item');
+          for (const item of allMenuItems) {
+            const menuId = item.getAttribute('data-menu-id');
+            if (menuId === articleKey) {
+              articleElement = item as HTMLElement;
+              break;
+            }
+          }
+        }
+        
+        // 方法3：通过查找包含文章ID的菜单项（容错处理）
+        if (!articleElement) {
+          const allMenuItems = document.querySelectorAll('.ant-menu-item');
+          for (const item of allMenuItems) {
+            const menuId = item.getAttribute('data-menu-id');
+            if (menuId && menuId.includes(currentArticleId)) {
+              articleElement = item as HTMLElement;
+              break;
+            }
+          }
+        }
+
+        if (articleElement) {
+          // 滚动到文章位置，居中显示
+          articleElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        }
+      }, 300); // 增加延迟时间，确保展开动画完成
+
+      // 清理定时器
+      return () => {
+        clearTimeout(scrollTimeout);
+      };
     }
-  }, [currentArticleId, categories]);
+  }, [currentArticleId, categories]); // 移除 openKeys 依赖，避免无限循环
 
   /**
    * 处理菜单点击
