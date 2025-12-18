@@ -44,6 +44,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 // Utilities
 import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
+import { useAuth } from '@/app/hooks/useAuth';
 
 interface ChapterManageFloatProps {
   categoryId: string; // 当前书籍分类ID
@@ -323,6 +324,12 @@ const DragPreview: React.FC<{ node: TreeNode | null }> = React.memo(({ node }) =
 // ---------- Main component ----------
 
 export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }: ChapterManageFloatProps) {
+  // 权限检查：只允许管理员和版主看到此按钮
+  const { canModerate } = useAuth();
+  if (!canModerate()) {
+    return null;
+  }
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
@@ -482,7 +489,18 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       keyboard: false,
       onOk: async () => {
         try {
-          const response = await fetch(`/api/categories/${categoryId}`, { method: 'DELETE' });
+          const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+          if (!token) {
+            message.error('请先登录');
+            return;
+          }
+
+          const response = await fetch(`/api/categories/${categoryId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
           const result = await response.json();
           if (result.success) {
             message.success('目录删除成功');
@@ -507,13 +525,22 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     }
 
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) {
+        message.error('请先登录');
+        return;
+      }
+
       const newCategoryId = `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const siblings = getSiblingsFromTree(treeData, newCategoryParentId || bookRootId || null);
       const newOrderIndex = siblings.length + 1;
 
       const response = await fetch('/api/categories', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id: newCategoryId,
           name: newCategoryName.trim(),

@@ -26,13 +26,18 @@ export default function BookcaseActionFloat({
 }: BookcaseActionFloatProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, canModerate } = useAuth();
   const categoryFromUrl = searchParams.get('category');
+
+  // 权限检查：只允许管理员和版主看到此按钮
+  if (!canModerate()) {
+    return null;
+  }
 
   // 判断是否在具体分类目录下
   const isInSpecificCategory = categoryFromUrl && categoryFromUrl !== 'cat_bookcase';
 
-  // 检查是否为管理员
+  // 检查是否为管理员（删除书籍功能仅管理员可用）
   const isAdmin = user?.role === 'admin';
 
   // ========== 发布功能 ==========

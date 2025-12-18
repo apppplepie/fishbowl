@@ -117,9 +117,18 @@ export default function TagInput({
   // 创建新标签
   const createTag = async (tagName: string) => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) {
+        message.error('请先登录');
+        return;
+      }
+
       const response = await fetch('/api/tags', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ name: tagName }),
       });
 

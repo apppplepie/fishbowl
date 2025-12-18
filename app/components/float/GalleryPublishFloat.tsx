@@ -18,12 +18,17 @@ interface GalleryPublishFloatProps {
  * 点击后弹出表单，创建绘画类型文章和图组
  */
 export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatProps) {
-  const { user } = useAuth();
+  const { user, canModerate } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [accessLevel, setAccessLevel] = useState<number>(2); // 默认General级别
+
+  // 权限检查：只允许管理员和版主看到此按钮
+  if (!canModerate()) {
+    return null;
+  }
 
   // 处理图片上传
   const handleUploadChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
@@ -51,6 +56,15 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
       // 上传图片到服务器
       const imageUrls: string[] = [];
       
+      // 获取 Token（提前获取，避免在循环中重复获取）
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      if (!token) {
+        message.error('请先登录');
+        setLoading(false);
+        return;
+      }
+
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
         if (file.originFileObj) {
@@ -61,13 +75,11 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           formData.append('file', file.originFileObj);
 
           // 上传到服务器
-          const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
           const uploadResponse = await fetch('/api/upload', {
             method: 'POST',
-            headers: token ? {
+            headers: {
               'Authorization': `Bearer ${token}`,
-            } : {},
+            },
             body: formData,
           });
 
@@ -110,13 +122,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
 
       console.log('构建的 blocks:', blocks.length, '个');
 
-      // 获取 Token
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
+      // Token 已经在上面获取过了，这里直接使用
 
       // 调用文章 API 创建绘画类型文章
       const response = await fetch('/api/articles', {

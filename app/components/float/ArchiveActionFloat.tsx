@@ -19,10 +19,15 @@ interface ArchiveActionFloatProps {
  */
 export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloatProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, canModerate } = useAuth();
   const [diaryModalOpen, setDiaryModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [diaryForm] = Form.useForm();
+
+  // 权限检查：只允许管理员和版主看到此按钮
+  if (!canModerate()) {
+    return null;
+  }
 
   // 生成日期标题（精确到分钟）
   const generateDateTitle = () => {

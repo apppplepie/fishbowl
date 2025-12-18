@@ -273,19 +273,24 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     // 如果用户上传了文件，则上传到服务器
     if (fileList.length > 0 && fileList[0].originFileObj) {
       try {
+        // 获取token用于身份验证
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        
+        if (!token) {
+          message.error({ content: '请先登录', key: 'upload' });
+          return;
+        }
+
         message.loading({ content: '正在上传图片...', key: 'upload' });
         
         const formData = new FormData();
         formData.append('file', fileList[0].originFileObj);
 
-        // 获取token用于身份验证
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
         const response = await fetch('/api/upload', {
           method: 'POST',
-          headers: token ? {
+          headers: {
             'Authorization': `Bearer ${token}`,
-          } : {},
+          },
           body: formData,
         });
 

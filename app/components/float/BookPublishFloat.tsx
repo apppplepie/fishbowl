@@ -16,8 +16,13 @@ interface BookPublishFloatProps {
 export default function BookPublishFloat({ onChapterManageSuccess }: BookPublishFloatProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, canModerate } = useAuth();
   const categoryFromUrl = searchParams.get('category');
+
+  // 权限检查：只允许管理员和版主看到此按钮
+  if (!canModerate()) {
+    return null;
+  }
 
   // 删除书籍相关状态
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -32,7 +37,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
   // 判断是否在具体分类目录下
   const isInSpecificCategory = categoryFromUrl && categoryFromUrl !== 'cat_bookcase';
 
-  // 检查是否为管理员
+  // 检查是否为管理员（删除书籍功能仅管理员可用）
   const isAdmin = user?.role === 'admin';
 
   // 处理删除书籍
