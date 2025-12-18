@@ -1,14 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, Tag } from 'antd';
-import { UserOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { UserOutlined, ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { BookCard as BookCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
+import DeleteBookModal from '@/app/components/modal/DeleteBookModal';
 
 interface BookCardProps {
   card: BookCardType;
   onClick?: () => void;
+  onDeleteSuccess?: () => void;
+  showDeleteIcon?: boolean;
 }
 
 /**
@@ -17,19 +20,30 @@ interface BookCardProps {
  * 封面图来自该目录下 order_index 最小的文章的第一张图片
  * 点击跳转到书籍详情页 /book/[id]
  */
-export default function BookCard({ card, onClick }: BookCardProps) {
+export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIcon = false }: BookCardProps) {
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击
+    setDeleteModalVisible(true);
+  };
 
   return (
     <Card
-      hoverable
+      hoverable={!showDeleteIcon}
       style={{
         borderRadius: '16px',
         overflow: 'hidden',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
         transition: 'all 0.3s ease',
+        opacity: showDeleteIcon ? 0.9 : 1,
+        cursor: showDeleteIcon ? 'default' : 'pointer',
       }}
       styles={{ body: { padding: '16px' } }}
-      onClick={onClick}
+      onClick={showDeleteIcon ? undefined : onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       cover={
         <div style={{
           position: 'relative',
@@ -73,6 +87,44 @@ export default function BookCard({ card, onClick }: BookCardProps) {
               📚 {card.title}
             </div>
           )}
+          {/* 删除按钮 - 删除模式下始终显示 */}
+          {showDeleteIcon && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                zIndex: 10,
+              }}
+            >
+              <div
+                onClick={handleDeleteClick}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 77, 79, 0.9)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 77, 79, 1)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 77, 79, 0.9)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <DeleteOutlined style={{ color: 'white', fontSize: '16px' }} />
+              </div>
+            </div>
+          )}
+
           {/* 渐变遮罩 */}
           <div style={{
             position: 'absolute',
@@ -155,6 +207,18 @@ export default function BookCard({ card, onClick }: BookCardProps) {
           box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
         }
       `}</style>
+
+      {/* 删除书籍确认对话框 */}
+      <DeleteBookModal
+        open={deleteModalVisible}
+        onCancel={() => setDeleteModalVisible(false)}
+        onSuccess={() => {
+          setDeleteModalVisible(false);
+          onDeleteSuccess?.();
+        }}
+        bookId={(card as any).categoryId || String(card.id)}
+        bookTitle={card.title}
+      />
     </Card>
   );
 }

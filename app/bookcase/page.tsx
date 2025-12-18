@@ -330,6 +330,9 @@ function BookcasePageContent() {
   // 侧边栏刷新key，用于强制重新渲染侧边栏
   const [sidebarKey, setSidebarKey] = useState(0);
 
+  // 删除模式状态
+  const [deleteMode, setDeleteMode] = useState(false);
+
   // 打开目录抽屉的函数
   const openCategoryDrawer = () => setDrawerVisible(true);
 
@@ -420,6 +423,7 @@ function BookcasePageContent() {
                 updatedAt: mainArticle.updatedAt || mainArticle.publishedAt || mainArticle.createdAt || new Date().toISOString(),
                 mainArticleId: mainArticle.id.toString(),
                 createdAt: mainArticle.publishedAt || mainArticle.createdAt || new Date().toISOString(),
+                categoryId: book.categoryId, // 保存书籍的 categoryId，用于删除
               };
             }
 
@@ -434,6 +438,7 @@ function BookcasePageContent() {
               updatedAt: new Date().toISOString(),
               mainArticleId: book.categoryId,
               createdAt: new Date().toISOString(),
+              categoryId: book.categoryId, // 保存书籍的 categoryId，用于删除
             };
           });
 
@@ -722,7 +727,20 @@ function BookcasePageContent() {
       case 'diary':
         return <DiaryCard key={article.id} card={article} onClick={handleClick} />;
       case 'book':
-        return <BookCard key={article.id} card={article} onClick={handleClick} />;
+        return (
+          <BookCard 
+            key={article.id} 
+            card={article} 
+            onClick={handleClick}
+            showDeleteIcon={deleteMode}
+            onDeleteSuccess={() => {
+              // 删除成功后刷新页面
+              setOffset(0);
+              setHasMore(true);
+              loadBookcaseArticles(0, false);
+            }}
+          />
+        );
       default:
         // 兼容 mock 数据的其他类型
         return <CardRenderer key={article.id} card={article} onClick={handleClick} />;
@@ -881,6 +899,10 @@ function BookcasePageContent() {
       {/* 书架页面操作悬浮按钮组 */}
       <BookcaseActionFloat
         onChapterManageSuccess={handleChapterManageSuccess}
+        deleteMode={deleteMode}
+        onDeleteModeChange={(enabled) => {
+          setDeleteMode(enabled);
+        }}
       />
 
       {/* 添加旋转动画样式 */}
