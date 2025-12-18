@@ -58,23 +58,81 @@ interface ProcessedArticle {
  */
 async function getCategoryAndChildrenIds(categoryId: string): Promise<string[]> {
   const result: string[] = [categoryId];
-
-  // 递归查询子分类
   const findChildren = async (parentIds: string[]) => {
+    if (parentIds.length === 0) return;
     const placeholders = parentIds.map(() => '?').join(',');
     const children = await query<any[]>(
       `SELECT id FROM categories WHERE parent_id IN (${placeholders})`,
       parentIds
     );
-
     if (children.length > 0) {
-      const childIds = children.map(child => child.id);
+      const childIds = children.map(c => c.id);
       result.push(...childIds);
       await findChildren(childIds);
     }
   };
-
   await findChildren([categoryId]);
+  return result;
+}
+
+/**
+ * DFS 排序文章：按分类树顺序 + 分类内 order_index
+ */
+function sortArticlesByDFS(
+  articles: ProcessedArticle[],
+  rootCategoryId: string,
+  categories: Array<{ id: string; parent_id: string | null; order_index: number }>
+): ProcessedArticle[] {
+  // 构建分类树映射
+  const categoryMap = new Map<string, { id: string; children: string[]; order_index: number }>();
+  categories.forEach(cat => {
+    categoryMap.set(cat.id, { id: cat.id, children: [], order_index: cat.order_index || 0 });
+  });
+  categories.forEach(cat => {
+    if (cat.parent_id) {
+      const parent = categoryMap.get(cat.parent_id);
+      if (parent) parent.children.push(cat.id);
+    }
+  });
+
+  // 按 order_index 排序子分类
+  categoryMap.forEach(cat => {
+    cat.children.sort((a, b) => {
+      const catA = categoryMap.get(a)!;
+      const catB = categoryMap.get(b)!;
+      return catA.order_index - catB.order_index;
+    });
+  });
+
+  // DFS 遍历获取分类顺序
+  const categoryOrder: string[] = [];
+  const dfs = (catId: string) => {
+    categoryOrder.push(catId);
+    const cat = categoryMap.get(catId);
+    if (cat) {
+      cat.children.forEach(childId => dfs(childId));
+    }
+  };
+  dfs(rootCategoryId);
+
+  // 按分类顺序和 order_index 排序文章
+  const articleMap = new Map<string, ProcessedArticle[]>();
+  articles.forEach(article => {
+    const catId = article.categoryId;
+    if (!articleMap.has(catId)) articleMap.set(catId, []);
+    articleMap.get(catId)!.push(article);
+  });
+  articleMap.forEach(articles => {
+    articles.sort((a, b) => a.orderInCategory - b.orderInCategory);
+  });
+
+  // 按分类顺序合并文章
+  const result: ProcessedArticle[] = [];
+  categoryOrder.forEach(catId => {
+    const catArticles = articleMap.get(catId);
+    if (catArticles) result.push(...catArticles);
+  });
+
   return result;
 }
 
@@ -123,12 +181,10 @@ export async function GET(request: NextRequest) {
     // 在前面添加封面权限参数
     queryParams.unshift(userAccessLevel, userAccessLevel);
 
-    // 添加ORDER BY的参数（放在最后，确保参数顺序正确）
-    // 归档页面始终按updated_at降序排序，无论是否指定categoryId
-    queryParams.push(0, 0);
-
-    console.log('WHERE clause:', whereClause);
-    console.log('Query params:', queryParams);
+    // 如果 orderByPath=true，需要获取所有文章（不分页），然后排序
+    const shouldOrderByPath = orderByPath && categoryId;
+    const queryLimit = shouldOrderByPath ? 10000 : limit; // 临时设置大limit，后续会排序
+    const queryOffset = shouldOrderByPath ? 0 : offset;
 
     // 优化查询：使用子查询直接获取预览数据
     const articles = await query<RawArticle[]>(
@@ -151,6 +207,7 @@ export async function GET(request: NextRequest) {
         c.name as category_name,
         c.path as category_path,
         c.depth as category_depth,
+        c.order_index as category_order_index,
         -- 封面图片处理：根据权限返回真实封面或占位符
         CASE
           WHEN a.cover_image IS NOT NULL AND a.cover_access_level <= ? THEN
@@ -183,19 +240,12 @@ export async function GET(request: NextRequest) {
        FROM articles a
        LEFT JOIN categories c ON a.category_id = c.id
        WHERE ${whereClause}
-       ORDER BY
-         CASE WHEN ? = 1 THEN a.order_index
-              ELSE NULL END ASC,
-         CASE WHEN ? = 1 THEN a.id
-              ELSE a.updated_at END DESC
-       LIMIT ${limit} OFFSET ${offset}`,
+       ${shouldOrderByPath ? '' : `ORDER BY a.updated_at DESC LIMIT ${queryLimit} OFFSET ${queryOffset}`}`,
       queryParams
     );
 
-    console.log('Query returned', articles.length, 'articles');
-
     // 处理和清理查询结果
-    const processedArticles: ProcessedArticle[] = articles.map((article: RawArticle) => ({
+    let processedArticles: ProcessedArticle[] = articles.map((article: RawArticle) => ({
       id: article.id,
       title: article.title,
       author: article.author,
@@ -212,12 +262,22 @@ export async function GET(request: NextRequest) {
       categoryId: article.category_id,
       orderInCategory: article.order_index,
       categoryName: article.category_name,
-      // 封面数据（已由SQL处理）
       coverImage: article.cover_image,
       coverIsPlaceholder: article.cover_is_placeholder,
-      // 标签（JSON数组）
       tags: article.tags || [],
     }));
+
+    // 如果 orderByPath=true，进行 DFS 排序
+    if (shouldOrderByPath) {
+      const categoryIds = await getCategoryAndChildrenIds(categoryId!);
+      const categories = await query<Array<{ id: string; parent_id: string | null; order_index: number }>>(
+        `SELECT id, parent_id, order_index FROM categories WHERE id IN (${categoryIds.map(() => '?').join(',')})`,
+        categoryIds
+      );
+      processedArticles = sortArticlesByDFS(processedArticles, categoryId!, categories);
+      // 应用分页
+      processedArticles = processedArticles.slice(offset, offset + limit);
+    }
 
     return NextResponse.json({
       success: true,
