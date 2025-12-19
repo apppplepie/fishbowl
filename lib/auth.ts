@@ -106,10 +106,9 @@ export function canEditArticle(
   }
   
   // 版主和普通用户必须是作者才能编辑
-  const isAuthor = 
-    (articleAuthor && articleAuthor === user.username) ||
-    (articleAuthorId && articleAuthorId === user.id);
-  
-  return isAuthor;
+  return (
+    (articleAuthor !== null && articleAuthor === user.username) ||
+    (articleAuthorId !== null && articleAuthorId === user.id)
+  );
 }
 
