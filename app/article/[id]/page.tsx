@@ -553,7 +553,6 @@ export default function ArticlePage() {
 
       <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
         <PageLayout
-          containerPaddingTop={isMobile ? '0px' : '45px'}
           box1Content={
             <div style={{ padding: '16px 24px' }}>
               <Breadcrumb
