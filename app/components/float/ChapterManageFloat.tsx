@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // UI imports
 import { FloatButton, Modal, message, Spin, Empty, Input } from 'antd';
@@ -324,12 +324,8 @@ const DragPreview: React.FC<{ node: TreeNode | null }> = React.memo(({ node }) =
 // ---------- Main component ----------
 
 export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }: ChapterManageFloatProps) {
-  // 权限检查：只允许管理员和版主看到此按钮
+  // 所有 hooks 必须在条件返回之前调用
   const { canModerate } = useAuth();
-  if (!canModerate()) {
-    return null;
-  }
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
@@ -347,8 +343,10 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
   // 控制弹窗保持状态的标志
   const [shouldKeepModalOpen, setShouldKeepModalOpen] = useState(false);
 
-  // 检测是否为移动设备
-  const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // 新建目录相关状态
+  const [newCategoryModalOpen, setNewCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
 
   // sensors - 支持桌面和移动端拖拽
   const sensors = useSensors(
@@ -363,35 +361,12 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     })
   );
 
-  // collision detection: prefer pointerWithin, fallback to rectIntersection
-  const collisionDetection = (args: any) => {
-    const pointer = pointerWithin(args);
-    if (pointer && pointer.length > 0) return pointer;
-    return rectIntersection(args);
-  };
-
-  useEffect(() => {
-    if (isModalOpen) {
-      loadChapterTree();
-    }
-  }, [isModalOpen]);
-
-  /**
-   * 获取书架分类ID（cat_bookcase）
-   * cat_bookcase 本身就是固定的 ID
-   */
-  const getBookcaseId = (): string => {
-    return 'cat_bookcase';
-  };
-
-  /**
-   * 加载章节树数据
-   */
-  const loadChapterTree = async () => {
+  // 加载章节树数据 - 使用 useCallback 以便在 useEffect 中使用
+  const loadChapterTree = useCallback(async () => {
     setLoading(true);
     try {
       // 获取书架分类ID（固定为 cat_bookcase）
-      const bookcaseId = getBookcaseId();
+      const bookcaseId = 'cat_bookcase';
       console.log('ChapterManageFloat: 书架ID:', bookcaseId);
       setBookRootId(bookcaseId);
 
@@ -429,28 +404,28 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
         // 添加章节编号
         displayNodes = addChapterNumbers(displayNodes);
 
-        // 保存当前的展开状态，避免刷新时弹窗消失
-        const currentExpandedKeys = new Set(expandedKeys);
-
         setTreeData(displayNodes);
 
-        // 保持当前的展开状态，而不是重置为全部展开
-        // 只有在初次加载时才展开所有节点
-        if (currentExpandedKeys.size === 0) {
-          // 初次加载：默认展开所有节点
-          const allExpandedKeys = new Set<string>();
-          const collectKeys = (nodes: TreeNode[]) => {
-            nodes.forEach(node => {
-              if (node.children && node.children.length > 0) {
-                allExpandedKeys.add(node.id);
-                collectKeys(node.children);
-              }
-            });
-          };
-          collectKeys(displayNodes);
-          setExpandedKeys(allExpandedKeys);
-        }
-        // 刷新时保持当前的展开状态，不做任何改变
+        // 使用函数式更新来避免依赖 expandedKeys，防止无限循环
+        // 只有在初次加载（expandedKeys 为空）时才展开所有节点
+        setExpandedKeys(prevExpandedKeys => {
+          if (prevExpandedKeys.size === 0) {
+            // 初次加载：默认展开所有节点
+            const allExpandedKeys = new Set<string>();
+            const collectKeys = (nodes: TreeNode[]) => {
+              nodes.forEach(node => {
+                if (node.children && node.children.length > 0) {
+                  allExpandedKeys.add(node.id);
+                  collectKeys(node.children);
+                }
+              });
+            };
+            collectKeys(displayNodes);
+            return allExpandedKeys;
+          }
+          // 刷新时保持当前的展开状态，不做任何改变
+          return prevExpandedKeys;
+        });
       } else {
         message.error('加载章节数据失败');
       }
@@ -460,6 +435,28 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     } finally {
       setLoading(false);
     }
+  }, [categoryId, rootDepth]); // 移除 expandedKeys 依赖，使用函数式更新避免无限循环
+
+  // useEffect 必须在条件返回之前
+  useEffect(() => {
+    if (isModalOpen) {
+      loadChapterTree();
+    }
+  }, [isModalOpen, loadChapterTree]);
+
+  // 权限检查：只允许管理员和版主看到此按钮（在所有 hooks 之后）
+  if (!canModerate()) {
+    return null;
+  }
+
+  // 检测是否为移动设备
+  const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  // collision detection: prefer pointerWithin, fallback to rectIntersection
+  const collisionDetection = (args: any) => {
+    const pointer = pointerWithin(args);
+    if (pointer && pointer.length > 0) return pointer;
+    return rectIntersection(args);
   };
 
   // add category handler (unchanged)
@@ -469,11 +466,6 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     setNewCategoryName('');
     setNewCategoryModalOpen(true);
   };
-
-  // new category modal state
-  const [newCategoryModalOpen, setNewCategoryModalOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
 
   // delete category handler unchanged (keeps API call)
   const handleDeleteCategory = async (categoryId: string, categoryName: string, e?: React.MouseEvent) => {

@@ -267,8 +267,8 @@ export default function PublishBookPage() {
 
       const articleResult = await articleResponse.json();
 
-      if (articleResponse.ok && articleResult.success && articleResult.article) {
-        console.log('成功创建书籍文章:', articleResult.article.id, '分类ID:', categoryId);
+      if (articleResponse.ok && articleResult.success && articleResult.articleId) {
+        console.log('成功创建书籍文章:', articleResult.articleId, '分类ID:', categoryId);
         message.success('书籍发布成功！');
         // 清空表单和草稿
         form.resetFields();
@@ -282,7 +282,7 @@ export default function PublishBookPage() {
         console.error('发布书籍失败: API返回成功但文章数据缺失', {
           responseOk: articleResponse.ok,
           resultSuccess: articleResult.success,
-          hasArticle: !!articleResult.article,
+          hasArticleId: !!articleResult.articleId,
           fullResult: articleResult
         });
         message.error(articleResult.error || '发布失败：服务器返回数据异常');

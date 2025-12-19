@@ -20,6 +20,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
+import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
@@ -47,6 +48,7 @@ export default function ArticlePage() {
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
   const { isLoggedIn, user, getToken } = useAuth();
+  const { canEdit: canEditArticle } = useCanEditArticle(articleId);
 
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
@@ -529,26 +531,21 @@ export default function ArticlePage() {
         }
       /> 
 
-      {/* 编辑悬浮按钮 - 仅文章作者、管理员或版主可见 */}
-      {isLoggedIn && article && user && (
-        // 检查权限：作者本人、管理员或版主
-        (article.author === user.username ||
-          user.role === 'admin' ||
-          user.role === 'moderator') && (
-          <ArticleEditFloat
-            mode={editMode}
-            onEdit={handleEdit}
-            onPreview={handlePreview}
-            onSave={handleSave}
-            onCancel={editMode === 'preview' ? handleBackToEdit : handleCancel}
-            onDelete={handleDelete}
-            onAdjustCategory={handleAdjustCategory}
-            categoryId={article.category_id}
-            articleAuthor={article.author}
-            currentUser={user.username}
-            userRole={user.role}
-          />
-        )
+      {/* 编辑悬浮按钮 - 使用后端API统一判断权限 */}
+      {isLoggedIn && article && user && canEditArticle && (
+        <ArticleEditFloat
+          mode={editMode}
+          onEdit={handleEdit}
+          onPreview={handlePreview}
+          onSave={handleSave}
+          onCancel={editMode === 'preview' ? handleBackToEdit : handleCancel}
+          onDelete={handleDelete}
+          onAdjustCategory={handleAdjustCategory}
+          categoryId={article.category_id}
+          articleAuthor={article.author}
+          currentUser={user.username}
+          userRole={user.role}
+        />
       )}
 
       <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
