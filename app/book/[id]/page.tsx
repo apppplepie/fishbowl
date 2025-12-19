@@ -906,6 +906,10 @@ export default function BookPage() {
                               fontSize: '16px',
                               color: '#333',
                               whiteSpace: 'pre-wrap',
+                              wordWrap: 'break-word',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
+                              maxWidth: '100%',
                             }}
                           >
                             {textContent.content}
