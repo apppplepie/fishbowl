@@ -63,7 +63,7 @@ public/
 
 - 上传的图片保存在 `public/uploads/` 文件夹
 - 文件名使用 UUID 生成，避免冲突
-- 访问 URL: `http://localhost:3001/uploads/[filename]`
+- 访问 URL: `http://localhost:3000/uploads/[filename]`
 
 ### 3. 在代码中使用上传 API
 

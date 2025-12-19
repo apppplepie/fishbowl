@@ -166,9 +166,9 @@ const pool = mysql.createPool({
 1. 初始化数据库表 → `npx ts-node scripts/init-db.ts`
 2. 插入测试数据 → `npx ts-node scripts/seed-data.ts`
 3. 启动开发服务器 → `npm run dev`
-4. 访问发布页面 → `http://localhost:3001/publish-article`
+4. 访问发布页面 → `http://localhost:3000/publish-article`
 5. 发布新文章 → 填写表单并点击"发布文章"
-6. 查看文章列表 → `http://localhost:3001/articles`
+6. 查看文章列表 → `http://localhost:3000/articles`
 7. 查看文章详情 → 点击文章卡片
 
 ## 📝 数据流程

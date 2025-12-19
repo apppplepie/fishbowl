@@ -119,8 +119,8 @@
 
 2. **访问受保护页面**
    ```
-   http://localhost:3001/dashboard
-   http://localhost:3001/profile
+   http://localhost:3000/dashboard
+   http://localhost:3000/profile
    ```
 
 3. **预期行为**
