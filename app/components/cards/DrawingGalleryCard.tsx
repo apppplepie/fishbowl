@@ -5,6 +5,7 @@ import { Card, Tag } from 'antd';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import type { PlaceholderBlock as PlaceholderBlockType } from '@/app/types/block';
 import PlaceholderDisplay from '@/app/components/blocks/PlaceholderDisplay';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 // 注入 CSS 动画
 if (typeof document !== 'undefined') {
@@ -53,6 +54,7 @@ interface DrawingGalleryCardProps {
  * 从文章的图片块中提取图片，按 order 降序显示（成图在前）
  */
 export default function DrawingGalleryCard({ article, onClick, onTitleClick }: DrawingGalleryCardProps) {
+  const { isMobile } = useResponsive();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set()); // 记录已加载的图片索引
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set()); // 记录加载失败的图片索引
@@ -416,58 +418,64 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
         {/* 底部信息 */}
         <div style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '13px',
+          flexDirection: isMobile ? 'column' : 'row',
+          justifyContent: isMobile ? 'flex-start' : 'space-between',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          gap: isMobile ? '12px' : '0',
+          fontSize: isMobile ? '12px' : '13px',
           color: '#999',
           paddingTop: '12px',
           borderTop: '1px solid #f0f0f0',
         }}>
           <div style={{ 
             display: 'flex', 
-            gap: '12px', 
+            gap: isMobile ? '8px' : '12px', 
             alignItems: 'center',
+            flexWrap: 'wrap',
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              padding: '4px 8px',
+              padding: isMobile ? '3px 6px' : '4px 8px',
               background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
               borderRadius: '6px',
               color: '#667eea',
               fontWeight: 500,
+              fontSize: isMobile ? '12px' : '13px',
             }}>
-              <span style={{ fontSize: '16px' }}>👤</span>
+              <span style={{ fontSize: isMobile ? '14px' : '16px' }}>👤</span>
               {article.author}
             </div>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              padding: '4px 8px',
+              padding: isMobile ? '3px 6px' : '4px 8px',
               background: 'linear-gradient(135deg, #f093fb15 0%, #f5576c15 100%)',
               borderRadius: '6px',
               color: '#f5576c',
               fontWeight: 500,
+              fontSize: isMobile ? '12px' : '13px',
             }}>
-              <span style={{ fontSize: '16px' }}>🎨</span>
+              <span style={{ fontSize: isMobile ? '14px' : '16px' }}>🎨</span>
               {images.length} 张
             </div>
           </div>
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: isMobile ? '8px' : '12px',
+            flexWrap: 'wrap',
           }}>
             {(article.likes !== undefined && article.likes !== null) && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px',
+                fontSize: isMobile ? '12px' : '13px',
+              }}>
                 ❤️ {article.likes}
-              </span>
-            )}
-            {(article.comments !== undefined && article.comments !== null) && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                💬 {article.comments}
               </span>
             )}
             <span style={{
@@ -475,8 +483,9 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
               alignItems: 'center',
               gap: '4px',
               color: '#999',
+              fontSize: isMobile ? '12px' : '13px',
             }}>
-              <span style={{ fontSize: '14px' }}>📝</span>
+              <span style={{ fontSize: isMobile ? '12px' : '14px' }}>📝</span>
               {formatRelativeTime(article.updatedAt || article.updated_at || article.publishedAt || article.published_at || article.createdAt || article.created_at)}
             </span>
           </div>
