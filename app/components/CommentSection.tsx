@@ -228,13 +228,6 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
 
   return (
     <div id="comment-section" style={{ marginTop: '32px' }}>
-      <h3 style={{ 
-        fontSize: '20px', 
-        fontWeight: 600,
-        marginBottom: '24px',
-      }}>
-        评论区（{comments.length}）
-      </h3>
 
       {/* 发表评论表单 */}
       <div style={{
@@ -341,8 +334,6 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
         <div style={{
           padding: '60px 40px',
           textAlign: 'center',
-          color: '#999',
-          background: '#fafafa',
           borderRadius: '8px',
         }}>
           <div style={{ fontSize: '16px' }}>加载中...</div>

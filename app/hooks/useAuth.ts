@@ -20,6 +20,7 @@ export function useAuth() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // 检查登录状态
   const checkLoginStatus = () => {
@@ -38,7 +39,13 @@ export function useAuth() {
         } catch (error) {
           console.error('解析用户信息失败:', error);
           // 如果解析失败，清除无效数据
-          logout();
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('isLoggedIn');
+          localStorage.removeItem('username');
+          setIsLoggedIn(false);
+          setToken(null);
+          setUser(null);
         }
       } else {
         setIsLoggedIn(false);
@@ -94,17 +101,23 @@ export function useAuth() {
       checkLoginStatus();
     };
 
-    syncLoginStatus();
+    // 初始化时检查登录状态
+    if (typeof window !== 'undefined') {
+      syncLoginStatus();
+      setIsLoading(false);
 
-    // 监听 storage 变化（用于跨标签页同步）
-    window.addEventListener('storage', syncLoginStatus);
-    // 自定义事件（用于同一页面内同步）
-    window.addEventListener('loginStatusChanged', syncLoginStatus);
+      // 监听 storage 变化（用于跨标签页同步）
+      window.addEventListener('storage', syncLoginStatus);
+      // 自定义事件（用于同一页面内同步）
+      window.addEventListener('loginStatusChanged', syncLoginStatus);
 
-    return () => {
-      window.removeEventListener('storage', syncLoginStatus);
-      window.removeEventListener('loginStatusChanged', syncLoginStatus);
-    };
+      return () => {
+        window.removeEventListener('storage', syncLoginStatus);
+        window.removeEventListener('loginStatusChanged', syncLoginStatus);
+      };
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   return {
@@ -112,6 +125,7 @@ export function useAuth() {
     user,
     token,
     username: user?.username || '', // 兼容旧版本
+    isLoading,
     login,
     logout,
     getToken,

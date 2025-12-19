@@ -36,12 +36,12 @@ export const publicNavigationItems: NavigationItem[] = [
     icon: 'FileTextOutlined',
     path: '/archive',
   },
-  {
-    key: 'publish-article',
-    label: '创作文章',
-    icon: 'FormOutlined',
-    path: '/publish-article',
-  },
+  // {
+  //   key: 'publish-article',
+  //   label: '创作文章',
+  //   icon: 'FormOutlined',
+  //   path: '/publish-article',
+  // },
   {
     key: 'bookcase',
     label: '书橱',
@@ -62,21 +62,3 @@ export const protectedNavigationItems: NavigationItem[] = [
     requireAuth: true,
   },
 ];
-
-/**
- * 用户下拉菜单配置
- */
-export const userMenuItems = [
-  {
-    key: 'dashboard',
-    label: '仪表盘',
-    path: '/dashboard',
-  },
-  {
-    key: 'profile',
-    label: '个人资料',
-    icon:'UserOutlined',
-    path: '/profile',
-  },
-];
-
