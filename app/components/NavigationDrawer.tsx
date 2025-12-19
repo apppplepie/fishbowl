@@ -148,6 +148,11 @@ export default function NavigationDrawer({
     ];
   };
 
+  // 避免混用 padding 与 paddingTop 等导致的样式覆盖问题
+  const bodyPaddingTop = windowWidth <= 768 ? '24px' : (isMobile ? '30px' : '0px');
+  const bodyPaddingBottom = isMobile ? '30px' : '0px';
+  const bodyPaddingHorizontal = isMobile ? '0px' : '24px';
+
   return (
     <Drawer
       title="导航菜单"
@@ -160,8 +165,10 @@ export default function NavigationDrawer({
       maskClosable={true}
       styles={{
         body: {
-          padding: isMobile ? '30px 0px' : '0px 24px',
-          paddingTop: isMobile ? '24px' : undefined,
+          paddingTop: bodyPaddingTop,
+          paddingBottom: bodyPaddingBottom,
+          paddingLeft: bodyPaddingHorizontal,
+          paddingRight: bodyPaddingHorizontal,
           background: 'rgba(0, 0, 0, 0.85)',
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
@@ -202,7 +209,7 @@ export default function NavigationDrawer({
           justifyContent: isMobile ? 'center' : 'flex-start',
         }}>
           {isLoggedIn ? (
-            /* 已登录 - 显示用户名，点击弹出用户菜单 */
+            /* 已登录 - 显示用户名，点击跳转到个人资料页 */
             <span
               style={{
                 display: 'flex',
@@ -215,7 +222,7 @@ export default function NavigationDrawer({
                 fontSize: '16px',
               }}
               onClick={() => {
-                setShowUserMenu(true);
+                router.push('/profile');
                 onClose();
               }}
             >
