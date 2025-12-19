@@ -139,11 +139,16 @@ export default function NavigationDrawer({
       },
     }));
 
+    // 如果没有受保护菜单项，直接返回公共菜单
+    if (protectedItems.length === 0) {
+      return publicItems;
+    }
+
     return [
       ...publicItems,
-      {
-        type: 'divider' as const,
-      },
+      // {
+      //   type: 'divider' as const,
+      // },
       ...protectedItems,
     ];
   };

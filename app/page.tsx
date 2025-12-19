@@ -208,21 +208,6 @@ export default function Home() {
               </Paragraph>
             </div>
           </div>
-
-          <Button 
-            type="default"
-            size="large"
-            onClick={startUnlock}
-            className="mt-12"
-            style={{ 
-              height: '50px', 
-              fontSize: '16px',
-              borderRadius: '25px',
-              padding: '0 32px'
-            }}
-          >
-            🔓 解锁并返回顶部
-          </Button>
         </div>
       </div>
     </div>

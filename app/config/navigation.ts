@@ -53,12 +53,4 @@ export const publicNavigationItems: NavigationItem[] = [
 /**
  * 需要登录才能访问的导航菜单
  */
-export const protectedNavigationItems: NavigationItem[] = [
-  {
-    key: 'profile',
-    label: '个人资料',
-    icon: 'UserOutlined',
-    path: '/profile',
-    requireAuth: true,
-  },
-];
+export const protectedNavigationItems: NavigationItem[] = [];
