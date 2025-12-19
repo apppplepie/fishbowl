@@ -64,14 +64,24 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
   // 从文章块中提取所有图片块，按 order 升序排列（order 最小的在前）
   const images = useMemo(() => {
     return article.blocks
-      .filter((block) => block.type === 'image' || block.type === 'placeholder')
+      .filter((block) => {
+        // 只包含图片块或原始类型为图片的占位块
+        if (block.type === 'image') {
+          return true;
+        }
+        if (block.type === 'placeholder') {
+          const placeholderBlock = block as PlaceholderBlockType;
+          return placeholderBlock.original_type === 'image';
+        }
+        return false;
+      })
       .sort((a, b) => a.order - b.order) // 升序，order 最小的在最前
       .map((block) => ({
         id: block.id,
         type: block.type,
-        url: block.type === 'image' ? block.parsedContent.url : null,
-        description: block.type === 'image' ? block.parsedContent.description : null,
-        placeholderData: block.type === 'placeholder' ? block : null,
+        url: block.type === 'image' && block.parsedContent?.url ? block.parsedContent.url : null,
+        description: block.type === 'image' && block.parsedContent?.description ? block.parsedContent.description : null,
+        placeholderData: block.type === 'placeholder' ? block as PlaceholderBlockType : null,
         order: block.order,
       }));
   }, [article.blocks]);
@@ -116,11 +126,19 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
     const preloadImage = (index: number) => {
       if (loadedImages.has(index)) return;
       
-      const img = new Image();
-      img.src = images[index].url;
-      img.onload = () => {
-        setLoadedImages(prev => new Set(prev).add(index));
-      };
+      const image = images[index];
+      // 只预加载有效的图片 URL，跳过占位块和空 URL
+      if (image.type === 'image' && image.url) {
+        const img = new Image();
+        img.src = image.url;
+        img.onload = () => {
+          setLoadedImages(prev => new Set(prev).add(index));
+        };
+        img.onerror = () => {
+          // 预加载失败时也记录，避免重复尝试
+          setFailedImages(prev => new Set(prev).add(index));
+        };
+      }
     };
 
     // 预加载下一张
@@ -215,65 +233,9 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {!isCurrentImageLoaded && !isCurrentImageFailed && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1,
-          }}>
-            <div style={{
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}>
-              <div className="loading-spinner" style={{
-                width: '20px',
-                height: '20px',
-                border: '3px solid rgba(255,255,255,0.3)',
-                borderTopColor: 'white',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-              }} />
-              加载中...
-            </div>
-          </div>
-        )}
-        {isCurrentImageFailed && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1,
-            color: 'white',
-            padding: '20px',
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>😢</div>
-            <div style={{ fontSize: '16px', fontWeight: 500 }}>图片加载失败</div>
-            <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.8, textAlign: 'center', wordBreak: 'break-all' }}>
-              {currentImage.url}
-            </div>
-          </div>
-        )}
         {currentImage.type === 'placeholder' ? (
           <PlaceholderDisplay
-            block={(currentImage as any).placeholderData}
+            block={currentImage.placeholderData!}
             style={{
               maxWidth: '100%',
               maxHeight: 'calc(100vh - 111px - 200px)',
@@ -282,23 +244,81 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
             }}
           />
         ) : currentImage.url ? (
-          <img
-            key={currentImage.id}
-            src={currentImage.url}
-            alt="图片"
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-            style={{
-              maxWidth: '100%',
-              maxHeight: 'calc(100vh - 111px - 200px)', // 减去PageLayout黑框+header(111px) 和卡片信息区域(约200px)
-              width: 'auto',
-              height: 'auto',
-              display: 'block',
-              objectFit: 'contain',
-              opacity: isCurrentImageLoaded ? 1 : 0,
-              transition: 'opacity 0.3s ease',
-            }}
-          />
+          <>
+            {!isCurrentImageLoaded && !isCurrentImageFailed && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1,
+              }}>
+                <div style={{
+                  color: 'white',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <div className="loading-spinner" style={{
+                    width: '20px',
+                    height: '20px',
+                    border: '3px solid rgba(255,255,255,0.3)',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }} />
+                  加载中...
+                </div>
+              </div>
+            )}
+            {isCurrentImageFailed && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1,
+                color: 'white',
+                padding: '20px',
+              }}>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>😢</div>
+                <div style={{ fontSize: '16px', fontWeight: 500 }}>图片加载失败</div>
+                <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.8, textAlign: 'center', wordBreak: 'break-all' }}>
+                  {currentImage.url}
+                </div>
+              </div>
+            )}
+            <img
+              key={currentImage.id}
+              src={currentImage.url}
+              alt="图片"
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              style={{
+                maxWidth: '100%',
+                maxHeight: 'calc(100vh - 111px - 200px)', // 减去PageLayout黑框+header(111px) 和卡片信息区域(约200px)
+                width: 'auto',
+                height: 'auto',
+                display: 'block',
+                objectFit: 'contain',
+                opacity: isCurrentImageLoaded ? 1 : 0,
+                transition: 'opacity 0.3s ease',
+              }}
+            />
+          </>
         ) : (
           <div
             style={{
