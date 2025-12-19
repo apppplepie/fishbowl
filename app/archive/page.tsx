@@ -493,8 +493,7 @@ function ArticlesPageContent() {
       {/* 归档页面操作悬浮按钮组 */}
       <ArchiveActionFloat
         onDiarySuccess={() => {
-          message.success('日志发布成功！');
-          // 重新加载文章列表
+          // 重新加载文章列表（成功消息已在组件内部显示）
           setOffset(0);
           setHasMore(true);
           loadArticles(0, false, selectedCategoryId);

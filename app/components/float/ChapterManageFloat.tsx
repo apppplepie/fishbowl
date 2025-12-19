@@ -815,11 +815,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
           // 乐观更新失败，回滚到之前的状态
           rollbackOptimisticUpdate();
 
-          if (response.status === 401) {
-            message.error('您还未登录或登录已过期，请刷新页面后重新登录');
-          } else {
-            message.error(result.error || '操作失败');
-          }
+          message.error(result.error || '操作失败');
         }
       }).catch(error => {
         console.error('解析响应失败:', error);
