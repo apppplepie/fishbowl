@@ -1,3 +1,6 @@
+// 加载环境变量
+import 'dotenv/config';
+
 import { query } from '../lib/db';
 import bcrypt from 'bcryptjs';
 

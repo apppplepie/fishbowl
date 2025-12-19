@@ -6,15 +6,16 @@
  * 2. 将 publish_date (DATE) 改为 published_at (DATETIME)
  */
 
+// 加载环境变量
+import 'dotenv/config';
+
 import fs from 'fs';
 import path from 'path';
 import mysql from 'mysql2/promise';
+import { getConnectionConfig } from '../lib/db-config';
 
 const config = {
-  host: 'localhost',
-  user: 'root',
-  password: 'root',
-  database: 'test',
+  ...getConnectionConfig(),
   multipleStatements: true, // 允许执行多条SQL语句
 };
 

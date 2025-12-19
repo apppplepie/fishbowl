@@ -6,6 +6,8 @@
  * 2. 修改 articles 表，添加 category_id 和 order_index 字段
  * 3. 创建默认分类
  */
+// 加载环境变量
+import 'dotenv/config';
 
 import { query } from '../lib/db';
 

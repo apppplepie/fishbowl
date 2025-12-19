@@ -2,6 +2,9 @@
  * 数据库初始化脚本
  * 运行方法: npx ts-node scripts/init-db.ts
  */
+// 加载环境变量
+import 'dotenv/config';
+
 import { testConnection, initDatabase } from '../lib/db';
 
 async function main() {
