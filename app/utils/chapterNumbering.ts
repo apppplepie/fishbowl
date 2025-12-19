@@ -21,11 +21,11 @@ interface ChapterCounter {
  * 获取章节号文字（卷、章、节）
  */
 export function getChapterLabel(depth: number, counter: number): string {
-  if (depth === 3) {
+  if (depth === 4) {
     return `第${counter}卷`;
-  } else if (depth === 4) {
+  } else if (depth === 5) {
     return `第${counter}章`;
-  } else if (depth >= 5) {
+  } else if (depth >= 6) {
     return `第${counter}节`;
   }
   return '';

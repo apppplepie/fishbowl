@@ -19,6 +19,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
+import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { useBookStore } from '@/app/stores/useBookStore';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
@@ -86,6 +87,7 @@ export default function BookPage() {
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
   const { isLoggedIn, user } = useAuth();
+  const { canEdit: canEditArticle } = useCanEditArticle(articleId);
   // 从URL参数获取分类信息，优先使用URL参数中的category
   const urlCategory = searchParams.get('category');
 
@@ -1148,8 +1150,8 @@ export default function BookPage() {
         imageUrl={selectedImage?.url || ''}
       />
 
-      {/* 编辑悬浮按钮 */}
-      {isLoggedIn && user?.username === book?.author && (
+      {/* 编辑悬浮按钮 - 使用后端API统一判断权限 */}
+      {isLoggedIn && user && book && canEditArticle && (
         <ArticleEditFloat
           mode={editMode}
           onEdit={() => handleEditModeChange('edit')}
@@ -1163,6 +1165,7 @@ export default function BookPage() {
           categoryId={bookCategoryId || undefined}
           articleAuthor={book?.author}
           currentUser={user?.username}
+          userRole={user.role}
         />
       )}
     </>

@@ -6,7 +6,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getCurrentUser, canModerate } from '@/lib/auth';
+import { getCurrentUser, canModerate, canEditArticle } from '@/lib/auth';
 
 // 权限检查函数
 function checkAccess(userAccessLevel: number, blockAccessLevel: number): boolean {
@@ -53,13 +53,11 @@ export async function PUT(
 
     const article = articles[0];
 
-    // 3. 权限检查：作者本人 OR 管理员 OR 版主
-    const isAuthor = 
-      article.author === currentUser.username || 
-      article.author_id === currentUser.id;
-    const hasModeratePermission = canModerate(currentUser);
-
-    if (!isAuthor && !hasModeratePermission) {
+    // 3. 权限检查：使用统一的权限检查函数
+    // - 管理员：可以编辑任何文章
+    // - 版主：必须是作者才能编辑
+    // - 普通用户：必须是作者才能编辑
+    if (!canEditArticle(currentUser, article.author, article.author_id)) {
       return NextResponse.json(
         { success: false, error: '无权编辑此文章' },
         { status: 403 }
@@ -394,13 +392,11 @@ export async function DELETE(
 
     const article = articles[0];
 
-    // 3. 权限检查：作者本人 OR 管理员 OR 版主
-    const isAuthor = 
-      article.author === currentUser.username || 
-      article.author_id === currentUser.id;
-    const hasModeratePermission = canModerate(currentUser);
-
-    if (!isAuthor && !hasModeratePermission) {
+    // 3. 权限检查：使用统一的权限检查函数
+    // - 管理员：可以删除任何文章
+    // - 版主：必须是作者才能删除
+    // - 普通用户：必须是作者才能删除
+    if (!canEditArticle(currentUser, article.author, article.author_id)) {
       return NextResponse.json(
         { success: false, error: '无权删除此文章' },
         { status: 403 }
