@@ -87,7 +87,7 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         color: '#999',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span>✍️ {card.author}</span>
+          {/* <span>✍️ {card.author}</span> */}
           <span style={{ color: '#999', fontSize: '12px' }}>
             📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}
           </span>
@@ -95,7 +95,7 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         <div style={{ display: 'flex', gap: '12px' }}>
           {card.readTime && <span><ClockCircleOutlined /> {card.readTime}min</span>}
           {(card.likes !== undefined && card.likes !== null) && <span>❤️ {card.likes}</span>}
-          {(card.comments !== undefined && card.comments !== null) && <span><MessageOutlined /> {card.comments}</span>}
+          {/* {(card.comments !== undefined && card.comments !== null) && <span><MessageOutlined /> {card.comments}</span>} */}
         </div>
       </div>
     </Card>

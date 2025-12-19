@@ -15,7 +15,7 @@ const calculateColumns = (width: number) => {
   if (width >= 1200) return 4;
   if (width >= 768) return 3;
   if (width >= 480) return 2;
-  return 1;
+  return 2; // 至少展示两栏
 };
 
 // 图片项组件（显示文章的封面）
@@ -57,7 +57,7 @@ const GalleryImage: React.FC<{
           objectFit: 'cover',
           display: imgLoaded ? 'block' : 'none',
           transition: 'transform 0.3s ease',
-          borderRadius: '8px',
+          borderRadius: '0px',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.05)';
@@ -220,7 +220,7 @@ export default function GalleryPage() {
       box1Content={<Header />}
       box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
       box2BgColor="#f5f5f5"
-      box2Style={{ padding: '40px 20px' }}
+      box2Style={{ padding: '6px 6px' }}
     >
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {loading ? (
@@ -234,13 +234,12 @@ export default function GalleryPage() {
             color: '#999',
           }}>
             <p style={{ fontSize: '16px', marginBottom: '8px' }}>🎨 还没有作品</p>
-            <p style={{ fontSize: '14px' }}>点击右下角按钮发布你的第一个绘画作品吧！</p>
           </div>
         ) : (
           <>
             <Masonry
               columns={columns}
-              gutter={16}
+              gutter={4}
               items={articles.map((article, index) => ({
                 key: article.id,
                 data: article,

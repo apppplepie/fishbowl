@@ -158,7 +158,7 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
       </div>
 
       {/* 底部信息栏 */}
-      <div style={{
+      {/* <div style={{
         padding: '12px 20px',
         background: '#fafafa',
         display: 'flex',
@@ -196,8 +196,8 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
           <span style={{ fontSize: '12px' }}>
             📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt || new Date().toISOString())}
           </span>
-        </div>
-      </div>
+        </div> */}
+      {/* </div> */}
     </Card>
   );
 }

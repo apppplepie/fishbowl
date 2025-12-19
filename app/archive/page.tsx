@@ -24,7 +24,7 @@ const calculateColumns = (width: number) => {
   if (width >= 1400) return 4;
   if (width >= 1200) return 3;
   if (width >= 768) return 2;
-  return 1;
+  return 2;
 };
 
 /**
@@ -434,7 +434,7 @@ function ArticlesPageContent() {
             <>
               <Masonry
                 columns={columns}
-                gutter={16}
+                gutter={8}
                 items={filteredCards.map((card) => ({
                   key: `card-${card.id}`,
                   data: card,
