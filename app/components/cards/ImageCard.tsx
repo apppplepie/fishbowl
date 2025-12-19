@@ -134,11 +134,6 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
                   ❤️ {card.likes}
                 </span>
               )}
-              {(card.comments !== undefined && card.comments !== null) && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  💬 {card.comments}
-                </span>
-              )}
             </div>
           </div>
         </div>
