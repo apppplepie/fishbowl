@@ -590,7 +590,7 @@ export default function PublishBookPage() {
 
               <Divider />
 
-              <div style={{ color: '#666', fontSize: '13px' }}>
+              {/* <div style={{ color: '#666', fontSize: '13px' }}>
                 <p style={{ margin: '4px 0' }}>💡 <strong>发布说明：</strong></p>
                 <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                   <li>书名将成为书籍的唯一标识</li>
@@ -598,7 +598,7 @@ export default function PublishBookPage() {
                   <li>封面图片建议使用JPG或PNG格式，大小不超过2MB</li>
                   <li>标签可以帮助读者更好地分类和查找书籍</li>
                 </ul>
-              </div>
+              </div> */}
             </Card>
           </Form>
         </div>

@@ -160,7 +160,8 @@ export default function NavigationDrawer({
       maskClosable={true}
       styles={{
         body: {
-          padding: isMobile ? '15px 0px' : '0px 24px',
+          padding: isMobile ? '30px 0px' : '0px 24px',
+          paddingTop: isMobile ? '24px' : undefined,
           background: 'rgba(0, 0, 0, 0.85)',
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
@@ -169,7 +170,7 @@ export default function NavigationDrawer({
         },
         wrapper: {
           position: 'absolute',
-          top: '45px',
+          top: '44px',
           pointerEvents: 'auto',
           height: isMobile ? undefined : 'fit-content',
           width: '100vw',

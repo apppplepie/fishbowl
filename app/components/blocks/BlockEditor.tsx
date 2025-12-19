@@ -659,10 +659,6 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
               )}
             </Upload>
           </div>
-
-          <div style={{ fontSize: '12px', color: '#999' }}>
-            提示：图片块添加后，图片本身不可编辑，但可以修改标题、描述和作者信息
-          </div>
         </Space>
       </Modal>
     </div>

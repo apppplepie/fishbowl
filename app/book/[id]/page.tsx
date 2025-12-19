@@ -236,12 +236,11 @@ export default function BookPage() {
                 title: block.parsedContent.title || block.title || '',
               };
             } else if (block.type === 'placeholder') {
-              // placeholder块应该被过滤掉，因为用户没有权限查看这些块
-              return null;
+              // placeholder块保留，用于显示权限不足的提示
+              return block;
             }
             return block;
-          })
-          .filter((block: any) => block !== null);
+          });
 
         const processedArticle = {
           ...result.article,

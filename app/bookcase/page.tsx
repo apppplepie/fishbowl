@@ -151,8 +151,8 @@ function BookcasePageContent() {
   // 删除模式状态
   const [deleteMode, setDeleteMode] = useState(false);
 
-  // 打开目录抽屉的函数
-  const openCategoryDrawer = () => setDrawerVisible(true);
+  // 切换目录抽屉的函数
+  const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);
 
   // 章节管理成功后的刷新函数
   const handleChapterManageSuccess = () => {

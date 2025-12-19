@@ -909,7 +909,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
             }
             {isOptimisticUpdate && (
               <span style={{ color: '#1890ff', marginLeft: 8 }}>
-                🔄 正在保存更改...
+                正在保存更改...
               </span>
             )}
           </p>

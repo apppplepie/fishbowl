@@ -77,7 +77,7 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
           <Button
             type="text"
             icon={<MenuOutlined style={{ fontSize: '20px', color: 'white' }} />}
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => setDrawerOpen(!drawerOpen)}
             style={{ border: 'none' }}
           />
 

@@ -511,8 +511,8 @@ export default function ArticlePage() {
     }
   };
 
-  // 打开目录抽屉的函数
-  const openCategoryDrawer = () => setDrawerVisible(true);
+  // 切换目录抽屉的函数
+  const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);
 
   return (
     <>

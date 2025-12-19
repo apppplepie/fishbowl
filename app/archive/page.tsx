@@ -54,8 +54,8 @@ function ArticlesPageContent() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  // 打开目录抽屉的函数
-  const openCategoryDrawer = () => setDrawerVisible(true);
+  // 切换目录抽屉的函数
+  const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);
 
   // 从 URL 参数初始化分类筛选
   useEffect(() => {
