@@ -2,14 +2,13 @@
  * 检查数据库迁移状态
  */
 
-import mysql from 'mysql2/promise';
+// 加载环境变量
+import 'dotenv/config';
 
-const config = {
-  host: 'localhost',
-  user: 'root',
-  password: 'root',
-  database: 'test',
-};
+import mysql from 'mysql2/promise';
+import { getConnectionConfig } from '../lib/db-config';
+
+const config = getConnectionConfig();
 
 async function checkMigration() {
   let connection: mysql.Connection | null = null;

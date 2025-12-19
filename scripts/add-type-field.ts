@@ -1,6 +1,9 @@
 /**
  * 数据库迁移脚本：添加 type 字段
  */
+// 加载环境变量
+import 'dotenv/config';
+
 import { query } from '../lib/db';
 
 async function addTypeField() {

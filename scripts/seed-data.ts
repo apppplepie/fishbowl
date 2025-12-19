@@ -2,6 +2,9 @@
  * 数据库种子数据脚本
  * 插入之前 mock 数据中的两篇文章到数据库
  */
+// 加载环境变量
+import 'dotenv/config';
+
 import { query } from '../lib/db';
 import { v4 as uuidv4 } from 'uuid';
 

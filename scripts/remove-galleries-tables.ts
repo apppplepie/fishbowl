@@ -2,6 +2,9 @@
  * 数据库回滚脚本 - 删除 galleries 相关表
  * 运行方法: npm run db:rollback:galleries
  */
+// 加载环境变量
+import 'dotenv/config';
+
 import { query, testConnection } from '../lib/db';
 
 async function rollbackTables() {

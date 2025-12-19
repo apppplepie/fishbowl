@@ -3,6 +3,9 @@
  * 将 TEXT (64KB) 改为 LONGTEXT (4GB)
  * 运行方法: npm run db:fix:blocks
  */
+// 加载环境变量
+import 'dotenv/config';
+
 import { query, testConnection } from '../lib/db';
 
 async function fixBlocksContentSize() {

@@ -2,6 +2,9 @@
  * 数据库迁移脚本 - 添加绘画类型功能
  * 运行方法: npx ts-node scripts/add-drawing-type.ts
  */
+// 加载环境变量
+import 'dotenv/config';
+
 import { query, testConnection } from '../lib/db';
 
 async function migrateDatabase() {

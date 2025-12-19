@@ -2,17 +2,10 @@
  * MySQL 数据库连接配置
  */
 import mysql from 'mysql2/promise';
+import { getDatabaseConfig } from './db-config';
 
 // 创建连接池
-export const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'root',
-  database: 'test',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
+export const pool = mysql.createPool(getDatabaseConfig());
 
 /**
  * 执行查询
