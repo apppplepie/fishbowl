@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Avatar, Button, Card } from 'antd';
-import { UserOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
+import { UserOutlined, LoginOutlined } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import '../styles/user-menu.css';
 
@@ -27,6 +28,7 @@ export default function UserMenu({
   onClose 
 }: UserMenuProps) {
   const { isMobile } = useResponsive();
+  const router = useRouter();
 
   const handleLogin = () => {
     onLogin();
@@ -36,6 +38,14 @@ export default function UserMenu({
   const handleLogout = () => {
     onLogout();
     onClose?.();
+  };
+
+  const handleUsernameClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 阻止事件冒泡，避免触发 NavigationDrawer 中的弹窗
+    if (isLoggedIn) {
+      router.push('/profile');
+      onClose?.();
+    }
   };
 
   return (
@@ -102,11 +112,27 @@ export default function UserMenu({
             textAlign: 'left',
             flex: 1,
           }}>
-            <div className="username-text" style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              marginBottom: '2px',
-            }}>
+            <div 
+              className="username-text" 
+              onClick={handleUsernameClick}
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                marginBottom: '2px',
+                cursor: isLoggedIn ? 'pointer' : 'default',
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (isLoggedIn) {
+                  e.currentTarget.style.opacity = '0.8';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (isLoggedIn) {
+                  e.currentTarget.style.opacity = '1';
+                }
+              }}
+            >
               {isLoggedIn ? username : '访客'}
             </div>
             <div style={{
@@ -118,21 +144,7 @@ export default function UserMenu({
           </div>
 
           {/* 操作按钮 */}
-          {isLoggedIn ? (
-            <Button
-              type="default"
-              danger
-              icon={<LogoutOutlined />}
-              onClick={handleLogout}
-              size="middle"
-              style={{
-                fontWeight: 500,
-                flexShrink: 0,
-              }}
-            >
-              {isMobile ? '退出' : '退出登录'}
-            </Button>
-          ) : (
+          {!isLoggedIn && (
             <Button
               type="primary"
               icon={<LoginOutlined />}
