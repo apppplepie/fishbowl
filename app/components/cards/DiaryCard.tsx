@@ -142,7 +142,7 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
         fontSize: '12px',
         color: '#666',
       }}>
-        <span>📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}</span>
+        {/* <span>📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}</span> */}
         {status && <span>{status}</span>}
       </div>
 

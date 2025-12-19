@@ -114,7 +114,7 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
           )}
           
           {/* 底部信息 */}
-          <div style={{
+          {/* <div style={{
             marginTop: '12px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -135,7 +135,7 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
                 </span>
               )}
             </div>
-          </div>
+          </div> */}
         </div>
       )}
     </Card>

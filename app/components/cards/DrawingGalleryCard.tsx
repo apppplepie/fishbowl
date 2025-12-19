@@ -182,7 +182,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
     <Card
       hoverable
       style={{ 
-        borderRadius: '16px',
+        borderRadius: '0',
         overflow: 'hidden',
         cursor: 'pointer',
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
