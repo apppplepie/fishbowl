@@ -50,17 +50,6 @@ export default function PublishChapterPage() {
   // 从URL参数获取category
   const categoryFromUrl = searchParams.get('category');
 
-  // 调试：在页面加载时检查登录状态
-  React.useEffect(() => {
-    console.log('=== 章节发布 - 登录状态检查 ===');
-    console.log('isLoggedIn:', isLoggedIn);
-    console.log('user:', user);
-    
-    if (!isLoggedIn || !user) {
-      message.warning('您还未登录，请先登录后再发布章节', 5);
-    }
-  }, [isLoggedIn, user]);
-
   // 页面加载时自动读取草稿
   React.useEffect(() => {
     const draftStr = localStorage.getItem('chapter-draft');

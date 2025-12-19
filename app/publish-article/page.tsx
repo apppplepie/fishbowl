@@ -45,61 +45,6 @@ export default function PublishArticlePage() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
-  
-  // 调试：在页面加载时检查登录状态
-  React.useEffect(() => {
-    const testTokenValidity = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('❌ 没有找到Token');
-        return false;
-      }
-      
-      try {
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-          console.log('✅ Token有效，用户信息:', result.user);
-          message.success(`Token有效！当前用户: ${result.user.username} (${result.user.role})`);
-          return true;
-        } else {
-          console.error('❌ Token无效:', result.error);
-          message.error('Token已失效，请重新登录');
-          // 清除无效的token
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.dispatchEvent(new Event('loginStatusChanged'));
-          return false;
-        }
-      } catch (error) {
-        console.error('❌ 测试Token失败:', error);
-        message.error('网络错误，无法验证Token');
-        return false;
-      }
-    };
-    
-    console.log('=== 登录状态检查 ===');
-    console.log('isLoggedIn:', isLoggedIn);
-    console.log('user:', user);
-    console.log('localStorage token:', localStorage.getItem('token'));
-    console.log('localStorage user:', localStorage.getItem('user'));
-    
-    // 如果未登录，显示提示
-    if (!isLoggedIn || !user) {
-      message.warning('您还未登录，请先登录后再发布内容', 5);
-    } else {
-      console.log('✅ 已登录，用户:', user.username, '角色:', user.role);
-      // 自动测试Token有效性
-      testTokenValidity();
-    }
-  }, [isLoggedIn, user]);
-
   // 页面加载时自动读取草稿
   React.useEffect(() => {
     const draftStr = localStorage.getItem('article-draft');
@@ -259,32 +204,15 @@ export default function PublishArticlePage() {
       status: 'published' as const,
     };
 
-    console.log('发布文章:', articleData);
-    
     try {
       // 获取 Token
       const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
       
-      console.log('=== 提交文章 - Token检查 ===');
-      console.log('Token存在:', !!token);
-      console.log('Token前20字符:', token?.substring(0, 20));
-      console.log('用户信息:', userStr);
-      console.log('useAuth状态:', { isLoggedIn, user });
-      
-      if (!token) {
-        console.error('❌ 没有找到Token');
-        message.error('请先登录（未找到登录凭证）');
+      if (!token || !userStr) {
+        message.error('请先登录');
         return;
       }
-      
-      if (!userStr) {
-        console.error('❌ 没有找到用户信息');
-        message.error('请先登录（未找到用户信息）');
-        return;
-      }
-
-      console.log('✅ Token和用户信息都存在，准备发送请求');
 
       // 调用API保存文章
       const response = await fetch('/api/articles', {
@@ -297,10 +225,6 @@ export default function PublishArticlePage() {
       });
 
       const result = await response.json();
-      
-      console.log('=== API响应 ===');
-      console.log('状态码:', response.status);
-      console.log('响应内容:', result);
 
       if (response.ok && result.success) {
         message.success('文章发布成功！');
@@ -319,7 +243,6 @@ export default function PublishArticlePage() {
           router.push('/archive');
         }, 1000);
       } else {
-        console.error('❌ 发布失败:', result.error);
         if (response.status === 401) {
           message.error('登录已过期，请重新登录');
           // 清除过期的登录信息
