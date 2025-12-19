@@ -981,9 +981,13 @@ export default function ArticlePage() {
                           </div>
                           <div style={{
                             whiteSpace: 'pre-wrap',
+                            wordWrap: 'break-word',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
                             lineHeight: '1.8',
                             fontSize: '16px',
                             color: '#333',
+                            maxWidth: '100%',
                           }}>
                             {(block.parsedContent as TextBlockContent).content}
                           </div>

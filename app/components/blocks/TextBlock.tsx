@@ -20,6 +20,7 @@ import {
 import type { TextBlock as TextBlockType } from '@/app/types/block';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { applyFormat, type FormatOption, findReplace } from '@/app/utils/textFormatter';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 const { TextArea } = Input;
 
@@ -48,6 +49,7 @@ export default function TextBlock({
   isDragging,
   sortableHandleProps,
 }: TextBlockProps) {
+  const { isMobile } = useResponsive();
   const [isFocused, setIsFocused] = useState(false);
   const [previousContent, setPreviousContent] = useState<string>(''); // 用于撤销
   const textAreaRef = useRef<any>(null);
@@ -338,6 +340,8 @@ export default function TextBlock({
   return (
     <>
       <style>{`
+
+        
         /* 彻底隐藏所有可能的滚动条 */
         .text-block-textarea,
         .text-block-textarea *,
@@ -382,13 +386,17 @@ export default function TextBlock({
       <div
         style={{
           position: 'relative',
-          padding: '12px',
+          padding: isMobile ? '8px' : '12px',
           border: isFocused ? '2px solid #1890ff' : '2px solid transparent',
           borderRadius: '8px',
           backgroundColor: isFocused ? '#fafafa' : 'transparent',
           transition: 'all 0.2s',
           marginBottom: '8px',
           opacity: isDragging ? 0.5 : 1,
+          wordWrap: 'break-word',
+          wordBreak: 'break-word',
+          overflowWrap: 'break-word',
+          maxWidth: '100%',
         }}
         onMouseEnter={() => setIsFocused(true)}
         onMouseLeave={() => setIsFocused(false)}
@@ -397,13 +405,14 @@ export default function TextBlock({
       <div
         style={{
           position: 'absolute',
-          left: '-40px',
-          top: '12px',
+          left: isMobile ? '8px' : '-40px',
+          top: isMobile ? '-40px' : '12px',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: isMobile ? 'row' : 'column',
           gap: '4px',
           opacity: isFocused ? 1 : 0.4,
           transition: 'opacity 0.2s',
+          zIndex: 10,
         }}
       >
         <div
@@ -477,20 +486,25 @@ export default function TextBlock({
         <div
           style={{
             position: 'absolute',
-            top: '12px',
-            left: '12px',
-            right: '12px',
+            top: isMobile ? '8px' : '12px',
+            left: isMobile ? '8px' : '12px',
+            right: isMobile ? '8px' : '12px',
             backgroundColor: '#fff',
             border: '2px solid #1890ff',
             borderRadius: '8px',
-            padding: '12px',
+            padding: isMobile ? '8px' : '12px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             zIndex: 100,
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {/* 查找输入行 */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ 
+              display: 'flex', 
+              gap: '8px', 
+              alignItems: 'center',
+              flexWrap: isMobile ? 'wrap' : 'nowrap',
+            }}>
               <Input
                 placeholder="查找..."
                 value={findText}
@@ -513,7 +527,12 @@ export default function TextBlock({
                 disabled={matches.length === 0}
                 title="下一个"
               />
-              <span style={{ fontSize: '12px', color: '#666', minWidth: '80px' }}>
+              <span style={{ 
+                fontSize: '12px', 
+                color: '#666', 
+                minWidth: isMobile ? '60px' : '80px',
+                flexShrink: 0,
+              }}>
                 {matches.length > 0 ? `${currentMatchIndex + 1}/${matches.length}` : '无匹配'}
               </span>
               <Button 
@@ -533,7 +552,12 @@ export default function TextBlock({
 
             {/* 替换输入行 */}
             {showReplaceInput && (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                alignItems: 'center',
+                flexWrap: isMobile ? 'wrap' : 'nowrap',
+              }}>
                 <Input
                   placeholder="替换为..."
                   value={replaceText}
@@ -617,11 +641,17 @@ export default function TextBlock({
         autoSize={{ minRows: 3 }}
         className="text-block-textarea"
         style={{
-          fontSize: '16px',
+          fontSize: isMobile ? '14px' : '16px',
           lineHeight: '1.8',
           border: 'none',
           boxShadow: 'none',
           padding: '8px 0 86px 0', // 底部留3行空白（16px * 1.8 * 3 ≈ 86px）
+          wordWrap: 'break-word',
+          wordBreak: 'break-word',
+          overflowWrap: 'break-word',
+          whiteSpace: 'pre-wrap',
+          maxWidth: '100%',
+          width: '100%',
         }}
         onFocus={() => setIsFocused(true)}
       />
@@ -631,7 +661,8 @@ export default function TextBlock({
         style={{
           position: 'absolute',
           bottom: '-15px',
-          right: '12px',
+          right: isMobile ? '8px' : '12px',
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
         }}
       >
         {ACCESS_LEVELS.map(level => (
