@@ -8,6 +8,8 @@ services:
     environment:
       DB_HOST: host.docker.internal
       DB_PORT: 3306
-      DB_USER: root
-      DB_PASSWORD: ""
+      DB_USER: docker
+      DB_PASSWORD: 090513
       DB_NAME: fishbowl
+    volumes:
+      - ./public/uploads:/app/public/uploads  # 持久化上传的文件

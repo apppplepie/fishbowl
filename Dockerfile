@@ -24,5 +24,13 @@
     COPY --from=builder /app/package.json ./package.json
     COPY --from=builder /app/next.config.* ./
 
+# 创建 uploads 目录并设置权限
+RUN mkdir -p /app/public/uploads && \
+    chown -R node:node /app && \
+    chmod -R 755 /app/public/uploads
+
+# 使用 node 用户运行（避免权限问题）
+USER node
+
     EXPOSE 3000
-    CMD
+    CMD ["npm", "run", "start"]
