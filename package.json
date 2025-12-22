@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start -p 3001",
+    "start": "next start -p 3000",
     "lint": "eslint",
     "db:init": "ts-node --project tsconfig.node.json scripts/init-db.ts",
     "db:seed": "ts-node --project tsconfig.node.json scripts/seed-data.ts",

@@ -1,12 +1,13 @@
 version: "3.9"
 
 services:
-  next-app:
+  fishbowl:
     build: .
-    container_name: next-app
     ports:
       - "3000:3000"
-    restart: unless-stopped
-env_file:
-      - .env.production
-
+    environment:
+      DB_HOST: host.docker.internal
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ""
+      DB_NAME: fishbowl

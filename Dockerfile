@@ -1,24 +1,29 @@
-FROM node:18-alpine
+# ---------- build ----------
+    FROM node:20-alpine AS builder
 
-# 设置工作目录
-WORKDIR /app
-
-# 先拷贝依赖文件（利用缓存）
-COPY package*.json ./
-
-# 安装依赖
-RUN npm install
-
-# 拷贝项目全部代码
-COPY . .
-
-# 构建 Next 应用
-RUN npm run build
-
-# 暴露端口
-EXPOSE 3000
-
-# 启动 Next 应用
-CMD ["npm", "run", "start"]
-
-
+    WORKDIR /app
+    
+    COPY package.json package-lock.json* ./
+    
+    # 关键在这里 👇
+    RUN npm install --legacy-peer-deps --force
+    
+    COPY . .
+    
+    RUN npm run build
+    
+    # ---------- runtime ----------
+    FROM node:20-alpine
+    
+    WORKDIR /app
+    ENV NODE_ENV=production
+    
+    COPY --from=builder /app/node_modules ./node_modules
+    COPY --from=builder /app/.next ./.next
+    COPY --from=builder /app/public ./public
+    COPY --from=builder /app/package.json ./package.json
+    COPY --from=builder /app/next.config.* ./
+    
+    EXPOSE 3000
+    CMD
+    
