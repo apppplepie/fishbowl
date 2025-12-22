@@ -34,6 +34,7 @@ import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 const { Option } = Select;
 
@@ -45,6 +46,7 @@ export default function PublishArticlePage() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
+  const { isMobile } = useResponsive();
   // 页面加载时自动读取草稿
   React.useEffect(() => {
     const draftStr = localStorage.getItem('article-draft');
@@ -414,7 +416,7 @@ export default function PublishArticlePage() {
             }}>
               ✍️ 创作文章
             </h2>
-            {user && (
+            {/* {user && (
               <div style={{
                 marginTop: '12px',
                 padding: '8px 12px',
@@ -425,7 +427,7 @@ export default function PublishArticlePage() {
               }}>
                 👤 当前用户: {user.username} ({user.role === 'admin' ? '管理员' : user.role === 'moderator' ? '版主' : '普通用户'})
               </div>
-            )}
+            )} */}
             {!isLoggedIn && (
               <div style={{
                 marginTop: '12px',
@@ -443,7 +445,7 @@ export default function PublishArticlePage() {
         }
         box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
         box2BgColor="#f5f5f5"
-        box2Style={{ padding: '40px 20px' }}
+        box2Style={{ padding: isMobile ? '12px 8px' : '40px 20px' }}
       >
         <div style={{ 
           maxWidth: '1200px', 
@@ -459,61 +461,82 @@ export default function PublishArticlePage() {
           >
             <Card
               style={{
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                marginBottom: '24px',
+                borderRadius: isMobile ? '8px' : '12px',
+                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                marginBottom: isMobile ? '12px' : '24px',
+                padding: isMobile ? '12px' : '24px',
               }}
+              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
             >
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Space>
-                  <Button onClick={loadDraft}>加载草稿</Button>
-                  <Button icon={<SaveOutlined />} onClick={saveDraft}>
-                    保存草稿
-                  </Button>
-                </Space>
-              </div>
+              {/* 移动端隐藏草稿按钮，使用浮动按钮代替 */}
+              {!isMobile && (
+                <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Space>
+                    <Button onClick={loadDraft}>加载草稿</Button>
+                    <Button icon={<SaveOutlined />} onClick={saveDraft}>
+                      保存草稿
+                    </Button>
+                  </Space>
+                </div>
+              )}
 
               <Form.Item
-                label="文章标题"
+                label={isMobile ? null : "文章标题"}
                 name="title"
                 rules={[{ required: true, message: '请输入文章标题' }]}
+                style={{ marginBottom: isMobile ? '12px' : '24px' }}
               >
                 <Input 
-                  placeholder="输入一个吸引人的标题..." 
-                  size="large"
-                  style={{ fontSize: '18px', fontWeight: 500 }}
+                  placeholder="输入文章标题..." 
+                  size={isMobile ? 'middle' : 'large'}
+                  style={{ 
+                    fontSize: isMobile ? '16px' : '18px', 
+                    fontWeight: 500 
+                  }}
                 />
               </Form.Item>
 
 
               <Form.Item
-                label="标签"
+                label={isMobile ? null : "标签"}
                 name="tags"
-                tooltip="添加标签可以帮助读者更好地找到你的文章"
+                tooltip={isMobile ? null : "添加标签可以帮助读者更好地找到你的文章"}
+                style={{ marginBottom: isMobile ? '12px' : '24px' }}
               >
                 <TagInput 
-                placeholder="输入标签，按空格或回车添加" maxTags={10} 
+                  placeholder={isMobile ? "标签 (空格/回车)" : "输入标签，按空格或回车添加"} 
+                  maxTags={10} 
                 />
               </Form.Item>
 
               <Form.Item
-                label="文章目录"
+                label={isMobile ? null : "文章目录"}
                 name="category_id"
-                tooltip="选择文章所属分类目录，方便管理和查找"
+                tooltip={isMobile ? null : "选择文章所属分类目录，方便管理和查找"}
+                style={{ marginBottom: isMobile ? '0' : '24px' }}
               >
-                <CategoryTreeSelect placeholder="选择文章所属目录（可选）" />
+                <CategoryTreeSelect placeholder={isMobile ? "选择目录（可选）" : "选择文章所属目录（可选）"} />
               </Form.Item>
             </Card>
 
             <Card
               style={{
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                marginBottom: '24px',
+                borderRadius: isMobile ? '8px' : '12px',
+                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                marginBottom: isMobile ? '60px' : '24px', // 移动端为浮动按钮留空间
+                padding: isMobile ? '8px' : '24px',
               }}
+              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
             >
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Space>
+              <div style={{ 
+                marginBottom: isMobile ? '8px' : '16px', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                flexWrap: isMobile ? 'wrap' : 'nowrap',
+                gap: isMobile ? '8px' : '0',
+              }}>
+                <Space wrap>
                   <Tag color="green">{stats.textBlocks} 文字</Tag>
                   <Tag color="orange">{stats.imageBlocks} 图片</Tag>
                   <Tag color="purple">{stats.codeBlocks} 代码</Tag>
@@ -526,14 +549,14 @@ export default function PublishArticlePage() {
                         size="small"
                         icon={<ThunderboltOutlined />}
                       >
-                        格式化
+                        {isMobile ? '格式' : '格式化'}
                       </Button>
                     </Dropdown>
                   )}
                 </Space>
               </div>
 
-              <Divider />
+              {!isMobile && <Divider />}
 
               {isPreviewMode ? (
                 // 预览模式：只显示内容，不可编辑

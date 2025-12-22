@@ -210,21 +210,17 @@ const SortableItem: React.FC<{
           padding: '6px 8px',
           cursor: 'grab',
           minHeight: '44px', // 移动端最小触摸区域
+          touchAction: 'manipulation', // 优化移动端触摸响应
         }}
-        onClick={() => hasChildren && onToggleExpand(node.id)}
-        onTouchStart={(e) => {
-          // 防止触摸时页面滚动和默认行为
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onTouchMove={(e) => {
-          // 防止拖拽过程中触发滚动
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onTouchEnd={(e) => {
-          // 确保触摸结束事件也被拦截
-          e.stopPropagation();
+        onClick={(e) => {
+          // 如果正在拖拽，不触发点击
+          if (isDragging) {
+            e.stopPropagation();
+            return;
+          }
+          if (hasChildren) {
+            onToggleExpand(node.id);
+          }
         }}
       >
         {isCategory && hasChildren && (
@@ -930,21 +926,13 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
               }}
             >
               <div
-                style={{ background: '#fafafa', padding: 16, borderRadius: 8 }}
+                style={{ 
+                  background: '#fafafa', 
+                  padding: 16, 
+                  borderRadius: 8,
+                  touchAction: 'pan-y', // 允许垂直滚动，但优化触摸响应
+                }}
                 className="chapter-tree-mobile"
-                onTouchStart={(e) => {
-                  // 在拖拽容器级别阻止默认触摸行为
-                  if (isMobile) {
-                    e.stopPropagation();
-                  }
-                }}
-                onTouchMove={(e) => {
-                  // 防止拖拽过程中的页面滚动
-                  if (isMobile) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                }}
               >
                 <SortableTree
                   nodes={treeData}

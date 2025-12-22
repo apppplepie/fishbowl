@@ -1,15 +1,9 @@
 @import "tailwindcss";
 
+/* 主题变量 */
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,14 +20,74 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+
+  /* 全局禁止缩放，防止双击和手势缩放 */
+  touch-action: manipulation;
+  -ms-touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 全局可点击元素处理 */
+button,
+a,
+[role="button"],
+[role="link"],
+[onclick],
+.cursor-pointer,
+.ant-btn,
+.ant-float-btn,
+.ant-float-btn-group {
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: pointer;
+}
+
+/* 输入框允许文本选择 */
+input,
+textarea,
+.ant-input,
+.ant-input-number-input,
+.ant-picker-input input {
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
+}
+
+/* 可滚动容器保持滚动能力 */
+.snap-container,
+.scroll-container,
+.ant-modal-body,
+.ant-drawer-body,
+.ant-list,
+.ant-table-body {
+  touch-action: pan-y;
 }
 
 /* 隐藏滚动条但保持滚动功能 */
 .snap-container::-webkit-scrollbar {
   display: none;
 }
-
 .snap-container {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* 移动端特定优化（可选） */
+@media (max-width: 768px) {
+  /* 确保浮动按钮、Modal、Drawer 内按钮立即响应 */
+  .ant-btn,
+  .ant-float-btn,
+  .ant-float-btn-group,
+  .ant-modal .ant-btn,
+  .ant-modal .ant-float-btn,
+  .ant-drawer .ant-btn,
+  .ant-drawer .ant-float-btn {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
 }

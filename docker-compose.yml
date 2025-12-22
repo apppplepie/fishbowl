@@ -1,12 +1,10 @@
-version: "3.9"
-
 services:
   fishbowl:
     build: .
     ports:
       - "3000:3000"
     environment:
-      DB_HOST: host.docker.internal
+      DB_HOST: 74.48.91.105
       DB_PORT: 3306
       DB_USER: docker
       DB_PASSWORD: 090513

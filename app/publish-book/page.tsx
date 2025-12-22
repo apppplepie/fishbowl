@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Form,
   Input,
@@ -55,9 +55,10 @@ function PublishBookPage() {
 
   // 自动保存相关
   const lastSavedFormRef = useRef<string>('');
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 保存草稿功能
-  const saveDraft = () => {
+  const saveDraft = useCallback(() => {
     const values = form.getFieldsValue();
     const author = user?.username || '匿名';
 
@@ -89,7 +90,44 @@ function PublishBookPage() {
     }
 
     message.success('书籍草稿已保存到本地');
-  };
+  }, [form, user, coverFileList]);
+
+  // 检查并保存草稿（带防抖）
+  const checkAndSaveDraft = useCallback(() => {
+    // 清除之前的定时器
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // 延迟2秒后保存（防抖）
+    saveTimeoutRef.current = setTimeout(() => {
+      const values = form.getFieldsValue();
+      const hasContent = (values.title || '').trim() ||
+        (values.description || '').trim() ||
+        (values.tags && values.tags.length > 0) ||
+        coverFileList.length > 0;
+
+      if (hasContent) {
+        // 比较当前表单数据与上次保存的是否不同
+        const currentFormData = {
+          ...values,
+          coverFileList: coverFileList.map(file => ({
+            uid: file.uid,
+            name: file.name,
+            status: file.status,
+            url: file.url
+          }))
+        };
+        const currentFormStr = JSON.stringify(currentFormData);
+
+        if (currentFormStr !== lastSavedFormRef.current) {
+          console.log('🔄 检测到表单变化，自动保存草稿...');
+          saveDraft();
+          lastSavedFormRef.current = currentFormStr;
+        }
+      }
+    }, 2000); // 2秒防抖
+  }, [form, coverFileList, saveDraft]);
 
   // 加载草稿
   const loadDraft = () => {
@@ -130,39 +168,29 @@ function PublishBookPage() {
     console.log('已清除书籍草稿');
   };
 
-  // 自动保存草稿 - 每60秒检查一次
+  // 使用 Form.useWatch 监听表单值变化
+  const watchedTitle = Form.useWatch('title', form);
+  const watchedDescription = Form.useWatch('description', form);
+  const watchedTags = Form.useWatch('tags', form);
+
+  // 当表单值或封面变化时，触发检查并保存
+  useEffect(() => {
+    checkAndSaveDraft();
+  }, [watchedTitle, watchedDescription, watchedTags, coverFileList, checkAndSaveDraft]);
+
+  // 定期保存（每60秒）作为备份
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
-      // 检查表单是否有实际内容且有更新
-      const values = form.getFieldsValue();
-      const hasContent = (values.title || '').trim() ||
-                        (values.description || '').trim() ||
-                        (values.tags && values.tags.length > 0) ||
-                        coverFileList.length > 0;
-
-      if (hasContent) {
-        // 比较当前表单数据与上次保存的是否不同
-        const currentFormData = {
-          ...values,
-          coverFileList: coverFileList.map(file => ({
-            uid: file.uid,
-            name: file.name,
-            status: file.status,
-            url: file.url
-          }))
-        };
-        const currentFormStr = JSON.stringify(currentFormData);
-
-        if (currentFormStr !== lastSavedFormRef.current) {
-          console.log('🔄 检测到表单变化，自动保存草稿...');
-          saveDraft();
-          lastSavedFormRef.current = currentFormStr;
-        }
-      }
+      checkAndSaveDraft();
     }, 60000); // 60秒检查一次
 
-    return () => clearInterval(autoSaveInterval);
-  }, [coverFileList]); // 依赖 coverFileList 的变化
+    return () => {
+      clearInterval(autoSaveInterval);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [checkAndSaveDraft]);
 
   // 表单提交
   const onFinish = async (values: any) => {
@@ -392,6 +420,10 @@ function PublishBookPage() {
             form={form}
             layout="vertical"
             onFinish={onFinish}
+            onValuesChange={() => {
+              // 表单值变化时触发检查
+              checkAndSaveDraft();
+            }}
             initialValues={{
               tags: [],
             }}
@@ -403,12 +435,12 @@ function PublishBookPage() {
                 marginBottom: '24px',
               }}
             >
-              <div style={{ marginBottom: '16px' }}>
+              {/* <div style={{ marginBottom: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: '18px' }}>📖 书籍信息</h3>
-              </div>
+              </div> */}
 
               <Form.Item
-                label="书名"
+                // label="书名"
                 name="title"
                 rules={[{ required: true, message: '请输入书名' }]}
               >
@@ -420,40 +452,12 @@ function PublishBookPage() {
               </Form.Item>
 
               <Form.Item
-                label="书籍简介"
-                name="description"
-                rules={[{ required: true, message: '请输入书籍简介' }]}
-              >
-                <TextArea
-                  placeholder="简要介绍这本书的内容、特点等..."
-                  rows={6}
-                  showCount
-                  maxLength={1000}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="标签（可选）"
+                // label="标签（可选）"
                 name="tags"
-                tooltip="添加标签可以帮助读者更好地找到你的书籍"
+              // tooltip="添加标签可以帮助读者更好地找到你的书籍"
               >
                 <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
               </Form.Item>
-            </Card>
-
-            <Card
-              style={{
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                marginBottom: '24px',
-              }}
-            >
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>🖼️ 封面图片（可选）</h3>
-                <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: '14px' }}>
-                  上传书籍封面图片，没有的话会使用默认封面
-                </p>
-              </div>
 
               <Upload {...coverUploadProps}>
                 {coverFileList.length === 0 && (
@@ -463,6 +467,31 @@ function PublishBookPage() {
                   </div>
                 )}
               </Upload>
+            </Card>
+
+            <Card
+              style={{
+                borderRadius: '12px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                marginBottom: '24px',
+              }}
+            >
+              {/* <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '18px' }}>🖼️ 封面图片（可选）</h3>
+                <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: '14px' }}>
+                  上传书籍封面图片，没有的话会使用默认封面
+                </p>
+              </div> */}
+              <Form.Item
+                // label="书籍简介"
+                name="description"
+                rules={[{ required: true, message: '请输入书籍简介' }]}
+              >
+                <TextArea
+                  placeholder="简要介绍这本书的内容、特点等..."
+                  rows={10}
+                />
+              </Form.Item>
             </Card>
 
             {isPreviewMode && (
@@ -559,7 +588,7 @@ function PublishBookPage() {
               </Card>
             )}
 
-            <Card
+            {/* <Card
               style={{
                 borderRadius: '12px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -600,7 +629,7 @@ function PublishBookPage() {
 
               <Divider />
 
-              {/* <div style={{ color: '#666', fontSize: '13px' }}>
+              <div style={{ color: '#666', fontSize: '13px' }}>
                 <p style={{ margin: '4px 0' }}>💡 <strong>发布说明：</strong></p>
                 <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                   <li>书名将成为书籍的唯一标识</li>
@@ -608,8 +637,8 @@ function PublishBookPage() {
                   <li>封面图片建议使用JPG或PNG格式，大小不超过2MB</li>
                   <li>标签可以帮助读者更好地分类和查找书籍</li>
                 </ul>
-              </div> */}
-            </Card>
+              </div>
+            </Card> */}
           </Form>
         </div>
       </PageLayout>

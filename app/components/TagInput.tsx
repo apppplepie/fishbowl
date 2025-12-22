@@ -216,9 +216,9 @@ export default function TagInput({
       )}
 
       {/* 提示信息 */}
-      <div style={{ marginTop: 4, fontSize: '12px', color: '#999' }}>
+      {/* <div style={{ marginTop: 4, fontSize: '12px', color: '#999' }}>
         💡 输入标签名称，按<strong>空格</strong>或<strong>回车</strong>添加标签，支持从已有标签中选择
-      </div>
+      </div> */}
     </div>
   );
 }

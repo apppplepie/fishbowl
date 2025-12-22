@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, Tag } from 'antd';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import type { PlaceholderBlock as PlaceholderBlockType } from '@/app/types/block';
@@ -60,6 +60,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set()); // 记录加载失败的图片索引
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const hasSwipedRef = useRef(false); // 使用 ref 标记是否发生了滑动，避免状态更新延迟
 
   // 从文章块中提取所有图片块，按 order 升序排列（order 最小的在前）
   const images = useMemo(() => {
@@ -152,6 +153,13 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
 
   // 处理图片区域点击（左侧1/3上一张，右侧1/3下一张）
   const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // 如果刚刚发生了滑动，不触发点击事件
+    if (hasSwipedRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
+    
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -168,18 +176,30 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
 
   // 触摸开始
   const onTouchStart = (e: React.TouchEvent) => {
+    const startX = e.targetTouches[0].clientX;
     setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    setTouchStart(startX);
+    hasSwipedRef.current = false; // 重置滑动标记
   };
 
   // 触摸移动
   const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    const currentX = e.targetTouches[0].clientX;
+    setTouchEnd(currentX);
+    // 如果移动距离超过阈值，标记为滑动
+    if (touchStart !== null && Math.abs(touchStart - currentX) > 10) {
+      hasSwipedRef.current = true;
+    }
   };
 
   // 触摸结束
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd) {
+      setTouchStart(null);
+      setTouchEnd(null);
+      hasSwipedRef.current = false;
+      return;
+    }
     
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
@@ -187,11 +207,21 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
 
     if (isLeftSwipe) {
       // 左滑：显示上一张
+      hasSwipedRef.current = true; // 标记为滑动，防止触发 click
       handlePrevious({ stopPropagation: () => {} } as React.MouseEvent);
     } else if (isRightSwipe) {
       // 右滑：显示下一张
+      hasSwipedRef.current = true; // 标记为滑动，防止触发 click
       handleNext({ stopPropagation: () => {} } as React.MouseEvent);
     }
+
+    // 重置触摸状态
+    setTouchStart(null);
+    setTouchEnd(null);
+    // 延迟重置滑动标记，防止触发 click 事件
+    setTimeout(() => {
+      hasSwipedRef.current = false;
+    }, 300);
   };
 
   if (!currentImage) return null;

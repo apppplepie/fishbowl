@@ -901,9 +901,9 @@ export default function BookPage() {
                           </div>
                           <div
                             style={{
-                              marginBottom: '24px',
+                              marginBottom: isMobile ? '16px' : '24px',
                               lineHeight: '1.8',
-                              fontSize: '16px',
+                              fontSize: isMobile ? '15px' : '16px',
                               color: '#333',
                               whiteSpace: 'pre-wrap',
                               wordWrap: 'break-word',
@@ -1066,7 +1066,7 @@ export default function BookPage() {
             <div style={{
               maxWidth: '800px',
               margin: '0 auto',
-              padding: isMobile ? '20px 16px 0' : '40px 20px 0',
+              padding: isMobile ? '12px 8px 0' : '40px 20px 0',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -1133,7 +1133,7 @@ export default function BookPage() {
           <div style={{
             maxWidth: '800px',
             margin: '0 auto',
-            padding: isMobile ? '0 16px 40px' : '0 20px 40px',
+            padding: isMobile ? '0 8px 20px' : '0 20px 40px',
           }}>
             <CommentSection
               articleId={currentArticleId}

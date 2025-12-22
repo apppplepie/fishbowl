@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Input, Button, Select, Segmented, Space } from 'antd';
-import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, CodeOutlined, CopyOutlined } from '@ant-design/icons';
+import { Input, Button, Select, Segmented, Space, Modal } from 'antd';
+import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, CodeOutlined, CopyOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { message } from 'antd';
 import type { CodeBlock as CodeBlockType } from '@/app/types/block';
 import { ACCESS_LEVELS } from '@/app/types/block';
+import { useResponsive } from '@/app/hooks/useResponsive';
+
+const { confirm } = Modal;
 
 const { TextArea } = Input;
 
@@ -56,6 +59,7 @@ export default function CodeBlock({
   sortableHandleProps,
 }: CodeBlockProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const { isMobile } = useResponsive();
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange({
@@ -101,6 +105,20 @@ export default function CodeBlock({
     message.success('代码已复制到剪贴板');
   };
 
+  const handleDelete = () => {
+    confirm({
+      title: '确认删除',
+      icon: <ExclamationCircleOutlined />,
+      content: '确定要删除这个代码块吗？',
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk() {
+        onDelete();
+      },
+    });
+  };
+
   return (
     <div
       style={{
@@ -115,38 +133,45 @@ export default function CodeBlock({
       }}
       onMouseEnter={() => setIsFocused(true)}
       onMouseLeave={() => setIsFocused(false)}
+      onTouchStart={() => setIsFocused(true)}
     >
-      {/* 工具栏 - 固定显示 */}
+      {/* 工具栏 - 移动端放左下角，桌面端在左侧 */}
       <div
         style={{
           position: 'absolute',
-          left: '-40px',
-          top: '12px',
+          left: isMobile ? '12px' : '-40px',
+          top: isMobile ? 'auto' : '12px',
+          bottom: isMobile ? '-15px' : 'auto',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: isMobile ? 'row' : 'column',
           gap: '4px',
           opacity: isFocused ? 1 : 0.4,
           transition: 'opacity 0.2s',
+          backgroundColor: isMobile ? 'rgba(255, 255, 255, 0.9)' : 'transparent',
+          padding: isMobile ? '2px 4px' : '0',
+          borderRadius: isMobile ? '4px' : '0',
+          boxShadow: isMobile ? '0 2px 6px rgba(0,0,0,0.1)' : 'none',
         }}
       >
-        <div
-          {...sortableHandleProps}
+        <Button
+          size="small"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={handleDelete}
+          disabled={!canDelete}
+          title={canDelete ? "删除块" : "至少需要保留一个块"}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '32px',
-            height: '32px',
-            cursor: 'grab',
-            color: '#999',
-            fontSize: '16px',
-            userSelect: 'none',
-            touchAction: 'none',
+            width: isMobile ? '24px' : '32px',
+            height: isMobile ? '24px' : '32px',
+            minWidth: isMobile ? '24px' : '32px',
+            padding: 0,
+            color: canDelete ? '#ff4d4f' : '#999',
+            border: 'none',
+            boxShadow: 'none',
+            background: 'transparent',
+            fontSize: isMobile ? '11px' : '14px',
           }}
-          title="按住拖动排序"
-        >
-          <MenuOutlined />
-        </div>
+        />
         <Button
           size="small"
           icon={<ArrowUpOutlined />}
@@ -154,12 +179,15 @@ export default function CodeBlock({
           disabled={!canMoveUp}
           title="上移"
           style={{
-            width: '32px',
-            height: '32px',
+            width: isMobile ? '24px' : '32px',
+            height: isMobile ? '24px' : '32px',
+            minWidth: isMobile ? '24px' : '32px',
+            padding: 0,
             color: '#999',
             border: 'none',
             boxShadow: 'none',
             background: 'transparent',
+            fontSize: isMobile ? '11px' : '14px',
           }}
         />
         <Button
@@ -169,28 +197,15 @@ export default function CodeBlock({
           disabled={!canMoveDown}
           title="下移"
           style={{
-            width: '32px',
-            height: '32px',
+            width: isMobile ? '24px' : '32px',
+            height: isMobile ? '24px' : '32px',
+            minWidth: isMobile ? '24px' : '32px',
+            padding: 0,
             color: '#999',
             border: 'none',
             boxShadow: 'none',
             background: 'transparent',
-          }}
-        />
-        <Button
-          size="small"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={onDelete}
-          disabled={!canDelete}
-          title={canDelete ? "删除块" : "至少需要保留一个块"}
-          style={{
-            width: '32px',
-            height: '32px',
-            color: '#999',
-            border: 'none',
-            boxShadow: 'none',
-            background: 'transparent',
+            fontSize: isMobile ? '11px' : '14px',
           }}
         />
       </div>
@@ -276,6 +291,9 @@ export default function CodeBlock({
               backgroundColor: (block.access_level || 1) === level.value ? level.color : undefined,
               borderColor: level.color,
               color: (block.access_level || 1) === level.value ? 'white' : level.color,
+              fontSize: isMobile ? '11px' : '12px',
+              padding: isMobile ? '0 6px' : '0 8px',
+              height: isMobile ? '24px' : '28px',
             }}
             onClick={() => handleAccessLevelChange(level.label)}
           >

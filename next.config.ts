@@ -10,6 +10,17 @@ const nextConfig: NextConfig = {
   
   // 如果需要使用 CDN，可以设置 assetPrefix
   // assetPrefix: process.env.NEXT_PUBLIC_CDN_URL || '',
+  
+  // 重写规则：将 /uploads 请求转发到 API 路由
+  // 这在 Docker 环境中特别有用，因为 volume 挂载的文件可能无法直接通过 public 目录访问
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: '/api/uploads/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

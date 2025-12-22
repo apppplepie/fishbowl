@@ -34,6 +34,7 @@ import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 const { Option } = Select;
 
@@ -46,6 +47,7 @@ function PublishChapterContent() {
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isMobile } = useResponsive();
 
   // 从URL参数获取category
   const categoryFromUrl = searchParams.get('category');
@@ -424,7 +426,7 @@ function PublishChapterContent() {
             }}>
               📄 发布章节
             </h2>
-            {user && (
+            {/* {user && (
               <div style={{
                 marginTop: '12px',
                 padding: '8px 12px',
@@ -435,7 +437,7 @@ function PublishChapterContent() {
               }}>
                 👤 当前用户: {user.username} ({user.role === 'admin' ? '管理员' : user.role === 'moderator' ? '版主' : '普通用户'})
               </div>
-            )}
+            )} */}
             {!isLoggedIn && (
               <div style={{
                 marginTop: '12px',
@@ -453,7 +455,7 @@ function PublishChapterContent() {
         }
         box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
         box2BgColor="#f5f5f5"
-        box2Style={{ padding: '40px 20px' }}
+        box2Style={{ padding: isMobile ? '12px 8px' : '40px 20px' }}
       >
         <div style={{
           maxWidth: '1200px',
@@ -469,68 +471,88 @@ function PublishChapterContent() {
           >
             <Card
               style={{
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                marginBottom: '24px',
+                borderRadius: isMobile ? '8px' : '12px',
+                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                marginBottom: isMobile ? '12px' : '24px',
+                padding: isMobile ? '12px' : '24px',
               }}
+              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
             >
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>📝 章节信息</h3>
-                <Space>
-                  <Button onClick={loadDraft}>加载草稿</Button>
-                  <Button icon={<SaveOutlined />} onClick={saveDraft}>
-                    保存草稿
-                  </Button>
-                </Space>
-              </div>
+              {/* 移动端隐藏标题和草稿按钮 */}
+              {!isMobile && (
+                <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px' }}>📝 章节信息</h3>
+                  <Space>
+                    <Button onClick={loadDraft}>加载草稿</Button>
+                    <Button icon={<SaveOutlined />} onClick={saveDraft}>
+                      保存草稿
+                    </Button>
+                  </Space>
+                </div>
+              )}
 
               <Form.Item
-                label="章节标题"
+                label={isMobile ? null : "章节标题"}
                 name="title"
                 rules={[{ required: true, message: '请输入章节标题' }]}
+                style={{ marginBottom: isMobile ? '12px' : '24px' }}
               >
                 <Input
                   placeholder="输入章节标题..."
-                  size="large"
-                  style={{ fontSize: '18px', fontWeight: 500 }}
+                  size={isMobile ? 'middle' : 'large'}
+                  style={{ 
+                    fontSize: isMobile ? '16px' : '18px', 
+                    fontWeight: 500 
+                  }}
                 />
               </Form.Item>
 
 
               <Form.Item
-                label="标签"
+                label={isMobile ? null : "标签"}
                 name="tags"
-                tooltip="添加标签可以帮助读者更好地找到你的章节"
+                tooltip={isMobile ? null : "添加标签可以帮助读者更好地找到你的章节"}
+                style={{ marginBottom: isMobile ? '12px' : '24px' }}
               >
-                <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
+                <TagInput placeholder={isMobile ? "标签 (空格/回车)" : "输入标签，按空格或回车添加"} maxTags={10} />
               </Form.Item>
 
               {categoryFromUrl && (
                 <div style={{
-                  marginBottom: '16px',
-                  padding: '12px',
+                  marginBottom: isMobile ? '0' : '16px',
+                  padding: isMobile ? '8px' : '12px',
                   background: '#f6ffed',
                   border: '1px solid #b7eb8f',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '12px' : '14px',
                   color: '#52c41a'
                 }}>
                   <strong>📂 发布到目录：</strong>{categoryName || categoryFromUrl}
-                  <br />
-                  <strong>🔢 章节序号：</strong>{nextOrderInCategory}
+                  {!isMobile && <br />}
+                  {isMobile && ' '}
+                  <strong>🔢 序号：</strong>{nextOrderInCategory}
                 </div>
               )}
             </Card>
 
             <Card
               style={{
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                marginBottom: '24px',
+                borderRadius: isMobile ? '8px' : '12px',
+                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                marginBottom: isMobile ? '60px' : '24px', // 移动端为浮动按钮留空间
+                padding: isMobile ? '8px' : '24px',
               }}
+              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
             >
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Space>
+              <div style={{ 
+                marginBottom: isMobile ? '8px' : '16px', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                flexWrap: isMobile ? 'wrap' : 'nowrap',
+                gap: isMobile ? '8px' : '0',
+              }}>
+                <Space wrap>
                   <Tag color="green">{stats.textBlocks} 文字</Tag>
                   <Tag color="orange">{stats.imageBlocks} 图片</Tag>
                   <Tag color="purple">{stats.codeBlocks} 代码</Tag>
@@ -543,14 +565,14 @@ function PublishChapterContent() {
                         size="small"
                         icon={<ThunderboltOutlined />}
                       >
-                        格式化
+                        {isMobile ? '格式' : '格式化'}
                       </Button>
                     </Dropdown>
                   )}
                 </Space>
               </div>
 
-              <Divider />
+              {!isMobile && <Divider />}
 
               {isPreviewMode ? (
                 // 预览模式：只显示内容，不可编辑

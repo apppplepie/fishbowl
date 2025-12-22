@@ -472,7 +472,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       {/* 编辑器主体 */}
       <div
         style={{
-          marginLeft: '48px', // 为左侧工具栏留出空间
+          marginLeft: isMobile ? '0' : '48px', // 移动端不需要左侧边距，工具栏在底部
           minHeight: '400px',
         }}
       >
@@ -523,19 +523,20 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
                   canDelete={blocks.length > 1}
                 />
 
-                {/* 块之间的添加按钮 */}
+                {/* 块之间的添加按钮 - 移动端简化 */}
                 <div
                   style={{
                     textAlign: 'center',
-                    marginTop: isMobile ? '24px' : '8px',
-                    opacity: 0.5,
+                    marginTop: isMobile ? '8px' : '8px',
+                    marginBottom: isMobile ? '8px' : '0',
+                    opacity: isMobile ? 0.7 : 0.5,
                     transition: 'opacity 0.2s',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.opacity = '1';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '0.5';
+                    e.currentTarget.style.opacity = isMobile ? '0.7' : '0.5';
                   }}
                 >
                   <Button
@@ -546,8 +547,10 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
                       setInsertPosition(index); // 记录要在这个块后面插入
                       setAddBlockModalVisible(true);
                     }}
-                  >
-                    在此处添加块
+                    style={{
+                      fontSize: isMobile ? '12px' : '14px',
+                    }}
+                  >添加新块
                   </Button>
                 </div>
               </div>

@@ -721,7 +721,7 @@ export default function ArticlePage() {
           <div style={{
             width: '100%',
             maxWidth: '900px',
-            padding: '40px 24px',
+            padding: isMobile ? '16px 12px' : '40px 24px',
           }}>
             {/* 模式提示 */}
             {editMode !== 'view' && (
@@ -743,10 +743,10 @@ export default function ArticlePage() {
             {editMode === 'edit' && (
               <div style={{
                 background: 'white',
-                padding: '40px',
-                borderRadius: '8px',
-                marginBottom: '24px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                padding: isMobile ? '16px 12px' : '40px',
+                borderRadius: isMobile ? '8px' : '8px',
+                marginBottom: isMobile ? '16px' : '24px',
+                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
               }}>
                 <div style={{ marginBottom: '24px' }}>
                   <label style={{
@@ -917,12 +917,12 @@ export default function ArticlePage() {
             {/* Part 2: 文章主体内容 */}
             <div style={{
               background: 'white',
-              padding: editMode === 'edit' ? '40px' : '40px',
-              borderRadius: '8px',
-              marginBottom: '24px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              padding: isMobile ? (editMode === 'edit' ? '16px 8px' : '20px 12px') : '40px',
+              borderRadius: isMobile ? '8px' : '8px',
+              marginBottom: isMobile ? '16px' : '24px',
+              boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
               lineHeight: '1.8',
-              fontSize: '16px',
+              fontSize: isMobile ? '15px' : '16px',
               color: '#333',
             }}>
               {editMode === 'edit' ? (
@@ -1153,9 +1153,9 @@ export default function ArticlePage() {
             {/* Part 3: 互动按钮和评论区 */}
             <div style={{
               background: 'white',
-              padding: '32px 40px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              padding: isMobile ? '20px 12px' : '32px 40px',
+              borderRadius: isMobile ? '8px' : '8px',
+              boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
             }}>
               {/* 互动按钮 */}
               <div style={{
