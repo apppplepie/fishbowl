@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import {
   Form,
   Input,
@@ -38,10 +38,10 @@ import FloatingActions, { FloatingActionsProps } from '@/app/components/float/Pu
 const { Option } = Select;
 
 /**
- * 章节发布页面
+ * 章节发布页面内部组件
  * 根据category参数发布子级文章
  */
-export default function PublishChapterPage() {
+function PublishChapterContent() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
@@ -687,5 +687,17 @@ export default function PublishChapterPage() {
         exitPath="/bookcase"
       />
     </>
+  );
+}
+
+/**
+ * 章节发布页面
+ * 用 Suspense 包装以支持 useSearchParams
+ */
+export default function PublishChapterPage() {
+  return (
+    <Suspense fallback={<div>加载中...</div>}>
+      <PublishChapterContent />
+    </Suspense>
   );
 }

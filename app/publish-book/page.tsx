@@ -33,7 +33,7 @@ const { TextArea } = Input;
 /**
  * 书籍发布页面
  */
-export default function PublishBookPage() {
+function PublishBookPage() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
@@ -44,7 +44,10 @@ export default function PublishBookPage() {
 
   // 组件挂载时尝试加载草稿
   useEffect(() => {
-    loadDraft();
+    // 确保在客户端环境中
+    if (typeof window !== 'undefined') {
+      loadDraft();
+    }
   }, []);
 
   // 为悬浮按钮提供必要的状态
@@ -81,13 +84,16 @@ export default function PublishBookPage() {
     console.log('保存书籍草稿:', draft);
 
     // 保存到本地存储
-    localStorage.setItem('book-draft', JSON.stringify(draft));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('book-draft', JSON.stringify(draft));
+    }
 
     message.success('书籍草稿已保存到本地');
   };
 
   // 加载草稿
   const loadDraft = () => {
+    if (typeof window === 'undefined') return;
     const draftStr = localStorage.getItem('book-draft');
     if (draftStr) {
       try {
@@ -118,7 +124,9 @@ export default function PublishBookPage() {
 
   // 清除草稿
   const clearDraft = () => {
-    localStorage.removeItem('book-draft');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('book-draft');
+    }
     console.log('已清除书籍草稿');
   };
 
@@ -170,7 +178,7 @@ export default function PublishBookPage() {
 
     try {
       // 获取 Token
-      const token = localStorage.getItem('token');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
       if (!token) {
         message.error('请先登录');
@@ -273,7 +281,9 @@ export default function PublishBookPage() {
         // 清空表单和草稿
         form.resetFields();
         setCoverFileList([]);
-        localStorage.removeItem('book-draft');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('book-draft');
+        }
         // 跳转到bookcase页面
         setTimeout(() => {
           router.push('/bookcase');
@@ -315,7 +325,7 @@ export default function PublishBookPage() {
     name: 'file',
     action: '/api/upload',
     headers: {
-      authorization: `Bearer ${localStorage.getItem('token')}`,
+      authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
     },
     listType: 'picture-card' as const,
     className: 'avatar-uploader',
@@ -618,3 +628,5 @@ export default function PublishBookPage() {
     </>
   );
 }
+
+export default PublishBookPage;
