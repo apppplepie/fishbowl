@@ -12,15 +12,18 @@ import path from 'path';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
+    // 在 Next.js 15 中，params 是一个 Promise，需要 await
+    const resolvedParams = await params;
+    
     // 构建文件路径
     const filePath = path.join(
       process.cwd(),
       'public',
       'uploads',
-      ...params.path
+      ...resolvedParams.path
     );
 
     // 安全检查：确保路径在 uploads 目录内
