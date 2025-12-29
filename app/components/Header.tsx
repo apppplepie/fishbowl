@@ -161,10 +161,12 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
           left: 0,
           right: 0,
           height: isVisible ? '45px' : '0',
-          display: isVisible ? 'block' : 'none',
+          opacity: isVisible ? 1 : 0,
+          visibility: isVisible ? 'visible' : 'hidden',
           zIndex: 10000,
-          pointerEvents: 'none',
-          transition: 'height 0.3s ease',
+          pointerEvents: isVisible ? 'auto' : 'none',
+          transition: 'height 0.3s ease, opacity 0.3s ease, visibility 0.3s ease',
+          overflow: 'hidden',
         }}
       >
         {/* Header 固定在顶部 */}
@@ -172,34 +174,33 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
           style={{
             position: 'relative',
             height: '45px',
+            minHeight: '45px',
             background: 'black',
             display: 'flex',
             alignItems: 'center',
             padding: isMobile ? '0 12px' : '0 24px',
             zIndex: 10001,
-            pointerEvents: 'auto',
+            pointerEvents: isVisible ? 'auto' : 'none',
             width: '100%',
           }}
         >
           {/* 左侧 - 自定义内容 */}
           {leftContent && (
-            <div style={{ flexShrink: 0 }}>
+            <div style={{ flexShrink: 0, marginRight: 'auto' }}>
               {leftContent}
             </div>
           )}
 
-          {/* 中间 - 导航菜单（绝对定位，始终居中） */}
+          {/* 中间 - 导航菜单（flex 布局，自动占据剩余空间并居中） */}
           <div style={{ 
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            flex: 1,
             display: 'flex', 
             justifyContent: 'center',
             alignItems: 'center',
             height: '100%',
             pointerEvents: 'auto',
-            width: 'auto',
-            maxWidth: 'calc(100% - 200px)', // 确保左右两侧有足够空间
+            minWidth: 0, // 允许收缩
+            padding: leftContent ? '0 12px' : '0',
           }}>
             <Menu
               mode="horizontal"
@@ -218,16 +219,14 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
             />
           </div>
 
-          {/* 右侧 - 用户信息（绝对定位，始终居右） */}
+          {/* 右侧 - 用户信息（固定在最右边，不移动） */}
           <div style={{ 
-            position: 'absolute',
-            right: isMobile ? '12px' : '24px',
-            top: '50%',
-            transform: 'translateY(-50%)',
+            flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            flexShrink: 0,
+            marginLeft: 'auto',
+            paddingLeft: isMobile ? '12px' : '24px',
           }}>
             {isLoggedIn ? (
               // 已登录 - 显示用户名，点击跳转到个人资料页
