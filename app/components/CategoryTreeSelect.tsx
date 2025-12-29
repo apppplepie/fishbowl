@@ -38,6 +38,7 @@ export default function CategoryTreeSelect({
 }: CategoryTreeSelectProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const [newCategoryModal, setNewCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [parentCategoryId, setParentCategoryId] = useState<string>('');
@@ -297,11 +298,23 @@ export default function CategoryTreeSelect({
     return null;
   };
 
+  /**
+   * 处理选择变化，选择后自动关闭下拉框
+   */
+  const handleChange = (selectedValue: string) => {
+    if (onChange) {
+      onChange(selectedValue);
+    }
+    setOpen(false); // 选择后关闭下拉框
+  };
+
   return (
     <>
       <TreeSelect
         value={value}
-        onChange={onChange}
+        onChange={handleChange}
+        open={open}
+        onOpenChange={setOpen}
         treeData={buildTreeDataWithPath(categories)}
         placeholder={placeholder}
         loading={loading}
