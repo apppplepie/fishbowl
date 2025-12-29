@@ -29,7 +29,7 @@ export default function BookChapterNavigator({
   onCategoryClick,
   visible = false,
   onClose,
-  expanded = true, // 默认展开
+  expanded = false, // 默认关闭
   onExpandedChange
 }: BookChapterNavigatorProps) {
   const { isMobile } = useResponsive();

@@ -152,7 +152,7 @@ function BookcasePageContent() {
   const [deleteMode, setDeleteMode] = useState(false);
 
   // 侧边栏展开状态（桌面端）
-  const [sidebarExpanded, setSidebarExpanded] = useState(true); // 默认展开
+  const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
 
   // 切换目录抽屉的函数（移动端）
   const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);

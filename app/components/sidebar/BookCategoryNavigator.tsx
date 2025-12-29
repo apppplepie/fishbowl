@@ -28,7 +28,7 @@ export default function BookCategoryNavigator({
   onCategorySelect,
   selectedCategoryId,
   refreshKey,
-  expanded = true, // 默认展开
+  expanded = false, // 默认关闭
   onExpandedChange
 }: BookCategoryNavigatorProps) {
   const { isMobile } = useResponsive();

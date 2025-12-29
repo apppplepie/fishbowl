@@ -163,7 +163,7 @@ export default function BookPage() {
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   // 侧边栏展开状态（桌面端）
-  const [sidebarExpanded, setSidebarExpanded] = useState(true); // 默认展开
+  const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
 
   // 章节标签缓存
   const chapterLabelCache = useChapterLabelCacheOptional();

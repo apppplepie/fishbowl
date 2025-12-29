@@ -26,7 +26,7 @@ export default function ArchiveCategoryNavigator({
   onClose,
   onCategorySelect,
   selectedCategoryId,
-  expanded = true, // 默认展开
+  expanded = false, // 默认关闭
   onExpandedChange
 }: ArchiveCategoryNavigatorProps) {
   const { isMobile } = useResponsive();
