@@ -1,5 +1,67 @@
 /* 导航栏样式美化 */
 
+/* Header 中的导航菜单样式 */
+.header-nav-menu {
+  border: none !important;
+  background: transparent !important;
+}
+
+.header-nav-menu .ant-menu-item {
+  border-radius: 4px !important;
+  margin: 0 4px !important;
+  padding: 4px 12px !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.header-nav-menu .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+.header-nav-menu .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border: none !important;
+}
+
+.header-nav-menu .ant-menu-item-selected:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.header-nav-menu .ant-menu-item .ant-menu-title-content {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  justify-content: center !important;
+}
+
+.header-nav-menu .ant-menu-item .anticon {
+  font-size: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* 移动端 Header 导航菜单样式 */
+@media (max-width: 768px) {
+  .header-nav-menu .ant-menu-item {
+    margin: 0 2px !important;
+    padding: 4px 8px !important;
+    min-width: 36px !important;
+  }
+
+  .header-nav-menu .ant-menu-item .ant-menu-title-content {
+    gap: 0 !important;
+  }
+}
+
 .custom-nav-menu .ant-menu-item {
   border-radius: 0 !important;
   margin: 0 !important;
