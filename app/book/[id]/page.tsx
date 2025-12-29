@@ -159,8 +159,11 @@ export default function BookPage() {
   // 评论数量状态
   const [commentsCount, setCommentsCount] = useState(0);
 
-  // 目录抽屉状态
+  // 目录抽屉状态（移动端）
   const [drawerVisible, setDrawerVisible] = useState(false);
+
+  // 侧边栏展开状态（桌面端）
+  const [sidebarExpanded, setSidebarExpanded] = useState(true); // 默认展开
 
   // 章节标签缓存
   const chapterLabelCache = useChapterLabelCacheOptional();
@@ -643,8 +646,11 @@ export default function BookPage() {
     );
   }
 
-  // 打开目录抽屉的函数
+  // 打开目录抽屉的函数（移动端）
   const openCategoryDrawer = () => setDrawerVisible(true);
+
+  // 切换侧边栏展开/收起（桌面端）
+  const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
 
   return (
     <>
@@ -655,16 +661,22 @@ export default function BookPage() {
         onArticleClick={handleArticleClick}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
+        expanded={sidebarExpanded}
+        onExpandedChange={setSidebarExpanded}
       />
 
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          isMobile && <BookChapterDrawerButton onClick={openCategoryDrawer} />
+          <BookChapterDrawerButton 
+            onClick={openCategoryDrawer} 
+            expanded={sidebarExpanded}
+            onToggle={toggleSidebar}
+          />
         }
       />
 
-      <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
+      <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout
           box1Content={
             <div style={{ padding: '16px 24px' }}>

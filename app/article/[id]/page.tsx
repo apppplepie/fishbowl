@@ -93,8 +93,11 @@ export default function ArticlePage() {
   // 评论数量状态
   const [commentsCount, setCommentsCount] = useState(0);
 
-  // 目录抽屉状态
+  // 目录抽屉状态（移动端）
   const [drawerVisible, setDrawerVisible] = useState(false);
+
+  // 侧边栏展开状态（桌面端）
+  const [sidebarExpanded, setSidebarExpanded] = useState(true); // 默认展开
 
   /**
    * 获取分类路径
@@ -511,8 +514,11 @@ export default function ArticlePage() {
     }
   };
 
-  // 切换目录抽屉的函数
+  // 切换目录抽屉的函数（移动端）
   const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);
+
+  // 切换侧边栏展开/收起（桌面端）
+  const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
 
   return (
     <>
@@ -522,12 +528,18 @@ export default function ArticlePage() {
         onArticleClick={handleArticleClick}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
+        expanded={sidebarExpanded}
+        onExpandedChange={setSidebarExpanded}
       />
 
       {/* Header 覆盖在PageLayout顶部边框上 */}
       <Header
         leftContent={
-          isMobile && <ArticleDrawerButton onClick={openCategoryDrawer} />
+          <ArticleDrawerButton 
+            onClick={openCategoryDrawer} 
+            expanded={sidebarExpanded}
+            onToggle={toggleSidebar}
+          />
         }
       /> 
 
@@ -548,7 +560,7 @@ export default function ArticlePage() {
         />
       )}
 
-      <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
+      <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout
           box1Content={
             <div style={{ padding: '16px 24px' }}>
