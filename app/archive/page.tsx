@@ -50,12 +50,18 @@ function ArticlesPageContent() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 选中的标签
   const [searchKeyword, setSearchKeyword] = useState(''); // 搜索关键词
 
-  // 目录抽屉状态
+  // 目录抽屉状态（移动端）
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  // 切换目录抽屉的函数
+  // 侧边栏展开状态（桌面端）
+  const [sidebarExpanded, setSidebarExpanded] = useState(true); // 默认展开
+
+  // 切换目录抽屉的函数（移动端）
   const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);
+
+  // 切换侧边栏展开/收起（桌面端）
+  const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
 
   // 从 URL 参数初始化分类筛选
   useEffect(() => {
@@ -320,11 +326,15 @@ function ArticlesPageContent() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          isMobile && <ArchiveCategoryDrawerButton onClick={openCategoryDrawer} />
+          <ArchiveCategoryDrawerButton 
+            onClick={openCategoryDrawer} 
+            expanded={sidebarExpanded}
+            onToggle={toggleSidebar}
+          />
         }
       />
       
-      <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
+      <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout
           box1Content={
           <div style={{ padding: '16px 24px' }}>
@@ -488,6 +498,8 @@ function ArticlesPageContent() {
         onClose={() => setDrawerVisible(false)}
         onCategorySelect={handleCategorySelect}
         selectedCategoryId={selectedCategoryId}
+        expanded={sidebarExpanded}
+        onExpandedChange={setSidebarExpanded}
       />
 
       {/* 归档页面操作悬浮按钮组 */}

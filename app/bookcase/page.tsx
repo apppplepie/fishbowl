@@ -142,7 +142,7 @@ function BookcasePageContent() {
   // 从URL参数获取category
   const categoryFromUrl = searchParams.get('category');
 
-  // 目录抽屉状态
+  // 目录抽屉状态（移动端）
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   // 侧边栏刷新key，用于强制重新渲染侧边栏
@@ -151,8 +151,14 @@ function BookcasePageContent() {
   // 删除模式状态
   const [deleteMode, setDeleteMode] = useState(false);
 
-  // 切换目录抽屉的函数
+  // 侧边栏展开状态（桌面端）
+  const [sidebarExpanded, setSidebarExpanded] = useState(true); // 默认展开
+
+  // 切换目录抽屉的函数（移动端）
   const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);
+
+  // 切换侧边栏展开/收起（桌面端）
+  const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
 
   // 章节管理成功后的刷新函数
   const handleChapterManageSuccess = () => {
@@ -496,11 +502,15 @@ function BookcasePageContent() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          isMobile && <BookCategoryDrawerButton onClick={openCategoryDrawer} />
+          <BookCategoryDrawerButton 
+            onClick={openCategoryDrawer} 
+            expanded={sidebarExpanded}
+            onToggle={toggleSidebar}
+          />
         }
       />
 
-      <div style={{ marginLeft: isMobile ? 0 : '280px' }}>
+      <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout
           box1Content={
           <div style={{ padding: '16px 24px' }}>
@@ -630,6 +640,8 @@ function BookcasePageContent() {
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         selectedCategoryId={categoryFromUrl}
+        expanded={sidebarExpanded}
+        onExpandedChange={setSidebarExpanded}
         onCategorySelect={(categoryId) => {
           // 移动端点击分类后跳转
           if (categoryId) {
