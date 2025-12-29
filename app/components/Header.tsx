@@ -33,7 +33,9 @@ interface HeaderProps {
  */
 export default function Header({ isVisible = true, leftContent }: HeaderProps) {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState<number>(0);
+  const [windowWidth, setWindowWidth] = useState<number>(
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
   const { isLoggedIn, username, logout, login } = useAuth();
   const { isMobile } = useResponsive();
   const pathname = usePathname();
@@ -158,10 +160,11 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
           top: 0,
           left: 0,
           right: 0,
-          height: '100vh',
+          height: isVisible ? '45px' : '0',
           display: isVisible ? 'block' : 'none',
           zIndex: 10000,
           pointerEvents: 'none',
+          transition: 'height 0.3s ease',
         }}
       >
         {/* Header 固定在顶部 */}
@@ -175,6 +178,7 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
             padding: isMobile ? '0 12px' : '0 24px',
             zIndex: 10001,
             pointerEvents: 'auto',
+            width: '100%',
           }}
         >
           {/* 左侧 - 自定义内容 */}
@@ -194,6 +198,8 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
             alignItems: 'center',
             height: '100%',
             pointerEvents: 'auto',
+            width: 'auto',
+            maxWidth: 'calc(100% - 200px)', // 确保左右两侧有足够空间
           }}>
             <Menu
               mode="horizontal"
