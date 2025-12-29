@@ -37,14 +37,25 @@ a,
 [role="link"],
 [onclick],
 .cursor-pointer,
-.ant-btn,
-.ant-float-btn,
-.ant-float-btn-group {
+.ant-btn {
   touch-action: manipulation !important;
   -webkit-tap-highlight-color: transparent !important;
   user-select: none !important;
   -webkit-user-select: none !important;
   cursor: pointer;
+}
+
+/* FloatButton 特殊处理：使用 auto 允许立即响应点击，避免移动端需要点两次的问题 */
+.ant-float-btn,
+.ant-float-btn-group,
+.ant-float-btn-group .ant-float-btn {
+  touch-action: auto !important;
+  -webkit-tap-highlight-color: transparent !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: pointer;
+  /* 确保 FloatButton 在最上层，不被其他元素遮挡 */
+  z-index: 1000 !important;
 }
 
 /* 输入框允许文本选择 */
@@ -77,17 +88,26 @@ textarea,
   scrollbar-width: none;
 }
 
-/* 移动端特定优化（可选） */
+/* 移动端特定优化 */
 @media (max-width: 768px) {
-  /* 确保浮动按钮、Modal、Drawer 内按钮立即响应 */
+  /* 普通按钮保持 manipulation 以消除双击延迟 */
   .ant-btn,
-  .ant-float-btn,
-  .ant-float-btn-group,
   .ant-modal .ant-btn,
-  .ant-modal .ant-float-btn,
-  .ant-drawer .ant-btn,
-  .ant-drawer .ant-float-btn {
+  .ant-drawer .ant-btn {
     touch-action: manipulation !important;
     -webkit-tap-highlight-color: transparent !important;
   }
+  
+  /* FloatButton 在移动端使用 auto，确保点击立即响应 */
+  .ant-float-btn,
+  .ant-float-btn-group,
+  .ant-float-btn-group .ant-float-btn,
+  .ant-modal .ant-float-btn,
+  .ant-drawer .ant-float-btn {
+    touch-action: auto !important;
+    -webkit-tap-highlight-color: transparent !important;
+    /* 移动端确保 FloatButton 在最上层 */
+    z-index: 1000 !important;
+  }
 }
+
