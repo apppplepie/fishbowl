@@ -1,557 +1,252 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Card, Tag } from 'antd';
-import { formatRelativeTime } from '@/app/utils/timeFormat';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import type { PlaceholderBlock as PlaceholderBlockType } from '@/app/types/block';
 import PlaceholderDisplay from '@/app/components/blocks/PlaceholderDisplay';
 import { useResponsive } from '@/app/hooks/useResponsive';
 
-// 注入 CSS 动画
-if (typeof document !== 'undefined') {
-  const styleId = 'drawing-gallery-card-animations';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.innerHTML = `
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-}
-
 interface DrawingGalleryCardProps {
-  article: {
-    id: string;
-    title: string;
-    excerpt?: string;
-    author: string;
-    updated_at?: string;
-    updatedAt?: string;
-    published_at?: string;
-    publishedAt?: string;
-    created_at?: string;
-    createdAt?: string;
-    tags?: string[]; // 标签
-    likes?: number;
-    comments?: number;
-    blocks: Array<{
-      id: string;
-      type: string;
-      order: number;
-      parsedContent: any;
-    } | PlaceholderBlockType>;
-  };
-  onClick?: () => void;
-  onTitleClick?: () => void;
+  article: any;
+  onClick?: () => void; // 点击整个卡片
+  onTitleClick?: () => void; // 点击标题
+  style?: React.CSSProperties;
 }
 
-/**
- * 绘画图组卡片
- * 从文章的图片块中提取图片，按 order 降序显示（成图在前）
- */
-export default function DrawingGalleryCard({ article, onClick, onTitleClick }: DrawingGalleryCardProps) {
+// 极简风格的绘画图组卡片：
+// - 最大尺寸限制：max-width: 90vw, max-height: 90vh
+// - 图片等比放大（object-fit: contain）并居中显示
+// - 标题悬浮在图片上（左下），半透明背景，提高可读性
+// - 支持左右点击切换与触摸滑动
+
+export default function DrawingGalleryCard({ article, onClick, onTitleClick, style }: DrawingGalleryCardProps) {
   const { isMobile } = useResponsive();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set()); // 记录已加载的图片索引
-  const [failedImages, setFailedImages] = useState<Set<number>>(new Set()); // 记录加载失败的图片索引
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const hasSwipedRef = useRef(false); // 使用 ref 标记是否发生了滑动，避免状态更新延迟
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
+  const touchStartRef = useRef<number | null>(null);
+  const hasSwipedRef = useRef(false);
 
-  // 从文章块中提取所有图片块，按 order 升序排列（order 最小的在前）
   const images = useMemo(() => {
-    return article.blocks
-      .filter((block) => {
-        // 只包含图片块或原始类型为图片的占位块
-        if (block.type === 'image') {
-          return true;
-        }
+    return (article?.blocks || [])
+      .filter((block: any) => {
+        if (block.type === 'image') return true;
         if (block.type === 'placeholder') {
-          const placeholderBlock = block as PlaceholderBlockType;
-          return placeholderBlock.original_type === 'image';
+          const pb = block as PlaceholderBlockType;
+          return pb.original_type === 'image';
         }
         return false;
       })
-      .sort((a, b) => a.order - b.order) // 升序，order 最小的在最前
-      .map((block) => ({
+      .sort((a: any, b: any) => a.order - b.order)
+      .map((block: any) => ({
         id: block.id,
         type: block.type,
-        url: block.type === 'image' && block.parsedContent?.url ? block.parsedContent.url : null,
-        description: block.type === 'image' && block.parsedContent?.description ? block.parsedContent.description : null,
-        placeholderData: block.type === 'placeholder' ? block as PlaceholderBlockType : null,
+        url: block.type === 'image' ? block.parsedContent?.url ?? null : null,
+        placeholderData: block.type === 'placeholder' ? (block as PlaceholderBlockType) : null,
         order: block.order,
       }));
-  }, [article.blocks]);
+  }, [article]);
+
+  useEffect(() => {
+    if (images.length > 0 && currentIndex >= images.length) setCurrentIndex(0);
+  }, [images.length, currentIndex]);
 
   const currentImage = images[currentIndex];
 
-  // 最小滑动距离（像素）
-  const minSwipeDistance = 50;
-
-  // 确保currentIndex不会超出images数组范围
+  // 预加载相邻图
   useEffect(() => {
-    if (images.length > 0 && currentIndex >= images.length) {
-      setCurrentIndex(0);
-    }
-  }, [images.length, currentIndex]);
-
-  // 切换到下一张（循环）
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  };
-
-  // 切换到上一张（循环）
-  const handlePrevious = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  };
-
-  // 标记当前图片已加载
-  const handleImageLoad = () => {
-    setLoadedImages(prev => new Set(prev).add(currentIndex));
-    console.log('图片加载成功，索引:', currentIndex, 'URL:', currentImage?.url);
-  };
-
-  // 标记当前图片加载失败
-  const handleImageError = () => {
-    setFailedImages(prev => new Set(prev).add(currentIndex));
-    console.error('图片加载失败，索引:', currentIndex, 'URL:', currentImage?.url);
-  };
-
-  // 判断当前图片是否已加载
-  const isCurrentImageLoaded = loadedImages.has(currentIndex);
-  const isCurrentImageFailed = failedImages.has(currentIndex);
-
-  // 预加载相邻图片
-  useEffect(() => {
-    if (images.length <= 1) return;
-
-    const preloadImage = (index: number) => {
-      // 检查索引是否有效
-      if (index < 0 || index >= images.length) return;
-      if (loadedImages.has(index)) return;
-
-      const image = images[index];
-      // 检查image是否存在以及只预加载有效的图片 URL
-      if (image && image.type === 'image' && image.url) {
+    if (!images || images.length <= 1) return;
+    const preload = (idx: number) => {
+      if (idx < 0 || idx >= images.length) return;
+      if (loadedImages.has(idx) || failedImages.has(idx)) return;
+      const it = images[idx];
+      if (it?.type === 'image' && it.url) {
         const img = new Image();
-        img.src = image.url;
-        img.onload = () => {
-          setLoadedImages(prev => new Set(prev).add(index));
-        };
-        img.onerror = () => {
-          // 预加载失败时也记录，避免重复尝试
-          setFailedImages(prev => new Set(prev).add(index));
-        };
+        img.src = it.url;
+        img.onload = () => setLoadedImages(prev => new Set(prev).add(idx));
+        img.onerror = () => setFailedImages(prev => new Set(prev).add(idx));
       }
     };
+    preload((currentIndex + 1) % images.length);
+    preload((currentIndex - 1 + images.length) % images.length);
+  }, [currentIndex, images, loadedImages, failedImages]);
 
-    // 预加载下一张
-    const nextIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
-    preloadImage(nextIndex);
+  const minSwipeDistance = 50;
 
-    // 预加载上一张
-    const prevIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
-    preloadImage(prevIndex);
-  }, [currentIndex, images, loadedImages]);
-
-  // 处理图片区域点击（左侧1/3上一张，右侧1/3下一张）
-  const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // 如果刚刚发生了滑动，不触发点击事件
-    if (hasSwipedRef.current) {
-      e.stopPropagation();
-      e.preventDefault();
-      return;
-    }
-    
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+  const handleTapOrClick = (e: React.MouseEvent) => {
+    if (hasSwipedRef.current) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
     const leftThird = rect.width / 3;
     const rightThird = rect.width * 2 / 3;
-
-    if (clickX < leftThird) {
-      handlePrevious(e); // 点击左侧显示上一张
-    } else if (clickX > rightThird) {
-      handleNext(e); // 点击右侧显示下一张
-    }
-    // 中间1/3不触发切换
+    if (x < leftThird) setCurrentIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
+    else if (x > rightThird) setCurrentIndex(prev => (prev === images.length - 1 ? 0 : prev + 1));
+    // 中间区域不触发翻页，供外部 onClick 使用
   };
 
-  // 触摸开始
   const onTouchStart = (e: React.TouchEvent) => {
-    const startX = e.targetTouches[0].clientX;
-    setTouchEnd(null);
-    setTouchStart(startX);
-    hasSwipedRef.current = false; // 重置滑动标记
+    touchStartRef.current = e.touches[0].clientX;
+    hasSwipedRef.current = false;
   };
-
-  // 触摸移动
   const onTouchMove = (e: React.TouchEvent) => {
-    const currentX = e.targetTouches[0].clientX;
-    setTouchEnd(currentX);
-    // 如果移动距离超过阈值，标记为滑动
-    if (touchStart !== null && Math.abs(touchStart - currentX) > 10) {
-      hasSwipedRef.current = true;
+    if (touchStartRef.current == null) return;
+    const dx = e.touches[0].clientX - touchStartRef.current;
+    if (Math.abs(dx) > 10) hasSwipedRef.current = true;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartRef.current == null) return;
+    const endX = e.changedTouches[0].clientX;
+    const distance = touchStartRef.current - endX;
+    if (distance > minSwipeDistance) {
+      // left swipe (show prev)
+      setCurrentIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
+    } else if (distance < -minSwipeDistance) {
+      // right swipe (show next)
+      setCurrentIndex(prev => (prev === images.length - 1 ? 0 : prev + 1));
     }
+    touchStartRef.current = null;
+    setTimeout(() => { hasSwipedRef.current = false; }, 250);
   };
 
-  // 触摸结束
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) {
-      setTouchStart(null);
-      setTouchEnd(null);
-      hasSwipedRef.current = false;
-      return;
-    }
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
+  const markLoaded = () => setLoadedImages(prev => new Set(prev).add(currentIndex));
+  const markFailed = () => setFailedImages(prev => new Set(prev).add(currentIndex));
 
-    if (isLeftSwipe) {
-      // 左滑：显示上一张
-      hasSwipedRef.current = true; // 标记为滑动，防止触发 click
-      handlePrevious({ stopPropagation: () => {} } as React.MouseEvent);
-    } else if (isRightSwipe) {
-      // 右滑：显示下一张
-      hasSwipedRef.current = true; // 标记为滑动，防止触发 click
-      handleNext({ stopPropagation: () => {} } as React.MouseEvent);
-    }
-
-    // 重置触摸状态
-    setTouchStart(null);
-    setTouchEnd(null);
-    // 延迟重置滑动标记，防止触发 click 事件
-    setTimeout(() => {
-      hasSwipedRef.current = false;
-    }, 300);
-  };
-
-  if (!currentImage) return null;
+  if (!currentImage) {
+    return (
+      <div style={{
+        width: '100%',
+        maxWidth: '90vw',
+        maxHeight: '90vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 12,
+        overflow: 'hidden',
+        background: '#f6f6f6',
+        ...style,
+      }} onClick={onClick}>
+        <div style={{ color: '#888' }}>没有可显示的图片</div>
+      </div>
+    );
+  }
 
   return (
-    <Card
-      hoverable
-      style={{
-        borderRadius: '0',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        transition: 'all 0.3s ease',
-        border: 'none',
-        background: 'transparent',
-      }}
-      styles={{ body: { padding: 0 } }}
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-        e.currentTarget.style.transform = 'translateY(-4px)';
+      style={{
+        width: '100%',
+        maxWidth: '90vw',
+        maxHeight: '90vh',
+        height: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        borderRadius: 12,
+        overflow: 'hidden',
+        background: 'transparent',
+        touchAction: 'pan-y', // 允许垂直滚动，但减少横向触摸冲突
+        ...style,
       }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
-      {/* 图片区域 - 点击左右切换 + 触摸滑动 */}
-      <div 
-        style={{ 
-          position: 'relative',
+      {/* 图片承载区，居中并等比最大化 */}
+      <div
+        onClick={handleTapOrClick}
+        style={{
+          width: '100%',
+          height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-          minHeight: '200px',
+          position: 'relative',
         }}
-        onClick={handleImageClick}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
       >
-        {currentImage.type === 'placeholder' ? (
-          <PlaceholderDisplay
-            block={currentImage.placeholderData!}
-            style={{
-              maxWidth: '100%',
-              maxHeight: 'calc(100vh - 111px - 200px)',
-              width: 'auto',
-              height: 'auto',
-            }}
-          />
-        ) : currentImage.url ? (
-          <>
-            {!isCurrentImageLoaded && !isCurrentImageFailed && (
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1,
-              }}>
-                <div style={{
-                  color: 'white',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}>
-                  <div className="loading-spinner" style={{
-                    width: '20px',
-                    height: '20px',
-                    border: '3px solid rgba(255,255,255,0.3)',
-                    borderTopColor: 'white',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite',
-                  }} />
-                  加载中...
-                </div>
-              </div>
-            )}
-            {isCurrentImageFailed && (
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1,
-                color: 'white',
-                padding: '20px',
-              }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>😢</div>
-                <div style={{ fontSize: '16px', fontWeight: 500 }}>图片加载失败</div>
-                <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.8, textAlign: 'center', wordBreak: 'break-all' }}>
-                  {currentImage.url}
-                </div>
-              </div>
-            )}
-            <img
-              key={currentImage.id}
-              src={currentImage.url}
-              alt="图片"
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              style={{
-                maxWidth: '100%',
-                maxHeight: 'calc(100vh - 111px - 200px)', // 减去PageLayout黑框+header(111px) 和卡片信息区域(约200px)
-                width: 'auto',
-                height: 'auto',
-                display: 'block',
-                objectFit: 'contain',
-                opacity: isCurrentImageLoaded ? 1 : 0,
-                transition: 'opacity 0.3s ease',
-              }}
-            />
-          </>
-        ) : (
-          <div
-            style={{
-              maxWidth: '100%',
-              maxHeight: 'calc(100vh - 111px - 200px)',
-              width: 'auto',
-              height: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#999',
-              fontSize: '16px',
-            }}
-          >
-            图片URL为空
+        {/* 加载/错误覆盖层 */}
+        {!loadedImages.has(currentIndex) && !failedImages.has(currentIndex) && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 2, pointerEvents: 'none'
+          }}>
+            <div style={{
+              padding: '6px 10px', borderRadius: 9999, background: 'rgba(0,0,0,0.35)', color: '#fff', fontSize: 13
+            }}>加载中…</div>
           </div>
         )}
-        
-        {/* 图片指示点 - 极简风格 */}
-        {images.length > 1 && (
-          <div style={{
+
+        {failedImages.has(currentIndex) ? (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+            <div style={{ color: '#fff', background: 'linear-gradient(90deg,#ff7a7a,#ff5a9b)', padding: 12, borderRadius: 8 }}>
+              图片加载失败
+            </div>
+          </div>
+        ) : null}
+
+        {/* 图片 或 占位块 */}
+        {currentImage.type === 'placeholder' && currentImage.placeholderData ? (
+          <div style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PlaceholderDisplay block={currentImage.placeholderData} style={{ maxWidth: '100%', maxHeight: '100%' }} />
+          </div>
+        ) : currentImage.url ? (
+          <img
+            src={currentImage.url}
+            alt={article.title || 'image'}
+            onLoad={markLoaded}
+            onError={markFailed}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              display: 'block',
+              userSelect: 'none',
+              MozUserSelect: 'none',
+              ...(typeof document !== 'undefined' && { WebkitUserDrag: 'none' }),
+              transition: 'transform 0.28s ease, opacity 0.28s ease',
+              opacity: loadedImages.has(currentIndex) ? 1 : 0.001,
+            } as React.CSSProperties}
+            draggable={false}
+          />
+        ) : (
+          <div style={{ color: '#888' }}>图片不可用</div>
+        )}
+
+        {/* 标题浮层（左下） */}
+        <div
+          onClick={(e) => { e.stopPropagation(); onTitleClick?.(); }}
+          style={{
             position: 'absolute',
-            bottom: '16px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            gap: '8px',
-          }}>
-            {images.map((_, index) => (
-              <div
-                key={index}
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: index === currentIndex 
-                    ? '#ffffff'
-                    : 'rgba(255, 255, 255, 0.4)',
-                  transition: 'background 0.2s ease',
-                  cursor: 'pointer',
-                  boxShadow: index === currentIndex 
-                    ? '0 2px 4px rgba(0,0,0,0.2)' 
-                    : 'none',
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCurrentIndex(index);
-                }}
-              />
+            left: 12,
+            bottom: 12,
+            zIndex: 3,
+            maxWidth: 'calc(100% - 24px)',
+            padding: '8px 12px',
+            borderRadius: 10,
+            background: 'rgba(0,0,0,0.45)',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: isMobile ? 14 : 16,
+            lineHeight: 1.2,
+            backdropFilter: 'blur(6px)',
+            cursor: 'pointer',
+          }}
+        >
+          {article.title}
+        </div>
+
+        {/* 极简指示点（可选） */}
+        {images.length > 1 && (
+          <div style={{ position: 'absolute', bottom: 12, right: 12, zIndex: 3, display: 'flex', gap: 8 }}>
+            {images.map((_: any, idx: number) => (
+              <div key={idx} onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
+                style={{ width: 8, height: 8, borderRadius: 9999, background: idx === currentIndex ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.45)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
             ))}
           </div>
         )}
       </div>
-
-      {/* 信息区域 - 点击进入文章 */}
-      <div 
-        style={{ 
-          padding: '20px',
-          background: 'linear-gradient(to bottom, #ffffff 0%, #fafafa 100%)',
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          onTitleClick?.();
-        }}
-      >
-        <h4 style={{ 
-          margin: '0 0 10px 0',
-          fontSize: '18px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          color: '#1a1a1a',
-          lineHeight: '1.4',
-          transition: 'color 0.2s ease',
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#667eea'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#1a1a1a'}
-        >
-          {article.title}
-        </h4>
-
-        {/* 标签 */}
-        {/* {article.tags && article.tags.length > 0 && (
-          <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {article.tags.slice(0, 5).map((tag: string, index: number) => {
-              const colors = ['magenta', 'volcano', 'orange', 'gold', 'purple', 'geekblue', 'blue', 'cyan', 'green', 'lime'];
-              const color = colors[index % colors.length];
-              return (
-                <Tag key={index} color={color}>
-                  {tag}
-                </Tag>
-              );
-            })}
-            {article.tags.length > 5 && (
-              <Tag color="default">
-                +{article.tags.length - 5}
-              </Tag>
-            )}
-          </div>
-        )} */}
-
-        {article.excerpt && (
-          <p style={{
-            margin: '0 0 14px 0',
-            color: '#666',
-            fontSize: '14px',
-            lineHeight: '1.6',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            cursor: 'pointer',
-          }}>
-            {article.excerpt}
-          </p>
-        )}
-        
-        {/* 底部信息 */}
-        {/* <div style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: isMobile ? 'flex-start' : 'space-between',
-          alignItems: isMobile ? 'flex-start' : 'center',
-          gap: isMobile ? '12px' : '0',
-          fontSize: isMobile ? '12px' : '13px',
-          color: '#999',
-          paddingTop: '12px',
-          borderTop: '1px solid #f0f0f0',
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            gap: isMobile ? '8px' : '12px', 
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: isMobile ? '3px 6px' : '4px 8px',
-              background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-              borderRadius: '6px',
-              color: '#667eea',
-              fontWeight: 500,
-              fontSize: isMobile ? '12px' : '13px',
-            }}>
-              <span style={{ fontSize: isMobile ? '14px' : '16px' }}>👤</span>
-              {article.author}
-            </div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: isMobile ? '3px 6px' : '4px 8px',
-              background: 'linear-gradient(135deg, #f093fb15 0%, #f5576c15 100%)',
-              borderRadius: '6px',
-              color: '#f5576c',
-              fontWeight: 500,
-              fontSize: isMobile ? '12px' : '13px',
-            }}>
-              <span style={{ fontSize: isMobile ? '14px' : '16px' }}>🎨</span>
-              {images.length} 张
-            </div>
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: isMobile ? '8px' : '12px',
-            flexWrap: 'wrap',
-          }}>
-            {(article.likes !== undefined && article.likes !== null) && (
-              <span style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px',
-                fontSize: isMobile ? '12px' : '13px',
-              }}>
-                ❤️ {article.likes}
-              </span>
-            )}
-            <span style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: '#999',
-              fontSize: isMobile ? '12px' : '13px',
-            }}>
-              <span style={{ fontSize: isMobile ? '12px' : '14px' }}>📝</span>
-              {formatRelativeTime(article.updatedAt || article.updated_at || article.publishedAt || article.published_at || article.createdAt || article.created_at)}
-            </span>
-          </div>
-        </div> */}
-      </div>
-    </Card>
+    </div>
   );
 }
 
