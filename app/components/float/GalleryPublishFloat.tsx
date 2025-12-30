@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, Form, Input, Upload, message, Button, Segmented } from 'antd';
 import { PlusOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
@@ -29,6 +29,17 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
   if (!canModerate()) {
     return null;
   }
+
+  // 检测触摸设备
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    setIsTouch(Boolean(touch));
+  }, []);
+
+  // 根据设备类型决定是否显示tooltip
+  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
 
   // 处理图片上传
   const handleUploadChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
@@ -170,7 +181,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         type="primary"
         style={{ right: 24, bottom: 24 }}
         onClick={() => setOpen(true)}
-        tooltip={{ title: "发布到照片墙", placement: "left" }}
+        tooltip={tooltipProp("发布到照片墙")}
       />
 
       <Modal
@@ -210,7 +221,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
 
           <Form.Item
             label="访问等级"
-            tooltip={{ title: "设置作品的访问权限，所有图片和文字都将使用此等级", placement: "left" }}
+            tooltip={tooltipProp("设置作品的访问权限，所有图片和文字都将使用此等级")}
           >
             <div style={{
               padding: '8px',
@@ -309,7 +320,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           <Form.Item
             name="category_id"
             label="分类"
-            tooltip={{ title: "选择绘画作品的子分类，未选择时默认发布到【绘画作品】", placement: "left" }}
+            tooltip={tooltipProp("选择绘画作品的子分类，未选择时默认发布到【绘画作品】")}
           >
             <CategoryTreeSelect 
               placeholder="选择分类（可选，默认：绘画作品）" 
@@ -320,7 +331,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           <Form.Item
             name="tags"
             label="标签"
-            tooltip={{ title: "添加标签可以帮助读者更好地找到你的作品", placement: "left" }}
+            tooltip={tooltipProp("添加标签可以帮助读者更好地找到你的作品")}
           >
             <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
           </Form.Item>

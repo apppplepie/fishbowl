@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, Input, message, Button, Spin } from 'antd';
 import { PlusOutlined, FileTextOutlined, DeleteOutlined, BookOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -23,6 +23,17 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
   if (!canModerate()) {
     return null;
   }
+
+  // 检测触摸设备
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    setIsTouch(Boolean(touch));
+  }, []);
+
+  // 根据设备类型决定是否显示tooltip
+  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
 
   // 删除书籍相关状态
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -159,12 +170,12 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
             bottom: 24,
           }}
           icon={<PlusOutlined />}
-          tooltip={{ title: "操作菜单", placement: "left" }}
+          tooltip={tooltipProp("操作菜单")}
         >
           {/* 发布章节按钮 */}
           <FloatButton
             icon={<FileTextOutlined />}
-            tooltip={{ title: "发布章节", placement: "left" }}
+            tooltip={tooltipProp("发布章节")}
             onClick={() => router.push(`/publish-chapter?category=${categoryFromUrl}`)}
           />
         </FloatButton.Group>
@@ -277,12 +288,12 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
             bottom: 24,
           }}
           icon={<BookOutlined />}
-          tooltip={{ title: "操作菜单", placement: "left" }}
+          tooltip={tooltipProp("操作菜单")}
         >
           {/* 发布新书按钮 */}
           <FloatButton
             icon={<BookOutlined />}
-            tooltip={{ title: "发布新书", placement: "left" }}
+            tooltip={tooltipProp("发布新书")}
             onClick={() => router.push('/publish-book')}
           />
 
@@ -293,7 +304,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
           {isAdmin && (
             <FloatButton
               icon={<DeleteOutlined />}
-              tooltip={{ title: "删除书籍", placement: "left" }}
+              tooltip={tooltipProp("删除书籍")}
               onClick={handleDeleteBookClick}
               style={{ backgroundColor: '#ff4d4f', color: 'white' }}
             />

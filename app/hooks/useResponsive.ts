@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useLayoutEffect } from 'react';
 
 /**
  * 响应式 Hook
@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 export function useResponsive(breakpoint: number = 768) {
   const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < breakpoint);
     };

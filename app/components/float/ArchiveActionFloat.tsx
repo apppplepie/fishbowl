@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, Form, Input, Select, message, Button } from 'antd';
 import { PlusOutlined, EditOutlined, BookOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
@@ -28,6 +28,17 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
   if (!canModerate()) {
     return null;
   }
+
+  // 检测触摸设备
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    setIsTouch(Boolean(touch));
+  }, []);
+
+  // 根据设备类型决定是否显示tooltip
+  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
 
   // 生成日期标题（精确到分钟）
   const generateDateTitle = () => {
@@ -127,25 +138,25 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
         type="primary"
         style={{ right: 24, bottom: 24 }}
         icon={<PlusOutlined />}
-        tooltip={{ title: "操作菜单", placement: "left" }}
+        tooltip={tooltipProp("操作菜单")}
       >
         {/* 写文章按钮 */}
         <FloatButton
           icon={<FileTextOutlined />}
-          tooltip={{ title: "写文章", placement: "left" }}
+          tooltip={tooltipProp("写文章")}
           onClick={handlePublishArticle}
         />
 
         {/* 写日志按钮 */}
         <FloatButton
           icon={<EditOutlined />}
-          tooltip={{ title: "写日志", placement: "left" }}
+          tooltip={tooltipProp("写日志")}
           onClick={() => setDiaryModalOpen(true)}
         />
 
         {/* 返回顶部按钮 */}
         <FloatButton.BackTop
-          tooltip={{ title: "返回顶部", placement: "left" }}
+          tooltip={tooltipProp("返回顶部")}
           visibilityHeight={100}
         />
       </FloatButton.Group>

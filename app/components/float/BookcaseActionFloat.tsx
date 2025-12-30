@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FloatButton, message } from 'antd';
 import { PlusOutlined, BookOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -39,6 +39,17 @@ export default function BookcaseActionFloat({
 
   // 检查是否为管理员（删除书籍功能仅管理员可用）
   const isAdmin = user?.role === 'admin';
+
+  // 检测触摸设备
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    setIsTouch(Boolean(touch));
+  }, []);
+
+  // 根据设备类型决定是否显示tooltip
+  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
 
   // ========== 发布功能 ==========
   // 跳转到发布新书页面
@@ -80,12 +91,12 @@ export default function BookcaseActionFloat({
           type="primary"
           style={{ right: 24, bottom: 24 }}
           icon={<PlusOutlined />}
-          tooltip={{ title: "操作菜单", placement: "left" }}
+          tooltip={tooltipProp("操作菜单")}
         >
           {/* 发布章节按钮 */}
           <FloatButton
             icon={<FileTextOutlined />}
-            tooltip={{ title: "发布章节", placement: "left" }}
+            tooltip={tooltipProp("发布章节")}
             onClick={handlePublishChapter}
           />
 
@@ -107,12 +118,12 @@ export default function BookcaseActionFloat({
           type="primary"
           style={{ right: 24, bottom: 24 }}
           icon={<BookOutlined />}
-          tooltip={{ title: "操作菜单", placement: "left" }}
+          tooltip={tooltipProp("操作菜单")}
         >
           {/* 发布新书按钮 */}
           <FloatButton
             icon={<BookOutlined />}
-            tooltip={{ title: "发布新书", placement: "left" }}
+            tooltip={tooltipProp("发布新书")}
             onClick={handlePublishBook}
           />
 
@@ -127,11 +138,11 @@ export default function BookcaseActionFloat({
           {isAdmin && (
             <FloatButton
               icon={<DeleteOutlined />}
-              tooltip={{ title: deleteMode ? "退出删除模式" : "删除书籍", placement: "left" }}
+              tooltip={tooltipProp(deleteMode ? "退出删除模式" : "删除书籍")}
               onClick={handleDeleteBookClick}
-              style={{ 
-                backgroundColor: deleteMode ? '#52c41a' : '#ff4d4f', 
-                color: 'white' 
+              style={{
+                backgroundColor: deleteMode ? '#52c41a' : '#ff4d4f',
+                color: 'white'
               }}
             />
           )}

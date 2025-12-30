@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal } from 'antd';
 import { 
   EditOutlined, 
@@ -67,6 +67,17 @@ export default function ArticleEditFloat({
     return null;
   }
 
+  // 检测触摸设备
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    setIsTouch(Boolean(touch));
+  }, []);
+
+  // 根据设备类型决定是否显示tooltip
+  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
+
   // 路由判断
   const isBookPage = pathname?.startsWith('/book/');
   const isArticlePage = pathname?.startsWith('/article/');
@@ -126,18 +137,18 @@ export default function ArticleEditFloat({
           trigger="click"
           style={{ insetInlineEnd: 24 }}
           icon={<MenuOutlined />}
-          tooltip={{ title: '操作', placement: 'left' }}
+          tooltip={tooltipProp('操作')}
           type="primary"
         >
           <FloatButton
             icon={<EditOutlined />}
-            tooltip={{ title: '编辑文章', placement: 'left' }}
+            tooltip={tooltipProp('编辑文章')}
             onClick={onEdit}
           />
           {isBookPage && (
             <FloatButton
               icon={<FileTextOutlined />}
-              tooltip={{ title: '发布章节', placement: 'left' }}
+              tooltip={tooltipProp('发布章节')}
               onClick={handlePublishChapter}
             />
           )}
@@ -151,14 +162,14 @@ export default function ArticleEditFloat({
           {isArticlePage && (
             <FloatButton
               icon={<FileTextOutlined />}
-              tooltip={{ title: '写文章', placement: 'left' }}
+              tooltip={tooltipProp('写文章')}
               onClick={handlePublishArticle}
             />
           )}
           {onDelete && (
             <FloatButton
               icon={<DeleteOutlined />}
-              tooltip={{ title: '删除文章', placement: 'left' }}
+              tooltip={tooltipProp('删除文章')}
               onClick={handleDelete}
             />
           )}
@@ -169,7 +180,7 @@ export default function ArticleEditFloat({
     return (
       <FloatButton
         icon={<EditOutlined />}
-        tooltip={{ title: '编辑文章', placement: 'left' }}
+        tooltip={tooltipProp('编辑文章')}
         type="primary"
         style={{ insetInlineEnd: 24 }}
         onClick={onEdit}
@@ -184,22 +195,22 @@ export default function ArticleEditFloat({
         trigger="click"
         style={{ insetInlineEnd: 24 }}
         icon={<EditOutlined />}
-        tooltip={{ title: '编辑中', placement: 'left' }}
+        tooltip={tooltipProp('编辑中')}
         type="primary"
       >
         <FloatButton
           icon={<SaveOutlined />}
-          tooltip={{ title: '保存', placement: 'left' }}
+          tooltip={tooltipProp('保存')}
           onClick={onSave}
         />
         <FloatButton
           icon={<EyeOutlined />}
-          tooltip={{ title: '预览', placement: 'left' }}
+          tooltip={tooltipProp('预览')}
           onClick={onPreview}
         />
         <FloatButton
           icon={<CloseOutlined />}
-          tooltip={{ title: '取消', placement: 'left' }}
+          tooltip={tooltipProp('取消')}
           onClick={onCancel}
         />
       </FloatButton.Group>
@@ -213,17 +224,17 @@ export default function ArticleEditFloat({
         trigger="click"
         style={{ insetInlineEnd: 24 }}
         icon={<EyeOutlined />}
-        tooltip={{ title: '预览中', placement: 'left' }}
+        tooltip={tooltipProp('预览中')}
         type="primary"
       >
         <FloatButton
           icon={<SaveOutlined />}
-          tooltip={{ title: '保存', placement: 'left' }}
+          tooltip={tooltipProp('保存')}
           onClick={onSave}
         />
         <FloatButton
           icon={<EditOutlined />}
-          tooltip={{ title: '继续编辑', placement: 'left' }}
+          tooltip={tooltipProp('继续编辑')}
           onClick={() => onCancel()} // 返回编辑模式
         />
       </FloatButton.Group>

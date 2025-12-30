@@ -445,6 +445,17 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     return null;
   }
 
+  // 检测触摸设备
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    setIsTouch(Boolean(touch));
+  }, []);
+
+  // 根据设备类型决定是否显示tooltip
+  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
+
   // 检测是否为移动设备
   const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
@@ -876,7 +887,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
 
       <FloatButton
         icon={<UnorderedListOutlined />}
-        tooltip={{ title: "章节管理", placement: "left" }}
+        tooltip={tooltipProp("章节管理")}
         onClick={(e) => { e?.stopPropagation(); showModal(); }}
       />
 

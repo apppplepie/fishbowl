@@ -216,6 +216,7 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
               }}
               theme="dark"
               className="header-nav-menu"
+              suppressHydrationWarning={true}
             />
           </div>
 

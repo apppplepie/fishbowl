@@ -2,7 +2,7 @@
 
 // Force recompile - updated import structure
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FloatButton, message, Modal } from 'antd';
 import {
   PlusOutlined,
@@ -60,6 +60,17 @@ export default function FloatingActions({
   if (!canModerate()) {
     return null;
   }
+
+  // 检测触摸设备
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    setIsTouch(Boolean(touch));
+  }, []);
+
+  // 根据设备类型决定是否显示tooltip
+  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
 
   const validateBeforePreview = (): boolean => {
     const values = form.getFieldsValue();
@@ -160,12 +171,12 @@ export default function FloatingActions({
         bottom: position?.bottom ?? 24
       }}
       className={className}
-      tooltip={{ title: '操作', placement: 'left' }}
+      tooltip={tooltipProp('操作')}
       type="primary"
     >
       <FloatButton
         icon={<CheckOutlined />}
-        tooltip={{ title: '发布文章', placement: 'left' }}
+        tooltip={tooltipProp('发布文章')}
         onClick={onPublish}
       />
       {/* {blocks.length > 0 ? (
@@ -183,13 +194,13 @@ export default function FloatingActions({
       )} */}
       <FloatButton
         icon={<EyeOutlined />}
-        tooltip={{ title: isPreviewMode ? '退出预览' : '预览', placement: 'left' }}
+        tooltip={tooltipProp(isPreviewMode ? '退出预览' : '预览')}
         type={isPreviewMode ? 'primary' : 'default'}
         onClick={handlePreviewToggle}
       />
       <FloatButton
         icon={<DeleteOutlined />}
-        tooltip={{ title: '退出页面', placement: 'left' }}
+        tooltip={tooltipProp('退出页面')}
         onClick={handleExit}
         style={{ backgroundColor: '#ff4d4f' }}
       />
