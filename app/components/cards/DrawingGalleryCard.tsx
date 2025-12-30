@@ -92,6 +92,13 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
   // 最小滑动距离（像素）
   const minSwipeDistance = 50;
 
+  // 确保currentIndex不会超出images数组范围
+  useEffect(() => {
+    if (images.length > 0 && currentIndex >= images.length) {
+      setCurrentIndex(0);
+    }
+  }, [images.length, currentIndex]);
+
   // 切换到下一张（循环）
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -125,11 +132,13 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
     if (images.length <= 1) return;
 
     const preloadImage = (index: number) => {
+      // 检查索引是否有效
+      if (index < 0 || index >= images.length) return;
       if (loadedImages.has(index)) return;
-      
+
       const image = images[index];
-      // 只预加载有效的图片 URL，跳过占位块和空 URL
-      if (image.type === 'image' && image.url) {
+      // 检查image是否存在以及只预加载有效的图片 URL
+      if (image && image.type === 'image' && image.url) {
         const img = new Image();
         img.src = image.url;
         img.onload = () => {
@@ -229,13 +238,14 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
   return (
     <Card
       hoverable
-      style={{ 
+      style={{
         borderRadius: '0',
         overflow: 'hidden',
         cursor: 'pointer',
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         transition: 'all 0.3s ease',
         border: 'none',
+        background: 'transparent',
       }}
       styles={{ body: { padding: 0 } }}
       onClick={onClick}
@@ -430,7 +440,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
         </h4>
 
         {/* 标签 */}
-        {article.tags && article.tags.length > 0 && (
+        {/* {article.tags && article.tags.length > 0 && (
           <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {article.tags.slice(0, 5).map((tag: string, index: number) => {
               const colors = ['magenta', 'volcano', 'orange', 'gold', 'purple', 'geekblue', 'blue', 'cyan', 'green', 'lime'];
@@ -447,7 +457,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
               </Tag>
             )}
           </div>
-        )}
+        )} */}
 
         {article.excerpt && (
           <p style={{
@@ -466,7 +476,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
         )}
         
         {/* 底部信息 */}
-        <div style={{
+        {/* <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           justifyContent: isMobile ? 'flex-start' : 'space-between',
@@ -539,7 +549,7 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick }: D
               {formatRelativeTime(article.updatedAt || article.updated_at || article.publishedAt || article.published_at || article.createdAt || article.created_at)}
             </span>
           </div>
-        </div>
+        </div> */}
       </div>
     </Card>
   );

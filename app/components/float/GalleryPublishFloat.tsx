@@ -60,82 +60,84 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
       message.error('请至少上传一张图片！');
       return;
     }
-
+  
     setLoading(true);
-
+  
     try {
-      // 上传图片到服务器
       const imageUrls: string[] = [];
-      
-      // 获取 Token（提前获取，避免在循环中重复获取）
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      
       if (!token) {
         message.error('请先登录');
         setLoading(false);
         return;
       }
-
+  
+      // 总体进度提示
+      message.loading({ content: `正在上传图片 0/${fileList.length}`, key: 'gallery_upload', duration: 0 });
+  
+      // helper: update a file's percent in fileList so AntD Upload shows progress
+      const updateFileProgress = (idx: number, percent: number, status?: UploadFile['status']) => {
+        setFileList(prev => {
+          const clone = [...prev];
+          const f = { ...(clone[idx] || {}) } as UploadFile;
+          f.percent = percent;
+          if (status) f.status = status;
+          clone[idx] = f;
+          return clone;
+        });
+      };
+  
+      // 逐个上传（简单可靠）。若要并发，可改为并发池（例如 3 个并发）
       for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
-        if (file.originFileObj) {
-          message.loading(`上传图片 ${i + 1}/${fileList.length}...`, 0);
-          
-          // 创建 FormData
-          const formData = new FormData();
-          formData.append('file', file.originFileObj);
-
-          // 上传到服务器
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-            body: formData,
-          });
-
-          const uploadData = await uploadResponse.json();
-
-          if (uploadData.success) {
-            imageUrls.push(uploadData.url);
-            console.log(`图片 ${i + 1} 上传成功:`, uploadData.url);
-          } else {
-            throw new Error(uploadData.error || '上传失败');
+        const fileItem = fileList[i];
+        if (!fileItem?.originFileObj) {
+          continue;
+        }
+  
+        // 标记开始上传（UI）
+        updateFileProgress(i, 0, 'uploading');
+        message.loading({ content: `上传图片 ${i + 1}/${fileList.length}...`, key: 'gallery_upload', duration: 0 });
+  
+        // 执行上传（会在回调中更新进度）
+        const result = await uploadFileWithProgress(
+          fileItem.originFileObj as File,
+          token,
+          (percent: number) => {
+            updateFileProgress(i, percent, 'uploading');
           }
+        );
+  
+        if (result && result.success) {
+          imageUrls.push(result.url!);
+          updateFileProgress(i, 100, 'done');
+        } else {
+          // 上传失败：标记并抛错，退出（也可以选择跳过继续上传其他图片）
+          updateFileProgress(i, 0, 'error');
+          throw new Error(result.error || '上传失败');
         }
       }
-
-      message.destroy(); // 清除加载提示
-      console.log('总共上传了', imageUrls.length, '张图片');
-
-      // 构建文章块（第一个是文字块，后面是图片块）
+  
+      message.success({ content: `上传完成，共 ${imageUrls.length} 张`, key: 'gallery_upload' });
+  
+      // 构造 blocks (保留你原来的逻辑)
       const blocks: any[] = [];
-      
-      // 如果有描述，创建文字块放在第一个
       if (values.description) {
         blocks.push({
           type: 'text',
           content: values.description,
-          access_level: accessLevel, // 使用选中的访问等级
+          access_level: accessLevel,
         });
       }
-
-      // 添加图片块
-      imageUrls.forEach((url, index) => {
+      imageUrls.forEach((url) => {
         blocks.push({
           type: 'image',
           imageUrl: url,
           description: '',
-          access_level: accessLevel, // 使用选中的访问等级
+          access_level: accessLevel,
         });
-        console.log(`图片块 ${index + 1} 添加成功，URL:`, url);
       });
-
-      console.log('构建的 blocks:', blocks.length, '个');
-
-      // Token 已经在上面获取过了，这里直接使用
-
-      // 调用文章 API 创建绘画类型文章
+  
+      // 创建文章（原来的 API 调用）
       const response = await fetch('/api/articles', {
         method: 'POST',
         headers: {
@@ -145,17 +147,16 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         body: JSON.stringify({
           title: values.title,
           excerpt: values.description || '一组绘画作品',
-          blocks: blocks,
+          blocks,
           tags: values.tags || [],
           status: 'published',
-          type: 'drawing', // 明确指定为绘画类型
-          category_id: values.category_id || 'cat_drawing', // 未选择时默认发到绘画作品分类
-          max_access_level: accessLevel, // 使用选中的访问等级
+          type: 'drawing',
+          category_id: values.category_id || 'cat_drawing',
+          max_access_level: accessLevel,
         }),
       });
-
+  
       const data = await response.json();
-
       if (data.success) {
         message.success('发布成功！');
         form.resetFields();
@@ -167,12 +168,53 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
       }
     } catch (error: any) {
       console.error('发布失败:', error);
-      message.destroy(); // 清除加载提示
-      message.error('发布失败: ' + error.message);
+      message.destroy();
+      message.error('发布失败: ' + (error?.message || String(error)));
     } finally {
       setLoading(false);
     }
   };
+  
+
+  // 放在组件内部（handleSubmit 同级）
+function uploadFileWithProgress(file: File, token: string | null, onProgress: (p: number) => void) {
+  return new Promise<{ success: boolean; url?: string; error?: any }>((resolve) => {
+    const xhr = new XMLHttpRequest();
+    const form = new FormData();
+    form.append('file', file);
+
+    xhr.open('POST', '/api/upload', true);
+
+    if (token) {
+      // 不要设置 Content-Type 手动值，会破坏 multipart 边界
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+
+    xhr.upload.onprogress = (ev: ProgressEvent) => {
+      if (ev.lengthComputable) {
+        const percent = Math.round((ev.loaded / ev.total) * 100);
+        onProgress(percent);
+      }
+    };
+
+    xhr.onload = () => {
+      try {
+        const resp = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(resp);
+        } else {
+          resolve({ success: false, error: resp || xhr.statusText || 'upload error' });
+        }
+      } catch (e) {
+        resolve({ success: false, error: 'parse error' });
+      }
+    };
+
+    xhr.onerror = () => resolve({ success: false, error: 'network error' });
+    xhr.send(form);
+  });
+}
+
 
   return (
     <>
@@ -203,26 +245,23 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         >
           <Form.Item
             name="title"
-            label="标题"
+            // label="标题"
             rules={[{ required: true, message: '请输入标题' }]}
           >
-            <Input placeholder="为你的作品起个名字" />
+            <Input placeholder="标题" />
           </Form.Item>
 
           <Form.Item
             name="description"
-            label="描述"
+            // label="描述"
           >
             <Input.TextArea
-              placeholder="描述你的创作过程或想法（会作为文字块显示在文章开头）..."
+              placeholder="描述"
               rows={4}
             />
           </Form.Item>
 
-          <Form.Item
-            label="访问等级"
-            tooltip={tooltipProp("设置作品的访问权限，所有图片和文字都将使用此等级")}
-          >
+          <Form.Item>
             <div style={{
               padding: '8px',
               border: '1px solid #d9d9d9',
@@ -319,8 +358,6 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
 
           <Form.Item
             name="category_id"
-            label="分类"
-            tooltip={tooltipProp("选择绘画作品的子分类，未选择时默认发布到【绘画作品】")}
           >
             <CategoryTreeSelect 
               placeholder="选择分类（可选，默认：绘画作品）" 
@@ -330,14 +367,11 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
 
           <Form.Item
             name="tags"
-            label="标签"
-            tooltip={tooltipProp("添加标签可以帮助读者更好地找到你的作品")}
           >
             <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
           </Form.Item>
 
           <Form.Item
-            label="上传图片"
             required
           >
             <Upload
@@ -368,9 +402,6 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
                 </div>
               )}
             </Upload>
-            <div style={{ marginTop: 8, color: '#999', fontSize: 12 }}>
-              建议按绘画过程顺序上传（草图 → 线稿 → 上色 → 成图），最多 10 张
-            </div>
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
