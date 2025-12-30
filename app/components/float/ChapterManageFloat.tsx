@@ -440,12 +440,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     }
   }, [isModalOpen, loadChapterTree]);
 
-  // 权限检查：只允许管理员和版主看到此按钮（在所有 hooks 之后）
-  if (!canModerate()) {
-    return null;
-  }
-
-  // 检测触摸设备
+  // 检测触摸设备 - 必须在权限检查之前调用hooks，确保每次渲染hooks顺序一致
   const [isTouch, setIsTouch] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -455,6 +450,11 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
 
   // 根据设备类型决定是否显示tooltip
   const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
+
+  // 权限检查：只允许管理员和版主看到此按钮（在所有 hooks 之后）
+  if (!canModerate()) {
+    return null;
+  }
 
   // 检测是否为移动设备
   const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);

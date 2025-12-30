@@ -790,7 +790,7 @@ export default function BookPage() {
                   )}
 
                   {/* 书籍信息 */}
-                  <div style={{
+                  {/* <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '16px',
@@ -800,7 +800,7 @@ export default function BookPage() {
                   }}>
                     <span>更新时间：{formatTimeToMinute(book.last_modified || book.publish_date)}</span>
                     <span>阅读量：{book.likes || 0}</span>
-                  </div>
+                  </div> */}
 
                   {/* 标签 */}
                   {book.tags && book.tags.length > 0 && (

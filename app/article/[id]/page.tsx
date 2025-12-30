@@ -681,7 +681,7 @@ export default function ArticlePage() {
                   )}
 
                   {/* 文章信息 */}
-                  <div style={{
+                  {/* <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '16px',
@@ -693,7 +693,7 @@ export default function ArticlePage() {
                     <span>日期：{editMode === 'edit' 
                       ? (editedArticle?.last_modified ? formatTimeToMinute(editedArticle.last_modified) : formatTimeToMinute(new Date().toISOString()))
                       : formatTimeToMinute(editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified)}</span>
-                  </div>
+                  </div> */}
 
                   {/* 标签 */}
                   {(editMode === 'edit' ? editedArticle?.tags : (editMode === 'preview' ? editedArticle?.tags : article?.tags))?.length > 0 && (

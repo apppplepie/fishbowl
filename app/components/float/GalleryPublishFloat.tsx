@@ -25,12 +25,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [accessLevel, setAccessLevel] = useState<number>(2); // 默认General级别
 
-  // 权限检查：只允许管理员和版主看到此按钮
-  if (!canModerate()) {
-    return null;
-  }
-
-  // 检测触摸设备
+  // 检测触摸设备 - 必须在权限检查之前调用hooks，确保每次渲染hooks顺序一致
   const [isTouch, setIsTouch] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -40,6 +35,11 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
 
   // 根据设备类型决定是否显示tooltip
   const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
+
+  // 权限检查：只允许管理员和版主看到此按钮
+  if (!canModerate()) {
+    return null;
+  }
 
   // 处理图片上传
   const handleUploadChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {

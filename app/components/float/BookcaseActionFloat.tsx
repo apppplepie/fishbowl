@@ -29,6 +29,17 @@ export default function BookcaseActionFloat({
   const { user, canModerate } = useAuth();
   const categoryFromUrl = searchParams.get('category');
 
+  // 检测触摸设备 - 必须在权限检查之前调用hooks，确保每次渲染hooks顺序一致
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    setIsTouch(Boolean(touch));
+  }, []);
+
+  // 根据设备类型决定是否显示tooltip
+  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
+
   // 权限检查：只允许管理员和版主看到此按钮
   if (!canModerate()) {
     return null;
@@ -39,17 +50,6 @@ export default function BookcaseActionFloat({
 
   // 检查是否为管理员（删除书籍功能仅管理员可用）
   const isAdmin = user?.role === 'admin';
-
-  // 检测触摸设备
-  const [isTouch, setIsTouch] = useState(false);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const touch = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
-    setIsTouch(Boolean(touch));
-  }, []);
-
-  // 根据设备类型决定是否显示tooltip
-  const tooltipProp = (title: string) => isTouch ? undefined : { title, placement: 'left' as const };
 
   // ========== 发布功能 ==========
   // 跳转到发布新书页面
