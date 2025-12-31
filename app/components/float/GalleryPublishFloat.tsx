@@ -343,10 +343,10 @@ function uploadFileWithProgress(file: File, token: string | null, onProgress: (p
                     color: '#666',
                     marginTop: '2px'
                   }}>
-                    {ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#52c41a' ? '所有人都能查看' :
-                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#1890ff' ? '注册用户可查看' :
-                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#faad14' ? '仅会员用户可查看' :
-                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#f5222d' ? '仅成人内容用户可查看' : '仅管理员可查看'}
+                    {ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#52c41a' ? '游客可查看' :
+                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#1890ff' ? '游客可查看（含个人日常）' :
+                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#faad14' ? '仅注册用户可查看' :
+                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#f5222d' ? '仅成人验证用户可查看' : '仅管理员可查看'}
                   </div>
                 </div>
               </div>

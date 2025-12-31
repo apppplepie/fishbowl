@@ -32,7 +32,7 @@ export default function Home() {
     // 给 smooth scroll 一个完成时间
     setTimeout(() => {
       isAutoScrolling.current = false;
-    }, 420);
+    }, 100);
   };
 
   // 滑动吸附逻辑
@@ -56,7 +56,7 @@ export default function Home() {
       // 给 smooth scroll 一个"完成时间"
       setTimeout(() => {
         isAutoScrolling.current = false;
-      }, 420);
+      }, 220);
     };
 
     const onScroll = () => {
@@ -67,20 +67,19 @@ export default function Home() {
       // 判断"用户停止滚动"
       scrollEndTimer = window.setTimeout(() => {
         const y = container.scrollTop;
-
-        // 👇 只在 par1 和 par2 切换区域附近才触发吸附
-        const SNAP_ZONE = SNAP_POINT * 0.6; // 吸附触发区：SNAP_POINT ± 60%
-
-        if (y >= SNAP_POINT - SNAP_ZONE && y <= SNAP_POINT + SNAP_ZONE) {
-          // 在切换区域附近，执行吸附逻辑
-          if (y < SNAP_POINT) {
-            snapTo(0); // 吸回 par1
-          } else {
-            snapTo(SNAP_POINT); // 吸到 par2 顶部
-          }
-        }
-        // 在切换区域外，不执行吸附，保持当前位置
-      }, 120); // 阻尼感的关键
+      
+        // 🚫 已经进入 par2 内容区 → 完全放行
+        if (y >= SNAP_POINT) return;
+      
+        // 👇 仍在 par1 区域，决定回去还是进 par2
+        const target = y < SNAP_POINT * 0.5 ? 0 : SNAP_POINT;
+      
+        if (Math.abs(y - target) < 2) return;
+      
+        snapTo(target);
+      }, 160);
+      
+      
     };
 
     container.addEventListener('scroll', onScroll, { passive: true });
@@ -114,10 +113,10 @@ export default function Home() {
       >
         <div className="text-center text-white px-8">
           <Title level={1} className="!text-white mb-6" style={{ fontSize: '3.5rem' }}>
-            🐠 欢迎来到
+            Fishbowl
           </Title>
           <Paragraph className="!text-white text-xl mb-8 max-w-2xl">
-            一个基于 Next.js 和 Ant Design 构建的现代化 Web 应用
+            没开发完，就这样吧
           </Paragraph>
           <Button
             type="primary"

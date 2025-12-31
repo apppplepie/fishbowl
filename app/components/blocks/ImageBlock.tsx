@@ -117,6 +117,7 @@ export default function ImageBlock({
           <AntImage
             src={(block.parsedContent as any).url}
             alt="图片"
+            preview={false}
             style={{
               width: '100%',
               height: 'auto',
