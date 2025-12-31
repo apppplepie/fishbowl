@@ -10,20 +10,83 @@ const { Title, Paragraph } = Typography;
 export default function Home() {
   const [showNavBar, setShowNavBar] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isAutoScrolling = useRef(false);
 
-  // 滚动监听
+  // 滚动到指定位置
+  const scrollToPosition = (position: number) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    isAutoScrolling.current = true;
+    container.scrollTo({
+      top: position,
+      behavior: 'smooth',
+    });
+
+    // 立即更新导航栏状态
+    const threshold = (window.innerHeight || 800) * 0.8;
+    setShowNavBar(position >= threshold);
+
+    // 给 smooth scroll 一个完成时间
+    setTimeout(() => {
+      isAutoScrolling.current = false;
+    }, 420);
+  };
+
+  // 滑动吸附逻辑
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const handleScroll = () => {
-      const scrollY = container.scrollTop;
-      const threshold = (window.innerHeight || 800) * 0.8; // 80vh
-      setShowNavBar(scrollY > threshold);
+    const SNAP_POINT = window.innerHeight * 0.8; // 80vh
+    let scrollEndTimer: number | null = null;
+
+    const snapTo = (target: number) => {
+      isAutoScrolling.current = true;
+      container.scrollTo({
+        top: target,
+        behavior: 'smooth',
+      });
+
+      // 在滚动开始时立即更新导航栏状态
+      setShowNavBar(target >= SNAP_POINT);
+
+      // 给 smooth scroll 一个"完成时间"
+      setTimeout(() => {
+        isAutoScrolling.current = false;
+      }, 420);
     };
 
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
+    const onScroll = () => {
+      if (isAutoScrolling.current) return;
+
+      if (scrollEndTimer) clearTimeout(scrollEndTimer);
+
+      // 判断"用户停止滚动"
+      scrollEndTimer = window.setTimeout(() => {
+        const y = container.scrollTop;
+
+        // 👇 只在 par1 和 par2 切换区域附近才触发吸附
+        const SNAP_ZONE = SNAP_POINT * 0.7; // 吸附触发区：SNAP_POINT ± 60%
+
+        if (y >= SNAP_POINT - SNAP_ZONE && y <= SNAP_POINT + SNAP_ZONE) {
+          // 在切换区域附近，执行吸附逻辑
+          if (y < SNAP_POINT) {
+            snapTo(0); // 吸回 par1
+          } else {
+            snapTo(SNAP_POINT); // 吸到 par2 顶部
+          }
+        }
+        // 在切换区域外，不执行吸附，保持当前位置
+      }, 120); // 阻尼感的关键
+    };
+
+    container.addEventListener('scroll', onScroll, { passive: true });
+
+    return () => {
+      container.removeEventListener('scroll', onScroll);
+      if (scrollEndTimer) clearTimeout(scrollEndTimer);
+    };
   }, []);
 
 
@@ -65,6 +128,7 @@ export default function Home() {
               borderRadius: '25px',
               padding: '0 32px'
             }}
+            onClick={() => scrollToPosition(window.innerHeight * 0.8)}
           >
             探索更多
           </Button>
