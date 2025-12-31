@@ -10,6 +10,7 @@ import {
   CodeOutlined,
   ThunderboltOutlined,
   FormatPainterOutlined,
+  LinkOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import {
@@ -36,7 +37,8 @@ import TextBlock from './TextBlock';
 import ImageBlock from './ImageBlock';
 import CodeBlock from './CodeBlock';
 import PlaceholderBlock from './PlaceholderBlock';
-import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, CodeBlock as CodeBlockType, PlaceholderBlock as PlaceholderBlockType } from '@/app/types/block';
+import QuoteBlock from './QuoteBlock';
+import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, CodeBlock as CodeBlockType, PlaceholderBlock as PlaceholderBlockType, QuoteBlock as QuoteBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useResponsive } from '@/app/hooks/useResponsive';
 
@@ -50,7 +52,8 @@ interface SortableItemProps {
   id: string;
   index: number;
   block: Block;
-  onChange: (updated: Block) => void;
+  blocks: Block[];
+  onChange: (blocks: Block[]) => void;
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -68,6 +71,7 @@ function SortableItem({
   id,
   index,
   block,
+  blocks,
   onChange,
   onDelete,
   onMoveUp,
@@ -100,13 +104,19 @@ function SortableItem({
   };
 
   const renderBlock = () => {
+    const handleBlockChange = (updatedBlock: Block) => {
+      const newBlocks = [...blocks];
+      newBlocks[index] = updatedBlock;
+      onChange(newBlocks);
+    };
+
     switch (block.type) {
       case 'text':
         return (
           <TextBlock
             key={block.id}
             block={block}
-            onChange={onChange}
+            onChange={handleBlockChange}
             onDelete={onDelete}
             sortableHandleProps={sortableHandleProps}
             {...commonProps}
@@ -117,7 +127,7 @@ function SortableItem({
           <ImageBlock
             key={block.id}
             block={block}
-            onChange={onChange}
+            onChange={handleBlockChange}
             onDelete={onDelete}
             sortableHandleProps={sortableHandleProps}
             {...commonProps}
@@ -128,7 +138,7 @@ function SortableItem({
           <CodeBlock
             key={block.id}
             block={block}
-            onChange={onChange}
+            onChange={handleBlockChange}
             onDelete={onDelete}
             sortableHandleProps={sortableHandleProps}
             {...commonProps}
@@ -139,6 +149,24 @@ function SortableItem({
           <PlaceholderBlock
             key={block.id}
             block={block as PlaceholderBlockType}
+          />
+        );
+      case 'quote':
+        return (
+          <QuoteBlock
+            key={block.id}
+            block={block as QuoteBlockType}
+            onReplaceWithBlock={(newBlock) => {
+              // 用新块替换当前的引用块
+              const newBlocks = [...blocks];
+              newBlocks[index] = newBlock;
+              onChange(newBlocks);
+            }}
+            onChange={handleBlockChange}
+            isEditing={true}
+            onDelete={onDelete}
+            sortableHandleProps={sortableHandleProps}
+            {...commonProps}
           />
         );
       default:
@@ -208,7 +236,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       order: 0, // 临时值，后面会重新排序
       content: '',
     };
-    
+
     // 在指定位置插入
     const newBlocks = [...blocks];
     if (insertPosition === -1) {
@@ -218,13 +246,13 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       // 在指定位置后面插入
       newBlocks.splice(insertPosition + 1, 0, newBlock);
     }
-    
+
     // 重新排序
     const reorderedBlocks = newBlocks.map((block, i) => ({
       ...block,
       order: i,
     }));
-    
+
     onChange(reorderedBlocks);
     setAddBlockModalVisible(false);
     setInsertPosition(-1);
@@ -239,7 +267,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       code: '',
       language: 'javascript',
     };
-    
+
     // 在指定位置插入
     const newBlocks = [...blocks];
     if (insertPosition === -1) {
@@ -249,13 +277,44 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       // 在指定位置后面插入
       newBlocks.splice(insertPosition + 1, 0, newBlock);
     }
-    
+
     // 重新排序
     const reorderedBlocks = newBlocks.map((block, i) => ({
       ...block,
       order: i,
     }));
-    
+
+    onChange(reorderedBlocks);
+    setAddBlockModalVisible(false);
+    setInsertPosition(-1);
+  };
+
+  // 添加引用块
+  const addQuoteBlock = () => {
+    const newBlock: QuoteBlockType = {
+      id: generateId(),
+      type: 'quote',
+      order: 0, // 临时值，后面会重新排序
+      title: '内容引用',
+      description: '点击查看所有内容块引用',
+    };
+
+    // 在指定位置插入
+    const newBlocks = [...blocks];
+    if (insertPosition === -1) {
+      // 添加到末尾
+      newBlocks.push(newBlock);
+    } else {
+      // 在指定位置后面插入
+      newBlocks.splice(insertPosition + 1, 0, newBlock);
+    }
+
+    // 重新排序
+    const reorderedBlocks = newBlocks.map((block, i) => ({
+      ...block,
+      order: i,
+    }));
+
     onChange(reorderedBlocks);
     setAddBlockModalVisible(false);
     setInsertPosition(-1);
@@ -270,34 +329,37 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
 
     let finalImageUrl = imageUrl;
 
-    // 如果用户上传了文件，则上传到服务器
+    // 如果用户上传了文件，则上传到服务器（改用 XHR + 进度）
     if (fileList.length > 0 && fileList[0].originFileObj) {
       try {
         // 获取token用于身份验证
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        
+
         if (!token) {
           message.error({ content: '请先登录', key: 'upload' });
           return;
         }
 
-        message.loading({ content: '正在上传图片...', key: 'upload' });
-        
-        const formData = new FormData();
-        formData.append('file', fileList[0].originFileObj);
+        // 初始化 loading（持久显示，后面用相同 key 更新）
+        message.loading({ content: '正在上传图片... 0%', key: 'upload', duration: 0 });
 
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-        });
+        // 节流：只在百分比增加 >=3 或达到 100 时更新一次提示，避免频繁渲染
+        let lastPercent = -1;
 
-        const result = await response.json();
+        const result = await uploadFileWithProgress(
+          fileList[0].originFileObj,
+          token,
+          (percent: number) => {
+            if (percent - lastPercent >= 3 || percent === 100) {
+              lastPercent = percent;
+              // 更新 loading 文案（保持同 key）
+              message.loading({ content: `正在上传图片... ${percent}%`, key: 'upload', duration: 0 });
+            }
+          }
+        );
 
-        if (response.ok && result.success) {
-          finalImageUrl = result.url;
+        if (result.success) {
+          finalImageUrl = result.url || '';
           message.success({ content: '图片上传成功！', key: 'upload' });
         } else {
           message.error({ content: result.error || '图片上传失败', key: 'upload' });
@@ -331,7 +393,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       // 在指定位置后面插入
       newBlocks.splice(insertPosition + 1, 0, newBlock);
     }
-    
+
     // 重新排序
     const reorderedBlocks = newBlocks.map((block, i) => ({
       ...block,
@@ -344,6 +406,46 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     setFileList([]);
     setInsertPosition(-1);
   };
+
+  // 放在组件内部（handleAddImageBlock 同级），负责上传并回传结果/进度
+  function uploadFileWithProgress(file: File, token: string | null, onProgress: (p: number) => void) {
+    return new Promise<{ success: boolean; url?: string; error?: any }>((resolve) => {
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append('file', file);
+
+      xhr.open('POST', '/api/upload', true);
+
+      if (token) {
+        // 注意：不要自己设置 Content-Type，否则 multipart boundary 会被破坏
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+
+      xhr.upload.onprogress = (ev: ProgressEvent<EventTarget>) => {
+        if (ev.lengthComputable) {
+          const percent = Math.round((ev.loaded / ev.total) * 100);
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        try {
+          const resp = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(resp);
+          } else {
+            resolve({ success: false, error: resp || xhr.statusText || 'upload error' });
+          }
+        } catch (e) {
+          resolve({ success: false, error: 'parse error' });
+        }
+      };
+
+      xhr.onerror = () => resolve({ success: false, error: 'network error' });
+      xhr.send(form);
+    });
+  }
+
 
   // 更新块
   const updateBlock = (index: number, updatedBlock: Block) => {
@@ -359,7 +461,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       message.warning('至少需要保留一个内容块');
       return;
     }
-    
+
     const newBlocks = blocks.filter((_, i) => i !== index);
     // 重新排序
     const reorderedBlocks = newBlocks.map((block, i) => ({
@@ -514,7 +616,8 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
                   id={block.id}
                   index={index}
                   block={block}
-                  onChange={(updated) => updateBlock(index, updated)}
+                  blocks={blocks}
+                  onChange={onChange}
                   onDelete={() => deleteBlock(index)}
                   onMoveUp={() => moveBlockUp(index)}
                   onMoveDown={() => moveBlockDown(index)}
@@ -613,6 +716,20 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
             <div>
               <div>代码块</div>
               <div style={{ fontSize: '12px', color: '#999' }}>添加代码片段，支持多种语言</div>
+            </div>
+          </Button>
+
+          <Button
+            type="default"
+            size="large"
+            icon={<LinkOutlined />}
+            onClick={addQuoteBlock}
+            block
+            style={{ height: '60px', fontSize: '16px' }}
+          >
+            <div>
+              <div>引用块</div>
+              <div style={{ fontSize: '12px', color: '#999' }}>引用其他内容块，支持分页浏览</div>
             </div>
           </Button>
         </Space>

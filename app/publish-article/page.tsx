@@ -464,9 +464,8 @@ export default function PublishArticlePage() {
                 borderRadius: isMobile ? '8px' : '12px',
                 boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
                 marginBottom: isMobile ? '12px' : '24px',
-                padding: isMobile ? '12px' : '24px',
               }}
-              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
+              styles={{ body: { padding: isMobile ? '12px' : '24px' } }}
             >
               {/* 移动端隐藏草稿按钮，使用浮动按钮代替 */}
               {!isMobile && (
@@ -524,9 +523,8 @@ export default function PublishArticlePage() {
                 borderRadius: isMobile ? '8px' : '12px',
                 boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
                 marginBottom: isMobile ? '60px' : '24px', // 移动端为浮动按钮留空间
-                padding: isMobile ? '8px' : '24px',
               }}
-              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
+              styles={{ body: { padding: isMobile ? '8px' : '24px' } }}
             >
               <div style={{ 
                 marginBottom: isMobile ? '8px' : '16px', 

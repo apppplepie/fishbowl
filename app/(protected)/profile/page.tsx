@@ -1,7 +1,7 @@
 'use client';
 
 import { Typography, Card, Avatar, Descriptions, Button, Spin, message } from 'antd';
-import { UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -209,9 +209,6 @@ export default function ProfilePage() {
                     {formatDate(userInfo.last_login_at)}
                   </Descriptions.Item>
                 )}
-                <Descriptions.Item label="状态">
-                  <span style={{ color: '#52c41a' }}>● 在线</span>
-                </Descriptions.Item>
               </Descriptions>
 
               {userInfo?.bio && (
@@ -220,7 +217,26 @@ export default function ProfilePage() {
                   <p style={{ color: '#666', lineHeight: '1.8' }}>{userInfo.bio}</p>
                 </div>
               )}
+
+              {/* 管理员功能按钮 */}
+              {displayUser?.role === 'admin' && (
+                <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #f0f0f0' }}>
+                  <Button
+                    type="primary"
+                    icon={<SettingOutlined />}
+                    onClick={() => router.push('/admin/dashboard')}
+                    size="large"
+                  >
+                    进入管理面板
+                  </Button>
+                </div>
+              )}
             </Card>
+
+
+
+
+
           )}
         </div>
       </PageLayout>

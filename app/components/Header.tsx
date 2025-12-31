@@ -106,6 +106,8 @@ export default function Header({ isVisible = true, leftContent, embedded = false
       onClick: () => {
         router.push(item.path);
       },
+      // 防止hydration不匹配
+      suppressHydrationWarning: true,
     }));
 
     // 如果未登录，只返回公共菜单
@@ -139,6 +141,8 @@ export default function Header({ isVisible = true, leftContent, embedded = false
       onClick: () => {
         router.push(item.path);
       },
+      // 防止hydration不匹配
+      suppressHydrationWarning: true,
     }));
 
     // 如果没有受保护菜单项，直接返回公共菜单

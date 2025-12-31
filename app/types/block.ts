@@ -2,7 +2,7 @@
  * 块编辑器类型定义
  */
 
-export type BlockType = 'text' | 'image' | 'code' | 'placeholder';
+export type BlockType = 'text' | 'image' | 'code' | 'placeholder' | 'quote';
 
 // 访问等级定义
 export const ACCESS_LEVELS = [
@@ -54,7 +54,14 @@ export interface PlaceholderBlock extends BaseBlock {
   message: string;
 }
 
-export type Block = TextBlock | ImageBlock | CodeBlock | PlaceholderBlock;
+// 引用块
+export interface QuoteBlock extends BaseBlock {
+  type: 'quote';
+  title?: string;
+  description?: string;
+}
+
+export type Block = TextBlock | ImageBlock | CodeBlock | PlaceholderBlock | QuoteBlock;
 
 // 文章数据结构
 export interface Article {
