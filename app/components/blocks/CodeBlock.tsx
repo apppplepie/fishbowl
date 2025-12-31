@@ -13,14 +13,15 @@ const { confirm } = Modal;
 const { TextArea } = Input;
 
 interface CodeBlockProps {
-  block: CodeBlockType;
-  onChange: (block: CodeBlockType) => void;
-  onDelete: () => void;
+  block: CodeBlockType & { parsedContent?: any };
+  mode: 'view' | 'edit'; // 浏览模式或编辑模式
+  onChange?: (block: CodeBlockType) => void;
+  onDelete?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  canDelete: boolean;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  canDelete?: boolean;
   isDragging?: boolean;
   sortableHandleProps?: any;
 }
@@ -48,14 +49,15 @@ const LANGUAGES = [
 
 export default function CodeBlock({
   block,
-  onChange,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-  canMoveUp,
-  canMoveDown,
-  canDelete,
-  isDragging,
+  mode,
+  onChange = () => {},
+  onDelete = () => {},
+  onMoveUp = () => {},
+  onMoveDown = () => {},
+  canMoveUp = false,
+  canMoveDown = false,
+  canDelete = false,
+  isDragging = false,
   sortableHandleProps,
 }: CodeBlockProps) {
   const [isFocused, setIsFocused] = useState(false);
@@ -118,6 +120,105 @@ export default function CodeBlock({
       },
     });
   };
+
+  // 浏览模式渲染
+  if (mode === 'view') {
+    const codeContent = block.parsedContent as any;
+    return (
+      <div>
+        {/* Access Level 显示 */}
+        <div
+          style={{
+            position: 'relative',
+            marginBottom: '8px',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: '-10px',
+              right: '12px',
+              backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+              color: 'white',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: 500,
+              zIndex: 10,
+            }}
+          >
+            {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+          </div>
+        </div>
+        <div style={{
+          background: '#282c34',
+          borderRadius: '8px',
+          padding: '20px',
+          overflow: 'auto',
+          position: 'relative',
+        }}>
+          {/* 复制按钮 */}
+          <Button
+            type="text"
+            icon={<CopyOutlined />}
+            size="small"
+            style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              color: '#abb2bf',
+              border: 'none',
+              background: 'transparent',
+              zIndex: 5,
+            }}
+            onClick={() => {
+              navigator.clipboard.writeText((codeContent as any).code || '').then(() => {
+                message.success('代码已复制到剪贴板');
+              }).catch(() => {
+                // 降级处理
+                const textArea = document.createElement('textarea');
+                textArea.value = (codeContent as any).code || '';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                message.success('代码已复制到剪贴板');
+              });
+            }}
+          />
+          {(codeContent as any).title && (
+            <div style={{
+              color: '#61dafb',
+              fontSize: '14px',
+              marginBottom: '12px',
+              fontWeight: 500,
+            }}>
+              {(codeContent as any).title}
+            </div>
+          )}
+          <div style={{
+            fontSize: '13px',
+            color: '#abb2bf',
+            marginBottom: '8px',
+            opacity: 0.7,
+          }}>
+            {(codeContent as any).language || 'plaintext'}
+          </div>
+          <pre style={{
+            margin: 0,
+            color: '#abb2bf',
+            fontSize: '14px',
+            lineHeight: '1.6',
+            overflowX: 'auto',
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
+          }}>
+            <code>{(codeContent as any).code}</code>
+          </pre>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

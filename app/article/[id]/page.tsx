@@ -6,7 +6,7 @@ import type { MenuProps } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
-import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, CopyOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, CopyOutlined, CameraOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
 import ArticleNavigator, { ArticleDrawerButton } from '@/app/components/sidebar/ArticleNavigator';
@@ -22,6 +22,9 @@ import { ACCESS_LEVELS } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
+import TextBlock from '@/app/components/blocks/TextBlock';
+import ImageBlock from '@/app/components/blocks/ImageBlock';
+import CodeBlock from '@/app/components/blocks/CodeBlock';
 import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
@@ -520,6 +523,245 @@ export default function ArticlePage() {
   // 切换侧边栏展开/收起（桌面端）
   const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
 
+  // 保存为图片处理
+  const handleExportAsImage = async () => {
+    try {
+      message.loading({ content: '正在准备导出...', key: 'export' });
+      const imageData = await exportPageAsLongImage();
+      message.success({ content: '图片已保存！', key: 'export' });
+
+      // 创建下载链接
+      const link = document.createElement('a');
+      link.download = `${article?.title || '文章'}.png`;
+      link.href = imageData;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('导出图片失败:', error);
+      message.error({ content: '导出失败，请重试', key: 'export' });
+    }
+  };
+
+  // 导出页面为长图
+  const exportPageAsLongImage = async (): Promise<string> => {
+    // 1. 进入导出模式
+    const exportState = enterExportMode();
+
+    try {
+      // 2. 等待页面稳定
+      await waitForLayoutStable();
+
+      // 3. 离屏渲染
+      const contentClone = cloneReadableContent();
+      const hiddenRoot = createHiddenRoot();
+      mount(contentClone, hiddenRoot);
+
+      // 4. 测量内容尺寸
+      const size = measureContentSize(hiddenRoot);
+
+      // 5. 渲染为图片
+      const imageData = await renderToImage(hiddenRoot, size);
+
+      // 6. 清理现场
+      cleanup(hiddenRoot, exportState);
+
+      return imageData;
+    } catch (error) {
+      // 确保清理现场
+      exitExportMode(exportState);
+      throw error;
+    }
+  };
+
+  // 进入导出模式
+  const enterExportMode = () => {
+    const originalState = {
+      bodyCursor: document.body.style.cursor,
+      bodyUserSelect: document.body.style.userSelect,
+      animationsDisabled: false,
+    };
+
+    // 隐藏编辑器UI和浮动按钮
+    const editorElements = document.querySelectorAll('[data-editor-ui]');
+    editorElements.forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+    });
+
+    // 隐藏所有浮动按钮
+    const floatButtons = document.querySelectorAll('.ant-float-btn, .ant-float-btn-group');
+    floatButtons.forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+    });
+
+    // 禁用光标
+    document.body.style.cursor = 'default';
+
+    // 禁用文字选择高亮
+    document.body.style.userSelect = 'none';
+
+    // 禁用动画
+    const style = document.createElement('style');
+    style.textContent = `
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    originalState.animationsDisabled = true;
+
+    return originalState;
+  };
+
+  // 退出导出模式
+  const exitExportMode = (originalState: any) => {
+    // 恢复编辑器UI和浮动按钮
+    const editorElements = document.querySelectorAll('[data-editor-ui]');
+    editorElements.forEach(el => {
+      (el as HTMLElement).style.display = '';
+    });
+
+    const floatButtons = document.querySelectorAll('.ant-float-btn, .ant-float-btn-group');
+    floatButtons.forEach(el => {
+      (el as HTMLElement).style.display = '';
+    });
+
+    // 恢复光标
+    document.body.style.cursor = originalState.bodyCursor;
+
+    // 恢复文字选择
+    document.body.style.userSelect = originalState.bodyUserSelect;
+
+    // 恢复动画
+    if (originalState.animationsDisabled) {
+      const styleElements = document.querySelectorAll('style');
+      styleElements.forEach(el => {
+        if (el.textContent?.includes('animation: none')) {
+          el.remove();
+        }
+      });
+    }
+  };
+
+  // 等待页面布局稳定
+  const waitForLayoutStable = (): Promise<void> => {
+    return new Promise((resolve) => {
+      let stableFrames = 0;
+      const requiredStableFrames = 10; // 等待10帧
+      let lastHeight = 0;
+
+      const checkStability = () => {
+        const currentHeight = document.documentElement.scrollHeight;
+
+        if (currentHeight === lastHeight) {
+          stableFrames++;
+          if (stableFrames >= requiredStableFrames) {
+            resolve();
+            return;
+          }
+        } else {
+          stableFrames = 0;
+          lastHeight = currentHeight;
+        }
+
+        requestAnimationFrame(checkStability);
+      };
+
+      // 延迟开始检查，给初始渲染一些时间
+      setTimeout(() => {
+        lastHeight = document.documentElement.scrollHeight;
+        requestAnimationFrame(checkStability);
+      }, 100);
+    });
+  };
+
+  // 克隆可读内容
+  const cloneReadableContent = (): HTMLElement => {
+    // 找到主要内容区域
+    const contentElement = document.querySelector('[data-content-area]') as HTMLElement;
+    if (!contentElement) {
+      throw new Error('找不到内容区域');
+    }
+
+    // 深度克隆内容
+    const clone = contentElement.cloneNode(true) as HTMLElement;
+
+    // 移除不需要的元素
+    const elementsToRemove = clone.querySelectorAll('[data-export-hide], .ant-float-btn, .ant-float-btn-group');
+    elementsToRemove.forEach(el => el.remove());
+
+    return clone;
+  };
+
+  // 创建隐藏根容器
+  const createHiddenRoot = (): HTMLElement => {
+    const root = document.createElement('div');
+    root.style.position = 'absolute';
+    root.style.left = '-9999px';
+    root.style.top = '-9999px';
+    root.style.width = '800px'; // 固定宽度
+    root.style.backgroundColor = '#ffffff';
+    root.style.fontFamily = 'Arial, sans-serif';
+    root.style.lineHeight = '1.6';
+    root.style.color = '#333';
+    root.style.padding = '20px';
+    root.style.boxSizing = 'border-box';
+    root.style.pointerEvents = 'none';
+
+    // 设置字体大小和颜色以确保可读性
+    root.style.fontSize = '16px';
+
+    document.body.appendChild(root);
+    return root;
+  };
+
+  // 挂载克隆内容到隐藏容器
+  const mount = (contentClone: HTMLElement, hiddenRoot: HTMLElement) => {
+    hiddenRoot.appendChild(contentClone);
+  };
+
+  // 测量内容尺寸
+  const measureContentSize = (hiddenRoot: HTMLElement) => {
+    const rect = hiddenRoot.getBoundingClientRect();
+    return {
+      width: 800, // 固定宽度
+      height: rect.height,
+    };
+  };
+
+  // 渲染为图片
+  const renderToImage = async (hiddenRoot: HTMLElement, size: { width: number; height: number }): Promise<string> => {
+    try {
+      // 使用html2canvas库进行渲染
+      const html2canvas = (await import('html2canvas')).default;
+
+      const canvas = await html2canvas(hiddenRoot, {
+        width: size.width,
+        height: size.height,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+      });
+
+      return canvas.toDataURL('image/png', 0.95);
+    } catch (error) {
+      console.error('html2canvas渲染失败:', error);
+      throw new Error('图片渲染失败');
+    }
+  };
+
+  // 清理现场
+  const cleanup = (hiddenRoot: HTMLElement, exportState: any) => {
+    // 移除隐藏容器
+    if (hiddenRoot && hiddenRoot.parentNode) {
+      hiddenRoot.parentNode.removeChild(hiddenRoot);
+    }
+
+    // 退出导出模式
+    exitExportMode(exportState);
+  };
+
   return (
     <>
       {/* 统一的文章导航组件（自动适配移动端/桌面端） */}
@@ -927,16 +1169,19 @@ export default function ArticlePage() {
             )}
 
             {/* Part 2: 文章主体内容 */}
-            <div style={{
-              background: 'white',
-              padding: isMobile ? (editMode === 'edit' ? '16px 8px' : '20px 12px') : '40px',
-              borderRadius: isMobile ? '8px' : '8px',
-              marginBottom: isMobile ? '16px' : '24px',
-              boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
-              lineHeight: '1.8',
-              fontSize: isMobile ? '15px' : '16px',
-              color: '#333',
-            }}>
+            <div
+              style={{
+                background: 'white',
+                padding: isMobile ? (editMode === 'edit' ? '16px 8px' : '20px 12px') : '40px',
+                borderRadius: isMobile ? '8px' : '8px',
+                marginBottom: isMobile ? '16px' : '24px',
+                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                lineHeight: '1.8',
+                fontSize: isMobile ? '15px' : '16px',
+                color: '#333',
+              }}
+              data-content-area
+            >
               {editMode === 'edit' ? (
                 // 编辑模式 - 使用块编辑器
                 <>
@@ -964,230 +1209,15 @@ export default function ArticlePage() {
               ) : (
                 // 浏览/预览模式 - 渲染块内容
                 <div>
-                  {(editMode === 'preview' && editedArticle ? editedArticle.blocks : article?.blocks || []).map((block: Block & { parsedContent: any }, index: number) => (
+                  {(editMode === 'preview' && editedArticle ? editedArticle.blocks : article?.blocks || []).map((block: any, index: number) => (
                     <div key={block.id} style={{ marginBottom: '32px' }}>
                       {block.type === 'text' ? (
-                        // 文字块
-                        <div>
-                          {/* Access Level 显示 */}
-                          <div style={{
-                            position: 'relative',
-                            marginBottom: '8px',
-                          }}>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '-10px',
-                                right: '12px',
-                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
-                                color: 'white',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                zIndex: 10,
-                              }}
-                            >
-                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
-                            </div>
-                          </div>
-                          <div style={{
-                            whiteSpace: 'pre-wrap',
-                            wordWrap: 'break-word',
-                            wordBreak: 'break-word',
-                            overflowWrap: 'break-word',
-                            lineHeight: '1.8',
-                            fontSize: '16px',
-                            color: '#333',
-                            maxWidth: '100%',
-                            userSelect: 'text',
-                            WebkitUserSelect: 'text',
-                          }}>
-                            {(block.parsedContent as TextBlockContent).content}
-                          </div>
-                        </div>
+                        <TextBlock block={block} mode="view" />
                       ) : block.type === 'image' ? (
-                        // 图片块
-                        <div>
-                          {/* Access Level 显示 */}
-                          <div
-                            style={{
-                              position: 'relative',
-                              marginBottom: '8px',
-                            }}
-                          >
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '-10px',
-                                right: '12px',
-                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
-                                color: 'white',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                zIndex: 10,
-                              }}
-                            >
-                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
-                            </div>
-                          </div>
-                          <div
-                            style={{
-                              cursor: 'pointer',
-                              textAlign: 'center',
-                              transition: 'transform 0.2s',
-                            }}
-                            onClick={() => handleImageClick(block.parsedContent as ImageBlockContent)}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'scale(1.02)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }}
-                          >
-                          {(() => {
-                            const parsedContent = block.parsedContent as ImageBlockContent;
-                            // 优先使用原始的imageUrl，如果parsedContent.url不存在的话
-                            const displayUrl = (parsedContent && parsedContent.url) || (block as any).imageUrl;
-                            return displayUrl ? (
-                              <img
-                                src={displayUrl}
-                                alt="图片"
-                                style={{
-                                  width: '100%',
-                                  height: 'auto',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                  objectFit: 'contain',
-                                }}
-                              />
-                            ) : (
-                              <div
-                                style={{
-                                  width: '100%',
-                                  height: '200px',
-                                  borderRadius: '8px',
-                                  backgroundColor: '#f5f5f5',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: '#999',
-                                  fontSize: '14px',
-                                }}
-                              >
-                                图片加载失败
-                              </div>
-                            );
-                          })()}
-                          {block.parsedContent && (block.parsedContent as ImageBlockContent).description && (
-                            <div style={{
-                              marginTop: '8px',
-                              fontSize: '13px',
-                              color: '#999',
-                            }}>
-                              {(block.parsedContent as ImageBlockContent).description}
-                            </div>
-                          )}
-                          </div>
-                        </div>
+                        <ImageBlock block={block} mode="view" />
                       ) : block.type === 'code' ? (
-                        // 代码块
-                        <div>
-                          {/* Access Level 显示 */}
-                          <div
-                            style={{
-                              position: 'relative',
-                              marginBottom: '8px',
-                            }}
-                          >
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '-10px',
-                                right: '12px',
-                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
-                                color: 'white',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                zIndex: 10,
-                              }}
-                            >
-                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
-                            </div>
-                          </div>
-                          <div style={{
-                            background: '#282c34',
-                            borderRadius: '8px',
-                            padding: '20px',
-                            overflow: 'auto',
-                            position: 'relative',
-                          }}>
-                            {/* 复制按钮 */}
-                            <Button
-                              type="text"
-                              icon={<CopyOutlined />}
-                              size="small"
-                              style={{
-                                position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                color: '#abb2bf',
-                                border: 'none',
-                                background: 'transparent',
-                                zIndex: 5,
-                              }}
-                              onClick={() => {
-                                navigator.clipboard.writeText((block.parsedContent as CodeBlockContent).code).then(() => {
-                                  message.success('代码已复制到剪贴板');
-                                }).catch(() => {
-                                  // 降级处理
-                                  const textArea = document.createElement('textarea');
-                                  textArea.value = (block.parsedContent as CodeBlockContent).code;
-                                  document.body.appendChild(textArea);
-                                  textArea.select();
-                                  document.execCommand('copy');
-                                  document.body.removeChild(textArea);
-                                  message.success('代码已复制到剪贴板');
-                                });
-                              }}
-                            />
-                            {(block.parsedContent as CodeBlockContent).title && (
-                              <div style={{
-                                color: '#61dafb',
-                                fontSize: '14px',
-                                marginBottom: '12px',
-                                fontWeight: 500,
-                              }}>
-                                {(block.parsedContent as CodeBlockContent).title}
-                              </div>
-                            )}
-                            <div style={{
-                              fontSize: '13px',
-                              color: '#abb2bf',
-                              marginBottom: '8px',
-                              opacity: 0.7,
-                            }}>
-                              {(block.parsedContent as CodeBlockContent).language}
-                            </div>
-                            <pre style={{
-                              margin: 0,
-                              color: '#abb2bf',
-                              fontSize: '14px',
-                              lineHeight: '1.6',
-                              overflowX: 'auto',
-                              userSelect: 'text',
-                              WebkitUserSelect: 'text',
-                            }}>
-                              <code>{(block.parsedContent as CodeBlockContent).code}</code>
-                            </pre>
-                          </div>
-                        </div>
+                        <CodeBlock block={block} mode="view" />
                       ) : block.type === 'placeholder' ? (
-                        // 占位块
                         <PlaceholderBlock block={block as any} />
                       ) : null}
                     </div>
@@ -1197,12 +1227,15 @@ export default function ArticlePage() {
             </div>
 
             {/* Part 3: 互动按钮和评论区 */}
-            <div style={{
-              background: 'white',
-              padding: isMobile ? '20px 12px' : '32px 40px',
-              borderRadius: isMobile ? '8px' : '8px',
-              boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
-            }}>
+            <div
+              style={{
+                background: 'white',
+                padding: isMobile ? '20px 12px' : '32px 40px',
+                borderRadius: isMobile ? '8px' : '8px',
+                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+              }}
+              data-export-hide
+            >
               {/* 互动按钮 */}
               <div style={{
                 display: 'flex',
@@ -1233,6 +1266,14 @@ export default function ArticlePage() {
                   }}
                 >
                   分享 {article?.shares || 0}
+                </Button>
+                <Button
+                  icon={<CameraOutlined />}
+                  size="large"
+                  style={{ minWidth: '120px' }}
+                  onClick={handleExportAsImage}
+                >
+                  保存为图片
                 </Button>
               </div>
 

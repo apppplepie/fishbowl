@@ -5,7 +5,7 @@ import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, B
 import type { MenuProps } from 'antd';
 
 const { Option } = Select;
-import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CopyOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CopyOutlined, CameraOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
 import BookChapterNavigator, { BookChapterDrawerButton } from '@/app/components/sidebar/BookChapterNavigator';
@@ -22,6 +22,9 @@ import { useAuth } from '@/app/hooks/useAuth';
 import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { useBookStore } from '@/app/stores/useBookStore';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
+import TextBlock from '@/app/components/blocks/TextBlock';
+import ImageBlock from '@/app/components/blocks/ImageBlock';
+import CodeBlock from '@/app/components/blocks/CodeBlock';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import type { Block as BlockType } from '@/app/types/block';
@@ -503,6 +506,26 @@ export default function BookPage() {
     });
   };
 
+  // 保存为图片处理
+  const handleExportAsImage = async () => {
+    try {
+      message.loading({ content: '正在准备导出...', key: 'export' });
+      const imageData = await exportPageAsLongImage();
+      message.success({ content: '图片已保存！', key: 'export' });
+
+      // 创建下载链接
+      const link = document.createElement('a');
+      link.download = `${book?.title || '书籍'}.png`;
+      link.href = imageData;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('导出图片失败:', error);
+      message.error({ content: '导出失败，请重试', key: 'export' });
+    }
+  };
+
   // 处理书籍目录中的文章点击 - 编辑模式下需要确认
   const handleArticleClick = (newArticleId: string) => {
     if (editMode === 'edit') {
@@ -651,6 +674,225 @@ export default function BookPage() {
 
   // 切换侧边栏展开/收起（桌面端）
   const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
+
+  // 导出页面为长图
+  const exportPageAsLongImage = async (): Promise<string> => {
+    // 1. 进入导出模式
+    const exportState = enterExportMode();
+
+    try {
+      // 2. 等待页面稳定
+      await waitForLayoutStable();
+
+      // 3. 离屏渲染
+      const contentClone = cloneReadableContent();
+      const hiddenRoot = createHiddenRoot();
+      mount(contentClone, hiddenRoot);
+
+      // 4. 测量内容尺寸
+      const size = measureContentSize(hiddenRoot);
+
+      // 5. 渲染为图片
+      const imageData = await renderToImage(hiddenRoot, size);
+
+      // 6. 清理现场
+      cleanup(hiddenRoot, exportState);
+
+      return imageData;
+    } catch (error) {
+      // 确保清理现场
+      exitExportMode(exportState);
+      throw error;
+    }
+  };
+
+  // 进入导出模式
+  const enterExportMode = () => {
+    const originalState = {
+      bodyCursor: document.body.style.cursor,
+      bodyUserSelect: document.body.style.userSelect,
+      animationsDisabled: false,
+    };
+
+    // 隐藏编辑器UI和浮动按钮
+    const editorElements = document.querySelectorAll('[data-editor-ui]');
+    editorElements.forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+    });
+
+    // 隐藏所有浮动按钮
+    const floatButtons = document.querySelectorAll('.ant-float-btn, .ant-float-btn-group');
+    floatButtons.forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+    });
+
+    // 禁用光标
+    document.body.style.cursor = 'default';
+
+    // 禁用文字选择高亮
+    document.body.style.userSelect = 'none';
+
+    // 禁用动画
+    const style = document.createElement('style');
+    style.textContent = `
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    originalState.animationsDisabled = true;
+
+    return originalState;
+  };
+
+  // 退出导出模式
+  const exitExportMode = (originalState: any) => {
+    // 恢复编辑器UI和浮动按钮
+    const editorElements = document.querySelectorAll('[data-editor-ui]');
+    editorElements.forEach(el => {
+      (el as HTMLElement).style.display = '';
+    });
+
+    const floatButtons = document.querySelectorAll('.ant-float-btn, .ant-float-btn-group');
+    floatButtons.forEach(el => {
+      (el as HTMLElement).style.display = '';
+    });
+
+    // 恢复光标
+    document.body.style.cursor = originalState.bodyCursor;
+
+    // 恢复文字选择
+    document.body.style.userSelect = originalState.bodyUserSelect;
+
+    // 恢复动画
+    if (originalState.animationsDisabled) {
+      const styleElements = document.querySelectorAll('style');
+      styleElements.forEach(el => {
+        if (el.textContent?.includes('animation: none')) {
+          el.remove();
+        }
+      });
+    }
+  };
+
+  // 等待页面布局稳定
+  const waitForLayoutStable = (): Promise<void> => {
+    return new Promise((resolve) => {
+      let stableFrames = 0;
+      const requiredStableFrames = 10; // 等待10帧
+      let lastHeight = 0;
+
+      const checkStability = () => {
+        const currentHeight = document.documentElement.scrollHeight;
+
+        if (currentHeight === lastHeight) {
+          stableFrames++;
+          if (stableFrames >= requiredStableFrames) {
+            resolve();
+            return;
+          }
+        } else {
+          stableFrames = 0;
+          lastHeight = currentHeight;
+        }
+
+        requestAnimationFrame(checkStability);
+      };
+
+      // 延迟开始检查，给初始渲染一些时间
+      setTimeout(() => {
+        lastHeight = document.documentElement.scrollHeight;
+        requestAnimationFrame(checkStability);
+      }, 100);
+    });
+  };
+
+  // 克隆可读内容
+  const cloneReadableContent = (): HTMLElement => {
+    // 找到主要内容区域
+    const contentElement = document.querySelector('[data-content-area]') as HTMLElement;
+    if (!contentElement) {
+      throw new Error('找不到内容区域');
+    }
+
+    // 深度克隆内容
+    const clone = contentElement.cloneNode(true) as HTMLElement;
+
+    // 移除不需要的元素
+    const elementsToRemove = clone.querySelectorAll('[data-export-hide], .ant-float-btn, .ant-float-btn-group');
+    elementsToRemove.forEach(el => el.remove());
+
+    return clone;
+  };
+
+  // 创建隐藏根容器
+  const createHiddenRoot = (): HTMLElement => {
+    const root = document.createElement('div');
+    root.style.position = 'absolute';
+    root.style.left = '-9999px';
+    root.style.top = '-9999px';
+    root.style.width = '800px'; // 固定宽度
+    root.style.backgroundColor = '#ffffff';
+    root.style.fontFamily = 'Arial, sans-serif';
+    root.style.lineHeight = '1.6';
+    root.style.color = '#333';
+    root.style.padding = '20px';
+    root.style.boxSizing = 'border-box';
+    root.style.pointerEvents = 'none';
+
+    // 设置字体大小和颜色以确保可读性
+    root.style.fontSize = '16px';
+
+    document.body.appendChild(root);
+    return root;
+  };
+
+  // 挂载克隆内容到隐藏容器
+  const mount = (contentClone: HTMLElement, hiddenRoot: HTMLElement) => {
+    hiddenRoot.appendChild(contentClone);
+  };
+
+  // 测量内容尺寸
+  const measureContentSize = (hiddenRoot: HTMLElement) => {
+    const rect = hiddenRoot.getBoundingClientRect();
+    return {
+      width: 800, // 固定宽度
+      height: rect.height,
+    };
+  };
+
+  // 渲染为图片
+  const renderToImage = async (hiddenRoot: HTMLElement, size: { width: number; height: number }): Promise<string> => {
+    try {
+      // 使用html2canvas库进行渲染
+      const html2canvas = (await import('html2canvas')).default;
+
+      const canvas = await html2canvas(hiddenRoot, {
+        width: size.width,
+        height: size.height,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+      });
+
+      return canvas.toDataURL('image/png', 0.95);
+    } catch (error) {
+      console.error('html2canvas渲染失败:', error);
+      throw new Error('图片渲染失败');
+    }
+  };
+
+  // 清理现场
+  const cleanup = (hiddenRoot: HTMLElement, exportState: any) => {
+    // 移除隐藏容器
+    if (hiddenRoot && hiddenRoot.parentNode) {
+      hiddenRoot.parentNode.removeChild(hiddenRoot);
+    }
+
+    // 退出导出模式
+    exitExportMode(exportState);
+  };
 
   return (
     <>
@@ -835,11 +1077,14 @@ export default function BookPage() {
           box2BgColor="#ffffff"
         >
           {/* 书籍内容 */}
-          <div style={{
-            maxWidth: '800px',
-            margin: '0 auto',
-            padding: isMobile ? '20px 16px' : '40px 20px',
-          }}>
+          <div
+            style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              padding: isMobile ? '20px 16px' : '40px 20px',
+            }}
+            data-content-area
+          >
             {editMode === 'edit' ? (
               <BlockEditor
                 blocks={book.blocks || []}
@@ -851,216 +1096,23 @@ export default function BookPage() {
                 {book.blocks && book.blocks.map((block: any, index: number) => {
                   switch (block.type) {
                     case 'text':
-                      const textContent = block.parsedContent as any;
                       return (
-                        <div key={block.id || index}>
-                          {/* Access Level 显示 */}
-                          <div style={{
-                            position: 'relative',
-                            marginBottom: '8px',
-                          }}>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '-20px',
-                                right: '12px',
-                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
-                                color: 'white',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                zIndex: 10,
-                              }}
-                            >
-                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
-                            </div>
-                          </div>
-                          <div
-                            style={{
-                              marginBottom: isMobile ? '16px' : '24px',
-                              lineHeight: '1.8',
-                              fontSize: isMobile ? '15px' : '16px',
-                              color: '#333',
-                              whiteSpace: 'pre-wrap',
-                              wordWrap: 'break-word',
-                              wordBreak: 'break-word',
-                              overflowWrap: 'break-word',
-                              maxWidth: '100%',
-                              userSelect: 'text',
-                              WebkitUserSelect: 'text',
-                            }}
-                          >
-                            {textContent.content}
-                          </div>
+                        <div key={block.id || index} style={{ marginBottom: isMobile ? '16px' : '24px' }}>
+                          <TextBlock block={block} mode="view" />
                         </div>
                       );
 
                     case 'image':
-                      const imageContent = block.parsedContent as any;
-                      // 优先使用原始的imageUrl，如果parsedContent.url不存在的话
-                      const displayUrl = (imageContent && imageContent.url) || (block as any).imageUrl;
                       return (
-                        <div key={block.id || index}>
-                          {/* Access Level 显示 */}
-                          <div style={{
-                            position: 'relative',
-                            marginBottom: '8px',
-                          }}>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '-10px',
-                                right: '12px',
-                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
-                                color: 'white',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                zIndex: 10,
-                              }}
-                            >
-                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
-                            </div>
-                          </div>
-                          <div
-                            style={{
-                              marginBottom: '24px',
-                              textAlign: 'center',
-                            }}
-                          >
-                          {displayUrl ? (
-                            <img
-                              src={displayUrl}
-                              alt={imageContent?.title || '图片'}
-                              style={{
-                                width: '100%',
-                                height: 'auto',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                objectFit: 'contain',
-                              }}
-                              onClick={() => handleImageClick(imageContent || { url: displayUrl })}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: '100%',
-                                height: '200px',
-                                borderRadius: '8px',
-                                backgroundColor: '#f5f5f5',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#999',
-                                fontSize: '14px',
-                              }}
-                            >
-                              图片加载失败
-                            </div>
-                          )}
-                          {imageContent?.title && (
-                            <div style={{
-                              marginTop: '8px',
-                              fontSize: '14px',
-                              color: '#666',
-                              textAlign: 'center',
-                            }}>
-                              {imageContent?.title}
-                            </div>
-                          )}
-                          </div>
+                        <div key={block.id || index} style={{ marginBottom: '24px' }}>
+                          <ImageBlock block={block} mode="view" />
                         </div>
                       );
 
                     case 'code':
-                      const codeContent = block.parsedContent as any;
                       return (
-                        <div key={block.id || index}>
-                          {/* Access Level 显示 */}
-                          <div style={{
-                            position: 'relative',
-                            marginBottom: '8px',
-                          }}>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '-10px',
-                                right: '12px',
-                                backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
-                                color: 'white',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                zIndex: 10,
-                              }}
-                            >
-                              {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
-                            </div>
-                          </div>
-                          <div
-                            style={{
-                              marginBottom: '24px',
-                              backgroundColor: '#f6f8fa',
-                              borderRadius: '6px',
-                              padding: '16px',
-                              fontFamily: 'monospace',
-                              fontSize: '14px',
-                              color: '#24292f',
-                              overflow: 'auto',
-                              position: 'relative',
-                            }}
-                          >
-                            {/* 复制按钮 */}
-                            <Button
-                              type="text"
-                              icon={<CopyOutlined />}
-                              size="small"
-                              style={{
-                                position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                color: '#656d76',
-                                border: 'none',
-                                background: 'transparent',
-                                zIndex: 5,
-                              }}
-                              onClick={() => {
-                                navigator.clipboard.writeText(codeContent.code).then(() => {
-                                  message.success('代码已复制到剪贴板');
-                                }).catch(() => {
-                                  // 降级处理
-                                  const textArea = document.createElement('textarea');
-                                  textArea.value = codeContent.code;
-                                  document.body.appendChild(textArea);
-                                  textArea.select();
-                                  document.execCommand('copy');
-                                  document.body.removeChild(textArea);
-                                  message.success('代码已复制到剪贴板');
-                                });
-                              }}
-                            />
-                            <pre style={{
-                              margin: 0,
-                              whiteSpace: 'pre-wrap',
-                              userSelect: 'text',
-                              WebkitUserSelect: 'text'
-                            }}>
-                              {codeContent.code}
-                            </pre>
-                          {codeContent.language && (
-                            <div style={{
-                              marginTop: '8px',
-                              fontSize: '12px',
-                              color: '#656d76',
-                              textAlign: 'right',
-                            }}>
-                              {codeContent.language}
-                            </div>
-                          )}
-                          </div>
+                        <div key={block.id || index} style={{ marginBottom: '24px' }}>
+                          <CodeBlock block={block} mode="view" />
                         </div>
                       );
 
@@ -1144,11 +1196,14 @@ export default function BookPage() {
           )}
 
           {/* 互动按钮 */}
-          <div style={{
-            maxWidth: '800px',
-            margin: '0 auto',
-            padding: isMobile ? '20px 8px' : '40px 20px',
-          }}>
+          <div
+            style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              padding: isMobile ? '20px 8px' : '40px 20px',
+            }}
+            data-export-hide
+          >
             <div style={{
               background: 'white',
               padding: isMobile ? '20px 12px' : '32px 40px',
@@ -1183,16 +1238,27 @@ export default function BookPage() {
                 >
                   分享
                 </Button>
+                <Button
+                  icon={<CameraOutlined />}
+                  size="large"
+                  style={{ minWidth: '120px' }}
+                  onClick={handleExportAsImage}
+                >
+                  保存为图片
+                </Button>
               </div>
             </div>
           </div>
 
           {/* 评论区 */}
-          <div style={{
-            maxWidth: '800px',
-            margin: '0 auto',
-            padding: isMobile ? '0 8px 20px' : '0 20px 40px',
-          }}>
+          <div
+            style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              padding: isMobile ? '0 8px 20px' : '0 20px 40px',
+            }}
+            data-export-hide
+          >
             <CommentSection
               articleId={currentArticleId}
               isLoggedIn={isLoggedIn}

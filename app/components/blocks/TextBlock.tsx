@@ -27,28 +27,30 @@ const { TextArea } = Input;
 const { confirm } = Modal;
 
 interface TextBlockProps {
-  block: TextBlockType;
-  onChange: (block: TextBlockType) => void;
-  onDelete: () => void;
+  block: TextBlockType & { parsedContent?: any };
+  mode: 'view' | 'edit'; // 浏览模式或编辑模式
+  onChange?: (block: TextBlockType) => void;
+  onDelete?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  canDelete: boolean;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  canDelete?: boolean;
   isDragging?: boolean;
   sortableHandleProps?: any;
 }
 
 export default function TextBlock({
   block,
-  onChange,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-  canMoveUp,
-  canMoveDown,
-  canDelete,
-  isDragging,
+  mode,
+  onChange = () => {},
+  onDelete = () => {},
+  onMoveUp = () => {},
+  onMoveDown = () => {},
+  canMoveUp = false,
+  canMoveDown = false,
+  canDelete = false,
+  isDragging = false,
   sortableHandleProps,
 }: TextBlockProps) {
   const { isMobile } = useResponsive();
@@ -352,6 +354,51 @@ export default function TextBlock({
       onClick: handleUndo,
     },
   ];
+
+  // 浏览模式渲染
+  if (mode === 'view') {
+    const textContent = block.parsedContent as any;
+    return (
+      <div>
+        {/* Access Level 显示 */}
+        <div style={{
+          position: 'relative',
+          marginBottom: '8px',
+        }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: '-20px',
+              right: '12px',
+              backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+              color: 'white',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: 500,
+              zIndex: 10,
+            }}
+          >
+            {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+          </div>
+        </div>
+        <div style={{
+          whiteSpace: 'pre-wrap',
+          wordWrap: 'break-word',
+          wordBreak: 'break-word',
+          overflowWrap: 'break-word',
+          lineHeight: '1.8',
+          fontSize: '16px',
+          color: '#333',
+          maxWidth: '100%',
+          userSelect: 'text',
+          WebkitUserSelect: 'text',
+        }}>
+          {(textContent as any).content}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

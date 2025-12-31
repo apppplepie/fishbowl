@@ -11,28 +11,30 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 const { confirm } = Modal;
 
 interface ImageBlockProps {
-  block: ImageBlockType;
-  onChange: (block: ImageBlockType) => void;
-  onDelete: () => void;
+  block: ImageBlockType & { parsedContent?: any };
+  mode: 'view' | 'edit'; // 浏览模式或编辑模式
+  onChange?: (block: ImageBlockType) => void;
+  onDelete?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  canDelete: boolean;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  canDelete?: boolean;
   isDragging?: boolean;
   sortableHandleProps?: any;
 }
 
 export default function ImageBlock({
   block,
-  onChange,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-  canMoveUp,
-  canMoveDown,
-  canDelete,
-  isDragging,
+  mode,
+  onChange = () => {},
+  onDelete = () => {},
+  onMoveUp = () => {},
+  onMoveDown = () => {},
+  canMoveUp = false,
+  canMoveDown = false,
+  canDelete = false,
+  isDragging = false,
   sortableHandleProps,
 }: ImageBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -70,6 +72,81 @@ export default function ImageBlock({
     });
   };
 
+  // 浏览模式渲染
+  if (mode === 'view') {
+    return (
+      <div>
+        {/* Access Level 显示 */}
+        <div
+          style={{
+            position: 'relative',
+            marginBottom: '8px',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: '-10px',
+              right: '12px',
+              backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
+              color: 'white',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: 500,
+              zIndex: 10,
+            }}
+          >
+            {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
+          </div>
+        </div>
+        <div
+          style={{
+            cursor: 'pointer',
+            textAlign: 'center',
+            transition: 'transform 0.2s',
+          }}
+          onClick={() => setShowModal(true)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.02)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          <AntImage
+            src={(block.parsedContent as any).url}
+            alt="图片"
+            style={{
+              width: '100%',
+              height: 'auto',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              objectFit: 'contain',
+            }}
+          />
+          {(block.parsedContent as any).description && (
+            <div style={{
+              marginTop: '8px',
+              fontSize: '13px',
+              color: '#999',
+            }}>
+              {(block.parsedContent as any).description}
+            </div>
+          )}
+        </div>
+        {showModal && (
+          <ImageCardModal
+            visible={showModal}
+            imageUrl={(block.parsedContent as any).url}
+            title={(block.parsedContent as any).title || ''}
+            description={(block.parsedContent as any).description || ''}
+            onClose={() => setShowModal(false)}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <>

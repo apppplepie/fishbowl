@@ -116,6 +116,7 @@ function SortableItem({
           <TextBlock
             key={block.id}
             block={block}
+            mode="edit"
             onChange={handleBlockChange}
             onDelete={onDelete}
             sortableHandleProps={sortableHandleProps}
@@ -127,6 +128,7 @@ function SortableItem({
           <ImageBlock
             key={block.id}
             block={block}
+            mode="edit"
             onChange={handleBlockChange}
             onDelete={onDelete}
             sortableHandleProps={sortableHandleProps}
@@ -138,6 +140,7 @@ function SortableItem({
           <CodeBlock
             key={block.id}
             block={block}
+            mode="edit"
             onChange={handleBlockChange}
             onDelete={onDelete}
             sortableHandleProps={sortableHandleProps}
