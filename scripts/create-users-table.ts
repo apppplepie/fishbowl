@@ -118,7 +118,7 @@ async function main() {
       `, [
         adminId,
         'admin',
-        'admin@fishbowl.com',
+        'creepender42@outlook.com',
         adminPassword,
         '管理员',
         'admin',

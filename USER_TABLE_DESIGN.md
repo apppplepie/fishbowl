@@ -135,7 +135,7 @@ FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL;
 ### 管理员账号
 - **用户名**: admin
 - **密码**: admin123456
-- **邮箱**: admin@fishbowl.com
+- **邮箱**: creepender42@outlook.com
 - **角色**: admin
 - ⚠️ **重要**：请在生产环境中立即修改密码！
 
