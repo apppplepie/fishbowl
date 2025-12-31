@@ -69,7 +69,7 @@ export default function Home() {
         const y = container.scrollTop;
 
         // 👇 只在 par1 和 par2 切换区域附近才触发吸附
-        const SNAP_ZONE = SNAP_POINT * 0.7; // 吸附触发区：SNAP_POINT ± 60%
+        const SNAP_ZONE = SNAP_POINT * 0.6; // 吸附触发区：SNAP_POINT ± 60%
 
         if (y >= SNAP_POINT - SNAP_ZONE && y <= SNAP_POINT + SNAP_ZONE) {
           // 在切换区域附近，执行吸附逻辑
