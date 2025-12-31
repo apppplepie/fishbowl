@@ -3,6 +3,7 @@
 import { Button, Typography } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from './components/Header';
 
 const { Title, Paragraph } = Typography;
@@ -11,6 +12,7 @@ export default function Home() {
   const [showNavBar, setShowNavBar] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(false);
+  const router = useRouter();
 
   // 滚动到指定位置
   const scrollToPosition = (position: number) => {
@@ -218,7 +220,30 @@ export default function Home() {
               <Paragraph className="!text-white/90">
                 基于 Next.js 16，享受极致的性能体验
               </Paragraph>
+
+
+
+
             </div>
+          </div>
+
+          {/* 跳转到归档页面按钮 */}
+          <div style={{ textAlign: 'center', marginTop: '40px' }}>
+            <Button
+              type="primary"
+              size="large"
+              onClick={() => router.push('/archive')}
+              style={{
+                height: '50px',
+                fontSize: '16px',
+                borderRadius: '25px',
+                padding: '0 40px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+              }}
+            >
+              📚 进入文章归档
+            </Button>
           </div>
         </div>
       </div>
