@@ -71,6 +71,46 @@ function ArticlesPageContent() {
     }
   }, [searchParams]);
 
+  // 监听页面导航变化，强制刷新数据（解决HTTPS环境下跳转回来不刷新的问题）
+  useEffect(() => {
+    // 当页面变为活跃状态时（从其他页面跳转回来），强制重新加载数据
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // 页面变为可见，检查是否需要刷新数据
+        const lastRefresh = sessionStorage.getItem('archiveLastRefresh');
+        const now = Date.now();
+        const REFRESH_INTERVAL = 30000; // 30秒内不重复刷新
+
+        if (!lastRefresh || now - parseInt(lastRefresh) > REFRESH_INTERVAL) {
+          console.log('检测到页面激活，刷新归档数据');
+          loadArticles(0, false, selectedCategoryId);
+          sessionStorage.setItem('archiveLastRefresh', now.toString());
+        }
+      }
+    };
+
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 监听页面焦点变化（额外保险）
+    window.addEventListener('focus', () => {
+      const lastRefresh = sessionStorage.getItem('archiveLastRefresh');
+      const now = Date.now();
+      const REFRESH_INTERVAL = 30000;
+
+      if (!lastRefresh || now - parseInt(lastRefresh) > REFRESH_INTERVAL) {
+        console.log('检测到页面获得焦点，刷新归档数据');
+        loadArticles(0, false, selectedCategoryId);
+        sessionStorage.setItem('archiveLastRefresh', now.toString());
+      }
+    });
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
+  }, [selectedCategoryId]);
+
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
   // 加载所有可用标签
@@ -347,7 +387,7 @@ function ArticlesPageContent() {
               justifyContent: isMobile ? 'flex-start' : 'space-between',
             }}>
               {/* 左侧：标签搜索筛选 */}
-              <div style={{ flex: 1 }}>
+              {/* <div style={{ flex: 1 }}>
                 <Select
                   mode="tags"
                   value={selectedTags}
@@ -378,7 +418,7 @@ function ArticlesPageContent() {
                   }}
                   options={allTags.map(tag => ({ label: tag, value: tag }))}
                 />
-              </div>
+              </div> */}
 
               {/* 右侧：关键词搜索 */}
               <div style={{ width: isMobile ? '100%' : '320px' }}>

@@ -136,10 +136,17 @@ export function generateExcerptFromBlocks(blocks: Block[], maxLength: number = 2
     return '';
   }
 
-  // 清理内容：移除多余的换行符，截取合适长度
+  // 清理内容：移除多余的空格、空行和换行符，截取合适长度
   let excerpt = firstTextBlock.content
-    .replace(/\n\s*\n/g, '\n') // 合并多个空行
-    .replace(/^\s+|\s+$/g, '') // 移除首尾空白
+    // 先移除行内的多余空格（连续的空格合并为一个）
+    .replace(/[ \t]+/g, ' ')
+    // 移除只有空格的行
+    .replace(/^[ \t]*$/gm, '')
+    // 合并多个空行
+    .replace(/\n\s*\n/g, '\n')
+    // 移除首尾空白
+    .replace(/^\s+|\s+$/g, '')
+    // 截取指定长度
     .substring(0, maxLength);
 
   // 如果内容被截断，添加省略号

@@ -5,7 +5,7 @@ import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, B
 import type { MenuProps } from 'antd';
 
 const { Option } = Select;
-import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CopyOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
 import BookChapterNavigator, { BookChapterDrawerButton } from '@/app/components/sidebar/BookChapterNavigator';
@@ -827,42 +827,7 @@ export default function BookPage() {
                   )}
                 </div>
 
-                {/* 操作按钮 */}
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  flexWrap: 'wrap',
-                  justifyContent: isMobile ? 'flex-start' : 'flex-end',
-                }}>
-                  {/* 点赞 */}
-                  <Button
-                    type={isLiked ? 'primary' : 'text'}
-                    icon={<LikeOutlined />}
-                    onClick={handleLike}
-                    loading={isLiking}
-                    style={{
-                      color: isLiked ? '#1890ff' : 'rgba(255, 255, 255, 0.8)',
-                      borderColor: isLiked ? '#1890ff' : 'rgba(255, 255, 255, 0.3)',
-                    }}
-                  >
-                    {likesCount}
-                  </Button>
-
-                  {/* 分享 */}
-                  <Button
-                    type="text"
-                    icon={<ShareAltOutlined />}
-                    onClick={handleShare}
-                    style={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      borderColor: 'rgba(255, 255, 255, 0.3)',
-                    }}
-                  >
-                    分享
-                  </Button>
-
-
-                </div>
+               
               </div>
             </div>
           }
@@ -897,7 +862,7 @@ export default function BookPage() {
                             <div
                               style={{
                                 position: 'absolute',
-                                top: '-10px',
+                                top: '-20px',
                                 right: '12px',
                                 backgroundColor: ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.color || '#52c41a',
                                 color: 'white',
@@ -922,6 +887,8 @@ export default function BookPage() {
                               wordBreak: 'break-word',
                               overflowWrap: 'break-word',
                               maxWidth: '100%',
+                              userSelect: 'text',
+                              WebkitUserSelect: 'text',
                             }}
                           >
                             {textContent.content}
@@ -1043,11 +1010,46 @@ export default function BookPage() {
                               fontSize: '14px',
                               color: '#24292f',
                               overflow: 'auto',
+                              position: 'relative',
                             }}
                           >
-                          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                            {codeContent.code}
-                          </pre>
+                            {/* 复制按钮 */}
+                            <Button
+                              type="text"
+                              icon={<CopyOutlined />}
+                              size="small"
+                              style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                color: '#656d76',
+                                border: 'none',
+                                background: 'transparent',
+                                zIndex: 5,
+                              }}
+                              onClick={() => {
+                                navigator.clipboard.writeText(codeContent.code).then(() => {
+                                  message.success('代码已复制到剪贴板');
+                                }).catch(() => {
+                                  // 降级处理
+                                  const textArea = document.createElement('textarea');
+                                  textArea.value = codeContent.code;
+                                  document.body.appendChild(textArea);
+                                  textArea.select();
+                                  document.execCommand('copy');
+                                  document.body.removeChild(textArea);
+                                  message.success('代码已复制到剪贴板');
+                                });
+                              }}
+                            />
+                            <pre style={{
+                              margin: 0,
+                              whiteSpace: 'pre-wrap',
+                              userSelect: 'text',
+                              WebkitUserSelect: 'text'
+                            }}>
+                              {codeContent.code}
+                            </pre>
                           {codeContent.language && (
                             <div style={{
                               marginTop: '8px',
@@ -1140,6 +1142,50 @@ export default function BookPage() {
               </div>
             </div>
           )}
+
+          {/* 互动按钮 */}
+          <div style={{
+            maxWidth: '800px',
+            margin: '0 auto',
+            padding: isMobile ? '20px 8px' : '40px 20px',
+          }}>
+            <div style={{
+              background: 'white',
+              padding: isMobile ? '20px 12px' : '32px 40px',
+              borderRadius: isMobile ? '8px' : '8px',
+              boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '16px',
+                paddingBottom: '32px',
+                borderBottom: '1px solid #e8e8e8',
+              }}>
+                <Button
+                  icon={<LikeOutlined />}
+                  size="large"
+                  style={{
+                    minWidth: '120px',
+                    color: isLiked ? '#1890ff' : undefined,
+                    borderColor: isLiked ? '#1890ff' : undefined,
+                  }}
+                  onClick={handleLike}
+                  loading={isLiking}
+                >
+                  {isLiked ? '已点赞' : '点赞'} {likesCount}
+                </Button>
+                <Button
+                  icon={<ShareAltOutlined />}
+                  size="large"
+                  style={{ minWidth: '120px' }}
+                  onClick={handleShare}
+                >
+                  分享
+                </Button>
+              </div>
+            </div>
+          </div>
 
           {/* 评论区 */}
           <div style={{

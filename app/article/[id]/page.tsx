@@ -6,7 +6,7 @@ import type { MenuProps } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
-import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
 import ArticleNavigator, { ArticleDrawerButton } from '@/app/components/sidebar/ArticleNavigator';
@@ -382,9 +382,9 @@ export default function ArticlePage() {
         if (response.ok && result.success) {
           message.success({ content: '文章保存成功！', key: 'save' });
           setEditMode('view');
-          // 跳转到归档页
+          // 跳转到归档页，并添加时间戳参数强制刷新
           setTimeout(() => {
-            router.push('/archive');
+            router.push(`/archive?t=${Date.now()}`);
           }, 1000);
         } else {
           message.error({ content: result.error || '保存失败', key: 'save' });
@@ -1000,6 +1000,8 @@ export default function ArticlePage() {
                             fontSize: '16px',
                             color: '#333',
                             maxWidth: '100%',
+                            userSelect: 'text',
+                            WebkitUserSelect: 'text',
                           }}>
                             {(block.parsedContent as TextBlockContent).content}
                           </div>
@@ -1122,34 +1124,66 @@ export default function ArticlePage() {
                             borderRadius: '8px',
                             padding: '20px',
                             overflow: 'auto',
+                            position: 'relative',
                           }}>
-                          {(block.parsedContent as CodeBlockContent).title && (
+                            {/* 复制按钮 */}
+                            <Button
+                              type="text"
+                              icon={<CopyOutlined />}
+                              size="small"
+                              style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                color: '#abb2bf',
+                                border: 'none',
+                                background: 'transparent',
+                                zIndex: 5,
+                              }}
+                              onClick={() => {
+                                navigator.clipboard.writeText((block.parsedContent as CodeBlockContent).code).then(() => {
+                                  message.success('代码已复制到剪贴板');
+                                }).catch(() => {
+                                  // 降级处理
+                                  const textArea = document.createElement('textarea');
+                                  textArea.value = (block.parsedContent as CodeBlockContent).code;
+                                  document.body.appendChild(textArea);
+                                  textArea.select();
+                                  document.execCommand('copy');
+                                  document.body.removeChild(textArea);
+                                  message.success('代码已复制到剪贴板');
+                                });
+                              }}
+                            />
+                            {(block.parsedContent as CodeBlockContent).title && (
+                              <div style={{
+                                color: '#61dafb',
+                                fontSize: '14px',
+                                marginBottom: '12px',
+                                fontWeight: 500,
+                              }}>
+                                {(block.parsedContent as CodeBlockContent).title}
+                              </div>
+                            )}
                             <div style={{
-                              color: '#61dafb',
-                              fontSize: '14px',
-                              marginBottom: '12px',
-                              fontWeight: 500,
+                              fontSize: '13px',
+                              color: '#abb2bf',
+                              marginBottom: '8px',
+                              opacity: 0.7,
                             }}>
-                              {(block.parsedContent as CodeBlockContent).title}
+                              {(block.parsedContent as CodeBlockContent).language}
                             </div>
-                          )}
-                          <div style={{
-                            fontSize: '13px',
-                            color: '#abb2bf',
-                            marginBottom: '8px',
-                            opacity: 0.7,
-                          }}>
-                            {(block.parsedContent as CodeBlockContent).language}
-                          </div>
-                          <pre style={{
-                            margin: 0,
-                            color: '#abb2bf',
-                            fontSize: '14px',
-                            lineHeight: '1.6',
-                            overflowX: 'auto',
-                          }}>
-                            <code>{(block.parsedContent as CodeBlockContent).code}</code>
-                          </pre>
+                            <pre style={{
+                              margin: 0,
+                              color: '#abb2bf',
+                              fontSize: '14px',
+                              lineHeight: '1.6',
+                              overflowX: 'auto',
+                              userSelect: 'text',
+                              WebkitUserSelect: 'text',
+                            }}>
+                              <code>{(block.parsedContent as CodeBlockContent).code}</code>
+                            </pre>
                           </div>
                         </div>
                       ) : block.type === 'placeholder' ? (

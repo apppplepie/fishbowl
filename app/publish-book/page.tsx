@@ -89,7 +89,7 @@ function PublishBookPage() {
       localStorage.setItem('book-draft', JSON.stringify(draft));
     }
 
-    message.success('书籍草稿已保存到本地');
+    // message.success('书籍草稿已保存到本地');
   }, [form, user, coverFileList]);
 
   // 检查并保存草稿（带防抖）
