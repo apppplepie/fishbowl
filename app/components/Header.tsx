@@ -22,6 +22,7 @@ import '../styles/navigation.css';
 interface HeaderProps {
   isVisible?: boolean;
   leftContent?: React.ReactNode; // 左侧自定义内容（可选）
+  embedded?: boolean; // 是否嵌入模式（使用static定位而不是fixed）
 }
 
 /**
@@ -31,7 +32,7 @@ interface HeaderProps {
  * - 中间：导航菜单（响应式：桌面端显示文字+图标，移动端只显示图标）
  * - 右侧：用户信息（已登录显示用户名，未登录显示登录按钮）
  */
-export default function Header({ isVisible = true, leftContent }: HeaderProps) {
+export default function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps) {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState<number>(
     typeof window !== 'undefined' ? window.innerWidth : 1024
@@ -156,17 +157,17 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
       {/* Header容器 */}
       <div
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: isVisible ? '45px' : '0',
-          opacity: isVisible ? 1 : 0,
-          visibility: isVisible ? 'visible' : 'hidden',
-          zIndex: 10000,
-          pointerEvents: isVisible ? 'auto' : 'none',
-          transition: 'height 0.3s ease, opacity 0.3s ease, visibility 0.3s ease',
-          overflow: 'hidden',
+          position: embedded ? 'static' : 'fixed',
+          top: embedded ? 'auto' : 0,
+          left: embedded ? 'auto' : 0,
+          right: embedded ? 'auto' : 0,
+          height: embedded ? '45px' : (isVisible ? '45px' : '0'),
+          opacity: embedded ? 1 : (isVisible ? 1 : 0),
+          visibility: embedded ? 'visible' : (isVisible ? 'visible' : 'hidden'),
+          zIndex: embedded ? 'auto' : 10000,
+          pointerEvents: embedded ? 'auto' : (isVisible ? 'auto' : 'none'),
+          transition: embedded ? 'none' : 'height 0.3s ease, opacity 0.3s ease, visibility 0.3s ease',
+          overflow: embedded ? 'visible' : 'hidden',
         }}
       >
         {/* Header 固定在顶部 */}

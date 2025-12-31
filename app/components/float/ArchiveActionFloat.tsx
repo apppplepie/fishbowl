@@ -202,7 +202,7 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
                 <Option value="😊">😊 开心</Option>
                 <Option value="😢">😢 难过</Option>
                 <Option value="😍">😍 幸福</Option>
-                <Option value="😤">😤 生气</Option>
+                <Option value="😡">😡 生气</Option>
                 <Option value="😴">😴 困倦</Option>
                 <Option value="🤔">🤔 思考</Option>
                 <Option value="💪">💪 充满动力</Option>
