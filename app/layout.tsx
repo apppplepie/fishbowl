@@ -26,7 +26,10 @@ export default function RootLayout({
     <html lang="en">
       <body
         style={{
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          backgroundAttachment: 'fixed',
+          minHeight: '100vh'
         }}
         className="antialiased"
       >

@@ -94,7 +94,7 @@ export default function PageLayout({
         <div
           style={{
             minHeight: '60px',
-            background: box1BgColor,
+            background: 'transparent',
             ...box1Style,
           }}
         >

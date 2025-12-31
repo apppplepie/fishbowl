@@ -108,14 +108,14 @@ export default function Home() {
       }}
     >
       {/* 第一部分 - 首屏 */}
-      <div 
+      <div
         id="part-1"
         ref={part1Ref}
         className="flex flex-col items-center justify-center"
-        style={{ 
+        style={{
           display: isLocked ? 'none' : 'flex',
           height: '80vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'transparent',
           scrollSnapAlign: 'start',
           scrollSnapStop: 'always'
         }}
@@ -151,7 +151,7 @@ export default function Home() {
         ref={part2Ref}
         className="h-screen flex flex-col items-center"
         style={{ 
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+          background: 'transparent',
           scrollSnapAlign: 'start',
           scrollSnapStop: 'always',
           overflowY: 'auto',
@@ -163,19 +163,29 @@ export default function Home() {
           padding: 0
         }}
       >
-        {/* 盒模型1：60px高的顶部区域 */}
+        {/* 盒模型1：7vh高的透明顶部区域 */}
         <div
           style={{
             height: '7vh',
-            background: ' #764ba2 100%',
+            background: 'transparent',
             width: '100%',
             flexShrink: 0,
             flexGrow: 0,
           }}
-        >&nbsp;</div>
+        >
+          {/* 透明占位区域 - 可以添加内容 */}
+        </div>
 
         {/* 盒模型2：内容区域 */}
-        <div className="max-w-4xl text-center text-white" style={{ padding: '40px 24px' }}>
+        <div
+        className="text-center text-white"
+        style={{
+          flex: 1,
+          width: '100%',
+          padding: '40px 24px',
+          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+          boxSizing: 'border-box',
+          }}>
           <Title level={2} className="!text-white mb-6">
             ✨ 关于我们
           </Title>

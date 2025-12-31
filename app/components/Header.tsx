@@ -97,7 +97,7 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-        }}>
+        }} suppressHydrationWarning>
           {item.icon && getIcon(item.icon)}
         </span>
       ),
@@ -130,7 +130,7 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-        }}>
+        }} suppressHydrationWarning>
           {item.icon && getIcon(item.icon)}
         </span>
       ),
@@ -186,21 +186,18 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
         >
           {/* 左侧 - 自定义内容 */}
           {leftContent && (
-            <div style={{ flexShrink: 0, marginRight: 'auto' }}>
+            <div style={{ flexShrink: 0 }}>
               {leftContent}
             </div>
           )}
 
-          {/* 中间 - 导航菜单（flex 布局，自动占据剩余空间并居中） */}
-          <div style={{ 
-            flex: 1,
-            display: 'flex', 
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100%',
+          {/* 中间 - 导航菜单（绝对居中定位） */}
+          <div style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
             pointerEvents: 'auto',
-            minWidth: 0, // 允许收缩
-            padding: leftContent ? '0 12px' : '0',
           }}>
             <Menu
               mode="horizontal"
@@ -216,18 +213,16 @@ export default function Header({ isVisible = true, leftContent }: HeaderProps) {
               }}
               theme="dark"
               className="header-nav-menu"
-              suppressHydrationWarning={true}
             />
           </div>
 
           {/* 右侧 - 用户信息（固定在最右边，不移动） */}
-          <div style={{ 
+          <div style={{
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             marginLeft: 'auto',
-            paddingLeft: isMobile ? '12px' : '24px',
           }}>
             {isLoggedIn ? (
               // 已登录 - 显示用户名，点击跳转到个人资料页

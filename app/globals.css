@@ -14,12 +14,15 @@
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  min-height: 100vh;
+  background-color: #f0fdf4; /* 移动端上拉下拉的背景底色 */
 
   /* 全局禁止缩放，防止双击和手势缩放 */
   touch-action: manipulation;
