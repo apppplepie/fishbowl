@@ -102,40 +102,23 @@ function PermissionSystemDemo() {
               ({isLoggedIn && user ? `${user.display_name || user.username}` : '游客'})
             </span>
           </div>
-          <div className="mt-3 text-center">
-            <Alert
-              message={
-                getUserActualLevel() === 2 ? "学习模式功能正在开发中..." :
-                getUserActualLevel() === 3 ? "已解锁会员专属内容" :
-                getUserActualLevel() === 4 ? "已解锁成人内容访问权限" :
-                getUserActualLevel() === 5 ? "拥有管理员权限" : "未知权限等级"
-              }
-              type={
-                getUserActualLevel() === 2 ? "warning" :
-                getUserActualLevel() === 3 ? "success" :
-                getUserActualLevel() === 4 ? "info" : "success"
-              }
-              showIcon
-              className="border-0 bg-white/10"
-            />
-          </div>
         </div>
       </div>
 
       {/* 权限等级选择器 */}
       <div className="text-center space-y-4">
         <h3 className="text-white font-medium text-lg">你可以在此页面体验各种权限</h3>
-        <div className="bg-white/20 rounded-lg p-6 max-w-md mx-auto">
+        <div className="bg-white/20 rounded-lg p-4 md:p-6 max-w-sm md:max-w-md mx-auto">
           <Segmented<string>
             size="large"
             options={ACCESS_LEVELS.map(level => ({
               label: (
-                <div className="flex items-center gap-2 font-medium">
+                <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2 font-medium py-1 md:py-0">
                   <div
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: level.color }}
                   />
-                  {level.label}
+                  <span className="text-xs md:text-sm">{level.label}</span>
                 </div>
               ),
               value: level.label,
@@ -151,9 +134,10 @@ function PermissionSystemDemo() {
               padding: '8px',
               borderRadius: '12px'
             }}
+            className="[&_.ant-segmented-item-selected]:h-12 md:[&_.ant-segmented-item-selected]:h-auto"
           />
-          <div className="mt-4 text-white/80 text-sm">
-            {ACCESS_LEVELS.find(level => level.value === currentUserLevel)?.label === 'P' ? '游客可查看' :
+          <div className="mt-4 text-white/80 text-sm leading-relaxed break-words">
+            {ACCESS_LEVELS.find(level => level.value === currentUserLevel)?.label === 'P' ? '游客可查看，学习模式（未开发）' :
              ACCESS_LEVELS.find(level => level.value === currentUserLevel)?.label === 'G' ? '游客可查看（含个人日常）' :
              ACCESS_LEVELS.find(level => level.value === currentUserLevel)?.label === 'M' ? '仅注册用户可查看' :
              ACCESS_LEVELS.find(level => level.value === currentUserLevel)?.label === 'A' ? '仅成人验证用户可查看' : '仅管理员可查看'}
@@ -254,36 +238,6 @@ function PermissionSystemDemo() {
             );
           })}
         </Row>
-      </div>
-
-      {/* 权限说明 */}
-      <div className="bg-white/10 rounded-lg p-6 space-y-4">
-        <h3 className="text-white font-medium text-lg">权限系统说明</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-white/90">
-          <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <UserOutlined /> 用户权限等级
-            </h4>
-            <ul className="space-y-1 text-sm">
-              <li>• <strong>游客</strong>：可查看P、G级内容</li>
-              <li>• <strong>注册用户</strong>：可查看P、G、M级内容</li>
-              <li>• <strong>成人验证</strong>：可查看P、G、M、A级内容</li>
-              <li>• <strong>管理员</strong>：可查看所有内容</li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <CrownOutlined /> 内容权限等级
-            </h4>
-            <ul className="space-y-1 text-sm">
-              <li>• <strong>P (公开)</strong>：所有人可见的基础内容</li>
-              <li>• <strong>G (一般)</strong>：含个人日常，方便学习模式筛选</li>
-              <li>• <strong>M (会员)</strong>：注册用户专属内容</li>
-              <li>• <strong>A (成人)</strong>：需要成人验证的内容</li>
-              <li>• <strong>R (管理员)</strong>：仅管理员可见的机密内容</li>
-            </ul>
-          </div>
-        </div>
       </div>
 
       {/* 升级提示弹窗 */}

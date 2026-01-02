@@ -462,11 +462,6 @@ export default function BookPage() {
 
   // 点赞处理
   const handleLike = async () => {
-    if (!isLoggedIn) {
-      message.warning('请先登录');
-      return;
-    }
-
     if (isLiking) return;
 
     setIsLiking(true);
@@ -1133,11 +1128,12 @@ export default function BookPage() {
               maxWidth: '800px',
               margin: '0 auto',
               padding: isMobile ? '12px 8px 0' : '40px 20px 0',
-              display: 'flex',
-              justifyContent: 'space-between',
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
               alignItems: 'center',
+              gap: '16px',
             }}>
-              <div>
+              <div style={{ textAlign: 'left' }}>
                 {navigation.canGoPrev && (
                   <Button
                     type="link"
@@ -1165,11 +1161,12 @@ export default function BookPage() {
                 fontSize: '14px',
                 color: '#666',
                 textAlign: 'center',
+                justifySelf: 'center',
               }}>
                 {navigation.currentIndex + 1} / {navigation.totalCount}
               </div>
 
-              <div>
+              <div style={{ textAlign: 'right' }}>
                 {navigation.canGoNext && (
                   <Button
                     type="link"
@@ -1204,12 +1201,17 @@ export default function BookPage() {
             }}
             data-export-hide
           >
-            <div style={{
-              background: 'white',
-              padding: isMobile ? '20px 12px' : '32px 40px',
-              borderRadius: isMobile ? '8px' : '8px',
-              boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
-            }}>
+            {/* Part 3: 互动按钮和评论区 */}
+            <div
+              style={{
+                background: 'white',
+                padding: isMobile ? '20px 12px' : '32px 40px',
+                borderRadius: isMobile ? '8px' : '8px',
+                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+              }}
+              data-export-hide
+            >
+              {/* 互动按钮 */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
@@ -1221,51 +1223,43 @@ export default function BookPage() {
                   icon={<LikeOutlined />}
                   size="large"
                   style={{
-                    minWidth: '120px',
+                    minWidth: isMobile ? '48px' : '120px',
                     color: isLiked ? '#1890ff' : undefined,
                     borderColor: isLiked ? '#1890ff' : undefined,
                   }}
                   onClick={handleLike}
                   loading={isLiking}
                 >
-                  {isLiked ? '已点赞' : '点赞'} {likesCount}
+                  {!isMobile && <>{isLiked ? '已点赞' : '点赞'} {likesCount}</>}
                 </Button>
                 <Button
                   icon={<ShareAltOutlined />}
                   size="large"
-                  style={{ minWidth: '120px' }}
+                  style={{ minWidth: isMobile ? '48px' : '120px' }}
                   onClick={handleShare}
                 >
-                  分享
+                  {!isMobile && '分享链接'}
                 </Button>
                 <Button
                   icon={<CameraOutlined />}
                   size="large"
-                  style={{ minWidth: '120px' }}
+                  style={{ minWidth: isMobile ? '48px' : '120px' }}
                   onClick={handleExportAsImage}
                 >
-                  保存为图片
+                  {!isMobile && '保存为图片'}
                 </Button>
               </div>
+
+              {/* 评论区 */}
+              <CommentSection
+                articleId={currentArticleId}
+                isLoggedIn={isLoggedIn}
+                currentUser={user}
+                onCommentCountChange={setCommentsCount}
+              />
             </div>
           </div>
 
-          {/* 评论区 */}
-          <div
-            style={{
-              maxWidth: '800px',
-              margin: '0 auto',
-              padding: isMobile ? '0 8px 20px' : '0 20px 40px',
-            }}
-            data-export-hide
-          >
-            <CommentSection
-              articleId={currentArticleId}
-              isLoggedIn={isLoggedIn}
-              currentUser={user}
-              onCommentCountChange={setCommentsCount}
-            />
-          </div>
         </PageLayout>
       </div>
 

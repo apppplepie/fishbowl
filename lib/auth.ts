@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 
 // JWT密钥（生产环境应该放在环境变量中）
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || '0OooOoO00oO0HR0313R1N3OoO0oOoO0oOo0';
 
 export interface JWTPayload {
   id: string;
@@ -17,7 +17,7 @@ export interface JWTPayload {
  */
 export function generateToken(payload: JWTPayload): string {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: '7d', // 7天过期
+    expiresIn: '1h', // 1小时过期（更安全）
   });
 }
 

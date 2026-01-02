@@ -98,7 +98,7 @@ export default function Header({ isVisible = true, leftContent, embedded = false
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-        }} suppressHydrationWarning>
+        }} >
           {item.icon && getIcon(item.icon)}
         </span>
       ),
@@ -133,7 +133,7 @@ export default function Header({ isVisible = true, leftContent, embedded = false
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-        }} suppressHydrationWarning>
+        }} >
           {item.icon && getIcon(item.icon)}
         </span>
       ),

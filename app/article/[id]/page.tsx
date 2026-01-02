@@ -523,6 +523,18 @@ export default function ArticlePage() {
   // 切换侧边栏展开/收起（桌面端）
   const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
 
+  // 复制分享链接处理
+  const handleShare = async () => {
+    try {
+      const url = window.location.href;
+      await navigator.clipboard.writeText(url);
+      message.success('链接已复制到剪切板');
+    } catch (error) {
+      console.error('复制链接失败:', error);
+      message.error('复制链接失败，请手动复制');
+    }
+  };
+
   // 保存为图片处理
   const handleExportAsImage = async () => {
     try {
@@ -1248,32 +1260,30 @@ export default function ArticlePage() {
                   icon={<LikeOutlined />}
                   size="large"
                   style={{
-                    minWidth: '120px',
+                    minWidth: isMobile ? '48px' : '120px',
                     color: isLiked ? '#1890ff' : undefined,
                     borderColor: isLiked ? '#1890ff' : undefined,
                   }}
                   onClick={handleLike}
                   loading={isLiking}
                 >
-                  {isLiked ? '已点赞' : '点赞'} {likesCount}
+                  {!isMobile && <>{isLiked ? '已点赞' : '点赞'} {likesCount}</>}
                 </Button>
                 <Button
                   icon={<ShareAltOutlined />}
                   size="large"
-                  style={{ minWidth: '120px' }}
-                  onClick={() => {
-                    message.info('分享功能开发中');
-                  }}
+                  style={{ minWidth: isMobile ? '48px' : '120px' }}
+                  onClick={handleShare}
                 >
-                  分享 {article?.shares || 0}
+                  {!isMobile && '分享链接'}
                 </Button>
                 <Button
                   icon={<CameraOutlined />}
                   size="large"
-                  style={{ minWidth: '120px' }}
+                  style={{ minWidth: isMobile ? '48px' : '120px' }}
                   onClick={handleExportAsImage}
                 >
-                  保存为图片
+                  {!isMobile && '保存为图片'}
                 </Button>
               </div>
 
