@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Modal, Form, Input, Button, Flex, Checkbox, message } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/hooks/useAuth';
 
 interface LoginModalProps {
   open: boolean;
@@ -15,6 +16,7 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const router = useRouter();
+  const { login } = useAuth();
 
   const onFinish = async (values: { username: string; password: string; remember: boolean }) => {
     setLoading(true);
@@ -37,23 +39,20 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
       if (response.ok && data.success) {
         // 登录成功
         message.success('登录成功！');
-        
-        // 保存 token 和用户信息到 localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // 如果勾选了"记住我"，设置较长的过期时间（这里简化处理）
-        if (values.remember) {
-          localStorage.setItem('remember', 'true');
-        }
-        
+
+        // 使用新的auth hook处理登录状态
+        await login(data.accessToken, data.user);
+
         form.resetFields();
-        
+
         // 通知父组件处理登录状态
         onLoginSuccess(data.user.display_name || data.user.username);
-        
-        // 刷新页面以更新登录状态
-        window.location.reload();
+
+        // 关闭模态框
+        onClose();
+
+        // 按需求：登录成功后统一跳转到首页
+        router.replace('/');
       } else {
         // 登录失败
         message.error(data.error || '登录失败，请检查用户名和密码');

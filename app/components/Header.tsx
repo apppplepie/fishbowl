@@ -34,10 +34,9 @@ interface HeaderProps {
  */
 export default function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps) {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState<number>(
-    typeof window !== 'undefined' ? window.innerWidth : 1024
-  );
-  const { isLoggedIn, username, logout, login } = useAuth();
+  // 避免 SSR/CSR 首屏 hydration mismatch：首屏统一用固定值，挂载后再同步真实宽度
+  const [windowWidth, setWindowWidth] = useState<number>(1024);
+  const { isLoggedIn, username, logout } = useAuth();
   const { isMobile } = useResponsive();
   const pathname = usePathname();
   const router = useRouter();
@@ -65,8 +64,7 @@ export default function Header({ isVisible = true, leftContent, embedded = false
   };
 
   // 登录成功处理
-  const handleLoginSuccess = (user: string) => {
-    login(user);
+  const handleLoginSuccess = (_username: string) => {
     setLoginModalOpen(false);
   };
 

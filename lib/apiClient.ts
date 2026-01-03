@@ -12,6 +12,9 @@ interface RequestOptions extends RequestInit {
  */
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
+  // 优先使用新版sessionStorage（access token），兼容旧版localStorage
+  const sessionToken = sessionStorage.getItem('access-token');
+  if (sessionToken) return sessionToken;
   return localStorage.getItem('token');
 }
 

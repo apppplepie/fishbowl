@@ -36,7 +36,7 @@ export default function AdminLayout({
 
       // 后端验证管理员权限
       try {
-        const token = getToken();
+        const token = await getToken();
         if (!token) {
           message.error('认证失败，请重新登录');
           router.push('/?login=true');

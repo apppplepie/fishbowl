@@ -173,7 +173,7 @@ export default function AdminDashboardPage() {
   // 获取用户列表
   const fetchUsers = async () => {
     try {
-      const token = getToken();
+      const token = await getToken();
       if (!token) return;
 
       const response = await fetch('/api/users', {
@@ -206,7 +206,7 @@ export default function AdminDashboardPage() {
   const handleCreateUser = async () => {
     try {
       const values = await form.validateFields();
-      const token = getToken();
+      const token = await getToken();
       if (!token) return;
 
       const response = await fetch('/api/users', {
@@ -249,7 +249,7 @@ export default function AdminDashboardPage() {
   // 保存用户更新
   const handleSave = async (record: UserData) => {
     try {
-      const token = getToken();
+      const token = await getToken();
       if (!token) return;
 
       const updateData = {

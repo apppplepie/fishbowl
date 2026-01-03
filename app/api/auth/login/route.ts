@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { generateToken } from '@/lib/auth';
+import { generateTokens } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
       [user.id]
     );
 
-    // 6. 生成JWT Token
-    const token = generateToken({
+    // 6. 生成JWT Tokens
+    const tokens = generateTokens({
       id: user.id,
       username: user.username,
       email: user.email,
@@ -76,11 +76,11 @@ export async function POST(req: NextRequest) {
       max_access_level: user.max_access_level || 3,
     });
 
-    // 7. 返回用户信息和token
-    return NextResponse.json({
+    // 7. 设置HttpOnly cookie存储refresh token
+    const response = NextResponse.json({
       success: true,
       message: '登录成功',
-      token,
+      accessToken: tokens.accessToken,
       user: {
         id: user.id,
         username: user.username,
@@ -91,6 +91,17 @@ export async function POST(req: NextRequest) {
         max_access_level: user.max_access_level || 3,
       },
     });
+
+    // 设置refresh token cookie
+    response.cookies.set('refresh-token', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS环境使用secure
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7, // 7天
+      path: '/',
+    });
+
+    return response;
 
   } catch (error: any) {
     console.error('登录失败:', error);

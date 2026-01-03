@@ -10,14 +10,50 @@ export interface JWTPayload {
   email: string;
   role: 'admin' | 'moderator' | 'user';
   max_access_level?: number;
+  type?: 'access' | 'refresh'; // Token类型
 }
 
 /**
- * 生成JWT Token
+ * 生成Access Token和Refresh Token
+ */
+export function generateTokens(payload: Omit<JWTPayload, 'type'>): {
+  accessToken: string;
+  refreshToken: string;
+} {
+  const now = Math.floor(Date.now() / 1000);
+
+  // 生成Access Token（15分钟过期）
+  const accessTokenPayload: JWTPayload = {
+    ...payload,
+    type: 'access'
+  };
+
+  const accessToken = jwt.sign(accessTokenPayload, JWT_SECRET, {
+    expiresIn: '15m', // 15分钟过期
+  });
+
+  // 生成Refresh Token（7天过期）
+  const refreshTokenPayload: JWTPayload = {
+    ...payload,
+    type: 'refresh'
+  };
+
+  const refreshToken = jwt.sign(refreshTokenPayload, JWT_SECRET, {
+    expiresIn: '7d', // 7天过期
+  });
+
+  return {
+    accessToken,
+    refreshToken
+  };
+}
+
+/**
+ * 生成单个JWT Token（向后兼容）
  */
 export function generateToken(payload: JWTPayload): string {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: '1h', // 1小时过期（更安全）
+    expiresIn: '15m', // 改为15分钟以配合refresh机制
   });
 }
 
@@ -32,6 +68,44 @@ export function verifyToken(token: string): JWTPayload | null {
     console.error('Token验证失败:', error);
     return null;
   }
+}
+
+/**
+ * 验证Refresh Token
+ */
+export function verifyRefreshToken(token: string): JWTPayload | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    // 确保是refresh token
+    if (decoded.type !== 'refresh') {
+      console.error('Token类型不匹配: 期望refresh token');
+      return null;
+    }
+    return decoded;
+  } catch (error) {
+    console.error('Refresh Token验证失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 使用Refresh Token刷新Access Token
+ */
+export function refreshAccessToken(refreshToken: string): {
+  accessToken: string;
+  refreshToken: string;
+} | null {
+  const decoded = verifyRefreshToken(refreshToken);
+
+  if (!decoded) {
+    return null;
+  }
+
+  // 从refresh token中提取用户信息（不包含type字段）
+  const { type, ...userPayload } = decoded;
+
+  // 生成新的token对
+  return generateTokens(userPayload);
 }
 
 /**
