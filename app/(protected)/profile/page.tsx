@@ -84,7 +84,6 @@ export default function ProfilePage() {
   const handleLogout = () => {
     logout();
     message.success('已退出登录');
-    router.push('/');
   };
 
   // 格式化日期

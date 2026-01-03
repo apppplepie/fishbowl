@@ -186,6 +186,8 @@ export function useAuth() {
         headers: {
           'Content-Type': 'application/json',
         },
+        // 尽量确保在页面跳转/刷新时也能把请求发出去
+        keepalive: true,
       });
     } catch (error) {
       console.error('Logout API call failed:', error);
@@ -197,9 +199,9 @@ export function useAuth() {
     // 触发自定义事件通知状态变化
     window.dispatchEvent(new Event('loginStatusChanged'));
 
-    // 重定向到首页
+    // 安全起见：退出后强制整页跳转（刷新）到首页，避免残留敏感 UI/缓存数据
     if (typeof window !== 'undefined') {
-      window.location.href = '/';
+      window.location.replace('/');
     }
   }, [clearAuthData]);
 
