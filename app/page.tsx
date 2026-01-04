@@ -308,12 +308,13 @@ export default function Home() {
   const [showNavBar, setShowNavBar] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(false);
+  const navBarTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
   // 滚动到指定位置
   const scrollToPosition = (position: number) => {
     const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!container || typeof window === 'undefined') return;
 
     isAutoScrolling.current = true;
     container.scrollTo({
@@ -321,23 +322,58 @@ export default function Home() {
       behavior: 'smooth',
     });
 
-    // 立即更新导航栏状态
-    const threshold = (window.innerHeight || 800) * 0.8;
-    setShowNavBar(position >= threshold);
+    // 延迟0.5s后更新导航栏状态
+    const threshold = window.innerHeight * 0.8;
+    const shouldShow = position >= threshold;
+    
+    // 清除之前的定时器
+    if (navBarTimerRef.current) {
+      clearTimeout(navBarTimerRef.current);
+      navBarTimerRef.current = null;
+    }
+    
+    // 延迟0.5s后更新状态
+    navBarTimerRef.current = setTimeout(() => {
+      setShowNavBar(shouldShow);
+      navBarTimerRef.current = null;
+    }, 500);
 
-    // 给 smooth scroll 一个完成时间
+    // 减少完成时间，让响应更快
     setTimeout(() => {
       isAutoScrolling.current = false;
-    }, 100);
+    }, 150);
   };
 
-  // 滑动吸附逻辑
+  // 滑动吸附逻辑和滚动位置检测
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!container || typeof window === 'undefined') return;
 
-    const SNAP_POINT = window.innerHeight * 0.8; // 80vh
-    let scrollEndTimer: number | null = null;
+    const getSnapPoint = () => window.innerHeight * 0.8; // 80vh
+    let scrollEndTimer: NodeJS.Timeout | null = null;
+    let lastScrollTop = container.scrollTop;
+    let lastScrollTime = Date.now();
+    let isScrolling = false;
+    let rafId: number | null = null;
+
+    // 更新导航栏显示状态（带延迟）
+    const updateNavBar = () => {
+      const y = container.scrollTop;
+      const threshold = getSnapPoint();
+      const shouldShow = y >= threshold;
+      
+      // 清除之前的定时器
+      if (navBarTimerRef.current) {
+        clearTimeout(navBarTimerRef.current);
+        navBarTimerRef.current = null;
+      }
+      
+      // 延迟0.5s后更新状态
+      navBarTimerRef.current = setTimeout(() => {
+        setShowNavBar(shouldShow);
+        navBarTimerRef.current = null;
+      }, 500);
+    };
 
     const snapTo = (target: number) => {
       isAutoScrolling.current = true;
@@ -346,45 +382,122 @@ export default function Home() {
         behavior: 'smooth',
       });
 
-      // 在滚动开始时立即更新导航栏状态
-      setShowNavBar(target >= SNAP_POINT);
-
-      // 给 smooth scroll 一个"完成时间"
+      // 在滚动结束后更新导航位置
       setTimeout(() => {
         isAutoScrolling.current = false;
-      }, 220);
+        updateNavBar(); // 确保状态同步
+      }, 30);
+    };
+
+    // 检查是否需要吸附
+    const checkSnap = () => {
+      if (isAutoScrolling.current) return;
+
+      const y = container.scrollTop;
+      const SNAP_POINT = getSnapPoint();
+    
+      // [表情] 已经进入 par2 内容区 → 完全放行
+      if (y >= SNAP_POINT) return;
+    
+      // [表情] 仍在 par1 区域，决定回去还是进 par2
+      // 调整判定阈值，让吸附更敏感（从0.5改为0.4）
+      const target = y < SNAP_POINT * 0.4 ? 0 : SNAP_POINT;
+    
+      // 如果距离目标点很近，直接吸附（阈值从2增加到5，让吸附更早触发）
+      if (Math.abs(y - target) < 5) {
+        if (Math.abs(y - target) > 1) {
+          snapTo(target);
+        }
+        return;
+      }
+
+      // 如果滚动速度很慢或已停止，立即吸附
+      const scrollSpeed = Math.abs(y - lastScrollTop);
+      if (scrollSpeed < 1 && !isScrolling) {
+        snapTo(target);
+      }
     };
 
     const onScroll = () => {
+      // 实时更新导航栏状态
+      updateNavBar();
+
       if (isAutoScrolling.current) return;
 
+      const currentScrollTop = container.scrollTop;
+      const currentTime = Date.now();
+      
+      // 检测滚动速度
+      const scrollDelta = Math.abs(currentScrollTop - lastScrollTop);
+      const timeDelta = currentTime - lastScrollTime;
+      
+      if (scrollDelta > 0) {
+        isScrolling = true;
+        lastScrollTop = currentScrollTop;
+        lastScrollTime = currentTime;
+      }
+
+      // 使用 requestAnimationFrame 来更流畅地检测
+      if (rafId) cancelAnimationFrame(rafId);
+      
+      rafId = requestAnimationFrame(() => {
+        // 在滚动过程中就开始检查是否需要吸附
+        checkSnap();
+      });
+
+      // 清除之前的定时器
       if (scrollEndTimer) clearTimeout(scrollEndTimer);
 
-      // 判断"用户停止滚动"
-      scrollEndTimer = window.setTimeout(() => {
-        const y = container.scrollTop;
-      
-        // 🚫 已经进入 par2 内容区 → 完全放行
-        if (y >= SNAP_POINT) return;
-      
-        // 👇 仍在 par1 区域，决定回去还是进 par2
-        const target = y < SNAP_POINT * 0.5 ? 0 : SNAP_POINT;
-      
-        if (Math.abs(y - target) < 2) return;
-      
-        snapTo(target);
-      }, 160);
-      
-      
+      // 减少判定时间，从160ms减少到50ms，让响应更快
+      scrollEndTimer = setTimeout(() => {
+        isScrolling = false;
+        checkSnap();
+      },30);
     };
 
+    // 触摸事件处理（移动端更早触发）
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+    };
+
+    const onTouchEnd = () => {
+      // 触摸结束后立即检查是否需要吸附
+      setTimeout(() => {
+        checkSnap();
+      }, 30);
+    };
+
+    // 初始化导航栏状态
+    updateNavBar();
+
     container.addEventListener('scroll', onScroll, { passive: true });
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    // 监听窗口大小变化，重新计算吸附点
+    const handleResize = () => {
+      updateNavBar();
+    };
+    window.addEventListener('resize', handleResize);
 
     return () => {
       container.removeEventListener('scroll', onScroll);
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('resize', handleResize);
       if (scrollEndTimer) clearTimeout(scrollEndTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+      if (navBarTimerRef.current) {
+        clearTimeout(navBarTimerRef.current);
+        navBarTimerRef.current = null;
+      }
     };
   }, []);
+
 
 
 
