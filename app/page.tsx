@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from './components/Header';
 import PermissionSystemDemo from './components/PermissionSystemDemo';
+import { theme } from './config/theme';
 
 const { Title, Paragraph } = Typography;
 
@@ -237,9 +238,9 @@ export default function Home() {
           style={{
             background: 'transparent',
             minHeight: '100vh',
-            borderLeft: '6px solid black',
-            borderRight: '6px solid black',
-            borderBottom: '6px solid black',
+            borderLeft: `6px solid ${theme.colors.black}`,
+            borderRight: `6px solid ${theme.colors.black}`,
+            borderBottom: `6px solid ${theme.colors.black}`,
             boxSizing: 'border-box',
             padding: 0
           }}
@@ -248,8 +249,10 @@ export default function Home() {
           <div
             style={{
               height: '45px',
-              width: '100%',
-              background: showNavBar ? 'transparent' : 'black',
+              width: 'calc(100% + 12px)',
+              marginLeft: '-6px',
+              marginRight: '-6px',
+              background: showNavBar ? 'transparent' : theme.colors.black,
               position: 'sticky',
               top: 0,
               zIndex: 1000,
@@ -281,7 +284,7 @@ export default function Home() {
               flex: 1,
               width: '100%',
               padding: '40px 24px',
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              background: theme.gradients.secondary,
               boxSizing: 'border-box',
             }}
           >
@@ -306,7 +309,7 @@ export default function Home() {
                 fontSize: '16px',
                 borderRadius: '25px',
                 padding: '0 40px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: theme.gradients.primary,
                 border: 'none',
               }}
             >

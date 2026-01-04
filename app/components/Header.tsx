@@ -15,6 +15,7 @@ import {
   LoginOutlined,
 } from '@ant-design/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
+import { theme } from '@/app/config/theme';
 import LoginModal from './LoginModal';
 import '../styles/navigation.css';
 // import NavigationDrawer from './NavigationDrawer'; // 保留但不使用，以后扩展
@@ -176,7 +177,7 @@ export default function Header({ isVisible = true, leftContent, embedded = false
             position: 'relative',
             height: '45px',
             minHeight: '45px',
-            background: 'black',
+            background: theme.colors.black,
             display: 'flex',
             alignItems: 'center',
             padding: isMobile ? '0 12px' : '0 24px',
@@ -207,7 +208,7 @@ export default function Header({ isVisible = true, leftContent, embedded = false
               style={{
                 border: 'none',
                 background: 'transparent',
-                color: 'white',
+                color: theme.text.primaryDark,
                 fontSize: isMobile ? '14px' : '15px',
                 fontWeight: 500,
                 lineHeight: '45px',
@@ -234,14 +235,14 @@ export default function Header({ isVisible = true, leftContent, embedded = false
                   gap: '6px',
                   fontWeight: 500,
                   cursor: 'pointer',
-                  color: 'white',
+                  color: theme.text.primaryDark,
                   fontSize: isMobile ? '14px' : '15px',
                   padding: '4px 8px',
                   borderRadius: '4px',
                   transition: 'background-color 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  if (!isMobile) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                  if (!isMobile) e.currentTarget.style.backgroundColor = theme.background.hover;
                 }}
                 onMouseLeave={(e) => {
                   if (!isMobile) e.currentTarget.style.backgroundColor = 'transparent';
@@ -259,10 +260,10 @@ export default function Header({ isVisible = true, leftContent, embedded = false
                 type="text"
                 icon={<LoginOutlined />}
                 onClick={() => setLoginModalOpen(true)}
-                style={{
-                  color: 'white',
-                  border: 'none',
-                  padding: isMobile ? '4px 8px' : '4px 12px',
+              style={{
+                color: theme.text.primaryDark,
+                border: 'none',
+                padding: isMobile ? '4px 8px' : '4px 12px',
                   height: 'auto',
                   display: 'flex',
                   alignItems: 'center',

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import MessageConfig from "./message-config";
 import Providers from "./providers";
+import { theme } from "./config/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ export default function RootLayout({
       <body
         style={{
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: theme.gradients.primary,
           backgroundAttachment: 'fixed',
           minHeight: '100vh'
         }}

@@ -4,6 +4,7 @@ import { Button, Typography, Modal, message, Segmented, Card, Row, Col, Tag, Ale
 import { LockOutlined, EyeOutlined, UserOutlined, CrownOutlined, MailOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { ACCESS_LEVELS } from '../types/block';
+import { theme } from '../config/theme';
 import PlaceholderDisplay from './blocks/PlaceholderDisplay';
 import { useAuth } from '../hooks/useAuth';
 
@@ -128,7 +129,7 @@ export default function PermissionSystemDemo() {
               if (level) setCurrentUserLevel(level.value);
             }}
             style={{
-              backgroundColor: 'rgba(255,255,255,0.1)',
+              backgroundColor: theme.background.whiteOverlayLight,
               padding: '8px',
               borderRadius: '12px'
             }}
@@ -224,9 +225,9 @@ export default function PermissionSystemDemo() {
                           message: '权限不足'
                         }}
                         style={{
-                          backgroundColor: 'rgba(255,255,255,0.1)',
-                          border: '1px dashed rgba(255,255,255,0.3)',
-                          color: 'rgba(255,255,255,0.8)'
+                          backgroundColor: theme.background.whiteOverlayLight,
+                          border: `1px dashed ${theme.border.dashed}`,
+                          color: theme.text.primaryDark
                         }}
                       />
                     )}
