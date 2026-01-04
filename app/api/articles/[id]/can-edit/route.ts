@@ -5,7 +5,7 @@
  * 权限规则：
  * - 管理员：可以编辑任何文章
  * - 版主：必须是作者才能编辑
- * - 普通用户：必须是作者才能编辑
+ * - 普通用户：不能编辑文章（只能发评论）
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';

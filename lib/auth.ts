@@ -165,7 +165,7 @@ export function canModerate(user: JWTPayload | null): boolean {
  * 检查用户是否可以编辑指定文章
  * - 管理员：可以编辑任何文章
  * - 版主：必须是作者才能编辑
- * - 普通用户：必须是作者才能编辑
+ * - 普通用户：不能编辑文章（只能发评论）
  */
 export function canEditArticle(
   user: JWTPayload | null,
@@ -179,7 +179,12 @@ export function canEditArticle(
     return true;
   }
   
-  // 版主和普通用户必须是作者才能编辑
+  // 普通用户不能编辑文章
+  if (user.role === 'user') {
+    return false;
+  }
+  
+  // 版主必须是作者才能编辑
   return (
     (articleAuthor !== null && articleAuthor === user.username) ||
     (articleAuthorId !== null && articleAuthorId === user.id)

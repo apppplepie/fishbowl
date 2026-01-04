@@ -56,7 +56,7 @@ export async function PUT(
     // 3. 权限检查：使用统一的权限检查函数
     // - 管理员：可以编辑任何文章
     // - 版主：必须是作者才能编辑
-    // - 普通用户：必须是作者才能编辑
+    // - 普通用户：不能编辑文章（只能发评论）
     if (!canEditArticle(currentUser, article.author, article.author_id)) {
       return NextResponse.json(
         { success: false, error: '无权编辑此文章' },
