@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Menu, Button, Tooltip } from 'antd';
+import { Menu, Button } from 'antd';
 import type { MenuProps } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -100,7 +100,6 @@ export default function Header({ isVisible = true, leftContent, embedded = false
           {item.icon && getIcon(item.icon)}
         </span>
       ),
-      title: !showText ? item.label : undefined, // 仅图标模式下显示tooltip
       onClick: () => {
         router.push(item.path);
       },
@@ -135,7 +134,6 @@ export default function Header({ isVisible = true, leftContent, embedded = false
           {item.icon && getIcon(item.icon)}
         </span>
       ),
-      title: !showText ? item.label : undefined,
       onClick: () => {
         router.push(item.path);
       },
@@ -229,79 +227,50 @@ export default function Header({ isVisible = true, leftContent, embedded = false
           }}>
             {isLoggedIn ? (
               // 已登录 - 显示用户名，点击跳转到个人资料页
-              <>
-                {!isMobile ? (
-                  <Tooltip title="个人资料">
-                    <span
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        color: 'white',
-                        fontSize: isMobile ? '14px' : '15px',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        transition: 'background-color 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                      onClick={() => {
-                        router.push('/profile');
-                      }}
-                    >
-                      <UserOutlined style={{ fontSize: '16px' }} />
-                      {!isMobile && <span>{username}</span>}
-                    </span>
-                  </Tooltip>
-                ) : (
-                  // 移动端 Tooltip 容易出现“点两次才触发”的交互问题，直接去掉
-                  <span
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      color: 'white',
-                      fontSize: '14px',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onClick={() => {
-                      router.push('/profile');
-                    }}
-                  >
-                    <UserOutlined style={{ fontSize: '16px' }} />
-                  </span>
-                )}
-              </>
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  color: 'white',
+                  fontSize: isMobile ? '14px' : '15px',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isMobile) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isMobile) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                onClick={() => {
+                  router.push('/profile');
+                }}
+              >
+                <UserOutlined style={{ fontSize: '16px' }} />
+                {!isMobile && <span>{username}</span>}
+              </span>
             ) : (
               // 未登录 - 显示登录按钮
-              <Tooltip title="登录">
-                <Button
-                  type="text"
-                  icon={<LoginOutlined />}
-                  onClick={() => setLoginModalOpen(true)}
-                  style={{
-                    color: 'white',
-                    border: 'none',
-                    padding: isMobile ? '4px 8px' : '4px 12px',
-                    height: 'auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  {!isMobile && <span>登录</span>}
-                </Button>
-              </Tooltip>
+              <Button
+                type="text"
+                icon={<LoginOutlined />}
+                onClick={() => setLoginModalOpen(true)}
+                style={{
+                  color: 'white',
+                  border: 'none',
+                  padding: isMobile ? '4px 8px' : '4px 12px',
+                  height: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                {!isMobile && <span>登录</span>}
+              </Button>
             )}
           </div>
         </header>
