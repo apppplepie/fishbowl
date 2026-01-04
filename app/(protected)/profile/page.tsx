@@ -5,6 +5,7 @@ import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
+import { apiRequestJson } from '@/lib/apiClient';
 import Header from '../../components/Header';
 import PageLayout from '@/app/components/PageLayout';
 
@@ -38,44 +39,41 @@ export default function ProfilePage() {
         return;
       }
 
-      // 如果已经有用户信息且用户ID相同，跳过请求
-      if (userInfo && userInfo.id === localUser.id) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const token = await getToken();
-        if (!token) {
-          setLoading(false);
-          return;
-        }
+        setLoading(true);
+        // 使用 apiRequestJson 自动处理token刷新和401响应
+        const data = await apiRequestJson<{ success: boolean; user?: UserInfo; error?: string }>('/api/auth/me');
 
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setUserInfo(data.user);
-          } else {
-            message.error(data.error || '获取用户信息失败');
-          }
+        if (data.success && data.user) {
+          setUserInfo(data.user);
         } else {
+          // 只在非401错误时显示错误消息（401会自动刷新token）
+          console.error('获取用户信息失败:', data.error);
+        }
+      } catch (error: any) {
+        console.error('获取用户信息失败:', error);
+        // 检查是否是认证错误（token刷新失败）
+        if (error.message && !error.message.includes('401')) {
           message.error('获取用户信息失败');
         }
-      } catch (error) {
-        console.error('获取用户信息失败:', error);
-        message.error('获取用户信息失败');
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserInfo();
+
+    // 监听登录状态变化（包括token刷新）
+    const handleLoginStatusChanged = () => {
+      fetchUserInfo();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('loginStatusChanged', handleLoginStatusChanged);
+      return () => {
+        window.removeEventListener('loginStatusChanged', handleLoginStatusChanged);
+      };
+    }
     // 只依赖 localUser?.id，避免对象引用变化导致重复请求
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localUser?.id]);

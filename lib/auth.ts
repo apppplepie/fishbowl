@@ -101,8 +101,14 @@ export function refreshAccessToken(refreshToken: string): {
     return null;
   }
 
-  // 从refresh token中提取用户信息（不包含type字段）
-  const { type, ...userPayload } = decoded;
+  // 从refresh token中提取用户信息，只保留必要的字段，排除JWT标准字段（exp, iat等）
+  const userPayload: Omit<JWTPayload, 'type'> = {
+    id: decoded.id,
+    username: decoded.username,
+    email: decoded.email,
+    role: decoded.role,
+    max_access_level: decoded.max_access_level,
+  };
 
   // 生成新的token对
   return generateTokens(userPayload);

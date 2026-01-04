@@ -38,6 +38,7 @@ async function refreshAccessToken(): Promise<string | null> {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // 关键：携带HttpOnly cookie
       });
 
       if (response.ok) {
@@ -47,6 +48,8 @@ async function refreshAccessToken(): Promise<string | null> {
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('access-token', data.accessToken);
             localStorage.setItem('token', data.accessToken);
+            // 触发事件通知其他组件token已更新
+            window.dispatchEvent(new Event('loginStatusChanged'));
           }
           return data.accessToken;
         }
@@ -110,6 +113,7 @@ export async function apiRequest(url: string, options: RequestOptions = {}): Pro
   let response = await fetch(url, {
     ...restOptions,
     headers: requestHeaders,
+    credentials: 'include', // 携带cookie以支持refresh token
   });
 
   // 如果返回401且需要认证，尝试刷新token并重试
@@ -122,6 +126,7 @@ export async function apiRequest(url: string, options: RequestOptions = {}): Pro
       response = await fetch(url, {
         ...restOptions,
         headers: requestHeaders,
+        credentials: 'include', // 携带cookie
       });
     } else {
       // 刷新失败，可能需要重新登录

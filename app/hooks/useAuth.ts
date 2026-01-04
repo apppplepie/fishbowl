@@ -207,48 +207,50 @@ export function useAuth() {
 
   // 获取 Token（用于 API 请求，支持自动刷新）
   const getToken = useCallback(async () => {
-    if (!token) {
-      // 尝试从sessionStorage获取
-      const storedToken = typeof window !== 'undefined'
-        ? (sessionStorage.getItem('access-token') || localStorage.getItem('token'))
-        : null;
-      if (storedToken) {
+    // 获取当前token（优先从state，其次从storage）
+    let currentToken = token;
+    if (!currentToken && typeof window !== 'undefined') {
+      currentToken = sessionStorage.getItem('access-token') || localStorage.getItem('token');
+      if (currentToken) {
         // 保持两处一致（避免旧代码读不到）
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('access-token', storedToken);
-          localStorage.setItem('token', storedToken);
-        }
-        setToken(storedToken);
-        return storedToken;
+        sessionStorage.setItem('access-token', currentToken);
+        localStorage.setItem('token', currentToken);
+        setToken(currentToken);
       }
+    }
+
+    if (!currentToken) {
       return null;
     }
 
-    // 检查token是否即将过期（提前5分钟刷新）
+    // 检查token是否已过期或即将过期（提前5分钟刷新）
     try {
-      const payload = decodeJwtPayload(token);
+      const payload = decodeJwtPayload(currentToken);
       if (!payload?.exp) {
         // payload解析失败或无exp，尝试刷新
         const newToken = await refreshToken();
-        return newToken || token;
+        return newToken; // 如果刷新失败，返回null而不是旧token
       }
       const exp = payload.exp * 1000; // 转换为毫秒
       const now = Date.now();
       const fiveMinutes = 5 * 60 * 1000;
 
+      // 如果token已过期或即将过期（5分钟内），尝试刷新
       if (exp - now < fiveMinutes) {
-        // Token即将过期，尝试刷新
+        // Token已过期或即将过期，尝试刷新
         const newToken = await refreshToken();
-        return newToken || token;
+        // 如果刷新成功，返回新token；如果刷新失败，返回null（不返回过期token）
+        return newToken;
       }
     } catch (error) {
       console.error('Token解析失败:', error);
       // 如果解析失败，尝试刷新
       const newToken = await refreshToken();
-      return newToken || null;
+      return newToken; // 如果刷新失败，返回null
     }
 
-    return token;
+    // Token有效，直接返回
+    return currentToken;
   }, [token, refreshToken, decodeJwtPayload]);
 
   // 检查是否是管理员
