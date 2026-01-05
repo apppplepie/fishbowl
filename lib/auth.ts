@@ -7,14 +7,14 @@ const JWT_SECRET = process.env.JWT_SECRET || '0OooOoO00oO0HR0313R1N3OoO0oOoO0oOo
 // Token过期时间配置（统一管理，避免错开）
 export const TOKEN_EXPIRATION = {
   // Access Token过期时间（JWT格式）
-  ACCESS_TOKEN_JWT: '1h', // JWT过期时间：1小时
+  ACCESS_TOKEN_JWT: '30s', // JWT过期时间：1小时
   // Access Token Cookie过期时间（秒），略大于JWT过期时间，避免边界情况
-  ACCESS_TOKEN_COOKIE: 60 * 60 + 300, // 1小时 + 5分钟 = 3900秒
+  ACCESS_TOKEN_COOKIE: 35, // 1小时 + 10秒
   
   // Refresh Token过期时间（JWT格式）
   REFRESH_TOKEN_JWT: '7d', // JWT过期时间：7天
   // Refresh Token Cookie过期时间（秒），略大于JWT过期时间
-  REFRESH_TOKEN_COOKIE: 60 * 60 * 24 * 7 + 3600, // 7天 + 1小时 = 604800 + 3600秒
+  REFRESH_TOKEN_COOKIE: 60 * 60 * 24 * 7 + 300, // 7天 + 1小时 = 604800 + 5min
 } as const;
 
 export interface JWTPayload {
@@ -71,11 +71,16 @@ export function generateToken(payload: JWTPayload): string {
 }
 
 /**
- * 验证JWT Token
+ * 验证JWT Token（仅接受 access token）
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JWTPayload;
+    // 确保是 access token
+    if (decoded.type && decoded.type !== 'access') {
+      console.error('Token type mismatch — expected access token.');
+      return null;
+    }
     return decoded;
   } catch (error) {
     console.error('Token验证失败:', error);
@@ -88,7 +93,7 @@ export function verifyToken(token: string): JWTPayload | null {
  */
 export function verifyRefreshToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JWTPayload;
     // 确保是refresh token
     if (decoded.type !== 'refresh') {
       console.error('Token类型不匹配: 期望refresh token');

@@ -3,6 +3,8 @@
  * 使用 HttpOnly Cookie 进行认证，所有请求自动携带 cookie
  */
 
+import { authFetch } from './authFetch';
+
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
 }
@@ -84,10 +86,9 @@ export async function apiRequest(url: string, options: RequestOptions = {}): Pro
   Object.assign(requestHeaders, headers);
 
   // 发送请求（浏览器自动携带 HttpOnly cookie）
-  let response = await fetch(url, {
+  let response = await authFetch(url, {
     ...restOptions,
     headers: requestHeaders,
-    credentials: 'include', // 关键：携带 HttpOnly cookie
   });
 
   // 如果返回401且需要认证，尝试刷新token并重试
@@ -98,10 +99,9 @@ export async function apiRequest(url: string, options: RequestOptions = {}): Pro
     if (refreshSuccess) {
       // 刷新成功，重试原始请求（浏览器会自动携带新的 cookie）
       console.log('✅ Token 刷新成功，重试原始请求');
-      response = await fetch(url, {
+      response = await authFetch(url, {
         ...restOptions,
         headers: requestHeaders,
-        credentials: 'include',
       });
     } else {
       // 刷新失败已经触发了 authRefreshFailed 事件
