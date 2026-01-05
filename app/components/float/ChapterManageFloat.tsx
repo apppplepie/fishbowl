@@ -211,7 +211,22 @@ const SortableItem: React.FC<{
           padding: '6px 8px',
           cursor: 'grab',
           minHeight: '44px', // 移动端最小触摸区域
-          touchAction: 'manipulation', // 优化移动端触摸响应
+          touchAction: 'none', // 拖拽时禁用所有默认触摸行为，避免与滚动冲突
+        }}
+        onTouchStart={(e) => {
+          // 阻止触摸事件冒泡到父容器，避免触发滚动
+          // 只在非拖拽状态下阻止，让 dnd-kit 处理拖拽
+          if (!isDragging) {
+            e.stopPropagation();
+          }
+        }}
+        onTouchMove={(e) => {
+          // 拖拽时阻止触摸移动事件冒泡，避免触发父容器滚动
+          // 注意：不能使用 preventDefault()，因为 React 的触摸事件是被动监听器
+          // 我们通过 CSS 的 touch-action: none 来阻止默认行为
+          if (isDragging) {
+            e.stopPropagation();
+          }
         }}
         onClick={(e) => {
           // 如果正在拖拽，不触发点击
@@ -332,6 +347,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
 
   // activeId for DragOverlay preview
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false); // 拖拽状态，用于控制样式
 
   // 乐观更新相关状态
   const [rollbackTreeData, setRollbackTreeData] = useState<TreeNode[]>([]);
@@ -352,8 +368,8 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 300, // 增加触摸延迟，确保拖拽优先级高于滚动
-        tolerance: 5, // 减少容忍距离，提高精确度
+        delay: 200, // 减少延迟，提高响应速度（从300ms降到200ms）
+        tolerance: 8, // 增加容忍距离，避免误触滚动（从5px增加到8px）
       },
     })
   );
@@ -685,11 +701,26 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
   // handleDragStart to set activeId for overlay
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    setIsDragging(true);
 
-    // 移动端：拖拽开始时禁用页面滚动
+    // 移动端：拖拽开始时禁用页面滚动和 Modal 滚动
     if (isMobile && typeof document !== 'undefined') {
+      // 禁用 body 滚动
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
+      
+      // 禁用 Modal body 滚动
+      const modalBody = document.querySelector('.ant-modal-body');
+      if (modalBody) {
+        (modalBody as HTMLElement).style.overflow = 'hidden';
+        (modalBody as HTMLElement).style.touchAction = 'none';
+      }
+      
+      // 禁用 Modal 内容区域滚动
+      const modalContent = document.querySelector('.ant-modal-content');
+      if (modalContent) {
+        (modalContent as HTMLElement).style.touchAction = 'none';
+      }
     }
   };
 
@@ -801,10 +832,25 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       console.error('拖拽失败:', error);
       message.error('操作失败');
     } finally {
-      // 无论成功失败都要恢复页面滚动
+      // 无论成功失败都要恢复页面滚动和 Modal 滚动
+      setIsDragging(false);
       if (isMobile && typeof document !== 'undefined') {
+        // 恢复 body 滚动
         document.body.style.overflow = '';
         document.body.style.touchAction = '';
+        
+        // 恢复 Modal body 滚动
+        const modalBody = document.querySelector('.ant-modal-body');
+        if (modalBody) {
+          (modalBody as HTMLElement).style.overflow = '';
+          (modalBody as HTMLElement).style.touchAction = '';
+        }
+        
+        // 恢复 Modal 内容区域
+        const modalContent = document.querySelector('.ant-modal-content');
+        if (modalContent) {
+          (modalContent as HTMLElement).style.touchAction = '';
+        }
       }
     }
   };
@@ -846,6 +892,13 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
 
         /* 拖拽激活时的全局禁用滚动 */
         .chapter-tree-mobile[data-dragging="true"] {
+          overflow: hidden !important;
+          touch-action: none !important;
+        }
+
+        /* 拖拽时禁用 Modal body 滚动 */
+        .chapter-tree-mobile[data-dragging="true"] ~ *,
+        body:has(.chapter-tree-mobile[data-dragging="true"]) .ant-modal-body {
           overflow: hidden !important;
           touch-action: none !important;
         }
@@ -895,10 +948,25 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
               onDragEnd={handleDragEnd}
               onDragCancel={() => {
                 setActiveId(null);
-                // 恢复页面滚动
+                setIsDragging(false);
+                // 恢复页面滚动和 Modal 滚动
                 if (isMobile && typeof document !== 'undefined') {
+                  // 恢复 body 滚动
                   document.body.style.overflow = '';
                   document.body.style.touchAction = '';
+                  
+                  // 恢复 Modal body 滚动
+                  const modalBody = document.querySelector('.ant-modal-body');
+                  if (modalBody) {
+                    (modalBody as HTMLElement).style.overflow = '';
+                    (modalBody as HTMLElement).style.touchAction = '';
+                  }
+                  
+                  // 恢复 Modal 内容区域
+                  const modalContent = document.querySelector('.ant-modal-content');
+                  if (modalContent) {
+                    (modalContent as HTMLElement).style.touchAction = '';
+                  }
                 }
               }}
             >
@@ -907,9 +975,25 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
                   background: '#fafafa', 
                   padding: 16, 
                   borderRadius: 8,
-                  touchAction: 'pan-y', // 允许垂直滚动，但优化触摸响应
+                  // 拖拽时禁用滚动，非拖拽时允许垂直滚动
+                  touchAction: isDragging ? 'none' : 'pan-y',
+                  // 拖拽时禁用滚动条
+                  overflow: isDragging ? 'hidden' : 'auto',
                 }}
                 className="chapter-tree-mobile"
+                data-dragging={isDragging}
+                onTouchStart={(e) => {
+                  // 如果正在拖拽，阻止事件冒泡到 Modal
+                  if (isDragging) {
+                    e.stopPropagation();
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // 拖拽时阻止触摸移动事件冒泡，避免触发 Modal 滚动
+                  if (isDragging) {
+                    e.stopPropagation();
+                  }
+                }}
               >
                 <SortableTree
                   nodes={treeData}

@@ -35,7 +35,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { apiGetJson } from '@/lib/apiClient';
+import { apiGetJson, apiPostJson } from '@/lib/apiClient';
+import { getNextOrderIndex } from '@/app/utils/orderIndex';
 
 const { Option } = Select;
 
@@ -89,51 +90,12 @@ function PublishChapterContent() {
   const lastSavedBlocksRef = useRef<string>('');
 
   // 获取下一个order_index值
-  // 需要考虑同一节点下的categories的order_index和articles的order_index不能重复
-  const getNextOrderInCategory = async (categoryId: string): Promise<number> => {
-    try {
-      let maxOrder = 0;
-
-      // 获取该分类下的所有子分类
-      const categoriesResult = await apiGetJson<{
-        success: boolean;
-        categories?: Array<{ order_index?: number }>;
-      }>(`/api/categories?type=children&parentId=${categoryId}`);
-
-      // 获取该分类下的所有文章
-      const articlesResult = await apiGetJson<{
-        success: boolean;
-        articles?: Array<{ orderInCategory?: number }>;
-      }>(`/api/articles/list?categoryId=${categoryId}&limit=1000`);
-
-      // 获取子分类的最大order_index
-      if (categoriesResult.success && categoriesResult.categories) {
-        const categoryOrders = categoriesResult.categories.map((cat: any) => cat.order_index || 0);
-        if (categoryOrders.length > 0) {
-          maxOrder = Math.max(maxOrder, ...categoryOrders);
-        }
-      }
-
-      // 获取子文章的最大order_index
-      // 注意：/api/articles/list 返回的字段名是 orderInCategory，而不是 order_index
-      if (articlesResult.success && articlesResult.articles) {
-        const articleOrders = articlesResult.articles.map((article: any) => article.orderInCategory || 0);
-        if (articleOrders.length > 0) {
-          maxOrder = Math.max(maxOrder, ...articleOrders);
-        }
-      }
-
-      return maxOrder + 1;
-    } catch (error) {
-      console.error('获取order_index失败:', error);
-      return 1;
-    }
-  };
+  // 使用工具函数计算，同时考虑子分类和文章的最大 order 值
 
   // 初始化时获取order_index和分类名称
   useEffect(() => {
     if (categoryFromUrl) {
-      getNextOrderInCategory(categoryFromUrl).then(setNextOrderInCategory);
+      getNextOrderIndex(categoryFromUrl).then(setNextOrderInCategory);
       
       // 获取分类名称
       apiGetJson<{ success: boolean; category?: { name: string } }>(`/api/categories/${categoryFromUrl}`)
@@ -463,7 +425,7 @@ function PublishChapterContent() {
                 marginBottom: isMobile ? '12px' : '24px',
                 padding: isMobile ? '12px' : '24px',
               }}
-              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
+              styles={{ body: { padding: isMobile ? '0' : '24px' } }}
             >
               {/* 移动端隐藏标题和草稿按钮 */}
               {!isMobile && (
@@ -529,7 +491,7 @@ function PublishChapterContent() {
                 marginBottom: isMobile ? '60px' : '24px', // 移动端为浮动按钮留空间
                 padding: isMobile ? '8px' : '24px',
               }}
-              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
+              styles={{ body: { padding: isMobile ? '0' : '24px' } }}
             >
               <div style={{ 
                 marginBottom: isMobile ? '8px' : '16px', 

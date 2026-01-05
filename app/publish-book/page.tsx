@@ -214,9 +214,9 @@ function PublishBookPage() {
         order_index: await getNextBookOrder(),
       };
 
-      const categoryResult = await apiPostJson<{ success: boolean; error?: string }>('/api/categories', categoryData);
+      const categoryResult = await apiPostJson<{ success: boolean; error?: string; category?: { id: string } }>('/api/categories', categoryData);
 
-      if (!categoryResponse.ok || !categoryResult.success) {
+      if (!categoryResult.success || !categoryResult.category) {
         message.error(categoryResult.error || '创建书籍分类失败');
         console.error('创建分类失败:', categoryResult);
         return;
@@ -276,7 +276,7 @@ function PublishBookPage() {
         status: 'published' as const,
       };
 
-      const articleResult = await apiPostJson<{ success: boolean; error?: string; article?: any }>('/api/articles', articleData);
+      const articleResult = await apiPostJson<{ success: boolean; error?: string; articleId?: string }>('/api/articles', articleData);
 
       if (articleResult.success && articleResult.articleId) {
         console.log('成功创建书籍文章:', articleResult.articleId, '分类ID:', categoryId);

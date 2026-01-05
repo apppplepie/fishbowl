@@ -666,7 +666,7 @@ export default function TextBlock({
 
 
           {/* 格式化菜单 */}
-          {/* <div
+          <div
             style={{
               position: 'absolute',
               top: '-10px',
@@ -687,7 +687,7 @@ export default function TextBlock({
                 格式化
               </Button>
             </Dropdown>
-          </div> */}
+          </div>
         </>
       )}
 

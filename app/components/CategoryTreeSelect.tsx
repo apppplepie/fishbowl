@@ -56,11 +56,12 @@ export default function CategoryTreeSelect({
       const data = await apiGetJson<{ success: boolean; categories?: Category[] }>('/api/categories?format=tree', { requiresAuth: false });
 
       if (data.success) {
-        let tree = data.categories;
+        let tree = data.categories || [];
 
         // 如果指定了根分类，只显示该分类及其子分类
-        if (rootCategoryId) {
-          tree = findSubTree(tree, rootCategoryId);
+        if (rootCategoryId && tree.length > 0) {
+          const subTree = findSubTree(tree, rootCategoryId);
+          tree = subTree.length > 0 ? subTree : tree;
         }
 
         setCategories(tree);

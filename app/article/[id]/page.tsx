@@ -31,6 +31,7 @@ import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import type { Block as BlockType } from '@/app/types/block';
 import { apiGet, apiPutJson, apiDeleteJson, apiPostJson, apiGetJson } from '@/lib/apiClient';
+import { getNextOrderIndex } from '@/app/utils/orderIndex';
 import {
   getArticleWithBlocks,
   type Block,
@@ -356,6 +357,7 @@ export default function ArticlePage() {
           title: editedArticle.title,
           type: editedArticle.type || 'text',
           category_id: editedArticle.category_id || null,
+          order_index: editedArticle.order_index || 0, // 包含 order_index，支持分类变更时自动更新顺序
           tags: editedArticle.tags || [],
           blocks: editedArticle.editorBlocks || [],
           excerpt: updatedExcerpt, // 添加重新生成的excerpt
@@ -1043,42 +1045,8 @@ export default function ArticlePage() {
                         let newOrderIndex = editedArticle.order_index || 0;
 
                         if (value && value !== editedArticle.category_id) {
-                          try {
-                            // 1. 查询新分类下的所有直接子分类，获取最大的 order_index
-                            let maxCategoryOrder = 0;
-                            try {
-                              const categoryData = await apiGetJson<{ success: boolean; tree?: { children?: any[] } }>(`/api/categories/${value}/tree-with-articles`);
-                              if (categoryData.success && categoryData.tree && categoryData.tree.children) {
-                                // 只查找直接子分类的 order_index
-                                for (const child of categoryData.tree.children) {
-                                  if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
-                                    maxCategoryOrder = child.order_index;
-                                  }
-                                }
-                              }
-                            } catch (error) {
-                              console.warn('获取子分类排序信息失败:', error);
-                            }
-
-                            // 2. 查询新分类下的所有文章，获取最大的 order_index
-                            let maxArticleOrder = 0;
-                            try {
-                              const articleData = await apiGetJson<{ success: boolean; articles?: any[] }>(`/api/articles?category=${value}&limit=1000&sort=order_desc`);
-                              if (articleData.articles && articleData.articles.length > 0) {
-                                maxArticleOrder = Math.max(
-                                  ...articleData.articles.map((article: any) => article.order_index || 0)
-                                );
-                              }
-                            } catch (error) {
-                              console.warn('获取文章排序信息失败:', error);
-                            }
-
-                            // 3. 取两者中的最大值 + 1
-                            newOrderIndex = Math.max(maxCategoryOrder, maxArticleOrder) + 1;
-                          } catch (error) {
-                            console.warn('获取排序信息失败，使用原有排序:', error);
-                            newOrderIndex = editedArticle.order_index || 0;
-                          }
+                          // 使用工具函数计算新的 order_index
+                          newOrderIndex = await getNextOrderIndex(value);
                         }
 
                         setEditedArticle({ ...editedArticle, category_id: value, order_index: newOrderIndex });

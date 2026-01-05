@@ -9,6 +9,7 @@ import CategoryTreeSelect from '../CategoryTreeSelect';
 import TagInput from '../TagInput';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { apiPostJson } from '@/lib/apiClient';
+import { getNextOrderIndex } from '@/app/utils/orderIndex';
 
 interface GalleryPublishFloatProps {
   onSuccess?: () => void;
@@ -131,6 +132,12 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         });
       });
   
+      // 设置默认分类和计算排序
+      const categoryId = values.category_id || 'cat_drawing';
+      
+      // 计算 order_index：找到当前分类下最大的 order 值 + 1
+      const orderInCategory = await getNextOrderIndex(categoryId);
+  
       // 创建文章
       const data = await apiPostJson<{ success: boolean; error?: string }>('/api/articles', {
         title: values.title,
@@ -139,7 +146,8 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         tags: values.tags || [],
         status: 'published',
         type: 'drawing',
-        category_id: values.category_id || 'cat_drawing',
+        category_id: categoryId,
+        order_index: orderInCategory,
         max_access_level: accessLevel,
       });
 

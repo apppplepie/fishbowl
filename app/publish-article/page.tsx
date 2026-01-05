@@ -35,6 +35,8 @@ import { useRouter } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { apiPostJson } from '@/lib/apiClient';
+import { getNextOrderIndex } from '@/app/utils/orderIndex';
 
 const { Option } = Select;
 
@@ -130,45 +132,7 @@ export default function PublishArticlePage() {
     const categoryId = values.category_id || 'cat_uncategorized';
 
     // 计算 order_index：找到当前分类下最大的 order 值 + 1
-    // 需要同时考虑子分类的 order_index 和文章的 order_index
-    let orderInCategory = 0;
-    try {
-      // 1. 查询当前分类下的所有直接子分类，获取最大的 order_index
-      let maxCategoryOrder = 0;
-      try {
-        const categoryData = await apiGetJson<{ success: boolean; tree?: { children?: any[] } }>(`/api/categories/${categoryId}/tree-with-articles`);
-        if (categoryData.success && categoryData.tree && categoryData.tree.children) {
-          // 只查找直接子分类的 order_index
-          for (const child of categoryData.tree.children) {
-            if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
-              maxCategoryOrder = child.order_index;
-            }
-          }
-        }
-      } catch (error) {
-        console.warn('获取子分类排序信息失败:', error);
-      }
-
-      // 2. 查询当前分类下的所有文章，获取最大的 order_index
-      let maxArticleOrder = 0;
-      try {
-        const articleData = await apiGetJson<{ success: boolean; articles?: any[] }>(`/api/articles?category=${categoryId}&limit=1000&sort=order_desc`);
-        if (articleData.articles && articleData.articles.length > 0) {
-          maxArticleOrder = Math.max(
-            ...articleData.articles.map((article: any) => article.order_index || 0)
-          );
-        }
-      } catch (error) {
-        console.warn('获取文章排序信息失败:', error);
-      }
-
-      // 3. 取两者中的最大值 + 1
-      orderInCategory = Math.max(maxCategoryOrder, maxArticleOrder) + 1;
-
-    } catch (error) {
-      console.warn('获取排序信息失败，使用默认排序:', error);
-      orderInCategory = 0;
-    }
+    const orderInCategory = await getNextOrderIndex(categoryId);
 
     // 计算所有 blocks 中 access_level 的最小值
     const maxAccessLevel = blocks.length > 0
