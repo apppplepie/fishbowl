@@ -14,8 +14,46 @@ export default function Home() {
   const [showNavBar, setShowNavBar] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(false);
-  const navBarTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hideNavBarTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const rafIdRef = useRef<number | null>(null);
   const router = useRouter();
+
+  // 统一的导航栏更新函数：立即显示 + 防抖隐藏
+  const updateNavBar = (scrollTop: number, threshold: number) => {
+    const shouldShow = scrollTop >= threshold;
+    
+    // 取消之前的 requestAnimationFrame
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+    
+    // 使用 requestAnimationFrame 优化性能
+    rafIdRef.current = requestAnimationFrame(() => {
+      // 超过阈值：立即显示
+      if (shouldShow) {
+        // 清除隐藏定时器
+        if (hideNavBarTimerRef.current) {
+          clearTimeout(hideNavBarTimerRef.current);
+          hideNavBarTimerRef.current = null;
+        }
+        setShowNavBar(true);
+      } 
+      // 低于阈值：防抖隐藏（避免滚动中频繁闪烁）
+      else {
+        // 清除之前的隐藏定时器
+        if (hideNavBarTimerRef.current) {
+          clearTimeout(hideNavBarTimerRef.current);
+        }
+        // 延迟 200ms 后隐藏（防抖）
+        hideNavBarTimerRef.current = setTimeout(() => {
+          setShowNavBar(false);
+          hideNavBarTimerRef.current = null;
+        }, 200);
+      }
+      rafIdRef.current = null;
+    });
+  };
 
   // 滚动到指定位置
   const scrollToPosition = (position: number) => {
@@ -28,21 +66,9 @@ export default function Home() {
       behavior: 'smooth',
     });
 
-    // 延迟0.5s后更新导航栏状态
+    // 使用统一的更新函数
     const threshold = window.innerHeight * 0.8;
-    const shouldShow = position >= threshold;
-    
-    // 清除之前的定时器
-    if (navBarTimerRef.current) {
-      clearTimeout(navBarTimerRef.current);
-      navBarTimerRef.current = null;
-    }
-    
-    // 延迟0.5s后更新状态
-    navBarTimerRef.current = setTimeout(() => {
-      setShowNavBar(shouldShow);
-      navBarTimerRef.current = null;
-    }, 500);
+    updateNavBar(position, threshold);
 
     // 减少完成时间，让响应更快
     setTimeout(() => {
@@ -56,30 +82,13 @@ export default function Home() {
     if (!container || typeof window === 'undefined') return;
 
     const getSnapPoint = () => window.innerHeight * 0.8; // 80vh
+    const getThreshold = () => window.innerHeight * 0.79; // 导航栏显示阈值
+    
     let scrollEndTimer: NodeJS.Timeout | null = null;
     let lastScrollTop = container.scrollTop;
     let lastScrollTime = Date.now();
     let isScrolling = false;
-    let rafId: number | null = null;
-
-    // 更新导航栏显示状态（带延迟）
-    const updateNavBar = () => {
-      const y = container.scrollTop;
-      const threshold = getSnapPoint();
-      const shouldShow = y >= threshold;
-      
-      // 清除之前的定时器
-      if (navBarTimerRef.current) {
-        clearTimeout(navBarTimerRef.current);
-        navBarTimerRef.current = null;
-      }
-      
-      // 延迟0.5s后更新状态
-      navBarTimerRef.current = setTimeout(() => {
-        setShowNavBar(shouldShow);
-        navBarTimerRef.current = null;
-      }, 500);
-    };
+    let snapRafId: number | null = null;
 
     const snapTo = (target: number) => {
       isAutoScrolling.current = true;
@@ -91,7 +100,7 @@ export default function Home() {
       // 在滚动结束后更新导航位置
       setTimeout(() => {
         isAutoScrolling.current = false;
-        updateNavBar(); // 确保状态同步
+        updateNavBar(container.scrollTop, getThreshold()); // 确保状态同步
       }, 30);
     };
 
@@ -122,7 +131,8 @@ export default function Home() {
     };
 
     const onScroll = () => {
-      updateNavBar();
+      // 使用统一的导航栏更新函数
+      updateNavBar(container.scrollTop, getThreshold());
 
       if (isAutoScrolling.current) return;
 
@@ -137,9 +147,9 @@ export default function Home() {
         lastScrollTime = currentTime;
       }
 
-      if (rafId) cancelAnimationFrame(rafId);
+      if (snapRafId) cancelAnimationFrame(snapRafId);
       
-      rafId = requestAnimationFrame(() => {
+      snapRafId = requestAnimationFrame(() => {
         checkSnap();
       });
 
@@ -165,14 +175,16 @@ export default function Home() {
       }, 30);
     };
 
-    updateNavBar();
+    // 初始化时更新导航栏状态
+    updateNavBar(container.scrollTop, getThreshold());
 
     container.addEventListener('scroll', onScroll, { passive: true });
     container.addEventListener('touchstart', onTouchStart, { passive: true });
     container.addEventListener('touchend', onTouchEnd, { passive: true });
 
     const handleResize = () => {
-      updateNavBar();
+      // 窗口大小改变时重新计算并更新
+      updateNavBar(container.scrollTop, getThreshold());
     };
     window.addEventListener('resize', handleResize);
 
@@ -182,10 +194,14 @@ export default function Home() {
       container.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('resize', handleResize);
       if (scrollEndTimer) clearTimeout(scrollEndTimer);
-      if (rafId) cancelAnimationFrame(rafId);
-      if (navBarTimerRef.current) {
-        clearTimeout(navBarTimerRef.current);
-        navBarTimerRef.current = null;
+      if (snapRafId) cancelAnimationFrame(snapRafId);
+      if (hideNavBarTimerRef.current) {
+        clearTimeout(hideNavBarTimerRef.current);
+        hideNavBarTimerRef.current = null;
+      }
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
       }
     };
   }, []);

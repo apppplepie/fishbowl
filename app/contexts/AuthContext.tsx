@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { apiGet } from '@/lib/apiClient';
 
 interface User {
   id: string;
@@ -71,11 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 调用 API 验证登录状态（从 cookie 读取 token）
+    // 调用 API 验证登录状态（使用 apiGet，自动处理 401 和 token 刷新）
     try {
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include', // 携带 cookie
-      });
+      const response = await apiGet('/api/auth/me');
 
       if (response.ok) {
         const data = await response.json();
@@ -90,8 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // 验证失败，清除本地数据
-      clearAuthData();
+      // 验证失败（可能是 401 且刷新也失败了）
+      // 不在这里清除数据，由 authRefreshFailed 事件统一处理
+      console.warn('⚠️ 登录状态验证失败');
       return false;
     } catch (error) {
       console.error('检查登录状态失败:', error);
@@ -171,6 +171,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await checkLoginStatus();
     };
 
+    // 处理刷新失败（refresh token 过期）
+    const handleAuthRefreshFailed = () => {
+      console.warn('🚪 Refresh token 已过期，清除登录状态');
+      clearAuthData();
+      
+      // 可选：显示提示
+      if (typeof window !== 'undefined') {
+        // 可以触发一个全局提示
+        const event = new CustomEvent('showLoginPrompt', {
+          detail: { message: '登录已过期，请重新登录' }
+        });
+        window.dispatchEvent(event);
+      }
+    };
+
     // 初始化时检查登录状态
     if (typeof window !== 'undefined') {
       syncLoginStatus().then(() => {
@@ -187,15 +202,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 自定义事件（用于同一页面内同步）
       window.addEventListener('storage', handleStorageChange);
       window.addEventListener('loginStatusChanged', syncLoginStatus);
+      window.addEventListener('authRefreshFailed', handleAuthRefreshFailed);
 
       return () => {
         window.removeEventListener('storage', handleStorageChange);
         window.removeEventListener('loginStatusChanged', syncLoginStatus);
+        window.removeEventListener('authRefreshFailed', handleAuthRefreshFailed);
       };
     } else {
       setIsLoading(false);
     }
-  }, [checkLoginStatus]);
+  }, [checkLoginStatus, clearAuthData]);
 
   const value: AuthContextType = {
     isLoggedIn,

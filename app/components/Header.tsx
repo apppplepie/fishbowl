@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Menu, Button } from 'antd';
+import { Menu, Button, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -51,6 +51,21 @@ export default function Header({ isVisible = true, leftContent, embedded = false
     updateWindowWidth(); // 初始化
     window.addEventListener('resize', updateWindowWidth);
     return () => window.removeEventListener('resize', updateWindowWidth);
+  }, []);
+
+  // 监听登录过期提示
+  useEffect(() => {
+    const handleLoginPrompt = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message: string }>;
+      message.warning(customEvent.detail?.message || '登录已过期，请重新登录', 4);
+      // 自动打开登录弹窗
+      setTimeout(() => {
+        setLoginModalOpen(true);
+      }, 500);
+    };
+
+    window.addEventListener('showLoginPrompt', handleLoginPrompt);
+    return () => window.removeEventListener('showLoginPrompt', handleLoginPrompt);
   }, []);
 
   // 图标映射
