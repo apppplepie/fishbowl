@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { refreshAccessToken } from '@/lib/auth';
+import { refreshAccessToken, TOKEN_EXPIRATION } from '@/lib/auth';
 
 /**
  * POST /api/auth/refresh - 刷新Access Token
@@ -52,21 +52,21 @@ export async function POST(req: NextRequest) {
       success: true,
     });
 
-    // 设置新的 access token cookie（短期，15分钟）
+    // 设置新的 access token cookie（短期，1h +）
     response.cookies.set('access-token', tokens.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 15, // 15分钟
+      maxAge: TOKEN_EXPIRATION.ACCESS_TOKEN_COOKIE,
       path: '/',
     });
 
-    // 更新 refresh token cookie（长期，7天）
+    // 更新 refresh token cookie（长期，7天 + ）
     response.cookies.set('refresh-token', tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7天
+      maxAge: TOKEN_EXPIRATION.REFRESH_TOKEN_COOKIE,
       path: '/',
     });
 

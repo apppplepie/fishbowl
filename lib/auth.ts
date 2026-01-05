@@ -4,6 +4,19 @@ import { NextRequest } from 'next/server';
 // JWT密钥（生产环境应该放在环境变量中）
 const JWT_SECRET = process.env.JWT_SECRET || '0OooOoO00oO0HR0313R1N3OoO0oOoO0oOo0';
 
+// Token过期时间配置（统一管理，避免错开）
+export const TOKEN_EXPIRATION = {
+  // Access Token过期时间（JWT格式）
+  ACCESS_TOKEN_JWT: '1h', // JWT过期时间：1小时
+  // Access Token Cookie过期时间（秒），略大于JWT过期时间，避免边界情况
+  ACCESS_TOKEN_COOKIE: 60 * 60 + 300, // 1小时 + 5分钟 = 3900秒
+  
+  // Refresh Token过期时间（JWT格式）
+  REFRESH_TOKEN_JWT: '7d', // JWT过期时间：7天
+  // Refresh Token Cookie过期时间（秒），略大于JWT过期时间
+  REFRESH_TOKEN_COOKIE: 60 * 60 * 24 * 7 + 3600, // 7天 + 1小时 = 604800 + 3600秒
+} as const;
+
 export interface JWTPayload {
   id: string;
   username: string;
@@ -22,14 +35,14 @@ export function generateTokens(payload: Omit<JWTPayload, 'type'>): {
 } {
   const now = Math.floor(Date.now() / 1000);
 
-  // 生成Access Token（15分钟过期）
+  // 生成Access Token（1h过期）
   const accessTokenPayload: JWTPayload = {
     ...payload,
     type: 'access'
   };
 
   const accessToken = jwt.sign(accessTokenPayload, JWT_SECRET, {
-    expiresIn: '15m', // 15分钟过期
+    expiresIn: TOKEN_EXPIRATION.ACCESS_TOKEN_JWT,
   });
 
   // 生成Refresh Token（7天过期）
@@ -39,7 +52,7 @@ export function generateTokens(payload: Omit<JWTPayload, 'type'>): {
   };
 
   const refreshToken = jwt.sign(refreshTokenPayload, JWT_SECRET, {
-    expiresIn: '7d', // 7天过期
+    expiresIn: TOKEN_EXPIRATION.REFRESH_TOKEN_JWT,
   });
 
   return {
@@ -53,7 +66,7 @@ export function generateTokens(payload: Omit<JWTPayload, 'type'>): {
  */
 export function generateToken(payload: JWTPayload): string {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: '15m', // 改为15分钟以配合refresh机制
+    expiresIn: TOKEN_EXPIRATION.ACCESS_TOKEN_JWT,
   });
 }
 
