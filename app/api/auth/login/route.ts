@@ -76,11 +76,11 @@ export async function POST(req: NextRequest) {
       max_access_level: user.max_access_level || 3,
     });
 
-    // 7. 设置HttpOnly cookie存储refresh token
+    // 7. 设置HttpOnly cookie存储access token和refresh token
     const response = NextResponse.json({
       success: true,
       message: '登录成功',
-      accessToken: tokens.accessToken,
+      // 不再返回 accessToken，因为存储在 HttpOnly cookie 中
       user: {
         id: user.id,
         username: user.username,
@@ -92,11 +92,20 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 设置refresh token cookie
+    // 设置 access token cookie（短期，15分钟）
+    response.cookies.set('access-token', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', // 改为 lax 以支持从其他页面跳转
+      maxAge: 60 * 15, // 15分钟
+      path: '/',
+    });
+
+    // 设置 refresh token cookie（长期，7天）
     response.cookies.set('refresh-token', tokens.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // HTTPS环境使用secure
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7天
       path: '/',
     });

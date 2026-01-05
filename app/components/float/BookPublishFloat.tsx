@@ -4,6 +4,7 @@ import { PlusOutlined, FileTextOutlined, DeleteOutlined, BookOutlined } from '@a
 import { useRouter, useSearchParams } from 'next/navigation';
 import ChapterManageFloat from './ChapterManageFloat';
 import { useAuth } from '@/app/hooks/useAuth';
+import { apiGetJson, apiDeleteJson } from '@/lib/apiClient';
 
 interface BookPublishFloatProps {
   onChapterManageSuccess?: () => void; // 章节管理成功后的回调
@@ -62,10 +63,9 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
 
     try {
       // 获取书籍信息
-      const response = await fetch(`/api/categories/${categoryFromUrl}`);
-      const result = await response.json();
+      const result = await apiGetJson<{ success: boolean; category?: { name: string } }>(`/api/categories/${categoryFromUrl}`, { requiresAuth: false });
 
-      if (response.ok && result.success && result.category) {
+      if (result.success && result.category) {
         setDeletingBookId(categoryFromUrl);
         setDeletingBookTitle(result.category.name);
         setDeleteModalVisible(true);
@@ -82,10 +82,9 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
   const loadBooksList = async () => {
     setSelectBookLoading(true);
     try {
-      const response = await fetch('/api/categories/book-previews?parentId=cat_bookcase');
-      const result = await response.json();
+      const result = await apiGetJson<{ success: boolean; books?: any[] }>('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: false });
 
-      if (response.ok && result.success && result.books) {
+      if (result.success && result.books) {
         const books = result.books.map((book: any) => ({
           id: book.categoryId,
           name: book.name || book.title
@@ -126,22 +125,9 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
     setDeleteLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
+      const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/categories/${deletingBookId}`);
 
-      const response = await fetch(`/api/categories/${deletingBookId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         message.success('书籍删除成功');
         setDeleteModalVisible(false);
         setConfirmTitle('');

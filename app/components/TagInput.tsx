@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tag, Input, AutoComplete, Space, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { apiGetJson, apiPostJson } from '@/lib/apiClient';
 
 interface TagInputProps {
   value?: string[];
@@ -44,8 +45,7 @@ export default function TagInput({
   // 加载标签列表
   const loadTags = async () => {
     try {
-      const response = await fetch('/api/tags');
-      const data = await response.json();
+      const data = await apiGetJson<{ success: boolean; tags?: TagOption[] }>('/api/tags', { requiresAuth: false });
       
       if (data.success) {
         setAllTags(data.tags || []);
@@ -117,22 +117,7 @@ export default function TagInput({
   // 创建新标签
   const createTag = async (tagName: string) => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
-
-      const response = await fetch('/api/tags', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name: tagName }),
-      });
-
-      const data = await response.json();
+      const data = await apiPostJson<{ success: boolean; error?: string }>('/api/tags', { name: tagName });
       
       if (data.success) {
         // 重新加载标签列表

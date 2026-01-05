@@ -5,6 +5,7 @@ import { Menu, Spin, Empty } from 'antd';
 import { FolderOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
+import { apiGetJson } from '@/lib/apiClient';
 import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
 
 interface Category {
@@ -242,8 +243,7 @@ export default function GenericCategoryTree({
     const loadData = async () => {
       setLoading(true);
       try {
-        const response = await fetch(apiEndpoint);
-        const result = await response.json();
+        const result = await apiGetJson<{ success: boolean; data?: Category[]; categories?: Category[] }>(apiEndpoint);
 
         if (result.success) {
           let categoriesData = result.data || result.categories || [];
@@ -258,8 +258,10 @@ export default function GenericCategoryTree({
             // 递归加载函数：为分类及其所有子孙分类加载子分类
             const loadChildrenRecursive = async (category: Category): Promise<Category> => {
               try {
-                const childrenRes = await fetch(`/api/categories?type=children&parentId=${category.id}`);
-                const childrenResult = await childrenRes.json();
+                const childrenResult = await apiGetJson<{
+                  success: boolean;
+                  categories?: Category[];
+                }>(`/api/categories?type=children&parentId=${category.id}`);
                 
                 if (childrenResult.success && childrenResult.categories && childrenResult.categories.length > 0) {
                   // 递归为每个子分类也加载其子分类

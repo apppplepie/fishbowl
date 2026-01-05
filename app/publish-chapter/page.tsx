@@ -35,6 +35,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { apiGetJson } from '@/lib/apiClient';
 
 const { Option } = Select;
 
@@ -94,15 +95,19 @@ function PublishChapterContent() {
       let maxOrder = 0;
 
       // 获取该分类下的所有子分类
-      const categoriesResponse = await fetch(`/api/categories?type=children&parentId=${categoryId}`);
-      const categoriesResult = await categoriesResponse.json();
+      const categoriesResult = await apiGetJson<{
+        success: boolean;
+        categories?: Array<{ order_index?: number }>;
+      }>(`/api/categories?type=children&parentId=${categoryId}`);
 
       // 获取该分类下的所有文章
-      const articlesResponse = await fetch(`/api/articles/list?categoryId=${categoryId}&limit=1000`);
-      const articlesResult = await articlesResponse.json();
+      const articlesResult = await apiGetJson<{
+        success: boolean;
+        articles?: Array<{ orderInCategory?: number }>;
+      }>(`/api/articles/list?categoryId=${categoryId}&limit=1000`);
 
       // 获取子分类的最大order_index
-      if (categoriesResponse.ok && categoriesResult.success && categoriesResult.categories) {
+      if (categoriesResult.success && categoriesResult.categories) {
         const categoryOrders = categoriesResult.categories.map((cat: any) => cat.order_index || 0);
         if (categoryOrders.length > 0) {
           maxOrder = Math.max(maxOrder, ...categoryOrders);
@@ -111,7 +116,7 @@ function PublishChapterContent() {
 
       // 获取子文章的最大order_index
       // 注意：/api/articles/list 返回的字段名是 orderInCategory，而不是 order_index
-      if (articlesResponse.ok && articlesResult.success && articlesResult.articles) {
+      if (articlesResult.success && articlesResult.articles) {
         const articleOrders = articlesResult.articles.map((article: any) => article.orderInCategory || 0);
         if (articleOrders.length > 0) {
           maxOrder = Math.max(maxOrder, ...articleOrders);
@@ -131,8 +136,7 @@ function PublishChapterContent() {
       getNextOrderInCategory(categoryFromUrl).then(setNextOrderInCategory);
       
       // 获取分类名称
-      fetch(`/api/categories/${categoryFromUrl}`)
-        .then(res => res.json())
+      apiGetJson<{ success: boolean; category?: { name: string } }>(`/api/categories/${categoryFromUrl}`)
         .then(result => {
           if (result.success && result.category) {
             setCategoryName(result.category.name);
@@ -192,27 +196,10 @@ function PublishChapterContent() {
     console.log('发布章节:', articleData);
 
     try {
-      // 获取 Token
-      const token = localStorage.getItem('token');
+      // 调用API保存文章（token 在 HttpOnly cookie 中）
+      const result = await apiPostJson<{ success: boolean; error?: string; articleId?: string }>('/api/articles', articleData);
 
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
-
-      // 调用API保存文章
-      const response = await fetch('/api/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(articleData),
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         message.success('章节发布成功！');
 
         // 清除相关书籍的缓存，因为新增了文章

@@ -10,6 +10,7 @@ import React, { useState, useEffect } from 'react';
 import { TreeSelect, Input, Modal, message, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { TreeSelectProps } from 'antd';
+import { apiGetJson, apiPostJson } from '@/lib/apiClient';
 
 interface Category {
   id: string;
@@ -52,8 +53,7 @@ export default function CategoryTreeSelect({
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/categories?format=tree');
-      const data = await response.json();
+      const data = await apiGetJson<{ success: boolean; categories?: Category[] }>('/api/categories?format=tree', { requiresAuth: false });
 
       if (data.success) {
         let tree = data.categories;
@@ -179,12 +179,7 @@ export default function CategoryTreeSelect({
     }
 
     try {
-      // 获取 token（提前获取，在计算 order_index 和创建分类时都需要）
-      const token = localStorage.getItem('token');
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
+      // Token 在 HttpOnly cookie 中，不需要手动获取
 
       // 生成新的分类ID
       const newId = `cat_${Date.now()}`;
@@ -198,20 +193,12 @@ export default function CategoryTreeSelect({
         // 1. 查询父分类下的所有直接子分类，获取最大的 order_index
         let maxCategoryOrder = 0;
         try {
-          const categoryResponse = await fetch(`/api/categories/${parentCategoryId}/tree-with-articles`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-
-          if (categoryResponse.ok) {
-            const categoryData = await categoryResponse.json();
-            if (categoryData.success && categoryData.tree && categoryData.tree.children) {
-              // 只查找直接子分类的 order_index
-              for (const child of categoryData.tree.children) {
-                if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
-                  maxCategoryOrder = child.order_index;
-                }
+          const categoryData = await apiGetJson<{ success: boolean; tree?: { children?: any[] } }>(`/api/categories/${parentCategoryId}/tree-with-articles`);
+          if (categoryData.success && categoryData.tree && categoryData.tree.children) {
+            // 只查找直接子分类的 order_index
+            for (const child of categoryData.tree.children) {
+              if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
+                maxCategoryOrder = child.order_index;
               }
             }
           }
@@ -222,19 +209,11 @@ export default function CategoryTreeSelect({
         // 2. 查询父分类下的所有文章，获取最大的 order_index
         let maxArticleOrder = 0;
         try {
-          const articleResponse = await fetch(`/api/articles?category=${parentCategoryId}&limit=1000&sort=order_desc`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-
-          if (articleResponse.ok) {
-            const articleData = await articleResponse.json();
-            if (articleData.articles && articleData.articles.length > 0) {
-              maxArticleOrder = Math.max(
-                ...articleData.articles.map((article: any) => article.order_index || 0)
-              );
-            }
+          const articleData = await apiGetJson<{ success: boolean; articles?: any[] }>(`/api/articles?category=${parentCategoryId}&limit=1000&sort=order_desc`);
+          if (articleData.articles && articleData.articles.length > 0) {
+            maxArticleOrder = Math.max(
+              ...articleData.articles.map((article: any) => article.order_index || 0)
+            );
           }
         } catch (error) {
           console.warn('获取文章排序信息失败:', error);
@@ -249,21 +228,12 @@ export default function CategoryTreeSelect({
         orderIndex = (parentCategory?.children?.length || 0) + 1;
       }
 
-      const response = await fetch('/api/categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: newId,
-          name: newCategoryName,
-          parent_id: parentCategoryId,
-          order_index: orderIndex,
-        }),
+      const result = await apiPostJson<{ success: boolean; error?: string }>('/api/categories', {
+        id: newId,
+        name: newCategoryName,
+        parent_id: parentCategoryId,
+        order_index: orderIndex,
       });
-
-      const result = await response.json();
 
       if (result.success) {
         message.success('分类创建成功');

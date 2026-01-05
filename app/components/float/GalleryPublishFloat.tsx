@@ -8,6 +8,7 @@ import { useAuth } from '@/app/hooks/useAuth';
 import CategoryTreeSelect from '../CategoryTreeSelect';
 import TagInput from '../TagInput';
 import { ACCESS_LEVELS } from '@/app/types/block';
+import { apiPostJson } from '@/lib/apiClient';
 
 interface GalleryPublishFloatProps {
   onSuccess?: () => void;
@@ -65,16 +66,10 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
   
     try {
       const imageUrls: string[] = [];
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) {
-        message.error('请先登录');
-        setLoading(false);
-        return;
-      }
-  
+
       // 总体进度提示
       message.loading({ content: `正在上传图片 0/${fileList.length}`, key: 'gallery_upload', duration: 0 });
-  
+
       // helper: update a file's percent in fileList so AntD Upload shows progress
       const updateFileProgress = (idx: number, percent: number, status?: UploadFile['status']) => {
         setFileList(prev => {
@@ -86,22 +81,21 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           return clone;
         });
       };
-  
+
       // 逐个上传（简单可靠）。若要并发，可改为并发池（例如 3 个并发）
       for (let i = 0; i < fileList.length; i++) {
         const fileItem = fileList[i];
         if (!fileItem?.originFileObj) {
           continue;
         }
-  
+
         // 标记开始上传（UI）
         updateFileProgress(i, 0, 'uploading');
         message.loading({ content: `上传图片 ${i + 1}/${fileList.length}...`, key: 'gallery_upload', duration: 0 });
-  
-        // 执行上传（会在回调中更新进度）
+
+        // 执行上传（会在回调中更新进度，token 在 HttpOnly cookie 中）
         const result = await uploadFileWithProgress(
           fileItem.originFileObj as File,
-          token,
           (percent: number) => {
             updateFileProgress(i, percent, 'uploading');
           }
@@ -137,26 +131,18 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         });
       });
   
-      // 创建文章（原来的 API 调用）
-      const response = await fetch('/api/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: values.title,
-          excerpt: values.description || '一组绘画作品',
-          blocks,
-          tags: values.tags || [],
-          status: 'published',
-          type: 'drawing',
-          category_id: values.category_id || 'cat_drawing',
-          max_access_level: accessLevel,
-        }),
+      // 创建文章
+      const data = await apiPostJson<{ success: boolean; error?: string }>('/api/articles', {
+        title: values.title,
+        excerpt: values.description || '一组绘画作品',
+        blocks,
+        tags: values.tags || [],
+        status: 'published',
+        type: 'drawing',
+        category_id: values.category_id || 'cat_drawing',
+        max_access_level: accessLevel,
       });
-  
-      const data = await response.json();
+
       if (data.success) {
         message.success('发布成功！');
         form.resetFields();
@@ -169,7 +155,10 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
     } catch (error: any) {
       console.error('发布失败:', error);
       message.destroy();
-      message.error('发布失败: ' + (error?.message || String(error)));
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('发布失败: ' + (error?.message || String(error)));
+      }
     } finally {
       setLoading(false);
     }
@@ -177,18 +166,16 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
   
 
   // 放在组件内部（handleSubmit 同级）
-function uploadFileWithProgress(file: File, token: string | null, onProgress: (p: number) => void) {
+function uploadFileWithProgress(file: File, onProgress: (p: number) => void) {
   return new Promise<{ success: boolean; url?: string; error?: any }>((resolve) => {
     const xhr = new XMLHttpRequest();
     const form = new FormData();
     form.append('file', file);
 
     xhr.open('POST', '/api/upload', true);
-
-    if (token) {
-      // 不要设置 Content-Type 手动值，会破坏 multipart 边界
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    }
+    
+    // 携带 HttpOnly cookie（token 在 cookie 中，不需要手动设置 Authorization header）
+    xhr.withCredentials = true;
 
     xhr.upload.onprogress = (ev: ProgressEvent) => {
       if (ev.lengthComputable) {

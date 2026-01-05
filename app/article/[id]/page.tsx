@@ -30,7 +30,7 @@ import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import type { Block as BlockType } from '@/app/types/block';
-import { apiGet } from '@/lib/apiClient';
+import { apiGet, apiPutJson, apiDeleteJson, apiPostJson, apiGetJson } from '@/lib/apiClient';
 import {
   getArticleWithBlocks,
   type Block,
@@ -362,27 +362,10 @@ export default function ArticlePage() {
           // 封面图片由后端自动计算，无需前端提供
         };
 
-        // 获取 Token
-        const token = localStorage.getItem('token');
-
-        if (!token) {
-          message.error({ content: '请先登录', key: 'save' });
-          return;
-        }
-
         // 调用更新 API
-        const response = await fetch(`/api/articles/${articleId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(saveData),
-        });
+        const result = await apiPutJson<{ success: boolean; error?: string }>(`/api/articles/${articleId}`, saveData);
 
-        const result = await response.json();
-
-        if (response.ok && result.success) {
+        if (result.success) {
           message.success({ content: '文章保存成功！', key: 'save' });
           setEditMode('view');
           // 跳转到归档页，并添加时间戳参数强制刷新
@@ -392,9 +375,12 @@ export default function ArticlePage() {
         } else {
           message.error({ content: result.error || '保存失败', key: 'save' });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('保存文章失败:', error);
-        message.error({ content: '保存失败，请重试', key: 'save' });
+        // 401错误会被apiClient自动处理，这里只处理其他错误
+        if (!error.message?.includes('401')) {
+          message.error({ content: '保存失败，请重试', key: 'save' });
+        }
       }
     }
   };
@@ -427,21 +413,7 @@ export default function ArticlePage() {
   const handleDelete = async () => {
     try {
       // 获取 Token
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
-
-      const response = await fetch(`/api/articles/${articleId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
+      const data = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/articles/${articleId}`);
 
       if (data.success) {
         message.success('文章删除成功');
@@ -454,7 +426,10 @@ export default function ArticlePage() {
       }
     } catch (error: any) {
       console.error('删除文章失败:', error);
-      message.error('删除失败: ' + error.message);
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('删除失败: ' + error.message);
+      }
     }
   };
 
@@ -470,40 +445,25 @@ export default function ArticlePage() {
     setIsLiking(true);
 
     try {
-      const token = localStorage.getItem('token');
 
       if (isLiked) {
         // 取消点赞
-        const response = await fetch(`/api/articles/${articleId}/like`, {
-          method: 'DELETE',
-          headers: token ? {
-            'Authorization': `Bearer ${token}`,
-          } : {},
-        });
-
-        const result = await response.json();
+        const result = await apiDeleteJson<{ success: boolean; likes?: number; error?: string }>(`/api/articles/${articleId}/like`);
 
         if (result.success) {
           setIsLiked(false);
-          setLikesCount(result.likes);
+          setLikesCount(result.likes || 0);
           message.success('已取消点赞');
         } else {
           message.error(result.error || '操作失败');
         }
       } else {
         // 点赞
-        const response = await fetch(`/api/articles/${articleId}/like`, {
-          method: 'POST',
-          headers: token ? {
-            'Authorization': `Bearer ${token}`,
-          } : {},
-        });
-
-        const result = await response.json();
+        const result = await apiPostJson<{ success: boolean; likes?: number; error?: string }>(`/api/articles/${articleId}/like`);
 
         if (result.success) {
           setIsLiked(true);
-          setLikesCount(result.likes);
+          setLikesCount(result.likes || 0);
           message.success('点赞成功！');
         } else {
           message.error(result.error || '操作失败');
@@ -1084,25 +1044,15 @@ export default function ArticlePage() {
 
                         if (value && value !== editedArticle.category_id) {
                           try {
-                            const token = localStorage.getItem('token');
-
                             // 1. 查询新分类下的所有直接子分类，获取最大的 order_index
                             let maxCategoryOrder = 0;
                             try {
-                              const categoryResponse = await fetch(`/api/categories/${value}/tree-with-articles`, {
-                                headers: {
-                                  'Authorization': `Bearer ${token}`,
-                                },
-                              });
-
-                              if (categoryResponse.ok) {
-                                const categoryData = await categoryResponse.json();
-                                if (categoryData.success && categoryData.tree && categoryData.tree.children) {
-                                  // 只查找直接子分类的 order_index
-                                  for (const child of categoryData.tree.children) {
-                                    if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
-                                      maxCategoryOrder = child.order_index;
-                                    }
+                              const categoryData = await apiGetJson<{ success: boolean; tree?: { children?: any[] } }>(`/api/categories/${value}/tree-with-articles`);
+                              if (categoryData.success && categoryData.tree && categoryData.tree.children) {
+                                // 只查找直接子分类的 order_index
+                                for (const child of categoryData.tree.children) {
+                                  if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
+                                    maxCategoryOrder = child.order_index;
                                   }
                                 }
                               }
@@ -1113,19 +1063,11 @@ export default function ArticlePage() {
                             // 2. 查询新分类下的所有文章，获取最大的 order_index
                             let maxArticleOrder = 0;
                             try {
-                              const articleResponse = await fetch(`/api/articles?category=${value}&limit=1000&sort=order_desc`, {
-                                headers: {
-                                  'Authorization': `Bearer ${token}`,
-                                },
-                              });
-
-                              if (articleResponse.ok) {
-                                const articleData = await articleResponse.json();
-                                if (articleData.articles && articleData.articles.length > 0) {
-                                  maxArticleOrder = Math.max(
-                                    ...articleData.articles.map((article: any) => article.order_index || 0)
-                                  );
-                                }
+                              const articleData = await apiGetJson<{ success: boolean; articles?: any[] }>(`/api/articles?category=${value}&limit=1000&sort=order_desc`);
+                              if (articleData.articles && articleData.articles.length > 0) {
+                                maxArticleOrder = Math.max(
+                                  ...articleData.articles.map((article: any) => article.order_index || 0)
+                                );
                               }
                             } catch (error) {
                               console.warn('获取文章排序信息失败:', error);

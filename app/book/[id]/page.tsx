@@ -38,7 +38,7 @@ import {
 } from '@/app/data/mockDatabase';
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 import { getChapterLabel } from '@/app/utils/chapterNumbering';
-import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/apiClient';
+import { apiGet, apiPutJson, apiDeleteJson, apiPostJson } from '@/lib/apiClient';
 import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
 
 const { TextArea } = Input;
@@ -172,6 +172,37 @@ export default function BookPage() {
   const chapterLabelCache = useChapterLabelCacheOptional();
 
   /**
+   * 滚动到页面顶部（兼容移动端）
+   * 同时处理多个可能的滚动容器，确保在所有设备上都能正常工作
+   */
+  const scrollToTop = useCallback(() => {
+    // 使用 requestAnimationFrame 确保在下一帧执行，DOM 已渲染
+    requestAnimationFrame(() => {
+      // 方法1: 同时设置多个可能的滚动容器（兼容不同浏览器）
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      
+      // 方法2: 使用 window.scrollTo（作为备选）
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // 方法3: 如果页面有固定容器，尝试找到并滚动它
+      const scrollableContainers = document.querySelectorAll('[data-content-area]');
+      scrollableContainers.forEach(container => {
+        if (container instanceof HTMLElement) {
+          container.scrollTop = 0;
+        }
+      });
+      
+      // 方法4: 延迟执行一次，确保在移动端也能生效
+      setTimeout(() => {
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        window.scrollTo({ top: 0, behavior: 'auto' }); // 使用 auto 确保立即执行
+      }, 100);
+    });
+  }, []);
+
+  /**
    * 获取分类路径
    */
   const fetchCategoryPath = async (categoryId: string) => {
@@ -300,6 +331,11 @@ export default function BookPage() {
         const finalCategory = targetCategory || useBookStore.getState().bookCategoryId;
         const newUrl = finalCategory ? `/book/${targetArticleId}?category=${finalCategory}` : `/book/${targetArticleId}`;
         window.history.replaceState({}, '', newUrl);
+
+        // 滚动到顶部（延迟执行，确保内容已渲染）
+        setTimeout(() => {
+          scrollToTop();
+        }, 50);
 
         console.log('虚拟翻页成功:', targetArticleId);
       } else {
@@ -449,6 +485,17 @@ export default function BookPage() {
     }
   }, [articleId]);
 
+  // 监听文章ID变化，滚动到顶部（处理从目录点击文章的情况）
+  useEffect(() => {
+    if (articleId) {
+      // 延迟执行，确保页面内容已加载
+      const timer = setTimeout(() => {
+        scrollToTop();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [articleId, scrollToTop]);
+
   // 预加载下一篇文章（只在导航信息变化且缓存中没有时预加载）
   useEffect(() => {
     if (navigation && navigation.nextArticleId && !articleCache.has(navigation.nextArticleId)) {
@@ -466,19 +513,23 @@ export default function BookPage() {
 
     setIsLiking(true);
     try {
-      const response = await (isLiked ? apiDelete(`/api/articles/${articleId}/like`) : apiPost(`/api/articles/${articleId}/like`));
+      const result = isLiked 
+        ? await apiDeleteJson<{ success: boolean; likes?: number; error?: string }>(`/api/articles/${articleId}/like`)
+        : await apiPostJson<{ success: boolean; likes?: number; error?: string }>(`/api/articles/${articleId}/like`);
 
-      const result = await response.json();
       if (result.success) {
         setIsLiked(!isLiked);
-        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+        setLikesCount(result.likes || (isLiked ? likesCount - 1 : likesCount + 1));
         message.success(isLiked ? '已取消点赞' : '点赞成功');
       } else {
         message.error(result.error || '操作失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('点赞操作失败:', error);
-      message.error('操作失败');
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('操作失败');
+      }
     } finally {
       setIsLiking(false);
     }
@@ -551,12 +602,6 @@ export default function BookPage() {
     if (!book) return;
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
-
       // 根据当前blocks重新生成excerpt
       const updatedExcerpt = generateExcerptFromBlocks(book.blocks) || '暂无简介';
 
@@ -572,9 +617,8 @@ export default function BookPage() {
 
       console.log('Book save - Sending data:', JSON.stringify(updateData, null, 2));
 
-      const response = await apiPut(`/api/articles/${articleId}`, updateData);
+      const result = await apiPutJson<{ success: boolean; error?: string }>(`/api/articles/${articleId}`, updateData);
 
-      const result = await response.json();
       if (result.success) {
         message.success('保存成功');
         setEditMode('view');
@@ -591,9 +635,12 @@ export default function BookPage() {
       } else {
         message.error(result.error || '保存失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('保存失败:', error);
-      message.error('保存失败');
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('保存失败');
+      }
     }
   };
 
@@ -607,15 +654,8 @@ export default function BookPage() {
       cancelText: '取消',
       onOk: async () => {
         try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            message.error('请先登录');
-            return;
-          }
+          const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/articles/${articleId}`);
 
-          const response = await apiDelete(`/api/articles/${articleId}`);
-
-          const result = await response.json();
           if (result.success) {
             message.success('删除成功');
 
@@ -630,9 +670,12 @@ export default function BookPage() {
           } else {
             message.error(result.error || '删除失败');
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('删除失败:', error);
-          message.error('删除失败');
+          // 401错误会被apiClient自动处理，这里只处理其他错误
+          if (!error.message?.includes('401')) {
+            message.error('删除失败');
+          }
         }
       },
     });

@@ -20,16 +20,26 @@ export async function POST(req: NextRequest) {
     const tokens = refreshAccessToken(refreshToken);
 
     if (!tokens) {
-      // Refresh token无效，清除cookie
+      // Refresh token无效，清除所有cookie
       const response = NextResponse.json(
         { success: false, error: 'Invalid refresh token' },
         { status: 401 }
       );
 
+      // 清除 access-token cookie
+      response.cookies.set('access-token', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 0, // 立即过期
+        path: '/',
+      });
+
+      // 清除 refresh-token cookie
       response.cookies.set('refresh-token', '', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         maxAge: 0, // 立即过期
         path: '/',
       });
@@ -37,17 +47,25 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    // 返回新的access token，并更新refresh token cookie
+    // 返回成功，不再返回 accessToken（存储在 cookie 中）
     const response = NextResponse.json({
       success: true,
-      accessToken: tokens.accessToken,
     });
 
-    // 更新refresh token cookie
+    // 设置新的 access token cookie（短期，15分钟）
+    response.cookies.set('access-token', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 15, // 15分钟
+      path: '/',
+    });
+
+    // 更新 refresh token cookie（长期，7天）
     response.cookies.set('refresh-token', tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7天
       path: '/',
     });

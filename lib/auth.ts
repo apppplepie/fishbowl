@@ -115,21 +115,22 @@ export function refreshAccessToken(refreshToken: string): {
 }
 
 /**
- * 从请求中提取Token
+ * 从请求中提取Token（从HttpOnly cookie读取）
  */
 export function extractToken(req: NextRequest): string | null {
-  const authHeader = req.headers.get('Authorization');
-  
-  if (!authHeader) {
-    return null;
+  // 优先从 cookie 读取 access-token
+  const accessToken = req.cookies.get('access-token')?.value;
+  if (accessToken) {
+    return accessToken;
   }
   
-  // 支持 "Bearer token" 格式
-  if (authHeader.startsWith('Bearer ')) {
+  // 兼容：如果 cookie 中没有，尝试从 Authorization header 读取（向后兼容）
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
   
-  return authHeader;
+  return null;
 }
 
 /**

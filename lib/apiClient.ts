@@ -1,6 +1,6 @@
 /**
  * API客户端工具
- * 统一处理认证token和请求
+ * 使用 HttpOnly Cookie 进行认证，所有请求自动携带 cookie
  */
 
 interface RequestOptions extends RequestInit {
@@ -8,23 +8,13 @@ interface RequestOptions extends RequestInit {
 }
 
 /**
- * 获取认证token
- */
-function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  // 优先使用新版sessionStorage（access token），兼容旧版localStorage
-  const sessionToken = sessionStorage.getItem('access-token');
-  if (sessionToken) return sessionToken;
-  return localStorage.getItem('token');
-}
-
-/**
- * 刷新Access Token
+ * 刷新Access Token（通过 HttpOnly Cookie）
+ * 刷新成功后，新的 token 会自动存储在 cookie 中
  */
 let isRefreshing = false;
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(): Promise<boolean> {
   // 如果正在刷新，返回同一个Promise
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
@@ -43,40 +33,36 @@ async function refreshAccessToken(): Promise<string | null> {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.accessToken) {
-          // 更新access token
+        if (data.success) {
+          // 刷新成功，新的 token 已自动存储在 cookie 中
+          // 触发事件通知其他组件登录状态已更新
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem('access-token', data.accessToken);
-            localStorage.setItem('token', data.accessToken);
-            // 触发事件通知其他组件token已更新
             window.dispatchEvent(new Event('loginStatusChanged'));
           }
-          return data.accessToken;
+          return true;
         }
       }
 
-      // 刷新失败，清除认证数据
+      // 刷新失败，清除本地用户数据
       if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('access-token');
         sessionStorage.removeItem('user');
-        localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('username');
+        window.dispatchEvent(new Event('loginStatusChanged'));
       }
-      return null;
+      return false;
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // 刷新失败，清除认证数据
+      // 刷新失败，清除本地用户数据
       if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('access-token');
         sessionStorage.removeItem('user');
-        localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('username');
+        window.dispatchEvent(new Event('loginStatusChanged'));
       }
-      return null;
+      return false;
     } finally {
       isRefreshing = false;
       refreshPromise = null;
@@ -88,7 +74,8 @@ async function refreshAccessToken(): Promise<string | null> {
 
 /**
  * 统一的API请求函数
- * 自动添加认证头，并在401时自动刷新token
+ * 使用 HttpOnly Cookie 进行认证，浏览器自动携带 cookie
+ * 401时自动刷新token并重试
  */
 export async function apiRequest(url: string, options: RequestOptions = {}): Promise<Response> {
   const { requiresAuth = true, headers = {}, ...restOptions } = options;
@@ -101,32 +88,23 @@ export async function apiRequest(url: string, options: RequestOptions = {}): Pro
   // 合并额外的headers
   Object.assign(requestHeaders, headers);
 
-  // 如果需要认证，添加token
-  if (requiresAuth) {
-    const token = getAuthToken();
-    if (token) {
-      requestHeaders['Authorization'] = `Bearer ${token}`;
-    }
-  }
-
-  // 发送请求
+  // 发送请求（浏览器自动携带 HttpOnly cookie）
   let response = await fetch(url, {
     ...restOptions,
     headers: requestHeaders,
-    credentials: 'include', // 携带cookie以支持refresh token
+    credentials: 'include', // 关键：携带 HttpOnly cookie
   });
 
   // 如果返回401且需要认证，尝试刷新token并重试
   if (response.status === 401 && requiresAuth) {
-    const newToken = await refreshAccessToken();
+    const refreshSuccess = await refreshAccessToken();
     
-    if (newToken) {
-      // 用新token重试请求
-      requestHeaders['Authorization'] = `Bearer ${newToken}`;
+    if (refreshSuccess) {
+      // 刷新成功，重试请求（浏览器会自动携带新的 cookie）
       response = await fetch(url, {
         ...restOptions,
         headers: requestHeaders,
-        credentials: 'include', // 携带cookie
+        credentials: 'include',
       });
     } else {
       // 刷新失败，可能需要重新登录

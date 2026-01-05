@@ -335,14 +335,6 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     // 如果用户上传了文件，则上传到服务器（改用 XHR + 进度）
     if (fileList.length > 0 && fileList[0].originFileObj) {
       try {
-        // 获取token用于身份验证
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-        if (!token) {
-          message.error({ content: '请先登录', key: 'upload' });
-          return;
-        }
-
         // 初始化 loading（持久显示，后面用相同 key 更新）
         message.loading({ content: '正在上传图片... 0%', key: 'upload', duration: 0 });
 
@@ -351,7 +343,6 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
 
         const result = await uploadFileWithProgress(
           fileList[0].originFileObj,
-          token,
           (percent: number) => {
             if (percent - lastPercent >= 3 || percent === 100) {
               lastPercent = percent;
@@ -411,18 +402,16 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
   };
 
   // 放在组件内部（handleAddImageBlock 同级），负责上传并回传结果/进度
-  function uploadFileWithProgress(file: File, token: string | null, onProgress: (p: number) => void) {
+  function uploadFileWithProgress(file: File, onProgress: (p: number) => void) {
     return new Promise<{ success: boolean; url?: string; error?: any }>((resolve) => {
       const xhr = new XMLHttpRequest();
       const form = new FormData();
       form.append('file', file);
 
       xhr.open('POST', '/api/upload', true);
-
-      if (token) {
-        // 注意：不要自己设置 Content-Type，否则 multipart boundary 会被破坏
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      }
+      
+      // 携带 HttpOnly cookie（token 在 cookie 中，不需要手动设置 Authorization header）
+      xhr.withCredentials = true;
 
       xhr.upload.onprogress = (ev: ProgressEvent<EventTarget>) => {
         if (ev.lengthComputable) {

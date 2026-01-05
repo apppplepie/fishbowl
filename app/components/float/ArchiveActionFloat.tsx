@@ -5,6 +5,7 @@ import { FloatButton, Modal, Form, Input, Select, message, Button } from 'antd';
 import { PlusOutlined, EditOutlined, BookOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
+import { apiPostJson } from '@/lib/apiClient';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -62,13 +63,7 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
     setLoading(true);
 
     try {
-      // 获取 Token
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
+      // Token 在 HttpOnly cookie 中，不需要手动获取
 
       // 生成日期标题
       const title = generateDateTitle();
@@ -95,25 +90,16 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
       });
 
       // 调用文章 API 创建日志类型文章
-      const response = await fetch('/api/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: title,
-          excerpt: diaryContent, // 完整的日志内容（包含元信息）存储在 excerpt 字段
-          blocks: blocks,
-          tags: [],
-          status: 'published',
-          type: 'diary', // 指定为日志类型
-          category_id: 'cat_diary', // 自动归类到日志分类
-          max_access_level: 2, // 日记文章为会员级别
-        }),
+      const data = await apiPostJson<{ success: boolean; error?: string }>('/api/articles', {
+        title: title,
+        excerpt: diaryContent, // 完整的日志内容（包含元信息）存储在 excerpt 字段
+        blocks: blocks,
+        tags: [],
+        status: 'published',
+        type: 'diary', // 指定为日志类型
+        category_id: 'cat_diary', // 自动归类到日志分类
+        max_access_level: 2, // 日记文章为会员级别
       });
-
-      const data = await response.json();
 
       if (data.success) {
         message.success('日志发布成功！');
@@ -125,7 +111,10 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
       }
     } catch (error: any) {
       console.error('发布日志失败:', error);
-      message.error('发布失败: ' + error.message);
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('发布失败: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }

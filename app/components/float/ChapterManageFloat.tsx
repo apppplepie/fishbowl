@@ -45,6 +45,7 @@ import { CSS } from '@dnd-kit/utilities';
 // Utilities
 import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
 import { useAuth } from '@/app/hooks/useAuth';
+import { apiGetJson, apiPostJson, apiDeleteJson } from '@/lib/apiClient';
 
 interface ChapterManageFloatProps {
   categoryId: string; // 当前书籍分类ID
@@ -367,8 +368,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       setBookRootId(bookcaseId);
 
       // 加载书架的完整树结构
-      const response = await fetch(`/api/categories/${bookcaseId}/tree-with-articles`);
-      const result = await response.json();
+      const result = await apiGetJson<{ success: boolean; data?: { tree: TreeNode[] } }>(`/api/categories/${bookcaseId}/tree-with-articles`, { requiresAuth: false });
 
       console.log('ChapterManageFloat: API响应:', result);
 
@@ -488,19 +488,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       keyboard: false,
       onOk: async () => {
         try {
-          const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-          if (!token) {
-            message.error('请先登录');
-            return;
-          }
-
-          const response = await fetch(`/api/categories/${categoryId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          const result = await response.json();
+          const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/categories/${categoryId}`);
           if (result.success) {
             message.success('目录删除成功');
             setHasChanges(true);
@@ -524,31 +512,17 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     }
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
-
       const newCategoryId = `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const siblings = getSiblingsFromTree(treeData, newCategoryParentId || bookRootId || null);
       const newOrderIndex = siblings.length + 1;
 
-      const response = await fetch('/api/categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: newCategoryId,
-          name: newCategoryName.trim(),
-          parent_id: newCategoryParentId,
-          order_index: newOrderIndex,
-        }),
+      const result = await apiPostJson<{ success: boolean; error?: string }>('/api/categories', {
+        id: newCategoryId,
+        name: newCategoryName.trim(),
+        parent_id: newCategoryParentId,
+        order_index: newOrderIndex,
       });
 
-      const result = await response.json();
       if (result.success) {
         message.success('目录创建成功');
         setNewCategoryModalOpen(false);
@@ -558,9 +532,12 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       } else {
         message.error(result.error || '创建目录失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('创建目录失败:', error);
-      message.error('创建目录失败');
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('创建目录失败');
+      }
     }
   };
 
@@ -734,12 +711,6 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
 
     try {
       // 从 localStorage 获取 token
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) {
-        message.error('未登录，请先登录');
-        return;
-      }
-
       // 找到被拖拽的节点和目标节点
       const dragNode = findNodeRecursive(treeData, active.id as string);
       const dropNode = findNodeRecursive(treeData, over.id as string);
@@ -791,45 +762,40 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
 
       console.log('发送请求数据:', apiPayload);
 
-      // 调用新的拖拽排序 API
-      const response = await fetch('/api/tree/reorder', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(apiPayload),
-      });
+      // 调用新的拖拽排序 API（异步处理响应，不要阻塞动画）
+      apiPostJson<{ success: boolean; error?: string }>('/api/tree/reorder', apiPayload)
+        .then(result => {
+          console.log('拖拽排序响应:', result);
 
-      // 异步处理响应，不要阻塞动画
-      response.json().then(result => {
-        console.log('拖拽排序响应:', { status: response.status, result });
+          if (result.success) {
+            // 乐观更新成功，确认状态并延迟同步
+            confirmOptimisticUpdate();
 
-        if (result.success) {
-          // 乐观更新成功，确认状态并延迟同步
-          confirmOptimisticUpdate();
+            // 清除书籍缓存，因为文章顺序发生了变化
+            if (typeof window !== 'undefined' && window.localStorage) {
+              // 这里清除的是书架的缓存，因为我们操作的是整个书架的结构
+              const cacheKey = 'book-articles-cache-cat_bookcase';
+              localStorage.removeItem(cacheKey);
+              console.log('已清除书架缓存，因为章节顺序发生变化');
+            }
 
-          // 清除书籍缓存，因为文章顺序发生了变化
-          if (typeof window !== 'undefined' && window.localStorage) {
-            // 这里清除的是书架的缓存，因为我们操作的是整个书架的结构
-            const cacheKey = 'book-articles-cache-cat_bookcase';
-            localStorage.removeItem(cacheKey);
-            console.log('已清除书架缓存，因为章节顺序发生变化');
+            message.success('操作成功');
+          } else {
+            // 乐观更新失败，回滚到之前的状态
+            rollbackOptimisticUpdate();
+
+            message.error(result.error || '操作失败');
           }
-
-          message.success('操作成功');
-        } else {
-          // 乐观更新失败，回滚到之前的状态
+        })
+        .catch(error => {
+          console.error('拖拽排序失败:', error);
+          // 网络错误也回滚
           rollbackOptimisticUpdate();
-
-          message.error(result.error || '操作失败');
-        }
-      }).catch(error => {
-        console.error('解析响应失败:', error);
-        // 网络错误也回滚
-        rollbackOptimisticUpdate();
-        message.error('操作失败');
-      });
+          // 401错误会被apiClient自动处理，这里只处理其他错误
+          if (!error.message?.includes('401')) {
+            message.error('操作失败');
+          }
+        });
 
     } catch (error) {
       console.error('拖拽失败:', error);

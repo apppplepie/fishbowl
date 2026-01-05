@@ -133,25 +133,15 @@ export default function PublishArticlePage() {
     // 需要同时考虑子分类的 order_index 和文章的 order_index
     let orderInCategory = 0;
     try {
-      const token = localStorage.getItem('token');
-
       // 1. 查询当前分类下的所有直接子分类，获取最大的 order_index
       let maxCategoryOrder = 0;
       try {
-        const categoryResponse = await fetch(`/api/categories/${categoryId}/tree-with-articles`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (categoryResponse.ok) {
-          const categoryData = await categoryResponse.json();
-          if (categoryData.success && categoryData.tree && categoryData.tree.children) {
-            // 只查找直接子分类的 order_index
-            for (const child of categoryData.tree.children) {
-              if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
-                maxCategoryOrder = child.order_index;
-              }
+        const categoryData = await apiGetJson<{ success: boolean; tree?: { children?: any[] } }>(`/api/categories/${categoryId}/tree-with-articles`);
+        if (categoryData.success && categoryData.tree && categoryData.tree.children) {
+          // 只查找直接子分类的 order_index
+          for (const child of categoryData.tree.children) {
+            if (child.node_type === 'category' && child.order_index > maxCategoryOrder) {
+              maxCategoryOrder = child.order_index;
             }
           }
         }
@@ -162,19 +152,11 @@ export default function PublishArticlePage() {
       // 2. 查询当前分类下的所有文章，获取最大的 order_index
       let maxArticleOrder = 0;
       try {
-        const articleResponse = await fetch(`/api/articles?category=${categoryId}&limit=1000&sort=order_desc`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (articleResponse.ok) {
-          const articleData = await articleResponse.json();
-          if (articleData.articles && articleData.articles.length > 0) {
-            maxArticleOrder = Math.max(
-              ...articleData.articles.map((article: any) => article.order_index || 0)
-            );
-          }
+        const articleData = await apiGetJson<{ success: boolean; articles?: any[] }>(`/api/articles?category=${categoryId}&limit=1000&sort=order_desc`);
+        if (articleData.articles && articleData.articles.length > 0) {
+          maxArticleOrder = Math.max(
+            ...articleData.articles.map((article: any) => article.order_index || 0)
+          );
         }
       } catch (error) {
         console.warn('获取文章排序信息失败:', error);
@@ -207,28 +189,10 @@ export default function PublishArticlePage() {
     };
 
     try {
-      // 获取 Token
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      
-      if (!token || !userStr) {
-        message.error('请先登录');
-        return;
-      }
+      // 调用API保存文章（token 在 HttpOnly cookie 中）
+      const result = await apiPostJson<{ success: boolean; error?: string; articleId?: string }>('/api/articles', articleData);
 
-      // 调用API保存文章
-      const response = await fetch('/api/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(articleData),
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         message.success('文章发布成功！');
         // 清空表单和块
         form.resetFields();
@@ -245,15 +209,7 @@ export default function PublishArticlePage() {
           router.push('/archive');
         }, 1000);
       } else {
-        if (response.status === 401) {
-          message.error('登录已过期，请重新登录');
-          // 清除过期的登录信息
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.dispatchEvent(new Event('loginStatusChanged'));
-        } else {
-          message.error(result.error || '发布失败，请重试');
-        }
+        message.error(result.error || '发布失败，请重试');
       }
     } catch (error) {
       console.error('❌ 发布文章异常:', error);

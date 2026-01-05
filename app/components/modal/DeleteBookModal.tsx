@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Modal, Input, message, Button } from 'antd';
 import { DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '@/app/hooks/useAuth';
+import { apiDeleteJson } from '@/lib/apiClient';
 
 interface DeleteBookModalProps {
   open: boolean;
@@ -45,22 +46,10 @@ export default function DeleteBookModal({
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
+      // Token 在 HttpOnly cookie 中，不需要手动获取
+      const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/categories/${bookId}`);
 
-      const response = await fetch(`/api/categories/${bookId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         message.success('书籍删除成功');
         onSuccess?.();
         onCancel();

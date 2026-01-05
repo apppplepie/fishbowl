@@ -3,80 +3,18 @@
 import { Typography, Card, Avatar, Descriptions, Button, Spin, message } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
-import { apiRequestJson } from '@/lib/apiClient';
 import Header from '../../components/Header';
 import PageLayout from '@/app/components/PageLayout';
 
 const { Title } = Typography;
 
-interface UserInfo {
-  id: string;
-  username: string;
-  email: string;
-  display_name: string;
-  avatar_url?: string;
-  bio?: string;
-  role: 'admin' | 'moderator' | 'user';
-  email_verified: boolean;
-  last_login_at?: string;
-  created_at: string;
-  max_access_level?: number;
-}
-
 export default function ProfilePage() {
   const router = useRouter();
-  const { user: localUser, logout, getToken } = useAuth();
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user: localUser, logout, isLoading } = useAuth();
 
-  // 获取最新用户信息
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      if (!localUser) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        // 使用 apiRequestJson 自动处理token刷新和401响应
-        const data = await apiRequestJson<{ success: boolean; user?: UserInfo; error?: string }>('/api/auth/me');
-
-        if (data.success && data.user) {
-          setUserInfo(data.user);
-        } else {
-          // 只在非401错误时显示错误消息（401会自动刷新token）
-          console.error('获取用户信息失败:', data.error);
-        }
-      } catch (error: any) {
-        console.error('获取用户信息失败:', error);
-        // 检查是否是认证错误（token刷新失败）
-        if (error.message && !error.message.includes('401')) {
-          message.error('获取用户信息失败');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserInfo();
-
-    // 监听登录状态变化（包括token刷新）
-    const handleLoginStatusChanged = () => {
-      fetchUserInfo();
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('loginStatusChanged', handleLoginStatusChanged);
-      return () => {
-        window.removeEventListener('loginStatusChanged', handleLoginStatusChanged);
-      };
-    }
-    // 只依赖 localUser?.id，避免对象引用变化导致重复请求
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localUser?.id]);
+  // 不需要再次获取用户信息，useAuth 已经处理了
+  // AuthContext 会自动调用 /api/auth/me 并保持状态同步
 
   // 处理登出
   const handleLogout = () => {
@@ -115,9 +53,6 @@ export default function ProfilePage() {
     }
   };
 
-  // 使用 API 返回的用户信息，如果没有则使用本地存储的用户信息
-  const displayUser = userInfo || localUser;
-
   return (
     <>
       {/* Header 独立在最顶部，覆盖在边框上 */}
@@ -145,11 +80,11 @@ export default function ProfilePage() {
           margin: '0 auto',
           width: '100%',
         }}>
-          {loading ? (
+          {isLoading ? (
             <div style={{ textAlign: 'center', padding: '60px 0' }}>
               <Spin size="large" />
             </div>
-          ) : !userInfo && !localUser ? (
+          ) : !localUser ? (
             <Card>
               <Title level={3}>未登录</Title>
               <p>请先登录以查看个人资料</p>
@@ -159,15 +94,15 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
                 <Avatar 
                   size={80} 
-                  src={displayUser?.avatar_url} 
-                  icon={!displayUser?.avatar_url && <UserOutlined />} 
+                  src={localUser?.avatar_url} 
+                  icon={!localUser?.avatar_url && <UserOutlined />} 
                 />
                 <div style={{ marginLeft: '24px', flex: 1 }}>
                   <Title level={3} style={{ margin: 0 }}>
-                    {displayUser?.display_name || displayUser?.username || '未知用户'}
+                    {localUser?.display_name || localUser?.username || '未知用户'}
                   </Title>
                   <p style={{ color: '#666', margin: '8px 0 0 0' }}>
-                    {displayUser?.email || '未设置邮箱'}
+                    {localUser?.email || '未设置邮箱'}
                   </p>
                 </div>
                 <Button 
@@ -182,41 +117,21 @@ export default function ProfilePage() {
               
               <Descriptions title="基本信息" bordered>
                 <Descriptions.Item label="用户名">
-                  {displayUser?.username || '未知'}
+                  {localUser?.username || '未知'}
                 </Descriptions.Item>
                 <Descriptions.Item label="显示名称">
-                  {displayUser?.display_name || '未设置'}
+                  {localUser?.display_name || '未设置'}
                 </Descriptions.Item>
                 <Descriptions.Item label="邮箱">
-                  {displayUser?.email || '未设置'}
-                  {userInfo?.email_verified && (
-                    <span style={{ color: '#52c41a', marginLeft: '8px' }}>✓ 已验证</span>
-                  )}
+                  {localUser?.email || '未设置'}
                 </Descriptions.Item>
                 <Descriptions.Item label="角色">
-                  {getRoleName(displayUser?.role)}
+                  {getRoleName(localUser?.role)}
                 </Descriptions.Item>
-                {userInfo?.created_at && (
-                  <Descriptions.Item label="注册时间">
-                    {formatDate(userInfo.created_at)}
-                  </Descriptions.Item>
-                )}
-                {userInfo?.last_login_at && (
-                  <Descriptions.Item label="最后登录">
-                    {formatDate(userInfo.last_login_at)}
-                  </Descriptions.Item>
-                )}
               </Descriptions>
 
-              {userInfo?.bio && (
-                <div style={{ marginTop: '24px' }}>
-                  <Title level={5}>个人简介</Title>
-                  <p style={{ color: '#666', lineHeight: '1.8' }}>{userInfo.bio}</p>
-                </div>
-              )}
-
               {/* 管理员功能按钮 */}
-              {displayUser?.role === 'admin' && (
+              {localUser?.role === 'admin' && (
                 <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #f0f0f0' }}>
                   <Button
                     type="primary"

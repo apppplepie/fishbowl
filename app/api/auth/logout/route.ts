@@ -5,16 +5,26 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function POST(req: NextRequest) {
   try {
-    // 清除refresh token cookie
+    // 清除所有认证相关的 cookie
     const response = NextResponse.json({
       success: true,
       message: '登出成功',
     });
 
+    // 清除 access-token cookie
+    response.cookies.set('access-token', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0, // 立即过期
+      path: '/',
+    });
+
+    // 清除 refresh-token cookie
     response.cookies.set('refresh-token', '', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 0, // 立即过期
       path: '/',
     });

@@ -21,6 +21,7 @@ export default function RegisterPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // 携带 cookie
         body: JSON.stringify({
           username: values.username,
           email: values.email,
@@ -34,9 +35,12 @@ export default function RegisterPage() {
       if (response.ok && data.success) {
         message.success('注册成功！');
         
-        // 保存 token 和用户信息
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // 只保存用户信息（token 已存储在 HttpOnly cookie 中）
+        if (data.user) {
+          sessionStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('isLoggedIn', 'true');
+        }
         
         // 跳转到首页
         setTimeout(() => {

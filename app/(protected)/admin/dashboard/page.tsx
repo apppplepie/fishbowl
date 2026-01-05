@@ -5,6 +5,7 @@ import type { GetRef, InputRef, TableProps } from 'antd';
 import { Button, Form, Input, Select, Table, Typography, message, Spin, InputNumber, Switch, Modal } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
+import { apiGetJson, apiPostJson, apiPutJson } from '@/lib/apiClient';
 import Header from '../../../components/Header';
 
 const { Title, Paragraph } = Typography;
@@ -155,7 +156,7 @@ type ColumnTypes = Exclude<TableProps<UserData>['columns'], undefined>;
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { user, logout, getToken } = useAuth();
+  const { user, logout } = useAuth();
   const [dataSource, setDataSource] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -172,30 +173,23 @@ export default function AdminDashboardPage() {
   // 获取用户列表
   const fetchUsers = async () => {
     try {
-      const token = await getToken();
-      if (!token) return;
-
-      const response = await fetch('/api/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          const users = data.data.users.map((user: any) => ({
-            key: user.id,
-            ...user,
-          }));
-          setDataSource(users);
-        }
+      const data = await apiGetJson<{ success: boolean; data?: { users: any[] }; error?: string }>('/api/users');
+      
+      if (data.success && data.data) {
+        const users = data.data.users.map((user: any) => ({
+          key: user.id,
+          ...user,
+        }));
+        setDataSource(users);
       } else {
+        message.error(data.error || '获取用户列表失败');
+      }
+    } catch (error: any) {
+      console.error('获取用户列表失败:', error);
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
         message.error('获取用户列表失败');
       }
-    } catch (error) {
-      console.error('获取用户列表失败:', error);
-      message.error('获取用户列表失败');
     } finally {
       setLoading(false);
     }
@@ -205,34 +199,19 @@ export default function AdminDashboardPage() {
   const handleCreateUser = async () => {
     try {
       const values = await form.validateFields();
-      const token = await getToken();
-      if (!token) return;
 
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: values.username,
-          password: values.password,
-          role: values.role,
-        }),
+      const data = await apiPostJson<{ success: boolean; error?: string }>('/api/users', {
+        username: values.username,
+        password: values.password,
+        role: values.role,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          message.success('用户创建成功');
-          form.resetFields();
-          setIsModalVisible(false);
-          fetchUsers(); // 刷新用户列表
-        } else {
-          message.error(data.error || '创建失败');
-        }
+      if (data.success) {
+        message.success('用户创建成功');
+        form.resetFields();
+        setIsModalVisible(false);
+        fetchUsers(); // 刷新用户列表
       } else {
-        const data = await response.json();
         message.error(data.error || '创建失败');
       }
     } catch (error: any) {
@@ -241,16 +220,16 @@ export default function AdminDashboardPage() {
         return;
       }
       console.error('创建用户失败:', error);
-      message.error('创建失败');
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('创建失败');
+      }
     }
   };
 
   // 保存用户更新
   const handleSave = async (record: UserData) => {
     try {
-      const token = await getToken();
-      if (!token) return;
-
       const updateData = {
         email: record.email,
         display_name: record.display_name,
@@ -260,30 +239,20 @@ export default function AdminDashboardPage() {
         max_access_level: record.max_access_level,
       };
 
-      const response = await fetch(`/api/users/${record.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
+      const data = await apiPutJson<{ success: boolean; error?: string }>(`/api/users/${record.id}`, updateData);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          message.success('用户信息更新成功');
-          fetchUsers(); // 重新获取数据
-        } else {
-          message.error(data.error || '更新失败');
-        }
+      if (data.success) {
+        message.success('用户信息更新成功');
+        fetchUsers(); // 重新获取数据
       } else {
-        const data = await response.json();
         message.error(data.error || '更新失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('更新用户信息失败:', error);
-      message.error('更新失败');
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('更新失败');
+      }
     }
   };
 

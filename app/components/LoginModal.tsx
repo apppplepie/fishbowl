@@ -28,6 +28,7 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // 携带 cookie
         body: JSON.stringify({
           username: values.username,
           password: values.password,
@@ -37,11 +38,11 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // 登录成功
+        // 登录成功（token 已存储在 HttpOnly cookie 中）
         message.success('登录成功！');
 
-        // 使用新的auth hook处理登录状态
-        await login(data.accessToken, data.user);
+        // 使用新的auth hook处理登录状态（不再传递 accessToken）
+        await login(data.user);
 
         form.resetFields();
 

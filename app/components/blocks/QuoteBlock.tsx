@@ -5,6 +5,7 @@ import { Card, Button, Modal, Typography, Pagination, Spin, Divider, Input } fro
 import { LinkOutlined, PictureOutlined } from '@ant-design/icons';
 import { Image as AntImage } from 'antd';
 import type { QuoteBlock as QuoteBlockType } from '@/app/types/block';
+import { apiGetJson } from '@/lib/apiClient';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -70,17 +71,17 @@ const QuoteBlock: React.FC<QuoteBlockProps> = ({
         params.append('search', query.trim());
       }
 
-      const response = await fetch(`/api/blocks?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setBlocks(data.data.blocks);
-          setTotal(data.data.total);
-        } else {
-          console.error('获取block数据失败:', data.error);
-        }
+      const data = await apiGetJson<{
+        success: boolean;
+        data: { blocks: any[]; total: number };
+        error?: string;
+      }>(`/api/blocks?${params}`);
+
+      if (data.success) {
+        setBlocks(data.data.blocks);
+        setTotal(data.data.total);
       } else {
-        console.error('获取block数据失败:', response.statusText);
+        console.error('获取block数据失败:', data.error);
       }
     } catch (error) {
       console.error('获取block数据失败:', error);

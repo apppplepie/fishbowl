@@ -27,6 +27,7 @@ import type { Block } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
+import { apiPostJson, apiGetJson } from '@/lib/apiClient';
 
 const { TextArea } = Input;
 
@@ -205,14 +206,6 @@ function PublishBookPage() {
     }
 
     try {
-      // 获取 Token
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-      if (!token) {
-        message.error('请先登录');
-        return;
-      }
-
       // 1. 首先创建书籍分类（category）
       const categoryData = {
         id: `book_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -221,16 +214,7 @@ function PublishBookPage() {
         order_index: await getNextBookOrder(),
       };
 
-      const categoryResponse = await fetch('/api/categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(categoryData),
-      });
-
-      const categoryResult = await categoryResponse.json();
+      const categoryResult = await apiPostJson<{ success: boolean; error?: string }>('/api/categories', categoryData);
 
       if (!categoryResponse.ok || !categoryResult.success) {
         message.error(categoryResult.error || '创建书籍分类失败');
@@ -292,18 +276,9 @@ function PublishBookPage() {
         status: 'published' as const,
       };
 
-      const articleResponse = await fetch('/api/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(articleData),
-      });
+      const articleResult = await apiPostJson<{ success: boolean; error?: string; article?: any }>('/api/articles', articleData);
 
-      const articleResult = await articleResponse.json();
-
-      if (articleResponse.ok && articleResult.success && articleResult.articleId) {
+      if (articleResult.success && articleResult.articleId) {
         console.log('成功创建书籍文章:', articleResult.articleId, '分类ID:', categoryId);
         message.success('书籍发布成功！');
         // 清空表单和草稿
@@ -318,7 +293,6 @@ function PublishBookPage() {
         }, 1000);
       } else {
         console.error('发布书籍失败: API返回成功但文章数据缺失', {
-          responseOk: articleResponse.ok,
           resultSuccess: articleResult.success,
           hasArticleId: !!articleResult.articleId,
           fullResult: articleResult
@@ -334,10 +308,11 @@ function PublishBookPage() {
   // 获取下一个书籍order
   const getNextBookOrder = async (): Promise<number> => {
     try {
-      const response = await fetch('/api/categories?type=children&parentId=cat_bookcase');
-      const result = await response.json();
+      const result = await apiGetJson<{ success: boolean; categories: Array<{ order_index?: number }> }>(
+        '/api/categories?type=children&parentId=cat_bookcase'
+      );
 
-      if (response.ok && result.success && result.categories.length > 0) {
+      if (result.success && result.categories.length > 0) {
         const maxOrder = Math.max(...result.categories.map((cat: any) => cat.order_index || 0));
         return maxOrder + 1;
       }
@@ -352,9 +327,10 @@ function PublishBookPage() {
   const coverUploadProps = {
     name: 'file',
     action: '/api/upload',
-    headers: {
-      authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
-    },
+    withCredentials: true, // 确保上传请求也携带 HttpOnly cookies
+    // 不再需要手动设置 Authorization header，token 在 HttpOnly cookie 中
+    // 但 Ant Design Upload 组件需要手动配置 withCredentials
+    // 注意：Ant Design Upload 可能不支持 withCredentials，需要自定义上传函数
     listType: 'picture-card' as const,
     className: 'avatar-uploader',
     fileList: coverFileList,

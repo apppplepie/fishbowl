@@ -14,56 +14,41 @@ interface UseCanEditArticleResult {
  * 调用后端API统一判断权限，避免前端分散的权限判断
  */
 export function useCanEditArticle(articleId: string | null | undefined): UseCanEditArticleResult {
-  const { isLoggedIn, token } = useAuth();
+  const { isLoggedIn } = useAuth();
   const [canEdit, setCanEdit] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const lastCheckedRef = useRef<{ articleId: string | null; token: string | null }>({ articleId: null, token: null });
+  const lastCheckedRef = useRef<string | null>(null);
 
   useEffect(() => {
     // 如果没有文章ID或未登录，直接返回
     if (!articleId || !isLoggedIn) {
       setCanEdit(false);
       setIsLoading(false);
-      lastCheckedRef.current = { articleId: null, token: null };
+      lastCheckedRef.current = null;
       return;
     }
-
-    // 获取当前 token
-    const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
     
-    // 如果已经检查过相同的 articleId 和 token，跳过重复请求
-    if (
-      lastCheckedRef.current.articleId === articleId &&
-      lastCheckedRef.current.token === authToken
-    ) {
+    // 如果已经检查过相同的 articleId，跳过重复请求
+    if (lastCheckedRef.current === articleId) {
       return;
     }
 
-    // 调用后端API检查权限
+    // 调用后端API检查权限（token 在 HttpOnly cookie 中）
     const checkPermission = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        if (!authToken) {
-          setCanEdit(false);
-          setIsLoading(false);
-          lastCheckedRef.current = { articleId, token: null };
-          return;
-        }
-
         const response = await fetch(`/api/articles/${articleId}/can-edit`, {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-          },
+          credentials: 'include', // 携带 HttpOnly cookie
         });
 
         const result = await response.json();
 
         if (result.success) {
           setCanEdit(result.canEdit);
-          lastCheckedRef.current = { articleId, token: authToken }; // 记录已检查的状态
+          lastCheckedRef.current = articleId; // 记录已检查的状态
         } else {
           setError(result.error || '检查权限失败');
           setCanEdit(false);
@@ -78,7 +63,7 @@ export function useCanEditArticle(articleId: string | null | undefined): UseCanE
     };
 
     checkPermission();
-  }, [articleId, isLoggedIn, token]); // 只依赖 articleId、isLoggedIn 和 token
+  }, [articleId, isLoggedIn]); // 只依赖 articleId 和 isLoggedIn
 
   return { canEdit, isLoading, error };
 }

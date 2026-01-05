@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Spin, message } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
+import { apiGetJson } from '@/lib/apiClient';
 
 /**
  * 管理员专用路由布局
@@ -15,7 +16,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isLoggedIn, isLoading, user, getToken } = useAuth();
+  const { isLoggedIn, isLoading, user } = useAuth();
 
   useEffect(() => {
     const checkAdminAccess = async () => {
@@ -36,29 +37,10 @@ export default function AdminLayout({
 
       // 后端验证管理员权限
       try {
-        const token = await getToken();
-        if (!token) {
-          message.error('认证失败，请重新登录');
-          router.push('/?login=true');
-          return;
-        }
-
-        const response = await fetch('/api/auth/verify-admin', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          const data = await response.json();
-          message.error(data.error || '无权限访问此页面');
-          router.push('/profile');
-          return;
-        }
-
-        const data = await response.json();
+        const data = await apiGetJson<{ success: boolean; isAdmin?: boolean; error?: string }>('/api/auth/verify-admin');
+        
         if (!data.success || !data.isAdmin) {
-          message.error('无权限访问此页面');
+          message.error(data.error || '无权限访问此页面');
           router.push('/profile');
           return;
         }
@@ -71,7 +53,7 @@ export default function AdminLayout({
     };
 
     checkAdminAccess();
-  }, [isLoggedIn, isLoading, user, router, getToken]);
+  }, [isLoggedIn, isLoading, user, router]);
 
   // 正在初始化时显示加载状态
   if (isLoading) {

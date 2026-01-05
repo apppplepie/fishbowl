@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { generateToken } from '@/lib/auth';
+import { generateTokens } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -98,27 +98,49 @@ export async function POST(req: NextRequest) {
       [userId]
     );
 
-    // 10. 生成JWT Token
-    const token = generateToken({
+    // 10. 生成JWT Tokens（access token 和 refresh token）
+    const tokens = generateTokens({
       id: userId,
       username,
       email,
       role: 'user',
+      max_access_level: 3, // 默认用户权限
     });
 
-    // 11. 返回用户信息和token
-    return NextResponse.json({
+    // 11. 设置HttpOnly cookie存储access token和refresh token
+    const response = NextResponse.json({
       success: true,
       message: '注册成功',
-      token,
+      // 不再返回 token，因为存储在 HttpOnly cookie 中
       user: {
         id: userId,
         username,
         email,
         display_name: display_name || username,
         role: 'user',
+        max_access_level: 3,
       },
     });
+
+    // 设置 access token cookie（短期，15分钟）
+    response.cookies.set('access-token', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 15, // 15分钟
+      path: '/',
+    });
+
+    // 设置 refresh token cookie（长期，7天）
+    response.cookies.set('refresh-token', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7天
+      path: '/',
+    });
+
+    return response;
 
   } catch (error: any) {
     console.error('注册失败:', error);

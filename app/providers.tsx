@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 import { ChapterLabelProvider } from './contexts/ChapterLabelContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 /**
  * 客户端 Providers 包装组件
@@ -9,9 +10,11 @@ import { ChapterLabelProvider } from './contexts/ChapterLabelContext';
  */
 export default function Providers({ children }: { children: ReactNode }) {
   return (
-    <ChapterLabelProvider>
-      {children}
-    </ChapterLabelProvider>
+    <AuthProvider>
+      <ChapterLabelProvider>
+        {children}
+      </ChapterLabelProvider>
+    </AuthProvider>
   );
 }
 

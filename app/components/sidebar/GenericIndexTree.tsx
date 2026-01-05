@@ -11,6 +11,7 @@ import {
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
 import { addChapterNumbers, formatNodeLabel } from '@/app/utils/chapterNumbering';
+import { apiGetJson } from '@/lib/apiClient';
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 
 /**
@@ -207,19 +208,21 @@ export default function GenericIndexTree({
    */
   const findBookRootId = async (categoryId: string): Promise<string> => {
     try {
-      const response = await fetch(`/api/categories/${categoryId}`);
-      const result = await response.json();
+      const result = await apiGetJson<{
+        success: boolean;
+        categories?: Array<{ path?: string; id: string }>;
+      }>(`/api/categories/${categoryId}`);
 
       if (result.success && result.categories && result.categories.length > 0) {
         const category = result.categories[0];
         if (category.path) {
           const pathParts = category.path.split('-');
-          // 书籍在depth=2，path有3段（例如：000000-000004-000001）
-          // 需要取前3段来获取书籍根节点
           if (pathParts.length >= 3) {
             const bookPath = pathParts.slice(0, 3).join('-');
-            const bookResponse = await fetch(`/api/categories?path=${encodeURIComponent(bookPath)}`);
-            const bookResult = await bookResponse.json();
+            const bookResult = await apiGetJson<{
+              success: boolean;
+              categories?: Array<{ id: string }>;
+            }>(`/api/categories?path=${encodeURIComponent(bookPath)}`);
 
             if (bookResult.success && bookResult.categories && bookResult.categories.length > 0) {
               return bookResult.categories[0].id;
@@ -522,8 +525,7 @@ export default function GenericIndexTree({
           apiUrl = apiUrl.replace('{id}', actualCategoryId);
         }
 
-        const response = await fetch(apiUrl);
-        const result = await response.json();
+        const result = await apiGetJson<{ success: boolean; data?: any }>(apiUrl);
 
         if (result.success && result.data) {
           let items: MenuProps['items'];

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Avatar, message, Space, Tooltip, Modal } from 'antd';
 import { MessageOutlined, UserOutlined, DeleteOutlined, LikeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
+import { apiPostJson, apiDeleteJson, apiGetJson } from '@/lib/apiClient';
 
 const { TextArea } = Input;
 
@@ -78,14 +79,11 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/articles/${articleId}/comments`);
-      const result = await response.json();
+      const result = await apiGetJson<{ success: boolean; comments?: Comment[]; error?: string }>(`/api/articles/${articleId}/comments`);
 
       if (result.success) {
-        // 将评论树扁平化，所有评论按时间顺序显示
         const flatComments = flattenComments(result.comments || []);
         setComments(flatComments);
-        // 通知父组件评论数量变化
         if (onCommentCountChange) {
           onCommentCountChange(flatComments.length);
         }
@@ -156,21 +154,10 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
     setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`/api/articles/${articleId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          content: commentText.trim(),
-          parent_id: replyingTo?.id || null, // 如果是回复，传入父评论 ID
-        }),
+      const result = await apiPostJson<{ success: boolean; error?: string }>(`/api/articles/${articleId}/comments`, {
+        content: commentText.trim(),
+        parent_id: replyingTo?.id || null, // 如果是回复，传入父评论 ID
       });
-
-      const result = await response.json();
 
       if (result.success) {
         message.success(replyingTo ? '回复成功！' : '评论发表成功！');
@@ -183,7 +170,10 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
       }
     } catch (error: any) {
       console.error('评论发表失败:', error);
-      message.error('评论发表失败，请重试');
+      // 401错误会被apiClient自动处理，这里只处理其他错误
+      if (!error.message?.includes('401')) {
+        message.error('评论发表失败，请重试');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -200,16 +190,7 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
       okType: 'danger',
       async onOk() {
         try {
-          const token = localStorage.getItem('token');
-          
-          const response = await fetch(`/api/comments/${commentId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-
-          const result = await response.json();
+          const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/comments/${commentId}`);
 
           if (result.success) {
             message.success('评论已删除');
