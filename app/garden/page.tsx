@@ -176,7 +176,9 @@ export default function GardenPage() {
           }
       };
       
-      updateBounds();
+      // 延迟一次初始测量，避免在 layout 尚未稳定时读取到 0
+      requestAnimationFrame(updateBounds);
+
       window.addEventListener('resize', updateBounds);
       // Also update on scroll since position relative to viewport might change if we use fixed positions,
       // but here bottle flows with document, so rect relative to viewport changes on scroll.
@@ -242,40 +244,46 @@ export default function GardenPage() {
   };
 
   const handleImport = (value: string) => {
-      setImportString(value);
-      if (!value) return;
+    setImportString(value);
+    if (!value) return;
+  
+    try {
+      const decoded = atob(value);
+      const parsed = JSON.parse(decoded) as PlantSettings;
+      if (parsed.stemColorStart && parsed.type) {
+        setSettings(parsed);
+        setToastMessage("Seed DNA planted!");
+  
+        // Trigger spawn at bottle bottom
+        if (bottleRef.current && canvasRef.current) {
+          // bottle rect (viewport coords)
+          const bottleRect = bottleRef.current.getBoundingClientRect();
 
-      try {
-          const decoded = atob(value);
-          const parsed = JSON.parse(decoded) as PlantSettings;
-          // Validate minimally
-          if (parsed.stemColorStart && parsed.type) {
-              setSettings(parsed);
-              setToastMessage("Seed DNA planted!");
-              
-              // Trigger spawn at bottle bottom
-              if (bottleRef.current && canvasRef.current) {
-                  // Re-calculate position based on current layout
-                  const rect = bottleRef.current.getBoundingClientRect();
-                  // We need x, y relative to the canvas (which covers the container).
-                  // Canvas is absolute inset-0 of the container.
-                  // If container is relative, canvas 0,0 is container 0,0.
-                  // bottleRef.offsetLeft is relative to container.
-                  const x = bottleRef.current.offsetLeft + bottleRef.current.offsetWidth / 2;
-                  const y = bottleRef.current.offsetTop + bottleRef.current.offsetHeight - 10; 
-
-                  // Spawn INSIDE bottle
-                  canvasRef.current.spawn(x, y, parsed, true);
-                  setImportString(''); // Clear input on success
-              }
-
-          } else {
-              // Silent fail or minimal feedback for invalid while typing? 
+          // 找到最近的祖先容器，该容器包含画布（GardenCanvas 的 canvases）
+          // 从 bottle 向上查找第一个包含 <canvas> 的祖先（更稳）
+          let containerEl: HTMLElement | null = bottleRef.current;
+          while (containerEl && !containerEl.querySelector('canvas')) {
+            containerEl = containerEl.parentElement;
           }
-      } catch (e) {
-          // invalid format
+          // 如果没找到包含 canvas 的祖先，退回到 document.body
+          const containerRect = containerEl ? containerEl.getBoundingClientRect() : document.body.getBoundingClientRect();
+
+          // 计算 container-relative CSS px 坐标（这就是 GardenCanvas 使用的坐标系）
+          const x = (bottleRect.left - containerRect.left) + bottleRect.width / 2;
+          const y = (bottleRect.top - containerRect.top) + bottleRect.height - 10;
+
+          // Spawn INSIDE bottle using container-relative coords
+          console.log('IMPORT_SPAWN', { bottleRect: bottleRef.current?.getBoundingClientRect(), containerRect, x, y });
+          canvasRef.current.spawn(x, y, parsed, true);
+
+          setImportString(''); // Clear input on success
+        }
       }
+    } catch (e) {
+      // invalid format
+    }
   };
+  
 
   const openDrawer = () => {
     setDrawerVisible(true);

@@ -61,14 +61,17 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
 
   const growersRef = useRef<Grower[]>([]);
   const bottlePlantsRef = useRef<BottlePlant[]>([]);
-  const requestRef = useRef<number>(0);
+  const requestRef = useRef<number | null>(null);
   const plantHistoryRef = useRef<PlantHistoryItem[]>([]);
   
   const bottleRectRef = useRef<DOMRect | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
-  
+
   // Touch double-tap detection for mobile
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+
+  const hasInitRef = useRef(false);           // 标记画布是否初始化完毕
+  const pendingSpawnsRef = useRef<Array<() => void>>([]); // 存放在 init 前的 spawn 操作
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -98,6 +101,14 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
 
   const spawnPlant = (x: number, y: number, overrideSettings?: PlantSettings, isInsideBottle: boolean = false) => {
     const s = overrideSettings || settings;
+    console.log('[spawnPlant] enter', { x, y, hasInit: hasInitRef.current, dims: dimensions, dpr: window.devicePixelRatio });
+
+    // 如果画布尚未初始化，推迟执行
+    if (!hasInitRef.current) {
+      pendingSpawnsRef.current.push(() => spawnPlant(x, y, overrideSettings, isInsideBottle));
+      console.log('[spawnPlant] deferred - canvas not ready');
+      return;
+    }
 
     // Save to history (for copying)
     plantHistoryRef.current.push({
@@ -106,17 +117,17 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     if (plantHistoryRef.current.length > 50) plantHistoryRef.current.shift();
 
     if (isInsideBottle) {
-        // Create an offscreen canvas for this plant
-        const dpr = window.devicePixelRatio || 1;
+        // Create an offscreen canvas for this plant at logical pixel size
+        // (main canvas already handles DPR scaling)
         const offCanvas = document.createElement('canvas');
-        offCanvas.width = dimensions.width * dpr;
-        offCanvas.height = dimensions.height * dpr;
+        offCanvas.width = dimensions.width;
+        offCanvas.height = dimensions.height;
         offCanvas.style.width = `${dimensions.width}px`;
         offCanvas.style.height = `${dimensions.height}px`;
         const offCtx = offCanvas.getContext('2d');
-        
+
         if (offCtx) {
-            offCtx.scale(dpr, dpr);
+            // Don't scale offscreen context - main canvas handles DPR
             const plantId = uuid();
             const newBottlePlant: BottlePlant = {
                 id: plantId,
@@ -127,7 +138,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
                 ctx: offCtx,
                 settings: s
             };
-            
+
             bottlePlantsRef.current.push(newBottlePlant);
             growersRef.current.push(createGrower(x, y, s, offCtx));
         }
@@ -177,41 +188,73 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
   // Initialization and Resize Logic with devicePixelRatio
   useEffect(() => {
     const dpr = window.devicePixelRatio || 1;
-    
+
+    // 如果 dimensions 还没准备好（0），不要初始化 loop
+    if (!dimensions.width || !dimensions.height) {
+      hasInitRef.current = false;
+      return;
+    }
+
+    // stop any running loop before reinit
+    if (requestRef.current) {
+      cancelAnimationFrame(requestRef.current);
+      requestRef.current = null;
+    }
+
     [canvasOutsideRef.current, canvasInsideRef.current].forEach(canvas => {
-        if (!canvas) return;
-        // Set actual canvas size (considering device pixel ratio)
-        canvas.width = dimensions.width * dpr;
-        canvas.height = dimensions.height * dpr;
-        // Set display size (CSS size)
-        canvas.style.width = `${dimensions.width}px`;
-        canvas.style.height = `${dimensions.height}px`;
-        
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-            ctx.scale(dpr, dpr);
+      if (!canvas) return;
+      // Set backing size and css size
+      canvas.width = Math.round(dimensions.width * dpr);
+      canvas.height = Math.round(dimensions.height * dpr);
+      canvas.style.width = `${dimensions.width}px`;
+      canvas.style.height = `${dimensions.height}px`;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // 防止重复 scale：用自定义属性标记
+        if (!(canvas as any).__scaled) {
+          ctx.scale(dpr, dpr);
+          (canvas as any).__scaled = true;
         }
+      }
     });
 
-    // Fill Outside canvas
+    // Clear / fill as original
     const ctxOut = canvasOutsideRef.current?.getContext('2d');
     if (ctxOut) {
-        ctxOut.fillStyle = '#fdfbf7'; 
-        ctxOut.fillRect(0, 0, dimensions.width, dimensions.height);
+      ctxOut.clearRect(0, 0, dimensions.width, dimensions.height);
+      ctxOut.fillStyle = '#fdfbf7';
+      ctxOut.fillRect(0, 0, dimensions.width, dimensions.height);
     }
-    
-    // Clear Inside canvas
     const ctxIn = canvasInsideRef.current?.getContext('2d');
     if (ctxIn) {
-        ctxIn.clearRect(0, 0, dimensions.width, dimensions.height);
+      ctxIn.clearRect(0, 0, dimensions.width, dimensions.height);
     }
 
-    // On resize, we lose the offscreen canvases if we don't handle them. 
-    // For simplicity, we clear everything on resize.
-    growersRef.current = [];
-    plantHistoryRef.current = [];
-    bottlePlantsRef.current = [];
-  }, [dimensions]);
+    // 标记初始化完成
+    hasInitRef.current = true;
+
+    // 处理挂起的 spawn
+    if (pendingSpawnsRef.current.length > 0) {
+      pendingSpawnsRef.current.forEach(fn => {
+        try { fn(); } catch (e) { /* swallow to avoid crash */ }
+      });
+      pendingSpawnsRef.current = [];
+    }
+
+    // restart animation loop
+    requestRef.current = requestAnimationFrame(update);
+
+    console.log('[CANVAS_TRANSFORM]', canvasOutsideRef.current?.getContext('2d')?.getTransform());
+
+    return () => {
+      if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+        requestRef.current = null;
+      }
+      // 不要清 hasInitRef 这里 — 由上面的 early-return 管控
+    };
+  }, [dimensions]); // 依赖 dimensions：当尺寸稳定后会触发，额外建议与调试点（如果你想再验证）
 
   // Handle Clear Trigger (Outside Only)
   useEffect(() => {
@@ -505,12 +548,6 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     requestRef.current = requestAnimationFrame(update);
   }, [settings, dimensions]);
 
-  useEffect(() => {
-    requestRef.current = requestAnimationFrame(update);
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [update]);
 
   const copyNearestPlant = (clientX: number, clientY: number) => {
       const rect = containerRef.current?.getBoundingClientRect();
