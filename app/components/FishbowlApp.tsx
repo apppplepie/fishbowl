@@ -20,8 +20,8 @@ const FishbowlApp: React.FC = () => {
     mounted
   } = useAppTheme();
 
-  // 在 hydration 完成前使用默认主题避免不匹配
-  const themeToUse = mounted ? currentFishbowlTheme : fishbowlThemes.find(t => t.id === 'morning') || fishbowlThemes[0];
+  // 直接使用当前主题，和其他页面保持一致
+  const themeToUse = currentFishbowlTheme;
 
   return (
     <PageLayout theme={themeToUse}>

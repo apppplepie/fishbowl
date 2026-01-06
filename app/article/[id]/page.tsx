@@ -61,6 +61,7 @@ export default function ArticlePage() {
 
   // 配置消息提示位置，避免被 header 遮挡
   useEffect(() => {
+    console.log('📄 文章页面加载完成');
     message.config({
       top: 60, // header 45px + 15px 间距
       duration: 2,
@@ -253,6 +254,7 @@ export default function ArticlePage() {
 
   // 进入编辑模式
   const handleEdit = () => {
+    console.log('✏️ 进入编辑模式');
     if (article) {
       // 转换块数据格式为编辑器格式
       const editorBlocks = article.blocks
@@ -314,13 +316,19 @@ export default function ArticlePage() {
 
   // 保存文章
   const handleSave = async () => {
+    console.log('🔄 开始保存文章...');
     if (editedArticle) {
       try {
+        console.log('📝 验证文章数据...');
+
         // 验证标题
         if (!editedArticle.title?.trim()) {
+          console.log('❌ 标题验证失败：标题为空');
           message.warning('请输入文章标题');
           return;
         }
+
+        console.log('✅ 标题验证通过:', editedArticle.title);
 
         // 验证绘画类型必须有图片
         if (editedArticle.type === 'drawing') {
@@ -354,17 +362,50 @@ export default function ArticlePage() {
         // 根据当前blocks重新生成excerpt
         const updatedExcerpt = generateExcerptFromBlocks(editedArticle.editorBlocks || []);
 
-        // 准备保存的数据
-        const saveData = {
+        // ------------------ 构造 saveData ------------------
+        const saveData: any = {
           title: editedArticle.title,
           type: editedArticle.type || 'text',
           category_id: editedArticle.category_id || null,
-          order_index: editedArticle.order_index || 0, // 包含 order_index，支持分类变更时自动更新顺序
           tags: editedArticle.tags || [],
           blocks: editedArticle.editorBlocks || [],
-          excerpt: updatedExcerpt, // 添加重新生成的excerpt
-          // 封面图片由后端自动计算，无需前端提供
+          excerpt: updatedExcerpt,
         };
+
+        // 规范化原始和新分类为字符串，避免 null/undefined 导致误判
+        const oldCat = String(article?.category_id ?? '');
+        const newCat = String(editedArticle.category_id ?? '');
+        const categoryChanged = newCat !== oldCat;
+
+        // —— 关键：只有当分类**真正改变**时才发送 order_index；未改分类时完全不包含该字段 ——
+        // 这样后端会保留现有顺序（如果后端实现正确只更新传入字段）
+        if (categoryChanged) {
+          let candidate = editedArticle.order_index;
+          if (candidate === '' || candidate === null) candidate = undefined;
+
+          if (candidate === undefined) {
+            try {
+              candidate = await getNextOrderIndex(editedArticle.category_id);
+            } catch (e) {
+              console.warn('getNextOrderIndex failed, using default order', e);
+              // 计算失败时使用1作为最后位置
+              candidate = 1;
+            }
+          }
+
+          if (candidate !== undefined && candidate !== null && !Number.isNaN(Number(candidate))) {
+            saveData.order_index = Number(candidate);
+          }
+        }
+
+        console.log('保存调试:', {
+          categoryChanged,
+          oldCat,
+          newCat,
+          hasOrderIndex: 'order_index' in saveData,
+          orderIndexValue: saveData.order_index,
+          saveData: saveData
+        });
 
         // 调用更新 API
         const result = await apiPutJson<{ success: boolean; error?: string }>(`/api/articles/${articleId}`, saveData);
@@ -753,13 +794,13 @@ export default function ArticlePage() {
       {/* Header 覆盖在PageLayout顶部边框上 */}
       <Header
         leftContent={
-          <ArticleDrawerButton 
-            onClick={openCategoryDrawer} 
+          <ArticleDrawerButton
+            onClick={openCategoryDrawer}
             expanded={sidebarExpanded}
             onToggle={toggleSidebar}
           />
         }
-      /> 
+      />
 
       {/* 编辑悬浮按钮 - 使用后端API统一判断权限 */}
       {isLoggedIn && article && user && canEditArticle && (
@@ -808,6 +849,27 @@ export default function ArticlePage() {
                   // 如果有分类路径，显示分类层级
                   ...(categoryPath.length > 0
                     ? categoryPath.map((cat, index) => ({
+                      title: (
+                        <a
+                          style={{
+                            color: 'white',
+                            textDecoration: 'none',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            transition: 'color 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                          onClick={() => router.push(`/archive?category=${cat.id}`)}
+                        >
+                          {cat.name}
+                        </a>
+                      ),
+                    }))
+                    : [
+                      // 如果没有分类路径，显示文章归档
+                      {
                         title: (
                           <a
                             style={{
@@ -820,34 +882,13 @@ export default function ArticlePage() {
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
                             onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-                            onClick={() => router.push(`/archive?category=${cat.id}`)}
+                            onClick={() => router.push('/archive')}
                           >
-                            {cat.name}
+                            文章归档
                           </a>
                         ),
-                      }))
-                    : [
-                        // 如果没有分类路径，显示文章归档
-                        {
-                          title: (
-                            <a
-                              style={{
-                                color: 'white',
-                                textDecoration: 'none',
-                                backgroundColor: 'transparent',
-                                border: 'none',
-                                padding: 0,
-                                transition: 'color 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                              onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-                              onClick={() => router.push('/archive')}
-                            >
-                              文章归档
-                            </a>
-                          ),
-                        },
-                      ]
+                      },
+                    ]
                   ),
                   // 当前文章标题
                   {
@@ -1043,11 +1084,18 @@ export default function ArticlePage() {
                       if (editedArticle) {
                         // 计算新的 order_index：找到新分类下最大的 order 值 + 1
                         // 需要同时考虑子分类的 order_index 和文章的 order_index
-                        let newOrderIndex = editedArticle.order_index || 0;
+                        let newOrderIndex = editedArticle.order_index;
 
                         if (value && value !== editedArticle.category_id) {
-                          // 使用工具函数计算新的 order_index
-                          newOrderIndex = await getNextOrderIndex(value);
+                          try {
+                            // 使用工具函数计算新的 order_index
+                            newOrderIndex = await getNextOrderIndex(value);
+                          } catch (error) {
+                            // 如果计算失败，保持原有顺序
+                            console.warn('计算新顺序失败，保持原有顺序:', error);
+                            newOrderIndex = editedArticle.order_index;
+                            message.warning('无法计算新顺序，保持原有位置');
+                          }
                         }
 
                         setEditedArticle({ ...editedArticle, category_id: value, order_index: newOrderIndex });
@@ -1238,4 +1286,5 @@ export default function ArticlePage() {
     </>
   );
 }
+
 

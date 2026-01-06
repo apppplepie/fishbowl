@@ -209,12 +209,79 @@ export default function Home() {
     };
   }, []);
 
+  // 将 Tailwind 渐变类名转换为 CSS 渐变字符串
+  const tailwindToCSS = (tailwindClass: string): string => {
+    // Tailwind 颜色映射表（常用颜色）
+    const colorMap: Record<string, string> = {
+      // Orange
+      'orange-50': '#fff7ed', 'orange-100': '#ffedd5', 'orange-200': '#fed7aa', 'orange-300': '#fdba74',
+      'orange-400': '#fb923c', 'orange-500': '#f97316',
+      // Rose
+      'rose-50': '#fff1f2', 'rose-100': '#ffe4e6', 'rose-200': '#fecdd3', 'rose-300': '#fda4af',
+      // Indigo
+      'indigo-50': '#eef2ff', 'indigo-100': '#e0e7ff', 'indigo-200': '#c7d2fe', 'indigo-300': '#a5b4fc',
+      // Teal
+      'teal-50': '#f0fdfa', 'teal-100': '#ccfbf1', 'teal-200': '#99f6e4', 'teal-300': '#5eead4',
+      'teal-400': '#2dd4bf', 'teal-500': '#14b8a6',
+      // Emerald
+      'emerald-50': '#ecfdf5', 'emerald-100': '#d1fae5', 'emerald-200': '#a7f3d0', 'emerald-300': '#6ee7b7',
+      // Pink
+      'pink-50': '#fdf2f8', 'pink-100': '#fce7f3', 'pink-200': '#fbcfe8',
+      // Purple
+      'purple-50': '#faf5ff', 'purple-100': '#f3e8ff', 'purple-200': '#e9d5ff', 'purple-300': '#d8b4fe',
+      // Violet
+      'violet-50': '#f5f3ff', 'violet-100': '#ede9fe', 'violet-200': '#ddd6fe', 'violet-300': '#c4b5fd',
+      // Red
+      'red-50': '#fef2f2', 'red-100': '#fee2e2', 'red-200': '#fecaca',
+      // Yellow
+      'yellow-50': '#fefce8', 'yellow-100': '#fef9c3', 'yellow-200': '#fef08a',
+      // Amber
+      'amber-50': '#fffbeb', 'amber-100': '#fef3c7', 'amber-200': '#fde68a',
+      // Lime
+      'lime-50': '#f7fee7', 'lime-100': '#ecfccb', 'lime-200': '#d9f99d',
+      // Green
+      'green-50': '#f0fdf4', 'green-100': '#dcfce7', 'green-200': '#bbf7d0',
+      // Cyan
+      'cyan-50': '#ecfeff', 'cyan-100': '#cffafe', 'cyan-200': '#a5f3fc', 'cyan-400': '#22d3ee', 'cyan-500': '#06b6d4',
+      // Blue
+      'blue-50': '#eff6ff', 'blue-100': '#dbeafe', 'blue-200': '#bfdbfe', 'blue-600': '#2563eb',
+      // Sky
+      'sky-50': '#f0f9ff', 'sky-100': '#e0f2fe', 'sky-200': '#bae6fd', 'sky-300': '#7dd3fc',
+      // Slate
+      'slate-50': '#f8fafc', 'slate-900': '#0f172a', 'slate-950': '#020617',
+      // Fuchsia
+      'fuchsia-900': '#701a75', 'fuchsia-950': '#4a044e',
+      // Stone
+      'stone-100': '#f5f5f4',
+      // Gray
+      'gray-50': '#f9fafb', 'gray-100': '#f3f4f6', 'gray-200': '#e5e7eb', 'gray-300': '#d1d5db',
+      'gray-400': '#9ca3af', 'gray-500': '#6b7280', 'gray-700': '#374151',
+      // Black
+      'black': '#000000',
+    };
+
+    // 解析 Tailwind 类名
+    const fromMatch = tailwindClass.match(/from-(\S+)/);
+    const viaMatch = tailwindClass.match(/via-(\S+)/);
+    const toMatch = tailwindClass.match(/to-(\S+)/);
+
+    const fromColor = fromMatch ? colorMap[fromMatch[1]] || '#ffffff' : '#ffffff';
+    const toColor = toMatch ? colorMap[toMatch[1]] || '#ffffff' : '#ffffff';
+
+    if (viaMatch) {
+      const viaColor = colorMap[viaMatch[1]] || '#ffffff';
+      return `linear-gradient(to bottom, ${fromColor} 0%, ${viaColor} 50%, ${toColor} 100%)`;
+    }
+
+    return `linear-gradient(to bottom, ${fromColor} 0%, ${toColor} 100%)`;
+  };
+
   // 获取渐变背景 CSS
   const getSkyGradient = () => {
     const gradient = currentFishbowlTheme.skyGradient;
     if (gradient.startsWith('bg-')) {
-      // Tailwind 类名，返回默认渐变
-      return 'linear-gradient(to bottom, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)';
+      // Tailwind 类名，转换为 CSS
+      return tailwindToCSS(gradient);
     }
     return gradient;
   };
@@ -222,8 +289,8 @@ export default function Home() {
   const getWaterGradient = () => {
     const gradient = currentFishbowlTheme.waterGradient;
     if (gradient.startsWith('bg-')) {
-      // Tailwind 类名，返回默认渐变
-      return 'linear-gradient(to bottom, #bae6fd 0%, #7dd3fc 50%, #38bdf8 100%)';
+      // Tailwind 类名，转换为 CSS
+      return tailwindToCSS(gradient);
     }
     return gradient;
   };
@@ -292,13 +359,15 @@ export default function Home() {
           className="flex flex-col items-center"
           style={{
             background: 'transparent',
-            minHeight: '100vh',
+            minHeight: 'calc(100vh - 80vh)', // 至少占据剩余空间
             borderLeft: `6px solid ${theme.colors.black}`,
             borderRight: `6px solid ${theme.colors.black}`,
             borderBottom: `6px solid ${theme.colors.black}`,
             boxSizing: 'border-box',
             padding: 0,
             position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           {/* 45px导航栏区域 */}
@@ -322,15 +391,16 @@ export default function Home() {
           </div>
 
           {/* 盒模型1：7vh高的透明顶部区域 */}
-           <div 
-           style={{ 
-            height: '7vh', 
-            background: 'transparent', 
-            width: '100%', 
-            flexShrink: 0, 
-            flexGrow: 0, 
-            }} > 
-            </div>
+          <div 
+            style={{ 
+              height: '7vh', 
+              background: 'transparent', 
+              width: '100%', 
+              flexShrink: 0, 
+              flexGrow: 0, 
+            }}
+          >
+          </div>
 
           {/* 盒模型2：主要内容区域（包含波浪） */}
           <div
@@ -341,6 +411,9 @@ export default function Home() {
               boxSizing: 'border-box',
               position: 'relative',
               paddingTop: '40px', // 给波浪留空间
+              minHeight: 'calc(100vh - 45px - 7vh)', // 至少填满屏幕减去导航栏和透明区域
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             {/* 波浪分隔器 - 在 box2 内部顶部 */}
@@ -360,7 +433,7 @@ export default function Home() {
             </div>
 
             {/* 内容区 */}
-            <div className="text-center text-white" style={{ padding: '0 24px 40px' }}>
+            <div className="text-center text-white" style={{ padding: '0 24px 40px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
               <Title level={2} className="!text-white mb-6" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                 权限系统
               </Title>
@@ -368,11 +441,11 @@ export default function Home() {
                 体验渐进式内容浏览
               </Paragraph>
 
-              <div className="max-w-5xl mx-auto">
+              <div className="max-w-5xl mx-auto" style={{ flex: 1 }}>
                 <PermissionSystemDemo />
               </div>
 
-              <div style={{ textAlign: 'center', marginTop: '40px' }}>
+              <div style={{ textAlign: 'center', marginTop: '40px', paddingBottom: '20px' }}>
                 <Button
                   type="primary"
                   size="large"

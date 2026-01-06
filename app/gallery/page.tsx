@@ -257,8 +257,7 @@ export default function GalleryPage() {
       
       <PageLayout
         theme={currentFishbowlTheme}
-        hideBox1={true}
-        box2Style={{ padding: '6px 6px' }}
+        box2Style={{ padding: '40px 6px' }}
       >
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
         {loading ? (
@@ -267,7 +266,7 @@ export default function GalleryPage() {
           </div>
         ) : articles.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '100px 20px', color: '#999' }}>
-            <p style={{ fontSize: 16, marginBottom: 8 }}>🎨 还没有作品</p>
+            <p style={{ fontSize: 16, marginBottom: 8 }}>还没有作品</p>
           </div>
         ) : (
           <>
@@ -289,8 +288,7 @@ export default function GalleryPage() {
 
             {!hasMore && articles.length > 0 && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#999', fontSize: 14 }}>
-                <div style={{ marginBottom: 8 }}>🎨</div>
-                已经到底了，没有更多作品啦~
+                没了
               </div>
             )}
           </>

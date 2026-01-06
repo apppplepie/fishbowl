@@ -46,8 +46,8 @@ export async function getNextOrderIndex(categoryId: string): Promise<number> {
     return maxOrder + 1;
   } catch (error) {
     console.warn('获取排序信息失败，使用默认排序:', error);
-    // 如果获取失败，返回 0（后端可能会自动处理）
-    return 0;
+    // 如果获取失败，返回 1（放在最后位置，避免与现有项目冲突）
+    return 1;
   }
 }
 
