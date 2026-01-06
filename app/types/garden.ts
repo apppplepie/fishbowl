@@ -1,30 +1,39 @@
+export interface Point {
+  x: number;
+  y: number;
+}
+
 export enum PlantType {
   VINE = 'VINE',
   PALM = 'PALM',
   GEOMETRIC = 'GEOMETRIC',
   UMBRELLA = 'UMBRELLA',
-  BERRY = 'BERRY'
+  BERRY = 'BERRY',
+  CLUSTER = 'CLUSTER'
 }
 
 export interface PlantSettings {
-  type: PlantType;
-  // Stem properties
+  type: PlantType; // Type of generator
+  
+  // Stem
   stemColorStart: string;
   stemColorEnd: string;
-  straightness: number;
-  curlFactor: number;
-  maxLife: number;
   baseWidth: number;
   growthSpeed: number;
-  // Leaf properties
+  maxLife: number;
+  curlFactor: number; // How much noise affects direction
+  straightness: number; // 0-1: Percentage of life spent growing straight up
+  
+  // Leaves
   leafColorStart: string;
   leafColorEnd: string;
-  leafFrequency: number;
+  leafFrequency: number; // Chance per frame to spawn a leaf
   leafSize: number;
-  // Flower properties
+
+  // Flowers
   flowerColorStart: string;
   flowerColorEnd: string;
-  flowerProbability: number;
+  flowerProbability: number; // Chance to spawn flower on death
   flowerSize: number;
   petalCount: number;
 }
@@ -33,22 +42,22 @@ export interface Grower {
   id: string;
   x: number;
   y: number;
-  angle: number;
+  angle: number; // in radians
   life: number;
   maxLife: number;
   width: number;
   speed: number;
-  color: string;
+  color: string; // Current cached color to avoid recalculating every frame if not needed, or just unused
   settings: PlantSettings;
   noiseOffset: number;
-  generation: number;
-  ctx: CanvasRenderingContext2D;
+  generation: number; // 0 for main stem, 1 for branch
+  ctx: CanvasRenderingContext2D; // Direct reference to the context to draw on
   hasAttemptedFlower?: boolean;
 }
 
 export interface GardenCanvasRef {
-  spawn: (x: number, y: number, overrideSettings?: PlantSettings, isInsideBottle?: boolean) => void;
-  undo?: () => void;
-  updateBottleRect?: (rect: DOMRect) => void;
+  spawn: (x: number, y: number, settings?: PlantSettings, isInsideBottle?: boolean) => void;
+  undo: () => void;
+  updateBottleRect: (rect: DOMRect) => void;
 }
 

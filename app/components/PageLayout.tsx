@@ -11,6 +11,7 @@ interface PageLayoutProps {
   box1Style?: CSSProperties; // 自定义盒模型1样式
   box2Style?: CSSProperties; // 自定义盒模型2样式
   containerPaddingTop?: string; // 自定义容器顶部padding（默认45px）
+  hideBox1?: boolean; // 是否隐藏盒模型1
 }
 
 export default function PageLayout({
@@ -21,6 +22,7 @@ export default function PageLayout({
   box1Style,
   box2Style,
   containerPaddingTop = '45px',
+  hideBox1 = false,
 }: PageLayoutProps) {
   const { isMobile } = useResponsive();
 
@@ -83,29 +85,31 @@ export default function PageLayout({
       <div
         style={{
           paddingTop: containerPaddingTop,
-          paddingLeft: '6px',
-          paddingRight: '6px',
-          paddingBottom: '6px',
+          paddingLeft: isMobile ? '0' : '6px',
+          paddingRight: isMobile ? '0' : '6px',
+          paddingBottom: isMobile ? '0' : '6px',
           minHeight: '100vh',
           boxSizing: 'border-box',
         }}
       >
         {/* 盒模型1：顶部区域，最小60px高，可自适应 */}
-        <div
-          style={{
-            minHeight: '60px',
-            background: 'transparent',
-            ...box1Style,
-          }}
-        >
-          {box1Content}
-        </div>
+        {!hideBox1 && (
+          <div
+            style={{
+              minHeight: '60px',
+              background: 'transparent',
+              ...box1Style,
+            }}
+          >
+            {box1Content}
+          </div>
+        )}
 
         {/* 盒模型2：内容区域，紧贴盒模型1 */}
         <div
           style={{
             background: box2BgColor,
-            minHeight: 'calc(100vh - 60px - 45px - 6px)',
+            minHeight: hideBox1 ? 'calc(100vh - 45px - 6px)' : 'calc(100vh - 60px - 45px - 6px)',
             ...box2Style,
           }}
         >

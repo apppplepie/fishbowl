@@ -66,6 +66,9 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
   
   const bottleRectRef = useRef<DOMRect | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
+  
+  // Touch double-tap detection for mobile
+  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -282,6 +285,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     } else if (type === PlantType.BERRY) {
       ctx.ellipse(size/2, 0, size/2, size/4, 0, 0, Math.PI * 2);
       ctx.fill();
+      
     } else {
       ctx.moveTo(0, 0);
       ctx.bezierCurveTo(size / 2, -size / 2, size, -size / 4, size, 0);
@@ -347,6 +351,23 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       ctx.moveTo(0, 0);
       ctx.lineTo(0, -size * 1.5);
       ctx.stroke();
+    } else if (type === PlantType.CLUSTER) {
+      // Draw many small dots in a circular cloud
+      const floretCount = Math.max(8, petals * 2);
+      for(let i=0; i < floretCount; i++) {
+        // Random point in circle
+        const r = size * Math.sqrt(Math.random());
+        const theta = Math.random() * 2 * Math.PI;
+        const fx = r * Math.cos(theta);
+        const fy = r * Math.sin(theta);
+        
+        const floretSize = size / 5 * (0.8 + Math.random() * 0.4);
+        
+        ctx.beginPath();
+        ctx.fillStyle = lerpColor(startColor, endColor, Math.random());
+        ctx.arc(fx, fy, floretSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else {
        const angleStep = (Math.PI * 2) / petals;
        for (let i = 0; i < petals; i++) {
@@ -396,12 +417,13 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
          }
          const targetAngle = -Math.PI / 2;
          grower.angle += (targetAngle - grower.angle) * 0.02;
-      } else if (settings.type === PlantType.BERRY) {
+      } else if (settings.type === PlantType.BERRY || settings.type === PlantType.CLUSTER) {
         const n = noiseGenerator.noise(grower.x * 0.02, grower.y * 0.02, grower.noiseOffset + life * 0.05);
         angleChange = n * (settings.curlFactor * 2);
         grower.angle += angleChange;
+        // Stronger tendency to grow up for cluster
         const targetAngle = -Math.PI / 2;
-        grower.angle += (targetAngle - grower.angle) * 0.02;
+        grower.angle += (targetAngle - grower.angle) * (settings.type === PlantType.CLUSTER ? 0.05 : 0.02);
       } else {
          if (progress < settings.straightness) {
            const targetAngle = -Math.PI / 2;
@@ -447,11 +469,13 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       if (settings.type === PlantType.GEOMETRIC) branchChance = 0.04; 
       if (settings.type === PlantType.UMBRELLA) branchChance = 0.002;
       if (settings.type === PlantType.BERRY) branchChance = 0.04;
+      if (settings.type === PlantType.CLUSTER) branchChance = 0.025;
 
       if (grower.generation < 2 && Math.random() < branchChance) {
          let branchAngleOffset = 0.6;
          if (settings.type === PlantType.GEOMETRIC) branchAngleOffset = 0.8; 
          if (settings.type === PlantType.BERRY) branchAngleOffset = 0.9;
+         if (settings.type === PlantType.CLUSTER) branchAngleOffset = 0.5;
 
          const branchAngle = grower.angle + (Math.random() > 0.5 ? branchAngleOffset : -branchAngleOffset);
          growersRef.current.push(createGrower(grower.x, grower.y, settings, ctx, grower.generation + 1, branchAngle));
@@ -488,8 +512,35 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     };
   }, [update]);
 
+  const copyNearestPlant = (clientX: number, clientY: number) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      let closest: PlantHistoryItem | null = null;
+      let minDist = 100;
+
+      for (const item of plantHistoryRef.current) {
+          const dx = item.x - x;
+          const dy = item.y - y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < minDist) {
+              minDist = dist;
+              closest = item;
+          }
+      }
+
+      if (closest) {
+          onSettingsCopied(closest.settings);
+      } else {
+          onSettingsCopied(settings);
+      }
+  };
+
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 && e.pointerType !== 'touch') return;
     const { clientX, clientY } = e;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -497,8 +548,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
-    // Check if we clicked on a bottle plant stem (approximation: near currentX and near y > originY - height)
-    // Simpler: Check x proximity to plant.currentX
+    // Check if we clicked on a bottle plant stem for DRAG
     const clickedPlant = bottlePlantsRef.current.find(p => Math.abs(x - p.currentX) < 40 && y < p.y && y > p.y - 400); // 40px radius, above origin
 
     if (clickedPlant) {
@@ -507,9 +557,44 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
             startX: x,
             plantStartX: clickedPlant.currentX
         };
-    } else {
-        // Paint outside
-        spawnPlant(x, y, undefined, false);
+        return;
+    }
+
+    // Double-tap detection for mobile (touch devices)
+    if (e.pointerType === 'touch') {
+        const now = Date.now();
+        const lastTap = lastTapRef.current;
+        
+        if (lastTap && (now - lastTap.time < 300)) {
+            // Check if taps are close enough (within 50px)
+            const dx = x - lastTap.x;
+            const dy = y - lastTap.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < 50) {
+                // Double tap detected - spawn plant
+                let isInside = false;
+                if (bottleRectRef.current) {
+                    const b = bottleRectRef.current;
+                    if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
+                        isInside = true;
+                    }
+                }
+                spawnPlant(x, y, undefined, isInside);
+                lastTapRef.current = null; // Reset after double tap
+                return;
+            }
+        }
+        
+        // Store this tap for potential double tap
+        lastTapRef.current = { time: now, x, y };
+        
+        // Clear after timeout if no second tap
+        setTimeout(() => {
+            if (lastTapRef.current && Date.now() - lastTapRef.current.time > 300) {
+                lastTapRef.current = null;
+            }
+        }, 300);
     }
   };
 
@@ -518,7 +603,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const x = clientX - rect.left;
-    const y = clientY - rect.top;
+    // const y = clientY - rect.top; // y unused for horizontal drag
 
     if (dragStateRef.current) {
         const { plantId, startX, plantStartX } = dragStateRef.current;
@@ -540,13 +625,6 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
             }
             plant.currentX = newX;
         }
-        return; // Don't paint if dragging
-    }
-
-    if (e.buttons === 1) { 
-        if (Math.random() > 0.6) {
-             spawnPlant(x, y, undefined, false);
-        }
     }
   };
 
@@ -556,32 +634,26 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
 
   const handleContextMenu = (e: React.MouseEvent) => {
       e.preventDefault();
-      // Implementation for context menu copying logic...
-      // Simplified: Just use closest from history
+      copyNearestPlant(e.clientX, e.clientY);
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+      const { clientX, clientY } = e;
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
-      
-      const clientX = e.clientX - rect.left;
-      const clientY = e.clientY - rect.top;
 
-      let closest: PlantHistoryItem | null = null;
-      let minDist = 100;
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
 
-      for (const item of plantHistoryRef.current) {
-          const dx = item.x - clientX;
-          const dy = item.y - clientY;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < minDist) {
-              minDist = dist;
-              closest = item;
+      let isInside = false;
+      if (bottleRectRef.current) {
+          const b = bottleRectRef.current;
+          if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
+              isInside = true;
           }
       }
 
-      if (closest) {
-          onSettingsCopied(closest.settings);
-      } else {
-          onSettingsCopied(settings);
-      }
+      spawnPlant(x, y, undefined, isInside);
   };
 
   return (
@@ -609,6 +681,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
             onContextMenu={handleContextMenu}
+            onDoubleClick={handleDoubleClick}
         />
     </div>
   );

@@ -9,28 +9,29 @@ import GardenSidebar from '../components/garden/GardenSidebar';
 import { GardenDrawerButton } from '../components/garden/GardenDrawerButton';
 import { PlantSettings, PlantType, GardenCanvasRef } from '../types/garden';
 
-// Vine: Soft, Curvy, Pastel
+// Vine: More harmonious natural greens
 const PRESET_VINE: PlantSettings = {
-  type: PlantType.VINE,
-  stemColorStart: '#86efac', 
-  stemColorEnd: '#2dd4bf',   
-  baseWidth: 6,
-  growthSpeed: 3,
-  maxLife: 280,
-  curlFactor: 0.08,
-  straightness: 0.4, 
+    type: PlantType.VINE,
+    stemColorStart: '#a3e635', // Lime 400
+    stemColorEnd: '#15803d',   // Green 700
+    baseWidth: 6,
+    growthSpeed: 3,
+    maxLife: 280,
+    curlFactor: 0.08,
+    straightness: 0.4, 
+    
+    leafColorStart: '#d9f99d', // Lime 200
+    leafColorEnd: '#166534',   // Green 800
+    leafFrequency: 0.1,
+    leafSize: 12,
   
-  leafColorStart: '#bef264', 
-  leafColorEnd: '#10b981',   
-  leafFrequency: 0.1,
-  leafSize: 12,
-
-  flowerColorStart: '#fca5a5', 
-  flowerColorEnd: '#c4b5fd',   
-  flowerProbability: 0.7,
-  flowerSize: 20,
-  petalCount: 7,
-};
+    flowerColorStart: '#fca5a5', 
+    flowerColorEnd: '#c4b5fd',   
+    flowerProbability: 0.7,
+    flowerSize: 20,
+    petalCount: 7,
+  };
+  
 
 // Palm: Big leaves, Thick stem, Earthy Greens
 const PRESET_PALM: PlantSettings = {
@@ -124,12 +125,35 @@ const PRESET_BERRY: PlantSettings = {
   petalCount: 5, // Used as berry count
 };
 
+// Cluster: Bushy, Cool Tones, Blue Flower Clusters
+const PRESET_CLUSTER: PlantSettings = {
+  type: PlantType.CLUSTER,
+  stemColorStart: '#334155', // Slate 700
+  stemColorEnd: '#94a3b8',   // Slate 400
+  baseWidth: 5,
+  growthSpeed: 3,
+  maxLife: 260,
+  curlFactor: 0.1, // Wavy
+  straightness: 0.5, 
+  
+  leafColorStart: '#0f766e', // Teal 700
+  leafColorEnd: '#5eead4',   // Teal 300
+  leafFrequency: 0.08, 
+  leafSize: 10,
+
+  flowerColorStart: '#93c5fd', // Blue 300
+  flowerColorEnd: '#1e3a8a',   // Blue 900
+  flowerProbability: 0.85,
+  flowerSize: 24, // Size of the whole cluster
+  petalCount: 12, // Number of florets in cluster
+};
+
 export default function GardenPage() {
   const { isMobile } = useResponsive();
   const [settings, setSettings] = useState<PlantSettings>(PRESET_VINE);
   const [clearTrigger, setClearTrigger] = useState(0);
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(true); // 桌面端默认展开
+  const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [importString, setImportString] = useState('');
   
@@ -146,7 +170,7 @@ export default function GardenPage() {
   // Update canvas with bottle bounds on mount/resize
   useEffect(() => {
       const updateBounds = () => {
-          if (bottleRef.current && canvasRef.current?.updateBottleRect) {
+          if (bottleRef.current && canvasRef.current) {
               const rect = bottleRef.current.getBoundingClientRect();
               canvasRef.current.updateBottleRect(rect);
           }
@@ -154,7 +178,17 @@ export default function GardenPage() {
       
       updateBounds();
       window.addEventListener('resize', updateBounds);
-      return () => window.removeEventListener('resize', updateBounds);
+      // Also update on scroll since position relative to viewport might change if we use fixed positions,
+      // but here bottle flows with document, so rect relative to viewport changes on scroll.
+      // However, GardenCanvas uses getBoundingClientRect() inside spawn logic too?
+      // Actually GardenCanvas.tsx only uses updateBottleRect to store the rect for drag constraints.
+      // Drag constraints need to be fresh if we scroll.
+      window.addEventListener('scroll', updateBounds);
+      
+      return () => {
+          window.removeEventListener('resize', updateBounds);
+          window.removeEventListener('scroll', updateBounds);
+      };
   }, []);
 
   const updateSettings = (newSettings: Partial<PlantSettings>) => {
@@ -175,6 +209,9 @@ export default function GardenPage() {
           case PlantType.BERRY:
               setSettings(PRESET_BERRY);
               break;
+          case PlantType.CLUSTER:
+              setSettings(PRESET_CLUSTER);
+              break;
           case PlantType.VINE:
           default:
               setSettings(PRESET_VINE);
@@ -188,7 +225,7 @@ export default function GardenPage() {
   };
 
   const handleUndo = () => {
-      if (canvasRef.current?.undo) {
+      if (canvasRef.current) {
           canvasRef.current.undo();
           setToastMessage("Retracted last bottle plant.");
       }
@@ -218,17 +255,18 @@ export default function GardenPage() {
               
               // Trigger spawn at bottle bottom
               if (bottleRef.current && canvasRef.current) {
+                  // Re-calculate position based on current layout
                   const rect = bottleRef.current.getBoundingClientRect();
-                  const containerRect = bottleRef.current.closest('.absolute')?.getBoundingClientRect();
-                  
-                  if (containerRect) {
-                      const x = rect.left - containerRect.left + rect.width / 2;
-                      const y = rect.top - containerRect.top + rect.height - 10; // 10px padding from bottom
+                  // We need x, y relative to the canvas (which covers the container).
+                  // Canvas is absolute inset-0 of the container.
+                  // If container is relative, canvas 0,0 is container 0,0.
+                  // bottleRef.offsetLeft is relative to container.
+                  const x = bottleRef.current.offsetLeft + bottleRef.current.offsetWidth / 2;
+                  const y = bottleRef.current.offsetTop + bottleRef.current.offsetHeight - 10; 
 
-                      // Spawn INSIDE bottle
-                      canvasRef.current.spawn(x, y, parsed, true);
-                      setImportString(''); // Clear input on success
-                  }
+                  // Spawn INSIDE bottle
+                  canvasRef.current.spawn(x, y, parsed, true);
+                  setImportString(''); // Clear input on success
               }
 
           } else {
@@ -275,17 +313,18 @@ export default function GardenPage() {
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '320px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout
           box2BgColor="transparent"
+          hideBox1={true}
           box2Style={{
             padding: 0,
             position: 'relative',
             display: 'flex',
-            height: 'calc(100vh - 60px - 45px - 6px)',
-            overflow: 'hidden',
+            minHeight: 'calc(100vh - 45px - 6px)',
+            overflow: 'auto',
             background: '#fdfbf7',
           }}
         >
           {/* 画布区域 */}
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ flex: 1, position: 'relative', minHeight: '140vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {/* Paper Grain Texture (Subtle) */}
             <div 
               className="absolute inset-0 opacity-[0.4] pointer-events-none z-10 mix-blend-multiply" 
@@ -307,14 +346,17 @@ export default function GardenPage() {
                 The Sketch Garden
               </h1>
               <p className="text-slate-500 mt-2 font-medium text-sm">
-                Paste DNA below to grow inside the bottle. Drag plants to rearrange.
+                Paste DNA below to grow inside the bottle. Double-click to plant.
               </p>
             </div>
 
-            {/* Glass Bottle Visual (Square/Rectangular) */}
+            {/* Spacer to push bottle down */}
+            <div style={{ flex: 1, minHeight: '30vh' }}></div>
+
+            {/* Glass Bottle Visual - Moved down significantly via flex spacer above */}
             <div 
               ref={bottleRef}
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 w-80 h-[280px] border-x-2 border-b-2 border-slate-300/60 bg-white/10 backdrop-blur-[2px] rounded-none shadow-xl pointer-events-none"
+              className="relative z-20 w-80 h-[280px] border-x-2 border-b-2 border-slate-300/60 bg-white/10 backdrop-blur-[2px] rounded-none shadow-xl pointer-events-none mb-4"
             >
               {/* Rim */}
               <div className="absolute top-0 w-full h-1 bg-slate-300/40"></div>
@@ -324,11 +366,14 @@ export default function GardenPage() {
             </div>
 
             {/* DNA Input Area & Undo Button */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30 w-80 flex gap-2">
+            <div className="relative z-30 w-80 flex gap-2 mb-20">
               <input 
                 type="text"
                 value={importString}
-                onChange={(e) => handleImport(e.target.value)}
+                onChange={(e) => {
+                  setImportString(e.target.value);
+                  handleImport(e.target.value);
+                }}
                 placeholder="Paste DNA..."
                 className="flex-1 px-4 py-3 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg shadow-sm text-center font-mono text-xs focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-slate-400"
               />
