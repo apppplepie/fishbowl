@@ -8,6 +8,22 @@ interface GardenCanvasProps {
   onSettingsCopied: (settings: PlantSettings) => void;
 }
 
+interface BottlePlant {
+  id: string;
+  originX: number; // Where it was spawned (used for growing logic)
+  currentX: number; // Where it is currently displayed (dragged)
+  y: number;
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  settings: PlantSettings; // Keep settings for reference
+}
+
+interface DragState {
+  plantId: string;
+  startX: number;
+  plantStartX: number;
+}
+
 // Helper to interpolate between two hex colors
 const lerpColor = (start: string, end: string, t: number) => {
     t = Math.max(0, Math.min(1, t));
@@ -36,16 +52,26 @@ interface PlantHistoryItem {
 }
 
 const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings, clearTrigger, onSettingsCopied }, ref) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Layer 1: The world outside
+  const canvasOutsideRef = useRef<HTMLCanvasElement>(null);
+  // Layer 2: The composite view of the bottle contents
+  const canvasInsideRef = useRef<HTMLCanvasElement>(null);
+
   const growersRef = useRef<Grower[]>([]);
+  const bottlePlantsRef = useRef<BottlePlant[]>([]);
   const requestRef = useRef<number>(0);
   const plantHistoryRef = useRef<PlantHistoryItem[]>([]);
+  
+  const bottleRectRef = useRef<DOMRect | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
+
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const uuid = () => Math.random().toString(36).substr(2, 9);
 
-  const createGrower = (x: number, y: number, plantSettings: PlantSettings, generation = 0, initialAngle?: number): Grower => {
+  const createGrower = (x: number, y: number, plantSettings: PlantSettings, ctx: CanvasRenderingContext2D, generation = 0, initialAngle?: number): Grower => {
     const baseAngle = -Math.PI / 2;
     const startAngle = initialAngle ?? (baseAngle + (Math.random() * 0.2 - 0.1));
 
@@ -62,26 +88,72 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       settings: plantSettings,
       noiseOffset: Math.random() * 1000,
       generation,
+      ctx,
+      hasAttemptedFlower: false,
     };
   };
 
-  const spawnPlant = (x: number, y: number, overrideSettings?: PlantSettings) => {
+  const spawnPlant = (x: number, y: number, overrideSettings?: PlantSettings, isInsideBottle: boolean = false) => {
     const s = overrideSettings || settings;
-    // Save to history
+
+    // Save to history (for copying)
     plantHistoryRef.current.push({
         x, y, settings: { ...s }, timestamp: Date.now()
     });
-    // Keep history manageable
-    if (plantHistoryRef.current.length > 50) {
-        plantHistoryRef.current.shift();
-    }
+    if (plantHistoryRef.current.length > 50) plantHistoryRef.current.shift();
 
-    growersRef.current.push(createGrower(x, y, s));
+    if (isInsideBottle) {
+        // Create an offscreen canvas for this plant
+        const dpr = window.devicePixelRatio || 1;
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = dimensions.width * dpr;
+        offCanvas.height = dimensions.height * dpr;
+        offCanvas.style.width = `${dimensions.width}px`;
+        offCanvas.style.height = `${dimensions.height}px`;
+        const offCtx = offCanvas.getContext('2d');
+        
+        if (offCtx) {
+            offCtx.scale(dpr, dpr);
+            const plantId = uuid();
+            const newBottlePlant: BottlePlant = {
+                id: plantId,
+                originX: x,
+                currentX: x,
+                y: y,
+                canvas: offCanvas,
+                ctx: offCtx,
+                settings: s
+            };
+            
+            bottlePlantsRef.current.push(newBottlePlant);
+            growersRef.current.push(createGrower(x, y, s, offCtx));
+        }
+    } else {
+        // Spawn on the outside canvas
+        const ctx = canvasOutsideRef.current?.getContext('2d');
+        if (ctx) {
+            growersRef.current.push(createGrower(x, y, s, ctx));
+        }
+    }
+  };
+
+  const undoLastBottlePlant = () => {
+      const popped = bottlePlantsRef.current.pop();
+      // Also need to remove any active growers associated with this plant's context to stop them
+      if (popped) {
+          growersRef.current = growersRef.current.filter(g => g.ctx !== popped.ctx);
+      }
   };
 
   useImperativeHandle(ref, () => ({
-    spawn: (x: number, y: number, overrideSettings?: PlantSettings) => {
-      spawnPlant(x, y, overrideSettings);
+    spawn: (x: number, y: number, overrideSettings?: PlantSettings, isInsideBottle?: boolean) => {
+      spawnPlant(x, y, overrideSettings, isInsideBottle);
+    },
+    undo: () => {
+        undoLastBottlePlant();
+    },
+    updateBottleRect: (rect: DOMRect) => {
+        bottleRectRef.current = rect;
     }
   }));
 
@@ -99,24 +171,61 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Initialization and Resize Logic with devicePixelRatio
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.width = dimensions.width;
-    canvas.height = dimensions.height;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-        // Transparent background so we can see CSS background if needed, 
-        // but we'll fill with the paper color to ensure trails work properly
-        ctx.fillStyle = '#fdfbf7'; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    
+    [canvasOutsideRef.current, canvasInsideRef.current].forEach(canvas => {
+        if (!canvas) return;
+        // Set actual canvas size (considering device pixel ratio)
+        canvas.width = dimensions.width * dpr;
+        canvas.height = dimensions.height * dpr;
+        // Set display size (CSS size)
+        canvas.style.width = `${dimensions.width}px`;
+        canvas.style.height = `${dimensions.height}px`;
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.scale(dpr, dpr);
+        }
+    });
+
+    // Fill Outside canvas
+    const ctxOut = canvasOutsideRef.current?.getContext('2d');
+    if (ctxOut) {
+        ctxOut.fillStyle = '#fdfbf7'; 
+        ctxOut.fillRect(0, 0, dimensions.width, dimensions.height);
     }
+    
+    // Clear Inside canvas
+    const ctxIn = canvasInsideRef.current?.getContext('2d');
+    if (ctxIn) {
+        ctxIn.clearRect(0, 0, dimensions.width, dimensions.height);
+    }
+
+    // On resize, we lose the offscreen canvases if we don't handle them. 
+    // For simplicity, we clear everything on resize.
     growersRef.current = [];
     plantHistoryRef.current = [];
-  }, [dimensions, clearTrigger]);
+    bottlePlantsRef.current = [];
+  }, [dimensions]);
+
+  // Handle Clear Trigger (Outside Only)
+  useEffect(() => {
+      const ctxOut = canvasOutsideRef.current?.getContext('2d');
+      if (ctxOut) {
+          ctxOut.fillStyle = '#fdfbf7'; 
+          ctxOut.fillRect(0, 0, dimensions.width, dimensions.height);
+      }
+      // Remove growers that target the outside canvas
+      if (canvasOutsideRef.current) {
+          const outCtx = canvasOutsideRef.current.getContext('2d');
+          growersRef.current = growersRef.current.filter(g => g.ctx !== outCtx);
+      }
+  }, [clearTrigger, dimensions]);
 
   const drawLeaf = (ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, baseSize: number, color: string, type: PlantType) => {
-    // Jitter Size: ±20% variation
+    // Jitter Size
     const size = baseSize * (0.8 + Math.random() * 0.4);
 
     ctx.save();
@@ -189,7 +298,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
   };
 
   const drawFlower = (ctx: CanvasRenderingContext2D, x: number, y: number, baseSize: number, startColor: string, endColor: string, petals: number, type: PlantType) => {
-    // Size Jitter: ±15% variation
+    // Size Jitter
     const size = baseSize * (0.85 + Math.random() * 0.3);
 
     ctx.save();
@@ -215,11 +324,9 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
           const by = (Math.random() - 0.5) * size;
           const berrySize = size / 3.5;
           ctx.beginPath();
-          // Mix start and end color randomly for each berry
           ctx.fillStyle = lerpColor(startColor, endColor, Math.random());
           ctx.arc(bx, by, berrySize, 0, Math.PI * 2);
           ctx.fill();
-          // Shine
           ctx.fillStyle = 'rgba(255,255,255,0.4)';
           ctx.beginPath();
           ctx.arc(bx - berrySize/3, by - berrySize/3, berrySize/4, 0, Math.PI * 2);
@@ -241,10 +348,8 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       ctx.lineTo(0, -size * 1.5);
       ctx.stroke();
     } else {
-       // Standard VINE / PALM flower
        const angleStep = (Math.PI * 2) / petals;
        for (let i = 0; i < petals; i++) {
-          // Petals gradient from start to end color based on index
           const petalColor = lerpColor(startColor, endColor, i / petals);
           ctx.fillStyle = petalColor;
           ctx.save();
@@ -254,7 +359,6 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
           ctx.fill();
           ctx.restore();
        }
-       // Center
        ctx.fillStyle = '#f59e0b'; // Amber
        ctx.beginPath();
        ctx.arc(0, 0, size/4, 0, Math.PI * 2);
@@ -264,33 +368,22 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
   };
 
   const update = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.globalCompositeOperation = 'source-over'; 
-
-    const newGrowers: Grower[] = [];
-
+    // 1. Process Growers
     growersRef.current.forEach((grower) => {
-      const { settings, life, maxLife } = grower;
-      
+      const { settings, life, maxLife, ctx } = grower;
+      // Setup context
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalCompositeOperation = 'source-over'; 
+
       if (life >= maxLife || grower.width < 0.1) {
-        if (grower.generation < 2 && Math.random() < settings.flowerProbability) {
-             drawFlower(
-                 ctx, 
-                 grower.x, 
-                 grower.y, 
-                 settings.flowerSize, 
-                 settings.flowerColorStart, 
-                 settings.flowerColorEnd, 
-                 settings.petalCount, 
-                 settings.type
-            );
+        if (!grower.hasAttemptedFlower) {
+            if (grower.generation < 2 && Math.random() < settings.flowerProbability) {
+                drawFlower(ctx, grower.x, grower.y, settings.flowerSize, settings.flowerColorStart, settings.flowerColorEnd, settings.petalCount, settings.type);
+            }
+            grower.hasAttemptedFlower = true;
         }
+        grower.life++; // Increment so it eventually gets filtered out
         return;
       }
 
@@ -334,23 +427,16 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       const currentWidth = grower.width * (1 - progress);
       ctx.lineWidth = Math.max(0.5, currentWidth);
       ctx.strokeStyle = stemColor;
-      
       ctx.globalAlpha = 0.9;
       ctx.stroke();
       ctx.globalAlpha = 1.0;
 
       if (Math.random() < settings.leafFrequency) {
         let leafAngle = grower.angle;
-
-        if (settings.type === PlantType.PALM) {
-            leafAngle += (Math.random() > 0.5 ? Math.PI/3 : -Math.PI/3);
-        } else if (settings.type === PlantType.GEOMETRIC) {
-             leafAngle += (Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2);
-        } else if (settings.type === PlantType.UMBRELLA) {
-             leafAngle += (Math.random() - 0.5); 
-        } else {
-            leafAngle += (Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2) + (Math.random() * 0.5 - 0.25);
-        }
+        if (settings.type === PlantType.PALM) leafAngle += (Math.random() > 0.5 ? Math.PI/3 : -Math.PI/3);
+        else if (settings.type === PlantType.GEOMETRIC) leafAngle += (Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2);
+        else if (settings.type === PlantType.UMBRELLA) leafAngle += (Math.random() - 0.5); 
+        else leafAngle += (Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2) + (Math.random() * 0.5 - 0.25);
 
         const leafColor = lerpColor(settings.leafColorStart, settings.leafColorEnd, progress);
         drawLeaf(ctx, grower.x, grower.y, leafAngle, settings.leafSize, leafColor, settings.type);
@@ -368,19 +454,32 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
          if (settings.type === PlantType.BERRY) branchAngleOffset = 0.9;
 
          const branchAngle = grower.angle + (Math.random() > 0.5 ? branchAngleOffset : -branchAngleOffset);
-         newGrowers.push(createGrower(grower.x, grower.y, settings, grower.generation + 1, branchAngle));
+         growersRef.current.push(createGrower(grower.x, grower.y, settings, ctx, grower.generation + 1, branchAngle));
       }
 
       grower.x = nextX;
       grower.y = nextY;
       grower.life++;
-
-      newGrowers.push(grower);
     });
 
-    growersRef.current = newGrowers;
+    // Remove dead growers
+    growersRef.current = growersRef.current.filter(g => g.life < g.maxLife + 50); // Keep +50 to finish animations if needed
+
+    // 2. Composite Bottle Plants
+    if (canvasInsideRef.current) {
+        const ctxIn = canvasInsideRef.current.getContext('2d');
+        if (ctxIn) {
+            ctxIn.clearRect(0, 0, dimensions.width, dimensions.height);
+            bottlePlantsRef.current.forEach(plant => {
+                // Determine offset based on drag
+                const dx = plant.currentX - plant.originX;
+                ctxIn.drawImage(plant.canvas, dx, 0);
+            });
+        }
+    }
+
     requestRef.current = requestAnimationFrame(update);
-  }, [settings]);
+  }, [settings, dimensions]);
 
   useEffect(() => {
     requestRef.current = requestAnimationFrame(update);
@@ -390,37 +489,83 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
   }, [update]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return; // Only left click paints
+    if (e.button !== 0) return;
     const { clientX, clientY } = e;
-    // We need to adjust coordinates relative to the canvas
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-      spawnPlant(clientX - rect.left, clientY - rect.top);
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    // Check if we clicked on a bottle plant stem (approximation: near currentX and near y > originY - height)
+    // Simpler: Check x proximity to plant.currentX
+    const clickedPlant = bottlePlantsRef.current.find(p => Math.abs(x - p.currentX) < 40 && y < p.y && y > p.y - 400); // 40px radius, above origin
+
+    if (clickedPlant) {
+        dragStateRef.current = {
+            plantId: clickedPlant.id,
+            startX: x,
+            plantStartX: clickedPlant.currentX
+        };
+    } else {
+        // Paint outside
+        spawnPlant(x, y, undefined, false);
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
+    const { clientX, clientY } = e;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    if (dragStateRef.current) {
+        const { plantId, startX, plantStartX } = dragStateRef.current;
+        const plant = bottlePlantsRef.current.find(p => p.id === plantId);
+        if (plant) {
+            let newX = plantStartX + (x - startX);
+            
+            // Constrain to bottle if possible
+            if (bottleRectRef.current) {
+                const bRect = bottleRectRef.current;
+                const canvasRect = rect;
+                
+                // Convert bottle global rect to canvas relative coords
+                const bottleLeft = bRect.left - canvasRect.left;
+                const bottleRight = bRect.right - canvasRect.left;
+                
+                // Clamp
+                newX = Math.max(bottleLeft + 20, Math.min(bottleRight - 20, newX));
+            }
+            plant.currentX = newX;
+        }
+        return; // Don't paint if dragging
+    }
+
     if (e.buttons === 1) { 
         if (Math.random() > 0.6) {
-           const rect = canvasRef.current?.getBoundingClientRect();
-           if (rect) {
-             spawnPlant(e.clientX - rect.left, e.clientY - rect.top);
-           }
+             spawnPlant(x, y, undefined, false);
         }
     }
   };
 
+  const handlePointerUp = () => {
+      dragStateRef.current = null;
+  };
+
   const handleContextMenu = (e: React.MouseEvent) => {
       e.preventDefault();
-      const rect = canvasRef.current?.getBoundingClientRect();
+      // Implementation for context menu copying logic...
+      // Simplified: Just use closest from history
+      const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
       
       const clientX = e.clientX - rect.left;
       const clientY = e.clientY - rect.top;
 
-      // Find closest plant in history
       let closest: PlantHistoryItem | null = null;
-      let minDist = 100; // Pixel radius to 'hit' a plant base
+      let minDist = 100;
 
       for (const item of plantHistoryRef.current) {
           const dx = item.x - clientX;
@@ -435,19 +580,35 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       if (closest) {
           onSettingsCopied(closest.settings);
       } else {
-          // If clicked empty space, copy current settings
           onSettingsCopied(settings);
       }
   };
 
   return (
     <div ref={containerRef} className="absolute inset-0">
+        {/* Layer 1: Outside World (Background) */}
         <canvas
-        ref={canvasRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onContextMenu={handleContextMenu}
-        className="w-full h-full cursor-crosshair touch-none"
+            ref={canvasOutsideRef}
+            className="absolute inset-0 w-full h-full pointer-events-none" 
+            style={{ zIndex: 0 }}
+        />
+        
+        {/* Layer 2: Inside Bottle (Foreground, Transparent) */}
+        <canvas
+            ref={canvasInsideRef}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 10 }}
+        />
+
+        {/* Layer 3: Interaction Layer (Transparent, Handles Events) */}
+        <div 
+            className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+            style={{ zIndex: 20 }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            onContextMenu={handleContextMenu}
         />
     </div>
   );

@@ -42,9 +42,13 @@ export interface Grower {
   settings: PlantSettings;
   noiseOffset: number;
   generation: number;
+  ctx: CanvasRenderingContext2D;
+  hasAttemptedFlower?: boolean;
 }
 
 export interface GardenCanvasRef {
-  spawn: (x: number, y: number, overrideSettings?: PlantSettings) => void;
+  spawn: (x: number, y: number, overrideSettings?: PlantSettings, isInsideBottle?: boolean) => void;
+  undo?: () => void;
+  updateBottleRect?: (rect: DOMRect) => void;
 }
 
