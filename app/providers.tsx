@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { ChapterLabelProvider } from './contexts/ChapterLabelContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { AppThemeProvider } from './contexts/AppThemeContext';
 
 /**
  * 客户端 Providers 包装组件
@@ -10,11 +11,13 @@ import { AuthProvider } from './contexts/AuthContext';
  */
 export default function Providers({ children }: { children: ReactNode }) {
   return (
-    <AuthProvider>
-      <ChapterLabelProvider>
-        {children}
-      </ChapterLabelProvider>
-    </AuthProvider>
+    <AppThemeProvider>
+      <AuthProvider>
+        <ChapterLabelProvider>
+          {children}
+        </ChapterLabelProvider>
+      </AuthProvider>
+    </AppThemeProvider>
   );
 }
 

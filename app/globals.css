@@ -116,3 +116,71 @@ textarea,
   }
 }
 
+/* 鱼缸布局 - 基于内容高度的flexbox布局 */
+.fishbowl-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  /* 只隐藏横向溢出，避免把页面内容（尤其是瀑布流/长列表）在纵向裁剪掉 */
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+.sky-section {
+  position: relative;
+  width: 100%;
+  min-height: fit-content;
+  /* 高度由内容决定 */
+  display: flex;
+  flex-direction: column;
+}
+
+.wave-section {
+  position: relative;
+  height: 80px; /* 固定波浪高度 */
+  z-index: 10;
+  overflow: hidden;
+  flex-shrink: 0; /* 波浪高度不缩小 */
+}
+
+.water-section {
+  position: relative;
+  width: 100%;
+  flex: 1 0 auto; /* 占据剩余空间 */
+  min-height: 200px; /* 最小高度 */
+  display: flex;
+  flex-direction: column;
+}
+
+.content-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.content-overlay > * {
+  pointer-events: auto;
+}
+
+/* 响应式调整 */
+@media (max-height: 600px) {
+  .wave-section {
+    height: 60px;
+  }
+}
+
+@media (min-height: 1200px) {
+  .wave-section {
+    height: 100px;
+  }
+}
+
+/* 确保波浪动画稳定 */
+.wave-section canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+

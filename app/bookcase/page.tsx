@@ -5,6 +5,7 @@ import { Masonry, Input, Tag, Select, message, Drawer, Button } from 'antd';
 import { SearchOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import CardRenderer from '@/app/components/cards/CardRenderer';
@@ -124,6 +125,7 @@ export { preloadAllBookArticleLists };
  */
 function BookcasePageContent() {
   const { isMobile } = useResponsive();
+  const { currentFishbowlTheme } = useAppTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [columns, setColumns] = useState<number>(3);
@@ -512,6 +514,7 @@ function BookcasePageContent() {
 
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout
+          theme={currentFishbowlTheme}
           box1Content={
           <div style={{ padding: '16px 24px' }}>
             {/* 桌面端：左右布局，移动端：上下布局 */}
@@ -558,8 +561,6 @@ function BookcasePageContent() {
             )}
           </div>
         }
-        box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-        box2BgColor="#f5f5f5"
         box2Style={{ padding: isMobile ? '16px' : '40px 20px' }}
       >
         {/* 瀑布流容器 */}

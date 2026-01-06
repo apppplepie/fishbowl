@@ -5,6 +5,7 @@ import { Masonry, Input, Tag, Select, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import CardRenderer from '@/app/components/cards/CardRenderer';
@@ -16,6 +17,7 @@ import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import { apiGet } from '@/lib/apiClient';
 import ArchiveCategoryNavigator, { ArchiveCategoryDrawerButton } from '@/app/components/sidebar/ArchiveCategoryNavigator';
 import { mockCards } from '@/app/data/mockCards';
+import GalleryPage from '@/app/gallery/page';
 import type { Card } from '@/app/types/card';
 import '../styles/articles-filter.css';
 
@@ -35,6 +37,7 @@ const calculateColumns = (width: number) => {
  */
 function ArticlesPageContent() {
   const { isMobile } = useResponsive();
+  const { currentFishbowlTheme } = useAppTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -376,6 +379,7 @@ function ArticlesPageContent() {
       
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout
+          theme={currentFishbowlTheme}
           box1Content={
           <div style={{ padding: '16px 24px' }}>
             {/* 桌面端：左右布局，移动端：上下布局 */}
@@ -456,8 +460,6 @@ function ArticlesPageContent() {
             )}
           </div>
         }
-        box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-        box2BgColor="#f5f5f5"
         box2Style={{ padding: isMobile ? '16px' : '40px 20px' }}
       >
         {/* 瀑布流容器 */}

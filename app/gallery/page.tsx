@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Masonry, Spin, message } from 'antd';
 import { useRouter } from 'next/navigation';
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '../components/PageLayout';
 import Header from '../components/Header';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
@@ -104,6 +105,7 @@ const GalleryImage: React.FC<{
 
 export default function GalleryPage() {
   const router = useRouter();
+  const { currentFishbowlTheme } = useAppTheme();
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -249,12 +251,15 @@ export default function GalleryPage() {
   }, []);
 
   return (
-    <PageLayout
-      box1Content={<Header />}
-      box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-      box2BgColor="#f5f5f5"
-      box2Style={{ padding: '6px 6px' }}
-    >
+    <>
+      {/* Header 独立在最顶部，覆盖在边框上 */}
+      <Header />
+      
+      <PageLayout
+        theme={currentFishbowlTheme}
+        hideBox1={true}
+        box2Style={{ padding: '6px 6px' }}
+      >
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '100px 0' }}>
@@ -290,7 +295,8 @@ export default function GalleryPage() {
             )}
           </>
         )}
-      </div>
+        </div>
+      </PageLayout>
 
       {/* 图组卡片遮罩层：纯净实现，无 Modal */}
       {selectedArticle && (
@@ -337,6 +343,6 @@ export default function GalleryPage() {
           fetchDrawingArticles(0, false);
         }}
       />
-    </PageLayout>
+    </>
   );
 }

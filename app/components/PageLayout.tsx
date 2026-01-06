@@ -2,11 +2,16 @@
 
 import { ReactNode, CSSProperties } from 'react';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { Theme } from '@/app/types/background';
+import SkySection from './background/SkySection';
+import WaterSection from './background/WaterSection';
+import WaveSeparator from './background/WaveSeparator';
 
 interface PageLayoutProps {
   children: ReactNode;
-  box1BgColor?: string; // 盒模型1的背景色
-  box2BgColor?: string; // 盒模型2的背景色
+  theme?: Theme; // 主题对象，包含天空和水体渐变
+  box1BgColor?: string; // 盒模型1的背景色（已废弃，使用theme.skyGradient）
+  box2BgColor?: string; // 盒模型2的背景色（已废弃，使用theme.waterGradient）
   box1Content?: ReactNode; // 盒模型1的内容（可选）
   box1Style?: CSSProperties; // 自定义盒模型1样式
   box2Style?: CSSProperties; // 自定义盒模型2样式
@@ -16,6 +21,7 @@ interface PageLayoutProps {
 
 export default function PageLayout({
   children,
+  theme,
   box1BgColor = '#4CAF50',
   box2BgColor = '#f5f5f5',
   box1Content,
@@ -25,6 +31,44 @@ export default function PageLayout({
   hideBox1 = false,
 }: PageLayoutProps) {
   const { isMobile } = useResponsive();
+
+  // 辅助函数：处理背景色/渐变，避免重复包装 linear-gradient
+  const processBg = (bg: string) => {
+    if (!bg) return 'transparent';
+    if (bg.startsWith('linear-gradient') || bg.startsWith('rgba') || bg.startsWith('rgb') || bg.startsWith('bg-')) {
+      return bg;
+    }
+    // 如果是纯色（如 #fff 或 red），包装成渐变以保持一致性
+    return `linear-gradient(to bottom, ${bg}, ${bg})`;
+  };
+
+  // 如果没有提供theme，使用默认值
+  const defaultTheme: Theme = {
+    id: 'default',
+    name: 'Default',
+    pageBg: 'bg-gray-50',
+    skyGradient: processBg(box1BgColor),
+    waterGradient: processBg(box2BgColor),
+    orbColors: {
+      sun: 'rgba(255, 255, 255, 0.3)',
+      atmosphere: 'rgba(255, 255, 255, 0.2)',
+      waterLight: 'rgba(255, 255, 255, 0.2)',
+      waterDeep: 'rgba(0, 0, 0, 0.1)',
+    },
+    waveColors: [
+      'rgba(255, 255, 255, 0.7)',
+      'rgba(255, 255, 255, 0.5)',
+      'rgba(255, 255, 255, 0.6)',
+      'rgba(255, 255, 255, 0.2)',
+    ],
+    pageLayout: {
+      box1Bg: 'transparent',
+      box2Bg: box2BgColor,
+      containerPaddingTop: '0px',
+    }
+  };
+
+  const currentTheme = theme || defaultTheme;
 
   return (
     <>
@@ -83,37 +127,61 @@ export default function PageLayout({
 
       {/* 内容区域 */}
       <div
+        className="fishbowl-layout"
         style={{
           paddingTop: containerPaddingTop,
           paddingLeft: isMobile ? '0' : '6px',
           paddingRight: isMobile ? '0' : '6px',
           paddingBottom: isMobile ? '0' : '6px',
-          minHeight: '100vh',
           boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
         }}
       >
-        {/* 盒模型1：顶部区域，最小60px高，可自适应 */}
+        {/* 盒模型1：顶部区域，使用天空渐变，高度由内容决定 */}
         {!hideBox1 && (
-          <div
-            style={{
-              minHeight: '60px',
-              background: 'transparent',
-              ...box1Style,
-            }}
-          >
-            {box1Content}
+          <div style={{ position: 'relative', width: '100%' }}>
+            <SkySection theme={currentTheme}>
+              <div style={{ padding: '20px', width: '100%', boxSizing: 'border-box', ...box1Style }}>
+                {box1Content}
+              </div>
+            </SkySection>
+            
+            {/* 波浪分隔器 - 跨越两个区域的交界处 */}
+            <div 
+              className="wave-section" 
+              style={{ 
+                position: 'absolute', 
+                bottom: '-40px', 
+                left: 0, 
+                right: 0, 
+                zIndex: 10,
+                height: '80px',
+                pointerEvents: 'none'
+              }}
+            >
+              <WaveSeparator colors={currentTheme.waveColors} />
+            </div>
           </div>
         )}
 
-        {/* 盒模型2：内容区域，紧贴盒模型1 */}
-        <div
-          style={{
-            background: box2BgColor,
-            minHeight: hideBox1 ? 'calc(100vh - 45px - 6px)' : 'calc(100vh - 60px - 45px - 6px)',
-            ...box2Style,
-          }}
-        >
-          {children}
+        {/* 盒模型2：内容区域，使用水体渐变，高度由内容决定 */}
+        <div style={{ flex: '1 0 auto', width: '100%', display: 'flex', flexDirection: 'column' }}>
+          <WaterSection theme={currentTheme}>
+            <div 
+              style={{ 
+                padding: '40px 20px 20px', 
+                minHeight: '200px',
+                width: '100%',
+                boxSizing: 'border-box',
+                flex: '1 0 auto',
+                ...box2Style 
+              }}
+            >
+              {children}
+            </div>
+          </WaterSection>
         </div>
       </div>
     </>

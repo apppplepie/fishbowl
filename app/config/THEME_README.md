@@ -2,7 +2,30 @@
 
 ## 概述
 
-为了统一整个应用的UI风格，我们创建了统一的配色主题文件 `app/config/theme.ts`。所有UI颜色都应该从这个文件引用，而不是在组件中硬编码颜色值。
+为了统一整个应用的UI风格，我们创建了统一的配色主题系统：
+
+1. **通用UI主题** (`app/config/theme.ts`) - 应用级别的颜色、渐变、阴影等
+2. **鱼缸背景主题** (`app/data/themes.ts`) - 专门的背景动画主题系统
+
+所有UI颜色都应该从相应主题文件引用，而不是在组件中硬编码颜色值。
+
+## 全局主题管理系统
+
+### AppThemeProvider
+
+我们提供了一个全局主题提供者 `AppThemeProvider`，它整合了所有主题系统：
+
+```typescript
+import { AppThemeProvider, useAppTheme } from '@/app/contexts/AppThemeContext';
+
+// 在应用根部包装
+<AppThemeProvider>
+  <App />
+</AppThemeProvider>
+
+// 在组件中使用
+const { uiTheme, currentFishbowlTheme, activeFishbowlThemeId } = useAppTheme();
+```
 
 ## 使用方法
 
@@ -102,6 +125,101 @@ style={{ backgroundColor: theme.background.hover }}  // rgba(255, 255, 255, 0.1)
 ```typescript
 style={{ borderColor: theme.border.default }}  // #d9d9d9
 style={{ borderColor: theme.border.primary }}  // #1890ff
+```
+
+## 鱼缸背景主题系统
+
+### 概述
+
+鱼缸背景主题系统 (`app/data/themes.ts`) 提供了丰富的动态背景效果，包含天空、水面、波浪等动画元素。系统包含10个预设主题 + 自定义模式。
+
+### 使用方法
+
+```typescript
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
+
+// 获取鱼缸主题
+const {
+  currentFishbowlTheme,    // 当前激活的主题
+  activeFishbowlThemeId,   // 当前主题ID
+  setActiveFishbowlThemeId, // 切换主题
+  fishbowlThemes          // 所有可用主题
+} = useAppTheme();
+
+// 使用主题样式
+<div className={currentFishbowlTheme.pageBg}>
+  {/* 页面背景 */}
+</div>
+```
+
+### 主题结构
+
+每个鱼缸主题包含以下属性：
+
+```typescript
+interface Theme {
+  id: string;                    // 主题唯一标识
+  name: string;                  // 显示名称
+  pageBg: string;                // 页面整体背景 (tailwind类)
+  skyGradient: string;           // 天空渐变
+  waterGradient: string;         // 水面渐变
+  orbColors: {                   // 光球颜色
+    sun: string;                 // 太阳光颜色
+    atmosphere: string;          // 大气层颜色
+    waterLight: string;          // 水面高光
+    waterDeep: string;           // 水面深层
+  };
+  waveColors: string[];          // 波浪颜色 (4层)
+  pageLayout: {                  // 页面布局样式
+    box1Bg: string;              // box1背景 (天空区域)
+    box2Bg: string;              // box2背景 (水面区域)
+    containerPaddingTop: string; // 容器顶部间距
+  };
+}
+```
+
+### 预设主题列表
+
+| 主题ID | 名称 | 特点 |
+|--------|------|------|
+| `morning` | Morning Mist | 橙色调，清晨薄雾效果 |
+| `sakura` | Sakura Breeze | 粉色调，樱花季氛围 |
+| `coral` | Coral Reef | 橙色调，珊瑚礁风格 |
+| `azure` | Azure Day | 蓝色调，晴朗天空 |
+| `emerald` | Emerald Springs | 绿色调，翠绿湖水 |
+| `midnight` | Deep Ocean | 深蓝色，深海效果 |
+| `neon` | Neon Synth | 霓虹色，赛博朋克风格 |
+| `sunset` | Golden Hour | 金色调，日落余晖 |
+| `noir` | Monochrome Noir | 黑白调，经典风格 |
+| `glacial` | Glacial Melt | 冰蓝色，冰川融化 |
+
+### 自定义模式
+
+除了预设主题，还支持自定义模式：
+
+```typescript
+// 激活自定义模式
+setActiveFishbowlThemeId('custom');
+
+// 调整参数 (0-360 HSL色相值)
+setSkyHue(45);    // 天空色相
+setWaterHue(200); // 水面色相
+```
+
+### PageLayout 集成
+
+PageLayout 组件已集成鱼缸主题系统：
+
+```typescript
+// PageLayout 会自动使用主题的布局样式
+<PageLayout theme={currentFishbowlTheme}>
+  {/* 内容 */}
+</PageLayout>
+
+// 内部会自动应用:
+// - box1 背景 = theme.pageLayout.box1Bg
+// - box2 背景 = theme.pageLayout.box2Bg
+// - 容器间距 = theme.pageLayout.containerPaddingTop
 ```
 
 ## 颜色分类说明

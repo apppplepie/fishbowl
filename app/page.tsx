@@ -4,13 +4,16 @@ import { Button, Typography } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAppTheme } from './contexts/AppThemeContext';
 import Header from './components/Header';
 import PermissionSystemDemo from './components/PermissionSystemDemo';
+import WaveSeparator from './components/background/WaveSeparator';
 import { theme } from './config/theme';
 
 const { Title, Paragraph } = Typography;
 
 export default function Home() {
+  const { currentFishbowlTheme } = useAppTheme();
   const [showNavBar, setShowNavBar] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isAutoScrolling = useRef(false);
@@ -21,13 +24,13 @@ export default function Home() {
   // 统一的导航栏更新函数：立即显示 + 防抖隐藏
   const updateNavBar = (scrollTop: number, threshold: number) => {
     const shouldShow = scrollTop >= threshold;
-    
+
     // 取消之前的 requestAnimationFrame
     if (rafIdRef.current) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
     }
-    
+
     // 使用 requestAnimationFrame 优化性能
     rafIdRef.current = requestAnimationFrame(() => {
       // 超过阈值：立即显示
@@ -38,7 +41,7 @@ export default function Home() {
           hideNavBarTimerRef.current = null;
         }
         setShowNavBar(true);
-      } 
+      }
       // 低于阈值：防抖隐藏（避免滚动中频繁闪烁）
       else {
         // 清除之前的隐藏定时器
@@ -83,7 +86,7 @@ export default function Home() {
 
     const getSnapPoint = () => window.innerHeight * 0.8; // 80vh
     const getThreshold = () => window.innerHeight * 0.79; // 导航栏显示阈值
-    
+
     let scrollEndTimer: NodeJS.Timeout | null = null;
     let lastScrollTop = container.scrollTop;
     let lastScrollTime = Date.now();
@@ -110,13 +113,13 @@ export default function Home() {
 
       const y = container.scrollTop;
       const SNAP_POINT = getSnapPoint();
-    
+
       // [表情] 已经进入 par2 内容区 → 完全放行
       if (y >= SNAP_POINT) return;
-    
+
       // [表情] 仍在 par1 区域，决定回去还是进 par2
       const target = y < SNAP_POINT * 0.4 ? 0 : SNAP_POINT;
-    
+
       if (Math.abs(y - target) < 5) {
         if (Math.abs(y - target) > 1) {
           snapTo(target);
@@ -138,9 +141,9 @@ export default function Home() {
 
       const currentScrollTop = container.scrollTop;
       const currentTime = Date.now();
-      
+
       const scrollDelta = Math.abs(currentScrollTop - lastScrollTop);
-      
+
       if (scrollDelta > 0) {
         isScrolling = true;
         lastScrollTop = currentScrollTop;
@@ -148,7 +151,7 @@ export default function Home() {
       }
 
       if (snapRafId) cancelAnimationFrame(snapRafId);
-      
+
       snapRafId = requestAnimationFrame(() => {
         checkSnap();
       });
@@ -158,7 +161,7 @@ export default function Home() {
       scrollEndTimer = setTimeout(() => {
         isScrolling = false;
         checkSnap();
-      },30);
+      }, 30);
     };
 
     let touchStartY = 0;
@@ -206,8 +209,40 @@ export default function Home() {
     };
   }, []);
 
+  // 获取渐变背景 CSS
+  const getSkyGradient = () => {
+    const gradient = currentFishbowlTheme.skyGradient;
+    if (gradient.startsWith('bg-')) {
+      // Tailwind 类名，返回默认渐变
+      return 'linear-gradient(to bottom, #fef3c7 0%, #fde68a 50%, #fcd34d 100%)';
+    }
+    return gradient;
+  };
+
+  const getWaterGradient = () => {
+    const gradient = currentFishbowlTheme.waterGradient;
+    if (gradient.startsWith('bg-')) {
+      // Tailwind 类名，返回默认渐变
+      return 'linear-gradient(to bottom, #bae6fd 0%, #7dd3fc 50%, #38bdf8 100%)';
+    }
+    return gradient;
+  };
+
   return (
     <>
+      {/* 固定背景层 - 只铺 100vh，显示天空渐变 */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '100vh',
+          background: getSkyGradient(),
+          zIndex: -1,
+        }}
+      />
+
       <div
         ref={scrollContainerRef}
         style={{
@@ -224,10 +259,10 @@ export default function Home() {
           }}
         >
           <div className="text-center text-white px-8">
-            <Title level={1} className="!text-white mb-6" style={{ fontSize: '3.5rem' }}>
+            <Title level={1} className="!text-white mb-6" style={{ fontSize: '3.5rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
               Fishbowl
             </Title>
-            <Paragraph className="!text-white text-xl mb-8 max-w-2xl">
+            <Paragraph className="!text-white text-xl mb-8 max-w-2xl" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
               没开发完，先这样吧
             </Paragraph>
             <Button
@@ -239,7 +274,11 @@ export default function Home() {
                 height: '50px',
                 fontSize: '18px',
                 borderRadius: '25px',
-                padding: '0 32px'
+                padding: '0 32px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                color: 'white',
               }}
               onClick={() => scrollToPosition(window.innerHeight * 0.8)}
             >
@@ -258,7 +297,8 @@ export default function Home() {
             borderRight: `6px solid ${theme.colors.black}`,
             borderBottom: `6px solid ${theme.colors.black}`,
             boxSizing: 'border-box',
-            padding: 0
+            padding: 0,
+            position: 'relative',
           }}
         >
           {/* 45px导航栏区域 */}
@@ -280,58 +320,78 @@ export default function Home() {
               <Header embedded={true} />
             )}
           </div>
-          
-          {/* 盒模型1：7vh高的透明顶部区域 */}
-          <div
-            style={{
-              height: '7vh',
-              background: 'transparent',
-              width: '100%',
-              flexShrink: 0,
-              flexGrow: 0,
-            }}
-          >
-          </div>
 
-          {/* 盒模型2：主要内容区域 */}
+          {/* 盒模型1：7vh高的透明顶部区域 */}
+           <div 
+           style={{ 
+            height: '7vh', 
+            background: 'transparent', 
+            width: '100%', 
+            flexShrink: 0, 
+            flexGrow: 0, 
+            }} > 
+            </div>
+
+          {/* 盒模型2：主要内容区域（包含波浪） */}
           <div
-            className="text-center text-white"
             style={{
               flex: 1,
               width: '100%',
-              padding: '40px 24px',
-              background: theme.gradients.secondary,
+              background: getWaterGradient(),
               boxSizing: 'border-box',
+              position: 'relative',
+              paddingTop: '40px', // 给波浪留空间
             }}
           >
-          <Title level={2} className="!text-white mb-6">
-            权限系统
-          </Title>
-          <Paragraph className="!text-white text-lg mb-6">
-            体验渐进式内容浏览
-          </Paragraph>
-
-          <div className="max-w-5xl mx-auto">
-            <PermissionSystemDemo />
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: '40px' }}>
-            <Button
-              type="primary"
-              size="large"
-              onClick={() => router.push('/archive')}
+            {/* 波浪分隔器 - 在 box2 内部顶部 */}
+            <div
               style={{
-                height: '50px',
-                fontSize: '16px',
-                borderRadius: '25px',
-                padding: '0 40px',
-                background: theme.gradients.primary,
-                border: 'none',
+                position: 'absolute',
+                top: '-40px',
+                left: 0,
+                right: 0,
+                width: '100%',
+                height: '80px',
+                zIndex: 10,
+                pointerEvents: 'none',
               }}
             >
-              进入文章归档
-            </Button>
-          </div>
+              <WaveSeparator colors={currentFishbowlTheme.waveColors} />
+            </div>
+
+            {/* 内容区 */}
+            <div className="text-center text-white" style={{ padding: '0 24px 40px' }}>
+              <Title level={2} className="!text-white mb-6" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                权限系统
+              </Title>
+              <Paragraph className="!text-white text-lg mb-6" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                体验渐进式内容浏览
+              </Paragraph>
+
+              <div className="max-w-5xl mx-auto">
+                <PermissionSystemDemo />
+              </div>
+
+              <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={() => router.push('/archive')}
+                  style={{
+                    height: '50px',
+                    fontSize: '16px',
+                    borderRadius: '25px',
+                    padding: '0 40px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    color: 'white',
+                  }}
+                >
+                  进入文章归档
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

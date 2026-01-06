@@ -7,6 +7,7 @@ import { ThunderboltOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, CopyOutlined, CameraOutlined } from '@ant-design/icons';
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
 import ArticleNavigator, { ArticleDrawerButton } from '@/app/components/sidebar/ArticleNavigator';
@@ -51,6 +52,7 @@ export default function ArticlePage() {
   const router = useRouter();
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
+  const { currentFishbowlTheme } = useAppTheme();
   const { isLoggedIn, user, getToken } = useAuth();
   const { canEdit: canEditArticle } = useCanEditArticle(articleId);
 
@@ -778,6 +780,7 @@ export default function ArticlePage() {
 
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout
+          theme={currentFishbowlTheme}
           box1Content={
             <div style={{ padding: '16px 24px' }}>
               <Breadcrumb
@@ -938,8 +941,6 @@ export default function ArticlePage() {
               </div>
             </div>
           }
-          box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-          box2BgColor="#f5f5f5"
           box2Style={{
             display: 'flex',
             justifyContent: 'center',
