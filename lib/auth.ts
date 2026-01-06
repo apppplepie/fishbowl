@@ -7,9 +7,9 @@ const JWT_SECRET = process.env.JWT_SECRET || '0OooOoO00oO0HR0313R1N3OoO0oOoO0oOo
 // Token过期时间配置（统一管理，避免错开）
 export const TOKEN_EXPIRATION = {
   // Access Token过期时间（JWT格式）
-  ACCESS_TOKEN_JWT: '1h', // JWT过期时间：1小时
+  ACCESS_TOKEN_JWT: '3h', // JWT过期时间：3小时
   // Access Token Cookie过期时间（秒），略大于JWT过期时间，避免边界情况
-  ACCESS_TOKEN_COOKIE: 60 * 60 + 10, // 1小时 + 10秒
+  ACCESS_TOKEN_COOKIE: 60 * 60 * 3 + 60, // 3小时 + 1分钟
   
   // Refresh Token过期时间（JWT格式）
   REFRESH_TOKEN_JWT: '7d', // JWT过期时间：7天

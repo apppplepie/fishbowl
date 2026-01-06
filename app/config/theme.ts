@@ -8,11 +8,11 @@ export const theme = {
   // 主背景渐变
   gradients: {
     // 主背景渐变（紫色系）- 用于layout和主要页面背景
-    primary: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    primary: 'linear-gradient(135deg,rgb(0, 0, 0) 0%,rgb(0, 0, 0) 100%)',
     // 次要背景渐变（粉红色系）- 用于内容区域
     secondary: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
     // 绿色背景渐变 - 用于特殊页面
-    green: 'linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%)',
+    green: 'linear-gradient(180deg,rgb(0, 0, 0) 0%,rgb(0, 0, 0) 100%)',
     // 黑色渐变 - 用于菜单选中状态
     dark: 'linear-gradient(90deg, #000 0%, #333 100%)',
   },

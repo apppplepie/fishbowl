@@ -4,6 +4,8 @@ import MessageConfig from "./message-config";
 import Providers from "./providers";
 import { theme } from "./config/theme";
 import "./globals.css";
+import { AppThemeProvider } from "./contexts/AppThemeContext";
+import { AppThemeBody } from "@/app/components/AppThemeBody";
 
 export const metadata: Metadata = {
   title: "Fishbowl",
@@ -25,22 +27,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        style={{
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-          background: theme.gradients.primary,
-          backgroundAttachment: 'fixed',
-          minHeight: '100vh'
-        }}
-        className="antialiased"
-      >
-        <AntdRegistry>
-          <Providers>
-            <MessageConfig />
-            {children}
-          </Providers>
-        </AntdRegistry>
-      </body>
+      <AppThemeProvider>
+        <AppThemeBody>
+          <AntdRegistry>
+            <Providers>
+              <MessageConfig />
+              {children}
+            </Providers>
+          </AntdRegistry>
+        </AppThemeBody>
+      </AppThemeProvider>
     </html>
   );
 }
