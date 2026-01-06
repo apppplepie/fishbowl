@@ -3,8 +3,6 @@
  * 集中管理所有导航菜单项，方便扩展和维护
  */
 
-import { icons } from "antd/es/image/PreviewGroup";
-
 export interface NavigationItem {
   key: string;
   label: string;
@@ -47,6 +45,12 @@ export const publicNavigationItems: NavigationItem[] = [
     label: '书橱',
     icon: 'BookOutlined',
     path: '/bookcase',
+  },
+  {
+    key: 'garden',
+    label: '花园',
+    icon: 'EnvironmentOutlined',
+    path: '/garden',
   },
 ];
 

@@ -15,6 +15,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   DashboardOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
@@ -61,7 +62,8 @@ export default function NavigationDrawer({
       case 'EditOutlined': return <EditOutlined />;
       case 'FormOutlined': return <FormOutlined />;
       case 'BookOutlined': return <BookOutlined />;
-      case 'UserOutlined': return <UserOutlined />
+      case 'UserOutlined': return <UserOutlined />;
+      case 'EnvironmentOutlined': return <EnvironmentOutlined />;
       default: return null;
     }
   };
