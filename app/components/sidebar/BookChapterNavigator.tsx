@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import GenericIndexTree, { GenericIndexTreeConfig } from './GenericIndexTree';
+import GenericTree, { GenericIndexTreeConfig } from './GenericTree';
 import GenericTreeDrawer, { TreeDrawerButton } from './GenericTreeDrawer';
 
 /**
@@ -77,7 +77,7 @@ export default function BookChapterNavigator({
 
   // 渲染树内容
   const renderTreeContent = () => (
-    <GenericIndexTree
+    <GenericTree
       config={config}
       currentArticleId={currentArticleId}
       onArticleClick={handleArticleClick}

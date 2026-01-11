@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import GenericCategoryTree, { GenericCategoryTreeConfig } from './GenericCategoryTree';
+import GenericTree, { GenericIndexTreeConfig } from './GenericTree';
 import GenericTreeDrawer, { TreeDrawerButton } from './GenericTreeDrawer';
 
 /**
@@ -46,16 +46,18 @@ export default function BookCategoryNavigator({
     onExpandedChange?.(newExpanded);
   };
 
-  const config: GenericCategoryTreeConfig = {
-    apiEndpoint: '/api/categories/tree?rootId=cat_bookcase',
-    rootNodeId: 'cat_bookcase',
-    rootNodeName: '书橱',
+  const config: GenericIndexTreeConfig = {
+    apiEndpoint: '/api/categories/{id}/tree-with-articles',
+    startCategoryId: 'cat_bookcase',
     emptyText: '暂无书籍',
-    loadChildrenForTopLevel: false, // ✅ 改为false，一次性获取完整树，避免N+1查询
     forceOpenRootKeys: true,
-    navigationPattern: '/bookcase?category={categoryId}',
+    categoryNavigationPattern: '/bookcase?category={categoryId}',
+    articleNavigationPattern: '/book/{articleId}',
     stylePrefix: 'book-category',
-    showChapterLabels: true // 书籍导航显示章节编号
+    showArticleCount: false,
+    dataFormat: 'flat-tree',
+    findBookRoot: false,
+    defaultOpenMode: 'all' // 书橱页展开所有目录
   };
 
   const handleCategorySelect = (categoryId: string | null) => {
@@ -69,10 +71,10 @@ export default function BookCategoryNavigator({
 
   // 渲染树内容
   const renderTreeContent = () => (
-    <GenericCategoryTree
+    <GenericTree
       config={config}
-      selectedCategoryId={selectedCategoryId}
-      onCategorySelect={handleCategorySelect}
+      currentArticleId={undefined}
+      onCategoryClick={handleCategorySelect}
     />
   );
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import GenericCategoryTree, { GenericCategoryTreeConfig } from './GenericCategoryTree';
+import GenericTree, { GenericIndexTreeConfig } from './GenericTree';
 import GenericTreeDrawer, { TreeDrawerButton } from './GenericTreeDrawer';
 
 /**
@@ -44,13 +44,16 @@ export default function ArchiveCategoryNavigator({
     onExpandedChange?.(newExpanded);
   };
 
-  const config: GenericCategoryTreeConfig = {
-    apiEndpoint: '/api/categories/tree',
+  const config: GenericIndexTreeConfig = {
+    apiEndpoint: '/api/categories/tree-with-articles',
     emptyText: '暂无目录',
-    forceOpenRootKeys: true, // 抽屉中允许全部展开
-    navigationPattern: '/archive?category={categoryId}',
+    forceOpenRootKeys: true,
+    categoryNavigationPattern: '/archive?category={categoryId}',
+    articleNavigationPattern: '/article/{articleId}',
     stylePrefix: 'archive-category',
-    showChapterLabels: false // 归档目录不显示章节编号
+    showArticleCount: true,
+    dataFormat: 'tree-with-articles',
+    defaultOpenMode: 'all' // 归档页展开所有目录
   };
 
   const handleCategorySelect = (categoryId: string | null) => {
@@ -64,10 +67,15 @@ export default function ArchiveCategoryNavigator({
 
   // 渲染树内容
   const renderTreeContent = () => (
-    <GenericCategoryTree
+    <GenericTree
       config={config}
-      selectedCategoryId={selectedCategoryId}
-      onCategorySelect={handleCategorySelect}
+      currentArticleId={undefined}
+      onCategoryClick={() => {
+        // 分类点击会通过 navigationPattern 自动处理跳转
+        if (isMobile && onClose) {
+          onClose(); // 移动端点击后关闭抽屉
+        }
+      }}
     />
   );
 
