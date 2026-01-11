@@ -16,7 +16,7 @@ const PRESET_VINE: PlantSettings = {
     stemColorEnd: '#15803d',   // Green 700
     baseWidth: 6,
     growthSpeed: 3,
-    maxLife: 280,
+    maxLife: 140,
     curlFactor: 0.08,
     straightness: 0.4, 
     
@@ -40,7 +40,7 @@ const PRESET_PALM: PlantSettings = {
   stemColorEnd: '#65a30d',   // Olive
   baseWidth: 10,
   growthSpeed: 2.5,
-  maxLife: 350,
+  maxLife: 175,
   curlFactor: 0.05,
   straightness: 0.7, 
   
@@ -63,7 +63,7 @@ const PRESET_GEOMETRIC: PlantSettings = {
   stemColorEnd: '#94a3b8',   // Light slate
   baseWidth: 4,
   growthSpeed: 4,
-  maxLife: 300,
+  maxLife: 150,
   curlFactor: 0, // Unused in geometric
   straightness: 0.9, 
   
@@ -86,7 +86,7 @@ const PRESET_UMBRELLA: PlantSettings = {
   stemColorEnd: '#34d399',   // Light Green
   baseWidth: 8,
   growthSpeed: 3,
-  maxLife: 400,
+  maxLife: 200,
   curlFactor: 0.03, // Very straight
   straightness: 0.8, 
   
@@ -109,7 +109,7 @@ const PRESET_BERRY: PlantSettings = {
   stemColorEnd: '#a8a29e',   // Grey wood
   baseWidth: 3,
   growthSpeed: 3.5,
-  maxLife: 250,
+  maxLife: 125,
   curlFactor: 0.15, // Erratic
   straightness: 0.3, 
   
@@ -132,7 +132,7 @@ const PRESET_CLUSTER: PlantSettings = {
   stemColorEnd: '#94a3b8',   // Slate 400
   baseWidth: 5,
   growthSpeed: 3,
-  maxLife: 260,
+  maxLife: 130,
   curlFactor: 0.1, // Wavy
   straightness: 0.5, 
   
@@ -229,7 +229,7 @@ export default function GardenPage() {
   const handleUndo = () => {
       if (canvasRef.current) {
           canvasRef.current.undo();
-          setToastMessage("Retracted last bottle plant.");
+          setToastMessage("拔掉了上一株植物...");
       }
   };
 
@@ -237,9 +237,9 @@ export default function GardenPage() {
       try {
           const id = btoa(JSON.stringify(copiedSettings));
           navigator.clipboard.writeText(id);
-          setToastMessage("Seed DNA copied to clipboard!");
+          setToastMessage("获得了种子!");
       } catch (e) {
-          console.error("Failed to serialize settings", e);
+          console.error("失败了", e);
       }
   };
 
@@ -252,7 +252,7 @@ export default function GardenPage() {
       const parsed = JSON.parse(decoded) as PlantSettings;
       if (parsed.stemColorStart && parsed.type) {
         setSettings(parsed);
-        setToastMessage("Seed DNA planted!");
+        setToastMessage("种下了植物!");
   
         // Trigger spawn at bottle bottom
         if (bottleRef.current && canvasRef.current) {
@@ -351,10 +351,13 @@ export default function GardenPage() {
             {/* UI Overlay: Title */}
             <div className="absolute top-8 w-full text-center pointer-events-none z-30">
               <h1 className="text-3xl md:text-5xl font-serif text-slate-800 tracking-tight drop-shadow-sm opacity-90">
-                The Sketch Garden
+                花园
               </h1>
               <p className="text-slate-500 mt-2 font-medium text-sm">
-                Paste DNA below to grow inside the bottle. Double-click to plant.
+                双击试试，左侧挑选植物
+              </p>
+              <p className="text-slate-500 mt-2 font-medium text-sm">
+                长按获得种子，下滑种入玻璃缸
               </p>
             </div>
 
@@ -382,7 +385,7 @@ export default function GardenPage() {
                   setImportString(e.target.value);
                   handleImport(e.target.value);
                 }}
-                placeholder="Paste DNA..."
+                placeholder="复制种子..."
                 className="flex-1 px-4 py-3 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg shadow-sm text-center font-mono text-xs focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-slate-400"
               />
               <button

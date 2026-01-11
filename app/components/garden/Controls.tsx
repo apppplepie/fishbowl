@@ -45,7 +45,7 @@ const Slider: React.FC<{
 
 const DualColorPicker: React.FC<{ label: string; start: string; end: string; onStartChange: (v: string) => void; onEndChange: (v: string) => void }> = ({ label, start, end, onStartChange, onEndChange }) => (
     <div className="flex flex-col gap-2">
-        <span className="text-xs text-slate-500 font-medium">{label} (Gradient)</span>
+        <span className="text-xs text-slate-500 font-medium">{label} (渐变)</span>
         <div className="flex items-center gap-2">
             <div className="relative overflow-hidden w-8 h-8 rounded-full border border-slate-200 shadow-sm transition-transform hover:scale-110">
                 <input 
@@ -69,10 +69,22 @@ const DualColorPicker: React.FC<{ label: string; start: string; end: string; onS
 );
 
 const Controls: React.FC<ControlsProps> = ({ settings, updateSettings, applyPreset, onClear }) => {
+  // 翻译函数
+  const translatePlantType = (type: PlantType): string => {
+    switch (type) {
+      case PlantType.VINE: return '藤蔓';
+      case PlantType.PALM: return '棕榈';
+      case PlantType.GEOMETRIC: return '几何';
+      case PlantType.UMBRELLA: return '伞形';
+      case PlantType.BERRY: return '浆果';
+      case PlantType.CLUSTER: return '簇生';
+      default: return type;
+    }
+  };
   return (
     <div className="w-80 h-full bg-white/90 border-r border-slate-200 p-6 overflow-y-auto scrollbar-hide shadow-lg flex flex-col z-20">
       <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-        <h2 className="text-slate-700 font-serif text-lg tracking-wide">Garden Tools</h2>
+        <h2 className="text-slate-700 font-serif text-lg tracking-wide">花园工具</h2>
       </div>
 
       <div className="mb-6 bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1">
@@ -83,48 +95,48 @@ const Controls: React.FC<ControlsProps> = ({ settings, updateSettings, applyPres
                 className={`flex-1 py-2 text-[10px] md:text-xs font-bold rounded-lg transition-all uppercase tracking-wide min-w-[30%]
                     ${settings.type === t ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                {t}
+                {translatePlantType(t)}
             </button>
         ))}
       </div>
 
-      <ControlGroup title="Stem Genetics">
-        <DualColorPicker 
-            label="Stem Gradient" 
-            start={settings.stemColorStart} 
-            end={settings.stemColorEnd} 
-            onStartChange={(c) => updateSettings({ stemColorStart: c })} 
-            onEndChange={(c) => updateSettings({ stemColorEnd: c })} 
+      <ControlGroup title="茎干基因">
+        <DualColorPicker
+            label="茎干渐变"
+            start={settings.stemColorStart}
+            end={settings.stemColorEnd}
+            onStartChange={(c) => updateSettings({ stemColorStart: c })}
+            onEndChange={(c) => updateSettings({ stemColorEnd: c })}
         />
-        <Slider label="Straightness" value={settings.straightness} min={0} max={1} step={0.05} onChange={(v) => updateSettings({ straightness: v })} />
-        <Slider label="Curviness" value={settings.curlFactor} min={0.01} max={0.2} step={0.01} onChange={(v) => updateSettings({ curlFactor: v })} />
-        <Slider label="Height" value={settings.maxLife} min={50} max={500} step={10} onChange={(v) => updateSettings({ maxLife: v })} />
-        <Slider label="Thickness" value={settings.baseWidth} min={1} max={15} step={0.5} onChange={(v) => updateSettings({ baseWidth: v })} />
+        <Slider label="挺直度" value={settings.straightness} min={0} max={1} step={0.05} onChange={(v) => updateSettings({ straightness: v })} />
+        <Slider label="弯曲度" value={settings.curlFactor} min={0.01} max={0.2} step={0.01} onChange={(v) => updateSettings({ curlFactor: v })} />
+        <Slider label="高度" value={settings.maxLife} min={50} max={500} step={10} onChange={(v) => updateSettings({ maxLife: v })} />
+        <Slider label="粗细" value={settings.baseWidth} min={1} max={15} step={0.5} onChange={(v) => updateSettings({ baseWidth: v })} />
       </ControlGroup>
 
-      <ControlGroup title="Foliage">
-        <DualColorPicker 
-            label="Leaf Gradient" 
-            start={settings.leafColorStart} 
-            end={settings.leafColorEnd} 
-            onStartChange={(c) => updateSettings({ leafColorStart: c })} 
-            onEndChange={(c) => updateSettings({ leafColorEnd: c })} 
+      <ControlGroup title="叶片">
+        <DualColorPicker
+            label="叶片渐变"
+            start={settings.leafColorStart}
+            end={settings.leafColorEnd}
+            onStartChange={(c) => updateSettings({ leafColorStart: c })}
+            onEndChange={(c) => updateSettings({ leafColorEnd: c })}
         />
-        <Slider label="Density" value={settings.leafFrequency} min={0} max={0.3} step={0.01} onChange={(v) => updateSettings({ leafFrequency: v })} />
-        <Slider label="Size" value={settings.leafSize} min={2} max={50} step={1} onChange={(v) => updateSettings({ leafSize: v })} />
+        <Slider label="密度" value={settings.leafFrequency} min={0} max={0.3} step={0.01} onChange={(v) => updateSettings({ leafFrequency: v })} />
+        <Slider label="大小" value={settings.leafSize} min={2} max={50} step={1} onChange={(v) => updateSettings({ leafSize: v })} />
       </ControlGroup>
 
-      <ControlGroup title="Bloom">
-        <DualColorPicker 
-            label="Petal/Fruit Color" 
-            start={settings.flowerColorStart} 
-            end={settings.flowerColorEnd} 
-            onStartChange={(c) => updateSettings({ flowerColorStart: c })} 
-            onEndChange={(c) => updateSettings({ flowerColorEnd: c })} 
+      <ControlGroup title="花朵">
+        <DualColorPicker
+            label="花瓣/果实颜色"
+            start={settings.flowerColorStart}
+            end={settings.flowerColorEnd}
+            onStartChange={(c) => updateSettings({ flowerColorStart: c })}
+            onEndChange={(c) => updateSettings({ flowerColorEnd: c })}
         />
-        <Slider label="Probability" value={settings.flowerProbability} min={0} max={1} step={0.1} onChange={(v) => updateSettings({ flowerProbability: v })} />
-        <Slider label="Size" value={settings.flowerSize} min={5} max={40} step={1} onChange={(v) => updateSettings({ flowerSize: v })} />
-        <Slider label="Count" value={settings.petalCount} min={3} max={16} step={1} onChange={(v) => updateSettings({ petalCount: v })} />
+        <Slider label="概率" value={settings.flowerProbability} min={0} max={1} step={0.1} onChange={(v) => updateSettings({ flowerProbability: v })} />
+        <Slider label="大小" value={settings.flowerSize} min={5} max={40} step={1} onChange={(v) => updateSettings({ flowerSize: v })} />
+        <Slider label="数量" value={settings.petalCount} min={3} max={16} step={1} onChange={(v) => updateSettings({ petalCount: v })} />
       </ControlGroup>
 
       <div className="pt-4 mt-6 border-t border-slate-100">
@@ -132,7 +144,7 @@ const Controls: React.FC<ControlsProps> = ({ settings, updateSettings, applyPres
             onClick={onClear}
             className="w-full bg-rose-50 hover:bg-rose-100 text-rose-500 py-3 rounded-xl text-sm font-medium transition-colors border border-rose-100 shadow-sm"
         >
-            Start New Page
+            清除花园
         </button>
       </div>
     </div>

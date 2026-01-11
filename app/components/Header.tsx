@@ -13,6 +13,7 @@ import {
   BookOutlined,
   UserOutlined,
   LoginOutlined,
+  SunOutlined,
 } from '@ant-design/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { theme } from '@/app/config/theme';
@@ -75,6 +76,7 @@ export default function Header({ isVisible = true, leftContent, embedded = false
       case 'PictureOutlined': return <PictureOutlined />;
       case 'FileTextOutlined': return <FileTextOutlined />;
       case 'BookOutlined': return <BookOutlined />;
+      case 'SunOutlined': return <SunOutlined />;
       default: return null;
     }
   };

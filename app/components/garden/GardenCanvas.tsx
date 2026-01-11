@@ -640,6 +640,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
             }
         }, 300);
     }
+
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -699,6 +700,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
 
       spawnPlant(x, y, undefined, isInside);
   };
+
 
   return (
     <div ref={containerRef} className="absolute inset-0">

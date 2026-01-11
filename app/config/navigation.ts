@@ -49,7 +49,7 @@ export const publicNavigationItems: NavigationItem[] = [
   {
     key: 'garden',
     label: '花园',
-    icon: 'EnvironmentOutlined',
+    icon: 'SunOutlined',
     path: '/garden',
   },
 ];
