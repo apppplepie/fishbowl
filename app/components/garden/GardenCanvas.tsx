@@ -69,6 +69,8 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
 
   // Touch double-tap detection for mobile
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  // Touch gesture detection for mobile scrolling vs dragging
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const hasInitRef = useRef(false);           // 标记画布是否初始化完毕
   const pendingSpawnsRef = useRef<Array<() => void>>([]); // 存放在 init 前的 spawn 操作
@@ -585,6 +587,11 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
+    // Store touch start position for gesture detection
+    if (e.pointerType === 'touch') {
+        touchStartRef.current = { x: clientX, y: clientY, time: Date.now() };
+    }
+
     // Check if we clicked on a bottle plant stem for DRAG
     const clickedPlant = bottlePlantsRef.current.find(p => Math.abs(x - p.currentX) < 40 && y < p.y && y > p.y - 400); // 40px radius, above origin
 
@@ -601,13 +608,13 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     if (e.pointerType === 'touch') {
         const now = Date.now();
         const lastTap = lastTapRef.current;
-        
+
         if (lastTap && (now - lastTap.time < 300)) {
             // Check if taps are close enough (within 50px)
             const dx = x - lastTap.x;
             const dy = y - lastTap.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            
+
             if (dist < 50) {
                 // Double tap detected - spawn plant
                 let isInside = false;
@@ -622,10 +629,10 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
                 return;
             }
         }
-        
+
         // Store this tap for potential double tap
         lastTapRef.current = { time: now, x, y };
-        
+
         // Clear after timeout if no second tap
         setTimeout(() => {
             if (lastTapRef.current && Date.now() - lastTapRef.current.time > 300) {
@@ -710,15 +717,36 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
         />
 
         {/* Layer 3: Interaction Layer (Transparent, Handles Events) */}
-        <div 
-            className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
-            style={{ zIndex: 20 }}
+        <div
+            className="absolute inset-0 w-full h-full cursor-crosshair"
+            style={{ zIndex: 20, touchAction: 'pan-y' }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
             onContextMenu={handleContextMenu}
             onDoubleClick={handleDoubleClick}
+            onTouchMove={(e) => {
+                // Handle touch gesture detection for mobile scrolling vs dragging
+                if (!touchStartRef.current || !dragStateRef.current) return;
+
+                const touch = e.touches[0];
+                if (!touch) return;
+
+                const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+                const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+
+                // If vertical movement is greater than horizontal, allow scrolling
+                if (deltaY > deltaX && deltaY > 10) {
+                    // This is likely a scroll gesture, don't prevent default
+                    return;
+                }
+
+                // If horizontal movement is greater, this is likely a drag
+                if (deltaX > deltaY && deltaX > 10) {
+                    e.preventDefault(); // Prevent scrolling during horizontal drag
+                }
+            }}
         />
     </div>
   );
