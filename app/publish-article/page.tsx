@@ -35,6 +35,7 @@ import { useRouter } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { apiPostJson } from '@/lib/apiClient';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
 
@@ -48,6 +49,7 @@ export default function PublishArticlePage() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
+  const { currentFishbowlTheme } = useAppTheme();
   const { isMobile } = useResponsive();
   // 页面加载时自动读取草稿
   React.useEffect(() => {
@@ -132,7 +134,13 @@ export default function PublishArticlePage() {
     const categoryId = values.category_id || 'cat_uncategorized';
 
     // 计算 order_index：找到当前分类下最大的 order 值 + 1
-    const orderInCategory = await getNextOrderIndex(categoryId);
+    let orderInCategory = 0;
+    try {
+      orderInCategory = await getNextOrderIndex(categoryId);
+    } catch (error) {
+      console.warn('计算排序失败，使用默认顺序:', error);
+      // 继续发布，后端可能会自动处理
+    }
 
     // 计算所有 blocks 中 access_level 的最小值
     const maxAccessLevel = blocks.length > 0
@@ -326,28 +334,17 @@ export default function PublishArticlePage() {
       <Header />
       
       <PageLayout
+        theme={currentFishbowlTheme}
         box1Content={
           <div style={{ padding: '16px 24px' }}>
-            <h2 style={{ 
-              margin: 0, 
-              color: 'white', 
+            <h2 style={{
+              margin: 0,
+              color: 'white',
               fontSize: '20px',
               fontWeight: 600,
             }}>
               ✍️ 创作文章
             </h2>
-            {/* {user && (
-              <div style={{
-                marginTop: '12px',
-                padding: '8px 12px',
-                background: 'rgba(255,255,255,0.2)',
-                borderRadius: '6px',
-                fontSize: '13px',
-                color: 'white',
-              }}>
-                👤 当前用户: {user.username} ({user.role === 'admin' ? '管理员' : user.role === 'moderator' ? '版主' : '普通用户'})
-              </div>
-            )} */}
             {!isLoggedIn && (
               <div style={{
                 marginTop: '12px',
@@ -363,9 +360,7 @@ export default function PublishArticlePage() {
             )}
           </div>
         }
-        box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-        box2BgColor="#f5f5f5"
-        box2Style={{ padding: isMobile ? '12px 8px' : '40px 20px' }}
+        box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
       >
         <div style={{ 
           maxWidth: '1200px', 

@@ -461,7 +461,7 @@ function ArticlesPageContent() {
             )}
           </div>
         }
-        box2Style={{ padding: isMobile ? '16px' : '40px 20px' }}
+        box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
       >
         {/* 瀑布流容器 */}
         <div style={{ 

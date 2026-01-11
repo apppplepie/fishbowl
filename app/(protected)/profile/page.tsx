@@ -4,14 +4,18 @@ import { Typography, Card, Avatar, Descriptions, Button, Spin, message } from 'a
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import Header from '../../components/Header';
 import PageLayout from '@/app/components/PageLayout';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 const { Title } = Typography;
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user: localUser, logout, isLoading } = useAuth();
+  const { currentFishbowlTheme } = useAppTheme();
+  const { isMobile } = useResponsive();
 
   // 不需要再次获取用户信息，useAuth 已经处理了
   // AuthContext 会自动调用 /api/auth/me 并保持状态同步
@@ -59,8 +63,9 @@ export default function ProfilePage() {
       <Header />
       
       <PageLayout
+        theme={currentFishbowlTheme}
         box1Content={
-          <div style={{ 
+          <div style={{
             padding: '16px 24px',
             display: 'flex',
             alignItems: 'center',
@@ -71,9 +76,7 @@ export default function ProfilePage() {
             </Title>
           </div>
         }
-        box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-        box2BgColor="#f5f5f5"
-        box2Style={{ padding: '40px 20px' }}
+        box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
       >
         <div style={{ 
           maxWidth: '1200px', 

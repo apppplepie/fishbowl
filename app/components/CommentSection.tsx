@@ -5,6 +5,7 @@ import { Button, Input, Avatar, message, Space, Tooltip, Modal } from 'antd';
 import { MessageOutlined, UserOutlined, DeleteOutlined, LikeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import { apiPostJson, apiDeleteJson, apiGetJson } from '@/lib/apiClient';
+import { useResponsive } from '@/app/hooks/useResponsive';
 
 const { TextArea } = Input;
 
@@ -31,6 +32,7 @@ interface CommentSectionProps {
 }
 
 export default function CommentSection({ articleId, currentUser, isLoggedIn, onCommentCountChange }: CommentSectionProps) {
+  const { isMobile } = useResponsive();
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -216,6 +218,8 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
         padding: '20px',
         background: '#fafafa',
         borderRadius: '8px',
+        width: '100%',
+        boxSizing: 'border-box',
       }}>
         {/* 回复提示 */}
         {replyingTo && (
@@ -228,15 +232,41 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
             fontSize: '13px',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: 'flex-start',
+            gap: '12px',
           }}>
-            <span>
-              💬 回复 <strong>{replyingTo.username}</strong>: "{replyingTo.content}"
-            </span>
-            <Button 
-              type="text" 
+            <div style={{
+              flex: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                fontSize: '13px',
+                lineHeight: '1.4',
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+              }}>
+                💬 回复 <strong>{replyingTo.username}</strong>: "
+                <span style={{
+                  maxWidth: '100%',
+                  display: 'inline-block',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {replyingTo.content.length > 50
+                    ? `${replyingTo.content.substring(0, 50)}...`
+                    : replyingTo.content
+                  }
+                </span>
+                "
+              </div>
+            </div>
+            <Button
+              type="text"
               size="small"
               onClick={handleCancelReply}
+              style={{ flexShrink: 0 }}
             >
               取消
             </Button>
@@ -264,9 +294,11 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                 maxLength={500}
                 disabled={!isLoggedIn}
                 style={{
+                  width: '100%',
                   fontSize: '14px',
                   resize: 'none',
                   paddingBottom: '30px', // 为底部字数统计留出空间
+                  boxSizing: 'border-box',
                 }}
               />
               {/* 字数统计显示在输入框内部右下角 */}
@@ -293,16 +325,16 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
               <Space>
                 {replyingTo && (
                   <Button onClick={handleCancelReply}>
-                    取消回复
+                    {isMobile ? '取消' : '取消回复'}
                   </Button>
                 )}
-                <Button 
+                <Button
                   type="primary"
                   onClick={handleSubmitComment}
                   loading={isSubmitting}
                   disabled={!isLoggedIn || !commentText.trim()}
                 >
-                  {replyingTo ? '发表回复' : '发表评论'}
+                  {isMobile ? (replyingTo ? '发表' : '发表') : (replyingTo ? '发表回复' : '发表评论')}
                 </Button>
               </Space>
             </div>
@@ -330,6 +362,9 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                 border: '1px solid #e8e8e8',
                 borderRadius: '8px',
                 transition: 'all 0.2s',
+                overflow: 'hidden',
+                width: '100%',
+                boxSizing: 'border-box',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
@@ -348,26 +383,39 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                 />
 
                 {/* 评论内容 */}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: 'hidden'
+                }}>
                   {/* 用户名和时间 */}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     marginBottom: '8px',
+                    gap: '8px',
                   }}>
-                    <div>
-                      <span style={{ 
+                    <div style={{
+                      flex: 1,
+                      minWidth: 0,
+                      overflow: 'hidden',
+                    }}>
+                      <div style={{
                         fontWeight: 600,
                         fontSize: '14px',
                         color: '#333',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
                       }}>
                         {comment.display_name || comment.username}
-                      </span>
-                      <span style={{ 
-                        marginLeft: '12px',
+                      </div>
+                      <span style={{
                         fontSize: '12px',
                         color: '#999',
+                        display: 'block',
+                        marginTop: '2px',
                       }}>
                         {formatTimeToMinute(comment.created_at)}
                       </span>
@@ -375,19 +423,21 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
 
                     {/* 删除按钮（评论作者、管理员或版主可删除） */}
                     {isLoggedIn && (
-                      currentUser?.username === comment.username || 
-                      currentUser?.role === 'admin' || 
+                      currentUser?.username === comment.username ||
+                      currentUser?.role === 'admin' ||
                       currentUser?.role === 'moderator'
                     ) && (
-                      <Tooltip title="删除评论">
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={() => handleDeleteComment(comment.id)}
-                        />
-                      </Tooltip>
+                      <div style={{ flexShrink: 0 }}>
+                        <Tooltip title="删除评论">
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => handleDeleteComment(comment.id)}
+                          />
+                        </Tooltip>
+                      </div>
                     )}
                   </div>
 
@@ -399,6 +449,8 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                     marginBottom: '12px',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                    maxWidth: '100%',
                   }}>
                     {comment.content}
                   </div>

@@ -35,6 +35,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import FloatingActions, { FloatingActionsProps } from '@/app/components/float/PublishFloat';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { apiGetJson, apiPostJson } from '@/lib/apiClient';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
 
@@ -48,6 +49,7 @@ function PublishChapterContent() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
+  const { currentFishbowlTheme } = useAppTheme();
   const searchParams = useSearchParams();
   const { isMobile } = useResponsive();
 
@@ -95,7 +97,12 @@ function PublishChapterContent() {
   // 初始化时获取order_index和分类名称
   useEffect(() => {
     if (categoryFromUrl) {
-      getNextOrderIndex(categoryFromUrl).then(setNextOrderInCategory);
+      getNextOrderIndex(categoryFromUrl)
+        .then(setNextOrderInCategory)
+        .catch(error => {
+          console.warn('获取章节顺序失败，使用默认顺序:', error);
+          setNextOrderInCategory(0); // 继续发布，后端可能会自动处理
+        });
       
       // 获取分类名称
       apiGetJson<{ success: boolean; category?: { name: string } }>(`/api/categories/${categoryFromUrl}`)
@@ -365,6 +372,7 @@ function PublishChapterContent() {
       <Header />
 
       <PageLayout
+        theme={currentFishbowlTheme}
         box1Content={
           <div style={{ padding: '16px 24px' }}>
             <h2 style={{
@@ -375,18 +383,6 @@ function PublishChapterContent() {
             }}>
               📄 发布章节
             </h2>
-            {/* {user && (
-              <div style={{
-                marginTop: '12px',
-                padding: '8px 12px',
-                background: 'rgba(255,255,255,0.2)',
-                borderRadius: '6px',
-                fontSize: '13px',
-                color: 'white',
-              }}>
-                👤 当前用户: {user.username} ({user.role === 'admin' ? '管理员' : user.role === 'moderator' ? '版主' : '普通用户'})
-              </div>
-            )} */}
             {!isLoggedIn && (
               <div style={{
                 marginTop: '12px',
@@ -402,9 +398,7 @@ function PublishChapterContent() {
             )}
           </div>
         }
-        box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-        box2BgColor="#f5f5f5"
-        box2Style={{ padding: isMobile ? '12px 8px' : '40px 20px' }}
+        box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
       >
         <div style={{
           maxWidth: '1200px',
