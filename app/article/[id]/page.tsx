@@ -10,7 +10,8 @@ import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined,
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import ArticleNavigator, { ArticleDrawerButton } from '@/app/components/sidebar/ArticleNavigator';
+import UnifiedNavigator, { UnifiedNavigatorButton } from '@/app/components/sidebar/UnifiedNavigator';
+import { GenericIndexTreeConfig } from '@/app/components/sidebar/GenericTree';
 import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -782,7 +783,18 @@ export default function ArticlePage() {
   return (
     <>
       {/* 统一的文章导航组件（自动适配移动端/桌面端） */}
-      <ArticleNavigator
+      <UnifiedNavigator
+        treeConfig={{
+          apiEndpoint: '/api/categories/tree-with-articles',
+          emptyText: '暂无文章',
+          forceOpenRootKeys: true,
+          categoryNavigationPattern: '/archive?category={categoryId}',
+          articleNavigationPattern: '/article/{articleId}',
+          stylePrefix: 'article-index-sidebar',
+          showArticleCount: true,
+          dataFormat: 'tree-with-articles',
+          defaultOpenMode: 'current-article-path',
+        }}
         currentArticleId={articleId}
         onArticleClick={handleArticleClick}
         visible={drawerVisible}
@@ -794,7 +806,7 @@ export default function ArticlePage() {
       {/* Header 覆盖在PageLayout顶部边框上 */}
       <Header
         leftContent={
-          <ArticleDrawerButton
+          <UnifiedNavigatorButton
             onClick={openCategoryDrawer}
             expanded={sidebarExpanded}
             onToggle={toggleSidebar}

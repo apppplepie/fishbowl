@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
+import { Drawer } from 'antd';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import GenericTreeDrawer from '../sidebar/GenericTreeDrawer';
 import Controls from './Controls';
 import { PlantSettings, PlantType } from '../../types/garden';
 
@@ -39,13 +39,26 @@ export default function GardenSidebar({
   if (isMobile) {
     // 移动端：抽屉
     return (
-      <GenericTreeDrawer
-        open={visible}
+      <Drawer
+        title={null}
+        placement="left"
         onClose={onClose || (() => {})}
+        open={visible}
         size={320}
+        styles={{
+          body: { padding: 0 },
+          header: { display: 'none' },
+        }}
       >
         {controlsContent}
-      </GenericTreeDrawer>
+        
+        {/* 去掉drawer默认间距 */}
+        <style>{`
+          .ant-drawer-body {
+            padding: 0 !important;
+          }
+        `}</style>
+      </Drawer>
     );
   }
 

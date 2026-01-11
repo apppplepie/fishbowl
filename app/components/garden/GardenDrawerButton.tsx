@@ -1,7 +1,8 @@
 'use client';
 
+import { Button } from 'antd';
+import { UnorderedListOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { TreeDrawerButton } from '../sidebar/GenericTreeDrawer';
 
 /**
  * 花园工具按钮组件
@@ -21,13 +22,23 @@ export function GardenDrawerButton({
   
   // 移动端：返回抽屉按钮
   if (isMobile) {
-    return <TreeDrawerButton onClick={onClick || (() => {})} />;
+    return (
+      <Button
+        type="text"
+        icon={<UnorderedListOutlined style={{ fontSize: '20px', color: 'white' }} />}
+        onClick={onClick || (() => {})}
+        style={{ border: 'none' }}
+      />
+    );
   }
   
   // 桌面端：返回展开/收起按钮
   return (
-    <TreeDrawerButton 
-      onClick={onToggle || (() => {})} 
+    <Button
+      type="text"
+      icon={<UnorderedListOutlined style={{ fontSize: '20px', color: 'white' }} />}
+      onClick={onToggle || (() => {})}
+      style={{ border: 'none' }}
     />
   );
 }

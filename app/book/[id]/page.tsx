@@ -9,7 +9,8 @@ import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined,
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '@/app/components/PageLayout';
 import Header from '@/app/components/Header';
-import BookChapterNavigator, { BookChapterDrawerButton } from '@/app/components/sidebar/BookChapterNavigator';
+import UnifiedNavigator, { UnifiedNavigatorButton } from '@/app/components/sidebar/UnifiedNavigator';
+import { GenericIndexTreeConfig } from '@/app/components/sidebar/GenericTree';
 import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -937,9 +938,21 @@ export default function BookPage() {
   return (
     <>
       {/* 统一的章节导航组件（自动适配移动端/桌面端） */}
-      <BookChapterNavigator
+      <UnifiedNavigator
+        treeConfig={{
+          apiEndpoint: '/api/categories/{id}/tree-with-articles',
+          startCategoryId: 'cat_bookcase',
+          emptyText: '暂无内容',
+          forceOpenRootKeys: false,
+          categoryNavigationPattern: '/bookcase?category={categoryId}',
+          articleNavigationPattern: '/book/{articleId}',
+          stylePrefix: 'chapter-index-sidebar',
+          showArticleCount: false,
+          dataFormat: 'flat-tree',
+          findBookRoot: false,
+          defaultOpenMode: 'current-article-path',
+        }}
         currentArticleId={storeCurrentArticleId || articleId}
-        bookCategoryId={bookCategoryId || undefined}
         onArticleClick={handleArticleClick}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
@@ -950,7 +963,7 @@ export default function BookPage() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          <BookChapterDrawerButton 
+          <UnifiedNavigatorButton 
             onClick={openCategoryDrawer} 
             expanded={sidebarExpanded}
             onToggle={toggleSidebar}

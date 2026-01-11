@@ -15,7 +15,8 @@ import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import { apiGet } from '@/lib/apiClient';
-import ArchiveCategoryNavigator, { ArchiveCategoryDrawerButton } from '@/app/components/sidebar/ArchiveCategoryNavigator';
+import UnifiedNavigator, { UnifiedNavigatorButton } from '@/app/components/sidebar/UnifiedNavigator';
+import { GenericIndexTreeConfig } from '@/app/components/sidebar/GenericTree';
 import { mockCards } from '@/app/data/mockCards';
 import GalleryPage from '@/app/gallery/page';
 import type { Card } from '@/app/types/card';
@@ -369,7 +370,7 @@ function ArticlesPageContent() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          <ArchiveCategoryDrawerButton 
+          <UnifiedNavigatorButton 
             onClick={openCategoryDrawer} 
             expanded={sidebarExpanded}
             onToggle={toggleSidebar}
@@ -535,7 +536,18 @@ function ArticlesPageContent() {
       </div>
 
       {/* 统一的归档分类导航组件（自动适配移动端/桌面端） */}
-      <ArchiveCategoryNavigator
+      <UnifiedNavigator
+        treeConfig={{
+          apiEndpoint: '/api/categories/tree-with-articles',
+          emptyText: '暂无目录',
+          forceOpenRootKeys: true,
+          categoryNavigationPattern: '/archive?category={categoryId}',
+          articleNavigationPattern: '/article/{articleId}',
+          stylePrefix: 'archive-category',
+          showArticleCount: true,
+          dataFormat: 'tree-with-articles',
+          defaultOpenMode: 'all',
+        }}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         onCategorySelect={handleCategorySelect}

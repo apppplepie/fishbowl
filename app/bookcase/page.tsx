@@ -14,7 +14,8 @@ import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
 import BookCard from '@/app/components/cards/BookCard';
-import BookCategoryNavigator, { BookCategoryDrawerButton } from '@/app/components/sidebar/BookCategoryNavigator';
+import UnifiedNavigator, { UnifiedNavigatorButton } from '@/app/components/sidebar/UnifiedNavigator';
+import { GenericIndexTreeConfig } from '@/app/components/sidebar/GenericTree';
 import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
@@ -504,7 +505,7 @@ function BookcasePageContent() {
       {/* Header 独立在最顶部，覆盖在边框上 */}
       <Header
         leftContent={
-          <BookCategoryDrawerButton 
+          <UnifiedNavigatorButton 
             onClick={openCategoryDrawer} 
             expanded={sidebarExpanded}
             onToggle={toggleSidebar}
@@ -636,7 +637,20 @@ function BookcasePageContent() {
       </div>
 
       {/* 统一的书籍分类导航组件（自动适配移动端/桌面端） */}
-      <BookCategoryNavigator
+      <UnifiedNavigator
+        treeConfig={{
+          apiEndpoint: '/api/categories/{id}/tree-with-articles',
+          startCategoryId: 'cat_bookcase',
+          emptyText: '暂无书籍',
+          forceOpenRootKeys: true,
+          categoryNavigationPattern: '/bookcase?category={categoryId}',
+          articleNavigationPattern: '/book/{articleId}',
+          stylePrefix: 'book-category',
+          showArticleCount: false,
+          dataFormat: 'flat-tree',
+          findBookRoot: false,
+          defaultOpenMode: 'all',
+        }}
         refreshKey={sidebarKey}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
@@ -651,6 +665,7 @@ function BookcasePageContent() {
             router.push('/bookcase');
           }
         }}
+        drawerPaddingTop={true}
       />
 
       {/* 书架页面操作悬浮按钮组 */}
