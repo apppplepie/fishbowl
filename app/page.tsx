@@ -277,7 +277,7 @@ export default function Home() {
         el = el.offsetParent as HTMLElement;
       }
 
-      ctx.strokeStyle = 'red';
+      ctx.strokeStyle = 'transparent';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -477,6 +477,7 @@ export default function Home() {
           height: '100vh',
           overflowY: 'scroll',
           position: 'relative',
+          background: getSkyGradient(),
         }}
       >
         {/* 根系层 - 在基线下方生长，叠在 box2 背景上 */}
@@ -541,7 +542,7 @@ export default function Home() {
             background: 'transparent',
           }}
         >
-          <div className="text-center text-white px-8">
+          <div className="text-center text-white px-8" style={{ position: 'relative', zIndex: 5 }}>
             <Title level={1} className="!text-white mb-6" style={{ fontSize: '3.5rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
               Fishbowl
             </Title>
@@ -562,10 +563,11 @@ export default function Home() {
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 color: 'white',
+                marginTop: '40px',
               }}
               onClick={() => scrollToPosition(window.innerHeight * 0.8)}
             >
-              探索更多
+              下拉
             </Button>
           </div>
         </div>
@@ -650,7 +652,7 @@ export default function Home() {
             </div>
 
             {/* 内容区 */}
-            <div className="text-center text-white" style={{ padding: '0 24px 40px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+            <div className="text-center text-white" style={{ padding: '0 24px 40px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 5 }}>
               <Title level={2} className="!text-white mb-6" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                 权限系统
               </Title>

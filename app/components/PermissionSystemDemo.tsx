@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Typography, Modal, message, Segmented, Card, Row, Col, Tag, Alert, Space, Divider } from 'antd';
+import { Button, Modal, message, Segmented, Card, Row, Col, Tag, Alert, Space, Divider } from 'antd';
 import { LockOutlined, EyeOutlined, UserOutlined, CrownOutlined, MailOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { ACCESS_LEVELS } from '../types/block';
@@ -8,7 +8,6 @@ import { theme } from '../config/theme';
 import PlaceholderDisplay from './blocks/PlaceholderDisplay';
 import { useAuth } from '../hooks/useAuth';
 
-const { Title, Paragraph } = Typography;
 
 /**
  * 权限系统演示组件
@@ -65,11 +64,27 @@ export default function PermissionSystemDemo() {
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 space-y-8 text-left">
+    <div 
+      className="rounded-xl p-8 space-y-8 text-left border border-white/20 shadow-2xl"
+      style={{
+        background: 'rgba(255, 255, 255, 0.15)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.1)',
+      }}
+    >
       {/* 当前用户等级指示器 */}
       <div className="text-center space-y-4">
         {/* 模拟权限选择器 */}
-        <div className="inline-flex items-center gap-3 bg-white/20 rounded-full px-6 py-3">
+        <div 
+          className="inline-flex items-center gap-3 rounded-full px-6 py-3 border border-white/30"
+          style={{
+            background: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(15px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(15px) saturate(180%)',
+            boxShadow: '0 4px 16px 0 rgba(0, 0, 0, 0.1)',
+          }}
+        >
           <UserOutlined className="text-white text-xl" />
           <span className="text-white font-medium">模拟权限等级</span>
           <div className="flex items-center gap-2">
@@ -84,7 +99,15 @@ export default function PermissionSystemDemo() {
         </div>
 
         {/* 实际用户权限检测 */}
-        <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg p-4 border border-white/20">
+        <div 
+          className="rounded-lg p-4 border border-white/30"
+          style={{
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(168, 85, 247, 0.25))',
+            backdropFilter: 'blur(15px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(15px) saturate(180%)',
+            boxShadow: '0 4px 16px 0 rgba(0, 0, 0, 0.1)',
+          }}
+        >
           <div className="flex items-center justify-center gap-4 mb-3">
             <CrownOutlined className="text-white text-2xl" />
             <span className="text-white font-semibold text-lg">您的实际权限</span>
@@ -107,7 +130,15 @@ export default function PermissionSystemDemo() {
       {/* 权限等级选择器 */}
       <div className="text-center space-y-4">
         <h3 className="text-white font-medium text-lg">你可以在此页面体验各种权限</h3>
-        <div className="bg-white/20 rounded-lg p-4 md:p-6 max-w-sm md:max-w-md mx-auto">
+        <div 
+          className="rounded-lg p-4 md:p-6 max-w-sm md:max-w-md mx-auto border border-white/30"
+          style={{
+            background: 'rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(15px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(15px) saturate(180%)',
+            boxShadow: '0 4px 16px 0 rgba(0, 0, 0, 0.1)',
+          }}
+        >
           <Segmented<string>
             size="large"
             options={ACCESS_LEVELS.map(level => ({
@@ -156,13 +187,35 @@ export default function PermissionSystemDemo() {
                 <Card
                   className={`h-full transition-all duration-300 ${
                     canAccess
-                      ? 'bg-white/20 hover:bg-white/30 cursor-pointer border-white/30'
-                      : 'bg-gray-100 hover:bg-gray-200 cursor-pointer border-gray-300'
+                      ? 'cursor-pointer border-white/30'
+                      : 'cursor-pointer border-gray-300'
                   }`}
                   onClick={() => handleLevelClick(level.value, level.label)}
                   style={{
                     borderRadius: '12px',
-                    backdropFilter: 'blur(10px)',
+                    background: canAccess 
+                      ? 'rgba(255, 255, 255, 0.25)' 
+                      : 'rgba(243, 244, 246, 0.9)',
+                    backdropFilter: 'blur(15px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(15px) saturate(180%)',
+                    border: canAccess 
+                      ? '1px solid rgba(255, 255, 255, 0.3)' 
+                      : '1px solid rgba(209, 213, 219, 0.8)',
+                    boxShadow: '0 4px 16px 0 rgba(0, 0, 0, 0.1)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (canAccess) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.35)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px 0 rgba(0, 0, 0, 0.15)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (canAccess) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 16px 0 rgba(0, 0, 0, 0.1)';
+                    }
                   }}
                 >
                   <div className="space-y-3">
