@@ -2,7 +2,7 @@
 
 import { Button, Typography } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppTheme } from './contexts/AppThemeContext';
 import Header from './components/Header';
@@ -13,6 +13,7 @@ import { theme } from './config/theme';
 import { BaselinePlant } from './types/garden';
 import { convertGradient } from './utils/colorConverter';
 import { PRESET_VINE } from './config/plantPresets';
+import { PlantGrowthEngine } from './engine/PlantGrowthEngine';
 
 const { Title, Paragraph } = Typography;
 
@@ -21,14 +22,23 @@ export default function Home() {
   const [showNavBar, setShowNavBar] = useState(false);
   const [baselineY, setBaselineY] = useState<number | null>(null);
   const [baselinePlants, setBaselinePlants] = useState<BaselinePlant[]>([]);
+  const [canvasHeight, setCanvasHeight] = useState(0);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const baselineCanvasRef = useRef<HTMLCanvasElement>(null);
+  const plantCanvasRef = useRef<HTMLCanvasElement>(null); // 植物画布层
   const box2Ref = useRef<HTMLDivElement | null>(null);
   const isAutoScrolling = useRef(false);
   const hideNavBarTimerRef = useRef<NodeJS.Timeout | null>(null);
   const rafIdRef = useRef<number | null>(null);
   const router = useRouter();
+
+  // 植物系统引用
+  const engineRef = useRef<PlantGrowthEngine>(new PlantGrowthEngine());
+  const growthAnimationRef = useRef<number | null>(null); // 生长动画帧 ID
+  const baselinePlantsDataRef = useRef<BaselinePlant[]>([]); // 基线植物数据
+  const hasInitializedPlantsRef = useRef(false); // 防止重复初始化
+  const MAX_BASELINE_PLANTS = 5; // 最大植物数量
 
   // 统一的导航栏更新函数：立即显示 + 防抖隐藏
   const updateNavBar = (scrollTop: number, threshold: number) => {
@@ -227,56 +237,6 @@ export default function Home() {
     return convertGradient(currentFishbowlTheme.waterGradient);
   };
 
-  // 创建示例基线植物
-  const createSampleBaselinePlant = (x: number, y: number, canvasWidth: number, canvasHeight: number): BaselinePlant => {
-    // 创建一个小的canvas，只包含植物区域（从基线向上80px）
-    const plantWidth = 60; // 植物宽度
-    const plantHeight = 100; // 植物高度（从基线向上）
-    const canvas = document.createElement('canvas');
-    canvas.width = plantWidth;
-    canvas.height = plantHeight;
-    const ctx = canvas.getContext('2d')!;
-
-    // 在局部canvas上绘制植物（相对于canvas左上角）
-    const localX = plantWidth / 2; // 植物在canvas中央
-    const localY = plantHeight; // 植物底部对齐canvas底部
-
-    // 绘制茎（从底部向上）
-    ctx.strokeStyle = '#4a5568';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(localX, localY);
-    ctx.lineTo(localX, localY - 80);
-    ctx.stroke();
-
-    // 叶子
-    ctx.fillStyle = '#48bb78';
-    ctx.beginPath();
-    ctx.ellipse(localX - 15, localY - 20, 12, 6, -Math.PI / 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.ellipse(localX + 15, localY - 40, 12, 6, Math.PI / 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 花朵
-    ctx.fillStyle = '#ed64a6';
-    ctx.beginPath();
-    ctx.arc(localX, localY - 80, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    return {
-      id: Math.random().toString(36).substr(2, 9),
-      originX: x,
-      currentX: x,
-      y: y,
-      canvas: canvas,
-      ctx: ctx,
-      settings: PRESET_VINE, // 使用默认藤蔓预设
-      height: 0 // 初始高度为0
-    };
-  };
-
   // 固定基线位置在 box2 顶部（使用世界坐标）
   useEffect(() => {
     const canvas = baselineCanvasRef.current;
@@ -315,25 +275,137 @@ export default function Home() {
       ctx.stroke();
 
       setBaselineY(y);
-
-      // 创建示例基线植物
-      const samplePlants: BaselinePlant[] = [];
-      const plantCount = 4; // 创建4个示例植物
-      const spacing = width / (plantCount + 1);
-
-      for (let i = 0; i < plantCount; i++) {
-        const x = spacing * (i + 1);
-        const plant = createSampleBaselinePlant(x, y, width, height);
-        samplePlants.push(plant);
-      }
-
-      setBaselinePlants(samplePlants);
+      setCanvasHeight(height); // 同时更新画布高度
     };
 
     draw();
     window.addEventListener('resize', draw);
     return () => window.removeEventListener('resize', draw);
   }, []);
+
+  // 生成单株植物
+  const spawnPlant = useCallback((x: number, y: number) => {
+    if (!plantCanvasRef.current) return;
+
+    const width = plantCanvasRef.current.width;
+    const height = canvasHeight;
+
+    // 创建离屏 canvas（不考虑 DPR，节省内存）
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = width;
+    offCanvas.height = height;
+
+    const offCtx = offCanvas.getContext('2d');
+    if (!offCtx) return;
+
+    const plant: BaselinePlant = {
+      id: Math.random().toString(36).substr(2, 9),
+      originX: x,
+      currentX: x,
+      y: y,
+      canvas: offCanvas,
+      ctx: offCtx,
+      settings: PRESET_VINE,
+    };
+
+    baselinePlantsDataRef.current.push(plant);
+    engineRef.current.spawnGrower(x, y, PRESET_VINE, offCtx);
+  }, [canvasHeight]);
+
+  // 合成所有植物到主画布
+  const compositeAllPlants = useCallback(() => {
+    const canvas = plantCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // 清空画布
+    ctx.clearRect(0, 0, width, height);
+
+    // 绘制每株植物
+    baselinePlantsDataRef.current.forEach((plant) => {
+      const dx = plant.currentX - plant.originX;
+      ctx.drawImage(plant.canvas, dx, 0);
+    });
+  }, []);
+
+  // 主更新循环
+  const updatePlantGrowth = useCallback(() => {
+    // 更新生长引擎
+    engineRef.current.update();
+
+    // 合成到主画布
+    compositeAllPlants();
+
+    // 检查是否所有植物都生长完成
+    if (engineRef.current.areAllPlantsFinished()) {
+      // 停止动画循环
+      if (growthAnimationRef.current) {
+        cancelAnimationFrame(growthAnimationRef.current);
+        growthAnimationRef.current = null;
+      }
+      console.log('🌱 所有植物生长完成，动画已停止');
+      return;
+    }
+
+    // 继续下一帧
+    growthAnimationRef.current = requestAnimationFrame(updatePlantGrowth);
+  }, [compositeAllPlants]);
+
+  // 初始化植物系统（仅首次加载）
+  useEffect(() => {
+    // 等待基线和画布高度就绪
+    if (!baselineY || !canvasHeight) return;
+    if (hasInitializedPlantsRef.current) return; // 防止重复初始化
+
+    const canvas = plantCanvasRef.current;
+    const container = scrollContainerRef.current;
+    if (!canvas || !container) return;
+
+    // 设置植物画布尺寸（与基线画布一致）
+    const width = container.clientWidth;
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = width * dpr;
+    canvas.height = canvasHeight * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${canvasHeight}px`;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 缩放上下文以适配 DPR
+    ctx.scale(dpr, dpr);
+
+    // 生成初始植物（沿基线随机分布）
+    const plantCount = Math.min(MAX_BASELINE_PLANTS, 4); // 默认生成 4 株
+    const positions = [0.15, 0.35, 0.65, 0.85]; // X 位置比例
+
+    positions.slice(0, plantCount).forEach((ratio) => {
+      const x = width * ratio;
+      spawnPlant(x, baselineY);
+    });
+
+    console.log(`🌱 已生成 ${plantCount} 株植物，开始生长动画`);
+
+    // 标记已初始化
+    hasInitializedPlantsRef.current = true;
+
+    // 启动生长动画循环
+    growthAnimationRef.current = requestAnimationFrame(updatePlantGrowth);
+
+    // 清理函数
+    return () => {
+      if (growthAnimationRef.current) {
+        cancelAnimationFrame(growthAnimationRef.current);
+        growthAnimationRef.current = null;
+      }
+    };
+  }, [baselineY, canvasHeight, spawnPlant, updatePlantGrowth]);
 
   return (
     <>
@@ -384,7 +456,7 @@ export default function Home() {
           position: 'relative',
         }}
       >
-        {/* 基线画布 - 使用世界坐标，跟随滚动内容 */}
+        {/* 基线画布 - 使用世界坐标，跟随滚动内容（红线层）*/}
         <canvas
           ref={baselineCanvasRef}
           style={{
@@ -395,6 +467,20 @@ export default function Home() {
             height: '100%',
             pointerEvents: 'none',
             zIndex: 1,
+          }}
+        />
+
+        {/* 植物画布 - 基线植物生长层 */}
+        <canvas
+          ref={plantCanvasRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 2,
           }}
         />
 
