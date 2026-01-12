@@ -93,8 +93,9 @@ export class CanvasLayerManager {
   /**
    * 合成基线植物到基线层
    * @param plants 基线植物数组
+   * @param baselineY 基线Y坐标（可选，如果提供则用于对齐）
    */
-  compositeBaselinePlants(plants: BaselinePlant[]): void {
+  compositeBaselinePlants(plants: BaselinePlant[], baselineY?: number): void {
     const canvas = this.layers.baseline;
     if (!canvas) return;
 

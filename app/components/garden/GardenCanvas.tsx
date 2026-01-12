@@ -216,9 +216,9 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
       // 更新生长引擎
       engineRef.current.update();
 
-      // 合成基线植物
+      // 合成基线植物（传递基线位置用于对齐）
       if (layerManagerRef.current) {
-        layerManagerRef.current.compositeBaselinePlants(baselinePlantsRef.current);
+        layerManagerRef.current.compositeBaselinePlants(baselinePlantsRef.current, baselineYRef.current);
       }
 
       requestRef.current = requestAnimationFrame(update);
@@ -326,7 +326,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
       onDragUpdate: () => {
         // 触发重绘
         if (layerManagerRef.current) {
-          layerManagerRef.current.compositeBaselinePlants(baselinePlantsRef.current);
+          layerManagerRef.current.compositeBaselinePlants(baselinePlantsRef.current, baselineYRef.current);
         }
       },
     });
