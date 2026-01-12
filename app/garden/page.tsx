@@ -7,146 +7,9 @@ import PageLayout from '../components/PageLayout';
 import GardenCanvas from '../components/garden/GardenCanvas';
 import GardenSidebar from '../components/garden/GardenSidebar';
 import { GardenDrawerButton } from '../components/garden/GardenDrawerButton';
-import { PlantSettings, PlantType, GardenCanvasRef } from '../types/garden';
-
-// Vine: More harmonious natural greens
-const PRESET_VINE: PlantSettings = {
-    type: PlantType.VINE,
-    stemColorStart: '#a3e635', // Lime 400
-    stemColorEnd: '#15803d',   // Green 700
-    baseWidth: 6,
-    growthSpeed: 3,
-    maxLife: 140,
-    curlFactor: 0.08,
-    straightness: 0.4, 
-    
-    leafColorStart: '#d9f99d', // Lime 200
-    leafColorEnd: '#166534',   // Green 800
-    leafFrequency: 0.1,
-    leafSize: 12,
-  
-    flowerColorStart: '#fca5a5', 
-    flowerColorEnd: '#c4b5fd',   
-    flowerProbability: 0.7,
-    flowerSize: 20,
-    petalCount: 7,
-  };
-  
-
-// Palm: Big leaves, Thick stem, Earthy Greens
-const PRESET_PALM: PlantSettings = {
-  type: PlantType.PALM,
-  stemColorStart: '#78716c', // Stone grey/brown
-  stemColorEnd: '#65a30d',   // Olive
-  baseWidth: 10,
-  growthSpeed: 2.5,
-  maxLife: 175,
-  curlFactor: 0.05,
-  straightness: 0.7, 
-  
-  leafColorStart: '#d9f99d', // Light moss
-  leafColorEnd: '#14532d',   // Dark green
-  leafFrequency: 0.05, // Rarer
-  leafSize: 35, // Huge
-
-  flowerColorStart: '#fdba74', // Orange
-  flowerColorEnd: '#fcd34d',   // Yellow
-  flowerProbability: 0.4,
-  flowerSize: 25,
-  petalCount: 5,
-};
-
-// Geometric: Sharp, Linear, Cool Blues/Greys
-const PRESET_GEOMETRIC: PlantSettings = {
-  type: PlantType.GEOMETRIC,
-  stemColorStart: '#475569', // Slate
-  stemColorEnd: '#94a3b8',   // Light slate
-  baseWidth: 4,
-  growthSpeed: 4,
-  maxLife: 150,
-  curlFactor: 0, // Unused in geometric
-  straightness: 0.9, 
-  
-  leafColorStart: '#e2e8f0', 
-  leafColorEnd: '#64748b',   
-  leafFrequency: 0.15,
-  leafSize: 10,
-
-  flowerColorStart: '#e0f2fe', 
-  flowerColorEnd: '#0ea5e9',   
-  flowerProbability: 0.6,
-  flowerSize: 15,
-  petalCount: 9,
-};
-
-// Umbrella: Tall, Solitary, Huge top leaf/bloom
-const PRESET_UMBRELLA: PlantSettings = {
-  type: PlantType.UMBRELLA,
-  stemColorStart: '#064e3b', // Dark Emerald
-  stemColorEnd: '#34d399',   // Light Green
-  baseWidth: 8,
-  growthSpeed: 3,
-  maxLife: 200,
-  curlFactor: 0.03, // Very straight
-  straightness: 0.8, 
-  
-  leafColorStart: '#047857', 
-  leafColorEnd: '#6ee7b7',   
-  leafFrequency: 0.01, // Very Rare side leaves
-  leafSize: 45, // Massive
-
-  flowerColorStart: '#fef3c7', // Cream
-  flowerColorEnd: '#fffbeb',   // White
-  flowerProbability: 0.9, // Almost always blooms at top
-  flowerSize: 40,
-  petalCount: 1, // Special rendering for 1 petal (spathe)
-};
-
-// Berry: Twiggy, Woody, Red Fruits
-const PRESET_BERRY: PlantSettings = {
-  type: PlantType.BERRY,
-  stemColorStart: '#422006', // Dark wood
-  stemColorEnd: '#a8a29e',   // Grey wood
-  baseWidth: 3,
-  growthSpeed: 3.5,
-  maxLife: 125,
-  curlFactor: 0.15, // Erratic
-  straightness: 0.3, 
-  
-  leafColorStart: '#3f6212', // Olive
-  leafColorEnd: '#166534',   // Green
-  leafFrequency: 0.05, // Sparse leaves
-  leafSize: 8, // Small
-
-  flowerColorStart: '#dc2626', // Red
-  flowerColorEnd: '#f97316',   // Orange
-  flowerProbability: 0.8,
-  flowerSize: 12,
-  petalCount: 5, // Used as berry count
-};
-
-// Cluster: Bushy, Cool Tones, Blue Flower Clusters
-const PRESET_CLUSTER: PlantSettings = {
-  type: PlantType.CLUSTER,
-  stemColorStart: '#334155', // Slate 700
-  stemColorEnd: '#94a3b8',   // Slate 400
-  baseWidth: 5,
-  growthSpeed: 3,
-  maxLife: 130,
-  curlFactor: 0.1, // Wavy
-  straightness: 0.5, 
-  
-  leafColorStart: '#0f766e', // Teal 700
-  leafColorEnd: '#5eead4',   // Teal 300
-  leafFrequency: 0.08, 
-  leafSize: 10,
-
-  flowerColorStart: '#93c5fd', // Blue 300
-  flowerColorEnd: '#1e3a8a',   // Blue 900
-  flowerProbability: 0.85,
-  flowerSize: 24, // Size of the whole cluster
-  petalCount: 12, // Number of florets in cluster
-};
+import RootSystem from '../components/garden/RootSystem';
+import { PlantSettings, PlantType, GardenCanvasRef, PlantRenderData } from '../types/garden';
+import { PRESET_VINE, getPlantPreset } from '../config/plantPresets';
 
 export default function GardenPage() {
   const { isMobile } = useResponsive();
@@ -156,8 +19,12 @@ export default function GardenPage() {
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [importString, setImportString] = useState('');
+  const [baselinePlants, setBaselinePlants] = useState<PlantRenderData[]>([]);
+  const [baselineY, setBaselineY] = useState<number>(600); // 默认基线位置
+  const [containerWidth, setContainerWidth] = useState<number>(1000);
   
   const canvasRef = useRef<GardenCanvasRef>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
       if (toastMessage) {
@@ -165,6 +32,48 @@ export default function GardenPage() {
           return () => clearTimeout(timer);
       }
   }, [toastMessage]);
+
+  // 更新植物列表和基线位置
+  useEffect(() => {
+    const updatePlants = () => {
+      if (!canvasRef.current) return;
+      
+      const plants = canvasRef.current.getAllBaselinePlants();
+      const baseline = canvasRef.current.getBaselineY();
+      setBaselinePlants(plants);
+      setBaselineY(baseline);
+      
+      // 更新容器宽度
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    // 初始更新
+    const timer = setTimeout(updatePlants, 600);
+    
+    // 定期更新（当植物变化时）
+    const interval = setInterval(updatePlants, 500);
+    
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize(); // 初始调用
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load saved config on mount
   useEffect(() => {
@@ -203,27 +112,7 @@ export default function GardenPage() {
   };
 
   const applyPreset = (type: PlantType) => {
-      switch (type) {
-          case PlantType.PALM:
-              setSettings(PRESET_PALM);
-              break;
-          case PlantType.GEOMETRIC:
-              setSettings(PRESET_GEOMETRIC);
-              break;
-          case PlantType.UMBRELLA:
-              setSettings(PRESET_UMBRELLA);
-              break;
-          case PlantType.BERRY:
-              setSettings(PRESET_BERRY);
-              break;
-          case PlantType.CLUSTER:
-              setSettings(PRESET_CLUSTER);
-              break;
-          case PlantType.VINE:
-          default:
-              setSettings(PRESET_VINE);
-              break;
-      }
+      setSettings(getPlantPreset(type));
   };
 
   const handleClear = () => {
@@ -401,7 +290,7 @@ export default function GardenPage() {
           }}
         >
           {/* 画布区域 */}
-          <div style={{ flex: 1, position: 'relative', minHeight: '140vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div ref={containerRef} style={{ flex: 1, position: 'relative', minHeight: '140vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {/* Paper Grain Texture (Subtle) */}
             <div 
               className="absolute inset-0 opacity-[0.4] pointer-events-none z-10 mix-blend-multiply" 
@@ -416,6 +305,26 @@ export default function GardenPage() {
               clearTrigger={clearTrigger}
               onSettingsCopied={handleSettingsCopied}
             />
+
+            {/* 根系系统 - 为每个基线植物渲染根系 */}
+            <div 
+              className="absolute top-0 left-0 right-0 w-full"
+              style={{ height: '1000px', zIndex: 2, pointerEvents: 'none' }}
+            >
+              {baselinePlants.map((plant, index) => {
+                const plantX = containerWidth * plant.position_x_ratio;
+                return (
+                  <RootSystem
+                    key={`root-${index}-${plant.position_x_ratio}`}
+                    x={plantX}
+                    baselineY={baselineY}
+                    dna={plant.dna}
+                    containerHeight={1000}
+                    animationProgress={1}
+                  />
+                );
+              })}
+            </div>
 
             {/* UI Overlay: Title */}
             <div className="absolute top-8 w-full text-center pointer-events-none z-30">

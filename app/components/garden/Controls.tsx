@@ -1,5 +1,6 @@
 import React from 'react';
 import { PlantSettings, PlantType } from '../../types/garden';
+import { translatePlantType, getAllPlantTypes } from '../../config/plantPresets';
 
 interface ControlsProps {
   settings: PlantSettings;
@@ -69,18 +70,7 @@ const DualColorPicker: React.FC<{ label: string; start: string; end: string; onS
 );
 
 const Controls: React.FC<ControlsProps> = ({ settings, updateSettings, applyPreset, onClear }) => {
-  // 翻译函数
-  const translatePlantType = (type: PlantType): string => {
-    switch (type) {
-      case PlantType.VINE: return '藤蔓';
-      case PlantType.PALM: return '棕榈';
-      case PlantType.GEOMETRIC: return '几何';
-      case PlantType.UMBRELLA: return '伞形';
-      case PlantType.BERRY: return '浆果';
-      case PlantType.CLUSTER: return '簇生';
-      default: return type;
-    }
-  };
+  const plantTypes = getAllPlantTypes();
   return (
     <div className="w-80 h-full bg-white/90 border-r border-slate-200 p-6 overflow-y-auto scrollbar-hide shadow-lg flex flex-col z-20">
       <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
@@ -88,7 +78,7 @@ const Controls: React.FC<ControlsProps> = ({ settings, updateSettings, applyPres
       </div>
 
       <div className="mb-6 bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1">
-        {[PlantType.VINE, PlantType.PALM, PlantType.GEOMETRIC, PlantType.UMBRELLA, PlantType.BERRY, PlantType.CLUSTER].map((t) => (
+        {plantTypes.map((t) => (
             <button
                 key={t}
                 onClick={() => applyPreset(t)}

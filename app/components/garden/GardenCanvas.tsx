@@ -1,6 +1,19 @@
 import React, { useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
-import { noiseGenerator } from '../../utils/noise';
-import { Grower, PlantSettings, PlantType, GardenCanvasRef } from '../../types/garden';
+import { 
+  GardenCanvasRef, 
+  PlantSettings, 
+  BaselinePlant, 
+  PlantHistoryItem,
+  PlantRenderData 
+} from '../../types/garden';
+import { PlantGrowthEngine } from '../../engine/PlantGrowthEngine';
+import { CanvasLayerManager, createOffscreenCanvas } from '../../utils/canvasLayerManager';
+import { useGardenInteraction } from '../../hooks/useGardenInteraction';
+
+// ============================================================================
+// GardenCanvas - 重构版本
+// 使用新的 Engine、Utils 和 Hooks，大幅简化代码
+// ============================================================================
 
 interface GardenCanvasProps {
   settings: PlantSettings;
@@ -8,867 +21,358 @@ interface GardenCanvasProps {
   onSettingsCopied: (settings: PlantSettings) => void;
 }
 
-interface BaselinePlant {
-  id: string;
-  originX: number; // Where it was spawned (used for growing logic)
-  currentX: number; // Where it is currently displayed (dragged)
-  y: number; // Baseline Y position
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-  settings: PlantSettings; // Keep settings for reference
-}
+const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
+  ({ settings, clearTrigger, onSettingsCopied }, ref) => {
+    const containerRef = useRef<HTMLDivElement>(null);
 
-interface DragState {
-  plantId: string;
-  startX: number;
-  plantStartX: number;
-}
+    // Canvas 层引用
+    const canvasOutsideRef = useRef<HTMLCanvasElement>(null);
+    const canvasBaselineRef = useRef<HTMLCanvasElement>(null);
 
-// Helper to interpolate between two hex colors
-const lerpColor = (start: string, end: string, t: number) => {
-    t = Math.max(0, Math.min(1, t));
-    const parse = (c: string) => {
-        const hex = c.replace('#', '');
-        return {
-            r: parseInt(hex.substring(0, 2), 16),
-            g: parseInt(hex.substring(2, 4), 16),
-            b: parseInt(hex.substring(4, 6), 16)
-        };
-    };
-    const s = parse(start);
-    const e = parse(end);
-    const r = Math.round(s.r + (e.r - s.r) * t);
-    const g = Math.round(s.g + (e.g - s.g) * t);
-    const b = Math.round(s.b + (e.b - s.b) * t);
-    return `rgb(${r}, ${g}, ${b})`;
-};
+    // 状态管理
+    const [dimensions, setDimensions] = useState({ width: 0, height: 1000 }); // 固定高度 1000px
 
-// Track previously spawned plants for "Right Click to Copy"
-interface PlantHistoryItem {
-    x: number;
-    y: number;
-    settings: PlantSettings;
-    timestamp: number;
-}
+    // 核心引擎和管理器
+    const engineRef = useRef<PlantGrowthEngine>(new PlantGrowthEngine());
+    const layerManagerRef = useRef<CanvasLayerManager | null>(null);
 
-const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings, clearTrigger, onSettingsCopied }, ref) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Layer 1: The world outside
-  const canvasOutsideRef = useRef<HTMLCanvasElement>(null);
-  // Layer 2: The composite view of the baseline plants
-  const canvasBaselineRef = useRef<HTMLCanvasElement>(null);
+    // 数据引用
+    const baselinePlantsRef = useRef<BaselinePlant[]>([]);
+    const plantHistoryRef = useRef<PlantHistoryItem[]>([]);
 
-  const growersRef = useRef<Grower[]>([]);
-  const baselinePlantsRef = useRef<BaselinePlant[]>([]);
-  const requestRef = useRef<number | null>(null);
-  const plantHistoryRef = useRef<PlantHistoryItem[]>([]);
-  
-  // Baseline configuration
-  const baselineYRef = useRef<number>(600); // Default: 60% of 1000px
-  const baselineColorRef = useRef<string>('rgba(0, 0, 0, 0.1)'); // Default baseline color
-  const BASELINE_TOLERANCE = 20; // Pixels tolerance for detecting if on baseline
-  
-  const dragStateRef = useRef<DragState | null>(null);
+    // 配置
+    const baselineYRef = useRef<number>(600); // 默认基线位置
+    const baselineColorRef = useRef<string>('rgba(0, 0, 0, 0.1)');
+    const BASELINE_TOLERANCE = 20;
+    const FIXED_HEIGHT = 1000;
 
-  // Touch double-tap detection for mobile
-  const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
-  // Touch gesture detection for mobile scrolling vs dragging
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  // Cooldown mechanism to prevent rapid spawning
-  const lastSpawnTimeRef = useRef<number>(0);
-  const SPAWN_COOLDOWN = 500; // 0.5 seconds in milliseconds
+    // 初始化标记
+    const hasInitRef = useRef(false);
+    const pendingSpawnsRef = useRef<Array<() => void>>([]);
+    const requestRef = useRef<number | null>(null);
+    const lastSpawnTimeRef = useRef<number>(0);
+    const SPAWN_COOLDOWN = 500;
 
-  const hasInitRef = useRef(false);           // 标记画布是否初始化完毕
-  const pendingSpawnsRef = useRef<Array<() => void>>([]); // 存放在 init 前的 spawn 操作
+    /**
+     * 生成植物
+     */
+    const spawnPlant = useCallback(
+      (x: number, y: number, overrideSettings?: PlantSettings, isOnBaseline: boolean = false, skipCooldown: boolean = false) => {
+        const s = overrideSettings || settings;
 
-  // 固定高度：1000px，宽度保持响应式
-  const FIXED_HEIGHT = 1000;
-  const [dimensions, setDimensions] = useState({ width: 0, height: FIXED_HEIGHT });
+        // 冷却检查
+        if (!skipCooldown) {
+          const now = Date.now();
+          if (now - lastSpawnTimeRef.current < SPAWN_COOLDOWN) {
+            return;
+          }
+          lastSpawnTimeRef.current = now;
+        }
 
-  const uuid = () => Math.random().toString(36).substr(2, 9);
+        // 如果画布未初始化，延迟执行
+        if (!hasInitRef.current) {
+          pendingSpawnsRef.current.push(() => spawnPlant(x, y, overrideSettings, isOnBaseline, skipCooldown));
+          return;
+        }
 
-  const createGrower = (x: number, y: number, plantSettings: PlantSettings, ctx: CanvasRenderingContext2D, generation = 0, initialAngle?: number): Grower => {
-    const baseAngle = -Math.PI / 2;
-    const startAngle = initialAngle ?? (baseAngle + (Math.random() * 0.2 - 0.1));
+        // 保存到历史
+        plantHistoryRef.current.push({
+          x,
+          y,
+          settings: { ...s },
+          timestamp: Date.now(),
+        });
+        if (plantHistoryRef.current.length > 50) plantHistoryRef.current.shift();
 
-    return {
-      id: uuid(),
-      x,
-      y,
-      angle: startAngle,
-      life: 0,
-      maxLife: plantSettings.maxLife / (generation + 1), 
-      width: plantSettings.baseWidth / (generation + 1),
-      speed: plantSettings.growthSpeed,
-      color: plantSettings.stemColorStart,
-      settings: plantSettings,
-      noiseOffset: Math.random() * 1000,
-      generation,
-      ctx,
-      hasAttemptedFlower: false,
-    };
-  };
+        if (isOnBaseline) {
+          // 创建离屏 canvas
+          const result = createOffscreenCanvas(dimensions.width, dimensions.height);
+          if (result) {
+            const { canvas: offCanvas, ctx: offCtx } = result;
+            const plantId = Math.random().toString(36).substr(2, 9);
 
-  const spawnPlant = (x: number, y: number, overrideSettings?: PlantSettings, isOnBaseline: boolean = false, skipCooldown: boolean = false) => {
-    const s = overrideSettings || settings;
-    console.log('[spawnPlant] enter', { x, y, hasInit: hasInitRef.current, dims: dimensions, dpr: window.devicePixelRatio });
-
-    // Cooldown check: prevent rapid spawning (0.5s cooldown)
-    // Skip cooldown when loading plants from database
-    if (!skipCooldown) {
-      const now = Date.now();
-      if (now - lastSpawnTimeRef.current < SPAWN_COOLDOWN) {
-        console.log('[spawnPlant] cooldown active, ignoring spawn');
-        return;
-      }
-      lastSpawnTimeRef.current = now;
-    }
-
-    // 如果画布尚未初始化，推迟执行
-    if (!hasInitRef.current) {
-      pendingSpawnsRef.current.push(() => spawnPlant(x, y, overrideSettings, isOnBaseline, skipCooldown));
-      console.log('[spawnPlant] deferred - canvas not ready');
-      return;
-    }
-
-    // Save to history (for copying)
-    plantHistoryRef.current.push({
-        x, y, settings: { ...s }, timestamp: Date.now()
-    });
-    if (plantHistoryRef.current.length > 50) plantHistoryRef.current.shift();
-
-    if (isOnBaseline) {
-        // Create an offscreen canvas for this plant at logical pixel size
-        // (main canvas already handles DPR scaling)
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = dimensions.width;
-        offCanvas.height = dimensions.height;
-        offCanvas.style.width = `${dimensions.width}px`;
-        offCanvas.style.height = `${dimensions.height}px`;
-        const offCtx = offCanvas.getContext('2d');
-
-        if (offCtx) {
-            // Don't scale offscreen context - main canvas handles DPR
-            const plantId = uuid();
             const newBaselinePlant: BaselinePlant = {
-                id: plantId,
-                originX: x,
-                currentX: x,
-                y: baselineYRef.current, // Use baseline Y position
-                canvas: offCanvas,
-                ctx: offCtx,
-                settings: s
+              id: plantId,
+              originX: x,
+              currentX: x,
+              y: baselineYRef.current,
+              canvas: offCanvas,
+              ctx: offCtx,
+              settings: s,
             };
 
             baselinePlantsRef.current.push(newBaselinePlant);
-            growersRef.current.push(createGrower(x, baselineYRef.current, s, offCtx));
+            engineRef.current.spawnGrower(x, baselineYRef.current, s, offCtx);
+          }
+        } else {
+          // 在外部层生成
+          const ctx = canvasOutsideRef.current?.getContext('2d');
+          if (ctx) {
+            engineRef.current.spawnGrower(x, y, s, ctx);
+          }
         }
-    } else {
-        // Spawn on the outside canvas
-        const ctx = canvasOutsideRef.current?.getContext('2d');
-        if (ctx) {
-            growersRef.current.push(createGrower(x, y, s, ctx));
-        }
-    }
-  };
+      },
+      [settings, dimensions]
+    );
 
-  const undoLastBaselinePlant = () => {
+    /**
+     * 撤销最后一个基线植物
+     */
+    const undoLastBaselinePlant = useCallback(() => {
       const popped = baselinePlantsRef.current.pop();
-      // Also need to remove any active growers associated with this plant's context to stop them
       if (popped) {
-          growersRef.current = growersRef.current.filter(g => g.ctx !== popped.ctx);
+        engineRef.current.removeByContext(popped.ctx);
       }
-  };
+    }, []);
 
-  // Get all baseline plants data for saving
-  const getAllBaselinePlants = () => {
-    const containerWidth = dimensions.width || containerRef.current?.offsetWidth || 1000; // Fallback width
-    const baselineY = baselineYRef.current;
-    
-    return baselinePlantsRef.current.map(plant => {
-      // Calculate position relative to container width and baseline
-      const position_x_ratio = plant.currentX / containerWidth;
-      // Baseline plants are always on the baseline, so offset is 0
-      // But we calculate it properly in case plant.y differs (shouldn't happen, but for safety)
-      const position_y_offset = baselineY - plant.y;
-      
-      return {
-        position_x_ratio,
-        position_y_offset,
-        dna: plant.settings,
-      };
-    });
-  };
+    /**
+     * 获取所有基线植物数据
+     */
+    const getAllBaselinePlants = useCallback((): PlantRenderData[] => {
+      const containerWidth = dimensions.width || 1000;
+      const baselineY = baselineYRef.current;
 
-  // Clear all plants
-  const clearAllPlants = () => {
-    // Clear baseline plants
-    baselinePlantsRef.current.forEach(plant => {
-      growersRef.current = growersRef.current.filter(g => g.ctx !== plant.ctx);
-    });
-    baselinePlantsRef.current = [];
-    
-    // Clear outside plants
-    const outCtx = canvasOutsideRef.current?.getContext('2d');
-    if (outCtx) {
-      growersRef.current = growersRef.current.filter(g => g.ctx !== outCtx);
-    }
-    
-    // Clear canvases
-    if (canvasOutsideRef.current) {
-      const ctx = canvasOutsideRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-        ctx.fillStyle = '#fdfbf7';
-        ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-      }
-    }
-    
-    if (canvasBaselineRef.current) {
-      const ctx = canvasBaselineRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-      }
-    }
-  };
+      return baselinePlantsRef.current.map((plant) => {
+        const position_x_ratio = plant.currentX / containerWidth;
+        const position_y_offset = baselineY - plant.y;
 
-  // Load plants from data
-  const loadPlants = (plantsData: Array<{ position_x_ratio: number; position_y_offset: number; dna: PlantSettings }>) => {
-    clearAllPlants();
-    
-    // Wait for canvas to be initialized before loading plants
-    if (!hasInitRef.current || !dimensions.width) {
-      // Store plants to load later
-      pendingSpawnsRef.current = plantsData.map(plantData => {
-        return () => {
-          const containerWidth = dimensions.width || containerRef.current?.offsetWidth || 1000;
-          const baselineY = baselineYRef.current;
-          const x = containerWidth * plantData.position_x_ratio;
-          const y = baselineY + plantData.position_y_offset;
-          spawnPlant(x, y, plantData.dna, true, true); // Skip cooldown for loading
+        return {
+          position_x_ratio,
+          position_y_offset,
+          dna: plant.settings,
         };
       });
-      return;
-    }
-    
-    const containerWidth = dimensions.width;
-    const baselineY = baselineYRef.current;
-    
-    // Load all plants (skip cooldown for batch loading)
-    // Load immediately without delay to avoid timing issues
-    plantsData.forEach((plantData) => {
-      const x = containerWidth * plantData.position_x_ratio;
-      const y = baselineY + plantData.position_y_offset;
-      
-      // All loaded plants are on baseline (draggable)
-      spawnPlant(x, y, plantData.dna, true, true); // true = skip cooldown
-    });
-  };
+    }, [dimensions.width]);
 
-  useImperativeHandle(ref, () => ({
-    spawn: (x: number, y: number, overrideSettings?: PlantSettings, isOnBaseline?: boolean) => {
-      spawnPlant(x, y, overrideSettings, isOnBaseline);
-    },
-    undo: () => {
-        undoLastBaselinePlant();
-    },
-    setBaselineY: (y: number) => {
-        baselineYRef.current = y;
-    },
-    setBaselineColor: (color: string) => {
-        baselineColorRef.current = color;
-    },
-    getBaselineY: () => baselineYRef.current,
-    getBaselineColor: () => baselineColorRef.current,
-    getAllBaselinePlants,
-    clearAllPlants,
-    loadPlants,
-  }));
+    /**
+     * 清除所有植物
+     */
+    const clearAllPlants = useCallback(() => {
+      baselinePlantsRef.current = [];
+      engineRef.current.clearAll();
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        // 只获取宽度，高度使用固定值
-        setDimensions({ 
-            width: containerRef.current.offsetWidth, 
-            height: FIXED_HEIGHT 
-        });
+      // 清空画布
+      if (layerManagerRef.current) {
+        layerManagerRef.current.clearOutsideLayer('#fdfbf7');
+        layerManagerRef.current.clearBaselineLayer();
       }
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    }, []);
 
-  // Initialization and Resize Logic with devicePixelRatio
-  useEffect(() => {
-    const dpr = window.devicePixelRatio || 1;
+    /**
+     * 加载植物数据
+     */
+    const loadPlants = useCallback(
+      (plantsData: PlantRenderData[]) => {
+        clearAllPlants();
 
-    // 如果 dimensions 还没准备好（0），不要初始化 loop
-    if (!dimensions.width || !dimensions.height) {
-      hasInitRef.current = false;
-      return;
-    }
-
-    // stop any running loop before reinit
-    if (requestRef.current) {
-      cancelAnimationFrame(requestRef.current);
-      requestRef.current = null;
-    }
-
-    [canvasOutsideRef.current, canvasBaselineRef.current].forEach(canvas => {
-      if (!canvas) return;
-      // Set backing size and css size
-      canvas.width = Math.round(dimensions.width * dpr);
-      canvas.height = Math.round(dimensions.height * dpr);
-      canvas.style.width = `${dimensions.width}px`;
-      canvas.style.height = `${dimensions.height}px`;
-
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        // 防止重复 scale：用自定义属性标记
-        if (!(canvas as any).__scaled) {
-          ctx.scale(dpr, dpr);
-          (canvas as any).__scaled = true;
+        if (!hasInitRef.current || !dimensions.width) {
+          pendingSpawnsRef.current = plantsData.map((plantData) => {
+            return () => {
+              const containerWidth = dimensions.width || 1000;
+              const baselineY = baselineYRef.current;
+              const x = containerWidth * plantData.position_x_ratio;
+              const y = baselineY + plantData.position_y_offset;
+              spawnPlant(x, y, plantData.dna, true, true);
+            };
+          });
+          return;
         }
+
+        const containerWidth = dimensions.width;
+        const baselineY = baselineYRef.current;
+
+        plantsData.forEach((plantData) => {
+          const x = containerWidth * plantData.position_x_ratio;
+          const y = baselineY + plantData.position_y_offset;
+          spawnPlant(x, y, plantData.dna, true, true);
+        });
+      },
+      [dimensions.width, clearAllPlants, spawnPlant]
+    );
+
+    /**
+     * 暴露的接口
+     */
+    useImperativeHandle(ref, () => ({
+      spawn: spawnPlant,
+      undo: undoLastBaselinePlant,
+      setBaselineY: (y: number) => {
+        baselineYRef.current = y;
+      },
+      setBaselineColor: (color: string) => {
+        baselineColorRef.current = color;
+      },
+      getBaselineY: () => baselineYRef.current,
+      getBaselineColor: () => baselineColorRef.current,
+      getAllBaselinePlants,
+      clearAllPlants,
+      loadPlants,
+    }));
+
+    /**
+     * 主更新循环
+     */
+    const update = useCallback(() => {
+      // 更新生长引擎
+      engineRef.current.update();
+
+      // 合成基线植物
+      if (layerManagerRef.current) {
+        layerManagerRef.current.compositeBaselinePlants(baselinePlantsRef.current);
       }
-    });
 
-    // Clear / fill as original
-    const ctxOut = canvasOutsideRef.current?.getContext('2d');
-    if (ctxOut) {
-      ctxOut.clearRect(0, 0, dimensions.width, dimensions.height);
-      ctxOut.fillStyle = '#fdfbf7';
-      ctxOut.fillRect(0, 0, dimensions.width, dimensions.height);
-    }
-    const ctxBaseline = canvasBaselineRef.current?.getContext('2d');
-    if (ctxBaseline) {
-      ctxBaseline.clearRect(0, 0, dimensions.width, dimensions.height);
-    }
+      requestRef.current = requestAnimationFrame(update);
+    }, []);
 
-    // 标记初始化完成
-    hasInitRef.current = true;
+    /**
+     * 初始化和 Resize 处理
+     */
+    useEffect(() => {
+      const handleResize = () => {
+        if (containerRef.current) {
+          setDimensions({
+            width: containerRef.current.offsetWidth,
+            height: FIXED_HEIGHT,
+          });
+        }
+      };
+      window.addEventListener('resize', handleResize);
+      handleResize();
+      return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
-    // 处理挂起的 spawn
-    if (pendingSpawnsRef.current.length > 0) {
-      pendingSpawnsRef.current.forEach(fn => {
-        try { fn(); } catch (e) { /* swallow to avoid crash */ }
-      });
-      pendingSpawnsRef.current = [];
-    }
+    /**
+     * Canvas 初始化
+     */
+    useEffect(() => {
+      if (!dimensions.width || !dimensions.height) {
+        hasInitRef.current = false;
+        return;
+      }
 
-    // restart animation loop
-    requestRef.current = requestAnimationFrame(update);
-
-    console.log('[CANVAS_TRANSFORM]', canvasOutsideRef.current?.getContext('2d')?.getTransform());
-
-    return () => {
+      // 停止现有动画循环
       if (requestRef.current) {
         cancelAnimationFrame(requestRef.current);
         requestRef.current = null;
       }
-      // 不要清 hasInitRef 这里 — 由上面的 early-return 管控
-    };
-  }, [dimensions]); // 依赖 dimensions：当尺寸稳定后会触发，额外建议与调试点（如果你想再验证）
 
-  // Handle Clear Trigger (Outside Only)
-  useEffect(() => {
-      const ctxOut = canvasOutsideRef.current?.getContext('2d');
-      if (ctxOut) {
-          ctxOut.fillStyle = '#fdfbf7'; 
-          ctxOut.fillRect(0, 0, dimensions.width, dimensions.height);
-      }
-      // Remove growers that target the outside canvas
-      if (canvasOutsideRef.current) {
-          const outCtx = canvasOutsideRef.current.getContext('2d');
-          growersRef.current = growersRef.current.filter(g => g.ctx !== outCtx);
-      }
-  }, [clearTrigger, dimensions]);
-
-  const drawLeaf = (ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, baseSize: number, color: string, type: PlantType) => {
-    // Jitter Size
-    const size = baseSize * (0.8 + Math.random() * 0.4);
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.fillStyle = color;
-    ctx.shadowBlur = 2;
-    ctx.shadowColor = "rgba(0,0,0,0.05)";
-    ctx.shadowOffsetY = 2;
-    
-    ctx.beginPath();
-    if (type === PlantType.PALM) {
-      const spread = Math.PI / 1.5;
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, size, -spread/2, spread/2);
-      ctx.lineTo(0, 0);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.3)";
-      ctx.lineWidth = 0.5;
-      for(let i = -2; i <= 2; i++) {
-         ctx.beginPath();
-         ctx.moveTo(0,0);
-         const a = (i * spread) / 6;
-         ctx.lineTo(Math.cos(a) * size * 0.9, Math.sin(a) * size * 0.9);
-         ctx.stroke();
-      }
-    } else if (type === PlantType.GEOMETRIC) {
-      ctx.moveTo(0, 0);
-      ctx.lineTo(size, -size/3);
-      ctx.lineTo(size * 1.5, 0);
-      ctx.lineTo(size, size/3);
-      ctx.lineTo(0, 0);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(0,0,0,0.1)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0,0);
-      ctx.lineTo(size * 1.5, 0);
-      ctx.stroke();
-    } else if (type === PlantType.UMBRELLA) {
-      ctx.rotate(-Math.PI / 2);
-      const w = size;
-      const h = size * 1.2;
-      ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(-w/2, -h/4, -w, h/2, 0, h);
-      ctx.bezierCurveTo(w, h/2, w/2, -h/4, 0, 0);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.2)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, h * 0.9);
-      ctx.stroke();
-    } else if (type === PlantType.BERRY) {
-      ctx.ellipse(size/2, 0, size/2, size/4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      
-    } else {
-      ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(size / 2, -size / 2, size, -size / 4, size, 0);
-      ctx.bezierCurveTo(size, size / 4, size / 2, size / 2, 0, 0);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(0,0,0,0.1)";
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(0,0);
-      ctx.lineTo(size * 0.8, 0);
-      ctx.stroke();
-    }
-    ctx.restore();
-  };
-
-  const drawFlower = (ctx: CanvasRenderingContext2D, x: number, y: number, baseSize: number, startColor: string, endColor: string, petals: number, type: PlantType) => {
-    // Size Jitter
-    const size = baseSize * (0.85 + Math.random() * 0.3);
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.shadowBlur = 4;
-    ctx.shadowColor = "rgba(0,0,0,0.1)";
-    ctx.shadowOffsetY = 2;
-
-    if (type === PlantType.GEOMETRIC) {
-       ctx.fillStyle = lerpColor(startColor, endColor, 0.5);
-       ctx.beginPath();
-       for(let i=0; i<petals * 2; i++) {
-          const r = (i % 2 === 0) ? size : size/3;
-          const a = (i * Math.PI) / petals;
-          ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-       }
-       ctx.closePath();
-       ctx.fill();
-    } else if (type === PlantType.BERRY) {
-       const berryCount = Math.floor(petals) || 3;
-       for(let i=0; i < berryCount; i++) {
-          const bx = (Math.random() - 0.5) * size;
-          const by = (Math.random() - 0.5) * size;
-          const berrySize = size / 3.5;
-          ctx.beginPath();
-          ctx.fillStyle = lerpColor(startColor, endColor, Math.random());
-          ctx.arc(bx, by, berrySize, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = 'rgba(255,255,255,0.4)';
-          ctx.beginPath();
-          ctx.arc(bx - berrySize/3, by - berrySize/3, berrySize/4, 0, Math.PI * 2);
-          ctx.fill();
-       }
-    } else if (type === PlantType.UMBRELLA) {
-      ctx.rotate(Math.random() - 0.5);
-      ctx.fillStyle = lerpColor(startColor, endColor, 0.2); 
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(-size/2, -size, -size*1.5, -size, 0, -size*2);
-      ctx.bezierCurveTo(size*1.5, -size, size/2, -size, 0, 0);
-      ctx.fill();
-      ctx.strokeStyle = lerpColor(startColor, endColor, 0.9);
-      ctx.lineWidth = size / 4;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, -size * 1.5);
-      ctx.stroke();
-    } else if (type === PlantType.CLUSTER) {
-      // Draw many small dots in a circular cloud
-      const floretCount = Math.max(8, petals * 2);
-      for(let i=0; i < floretCount; i++) {
-        // Random point in circle
-        const r = size * Math.sqrt(Math.random());
-        const theta = Math.random() * 2 * Math.PI;
-        const fx = r * Math.cos(theta);
-        const fy = r * Math.sin(theta);
-        
-        const floretSize = size / 5 * (0.8 + Math.random() * 0.4);
-        
-        ctx.beginPath();
-        ctx.fillStyle = lerpColor(startColor, endColor, Math.random());
-        ctx.arc(fx, fy, floretSize, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else {
-       const angleStep = (Math.PI * 2) / petals;
-       for (let i = 0; i < petals; i++) {
-          const petalColor = lerpColor(startColor, endColor, i / petals);
-          ctx.fillStyle = petalColor;
-          ctx.save();
-          ctx.rotate(i * angleStep);
-          ctx.beginPath();
-          ctx.ellipse(size/1.5, 0, size/1.5, size/4, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-       }
-       ctx.fillStyle = '#f59e0b'; // Amber
-       ctx.beginPath();
-       ctx.arc(0, 0, size/4, 0, Math.PI * 2);
-       ctx.fill();
-    }
-    ctx.restore();
-  };
-
-  const update = useCallback(() => {
-    // 1. Process Growers
-    growersRef.current.forEach((grower) => {
-      const { settings, life, maxLife, ctx } = grower;
-      // Setup context
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.globalCompositeOperation = 'source-over'; 
-
-      if (life >= maxLife || grower.width < 0.1) {
-        if (!grower.hasAttemptedFlower) {
-            if (grower.generation < 2 && Math.random() < settings.flowerProbability) {
-                drawFlower(ctx, grower.x, grower.y, settings.flowerSize, settings.flowerColorStart, settings.flowerColorEnd, settings.petalCount, settings.type);
-            }
-            grower.hasAttemptedFlower = true;
+      // 初始化层管理器
+      layerManagerRef.current = new CanvasLayerManager(
+        {
+          outside: canvasOutsideRef.current,
+          baseline: canvasBaselineRef.current,
+        },
+        {
+          width: dimensions.width,
+          height: dimensions.height,
+          backgroundColor: '#fdfbf7',
         }
-        grower.life++; // Increment so it eventually gets filtered out
-        return;
-      }
+      );
 
-      const progress = life / maxLife;
-      let angleChange = 0;
+      layerManagerRef.current.initializeLayers();
 
-      if (settings.type === PlantType.GEOMETRIC) {
-         if (Math.random() < 0.05) { 
-            grower.angle += (Math.random() > 0.5 ? 1 : -1) * (Math.PI / 6); 
-         }
-         const targetAngle = -Math.PI / 2;
-         grower.angle += (targetAngle - grower.angle) * 0.02;
-      } else if (settings.type === PlantType.BERRY || settings.type === PlantType.CLUSTER) {
-        const n = noiseGenerator.noise(grower.x * 0.02, grower.y * 0.02, grower.noiseOffset + life * 0.05);
-        angleChange = n * (settings.curlFactor * 2);
-        grower.angle += angleChange;
-        // Stronger tendency to grow up for cluster
-        const targetAngle = -Math.PI / 2;
-        grower.angle += (targetAngle - grower.angle) * (settings.type === PlantType.CLUSTER ? 0.05 : 0.02);
-      } else {
-         if (progress < settings.straightness) {
-           const targetAngle = -Math.PI / 2;
-           const correction = (targetAngle - grower.angle) * 0.1;
-           const wobble = (Math.random() - 0.5) * 0.05;
-           grower.angle += correction + wobble;
-         } else {
-           const n = noiseGenerator.noise(grower.x * 0.01, grower.y * 0.01, grower.noiseOffset + life * 0.02);
-           angleChange = n * settings.curlFactor;
-           grower.angle += angleChange;
-         }
-      }
+      // 标记初始化完成
+      hasInitRef.current = true;
 
-      const nextX = grower.x + Math.cos(grower.angle) * grower.speed;
-      const nextY = grower.y + Math.sin(grower.angle) * grower.speed;
-
-      const stemColor = lerpColor(settings.stemColorStart, settings.stemColorEnd, progress);
-
-      ctx.beginPath();
-      ctx.moveTo(grower.x, grower.y);
-      ctx.lineTo(nextX, nextY);
-      
-      const currentWidth = grower.width * (1 - progress);
-      ctx.lineWidth = Math.max(0.5, currentWidth);
-      ctx.strokeStyle = stemColor;
-      ctx.globalAlpha = 0.9;
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-
-      if (Math.random() < settings.leafFrequency) {
-        let leafAngle = grower.angle;
-        if (settings.type === PlantType.PALM) leafAngle += (Math.random() > 0.5 ? Math.PI/3 : -Math.PI/3);
-        else if (settings.type === PlantType.GEOMETRIC) leafAngle += (Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2);
-        else if (settings.type === PlantType.UMBRELLA) leafAngle += (Math.random() - 0.5); 
-        else leafAngle += (Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2) + (Math.random() * 0.5 - 0.25);
-
-        const leafColor = lerpColor(settings.leafColorStart, settings.leafColorEnd, progress);
-        drawLeaf(ctx, grower.x, grower.y, leafAngle, settings.leafSize, leafColor, settings.type);
-      }
-
-      let branchChance = 0.015;
-      if (settings.type === PlantType.PALM) branchChance = 0.005; 
-      if (settings.type === PlantType.GEOMETRIC) branchChance = 0.04; 
-      if (settings.type === PlantType.UMBRELLA) branchChance = 0.002;
-      if (settings.type === PlantType.BERRY) branchChance = 0.04;
-      if (settings.type === PlantType.CLUSTER) branchChance = 0.025;
-
-      if (grower.generation < 2 && Math.random() < branchChance) {
-         let branchAngleOffset = 0.6;
-         if (settings.type === PlantType.GEOMETRIC) branchAngleOffset = 0.8; 
-         if (settings.type === PlantType.BERRY) branchAngleOffset = 0.9;
-         if (settings.type === PlantType.CLUSTER) branchAngleOffset = 0.5;
-
-         const branchAngle = grower.angle + (Math.random() > 0.5 ? branchAngleOffset : -branchAngleOffset);
-         growersRef.current.push(createGrower(grower.x, grower.y, settings, ctx, grower.generation + 1, branchAngle));
-      }
-
-      grower.x = nextX;
-      grower.y = nextY;
-      grower.life++;
-    });
-
-    // Remove dead growers
-    growersRef.current = growersRef.current.filter(g => g.life < g.maxLife + 50); // Keep +50 to finish animations if needed
-
-    // 2. Composite Baseline Plants
-    if (canvasBaselineRef.current) {
-        const ctxBaseline = canvasBaselineRef.current.getContext('2d');
-        if (ctxBaseline) {
-            ctxBaseline.clearRect(0, 0, dimensions.width, dimensions.height);
-            baselinePlantsRef.current.forEach(plant => {
-                // Determine offset based on drag
-                const dx = plant.currentX - plant.originX;
-                ctxBaseline.drawImage(plant.canvas, dx, 0);
-            });
-        }
-    }
-
-    requestRef.current = requestAnimationFrame(update);
-  }, [settings, dimensions]);
-
-
-  const copyNearestPlant = (clientX: number, clientY: number) => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-
-      let closest: PlantHistoryItem | null = null;
-      let minDist = 100;
-
-      for (const item of plantHistoryRef.current) {
-          const dx = item.x - x;
-          const dy = item.y - y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < minDist) {
-              minDist = dist;
-              closest = item;
+      // 执行挂起的 spawn
+      if (pendingSpawnsRef.current.length > 0) {
+        pendingSpawnsRef.current.forEach((fn) => {
+          try {
+            fn();
+          } catch (e) {
+            console.error('Failed to execute pending spawn:', e);
           }
+        });
+        pendingSpawnsRef.current = [];
       }
 
-      if (closest) {
-          onSettingsCopied(closest.settings);
-      } else {
-          onSettingsCopied(settings);
+      // 启动动画循环
+      requestRef.current = requestAnimationFrame(update);
+
+      return () => {
+        if (requestRef.current) {
+          cancelAnimationFrame(requestRef.current);
+          requestRef.current = null;
+        }
+      };
+    }, [dimensions, update]);
+
+    /**
+     * 清除触发器处理
+     */
+    useEffect(() => {
+      if (layerManagerRef.current) {
+        layerManagerRef.current.clearOutsideLayer('#fdfbf7');
       }
-  };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0 && e.pointerType !== 'touch') return;
-    const { clientX, clientY } = e;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
+      // 移除外部层的生长器
+      const outCtx = canvasOutsideRef.current?.getContext('2d');
+      if (outCtx) {
+        engineRef.current.removeByContext(outCtx);
+      }
+    }, [clearTrigger]);
 
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    // Store touch start position for gesture detection
-    if (e.pointerType === 'touch') {
-        touchStartRef.current = { x: clientX, y: clientY, time: Date.now() };
-    }
-
-    // Check if we clicked on a baseline plant stem for DRAG
-    const baselineY = baselineYRef.current;
-    const clickedPlant = baselinePlantsRef.current.find(p => {
-        const distX = Math.abs(x - p.currentX);
-        const distY = Math.abs(y - baselineY);
-        // Check if click is near the plant's X position and near the baseline
-        return distX < 40 && distY < 400 && y < baselineY; // 40px radius horizontally, 400px above baseline
+    /**
+     * 交互处理 Hook
+     */
+    const { handlers } = useGardenInteraction({
+      baselineY: baselineYRef.current,
+      baselineTolerance: BASELINE_TOLERANCE,
+      baselinePlants: baselinePlantsRef.current,
+      plantHistory: plantHistoryRef.current,
+      dimensions,
+      onSpawn: (x, y, isOnBaseline) => spawnPlant(x, y, undefined, isOnBaseline),
+      onCopySettings: onSettingsCopied,
+      onDragUpdate: () => {
+        // 触发重绘
+        if (layerManagerRef.current) {
+          layerManagerRef.current.compositeBaselinePlants(baselinePlantsRef.current);
+        }
+      },
     });
 
-    if (clickedPlant) {
-        dragStateRef.current = {
-            plantId: clickedPlant.id,
-            startX: x,
-            plantStartX: clickedPlant.currentX
-        };
-        return;
-    }
-
-    // Double-tap detection for mobile (touch devices)
-    if (e.pointerType === 'touch') {
-        const now = Date.now();
-        const lastTap = lastTapRef.current;
-
-        if (lastTap && (now - lastTap.time < 300)) {
-            // Check if taps are close enough (within 50px)
-            const dx = x - lastTap.x;
-            const dy = y - lastTap.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < 50) {
-                // Double tap detected - spawn plant
-                const baselineY = baselineYRef.current;
-                const isOnBaseline = Math.abs(y - baselineY) < BASELINE_TOLERANCE;
-                spawnPlant(x, y, undefined, isOnBaseline);
-                lastTapRef.current = null; // Reset after double tap
-                return;
-            }
-        }
-
-        // Store this tap for potential double tap
-        lastTapRef.current = { time: now, x, y };
-
-        // Clear after timeout if no second tap
-        setTimeout(() => {
-            if (lastTapRef.current && Date.now() - lastTapRef.current.time > 300) {
-                lastTapRef.current = null;
-            }
-        }, 300);
-    }
-
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    const { clientX, clientY } = e;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = clientX - rect.left;
-    // const y = clientY - rect.top; // y unused for horizontal drag
-
-    if (dragStateRef.current) {
-        const { plantId, startX, plantStartX } = dragStateRef.current;
-        const plant = baselinePlantsRef.current.find(p => p.id === plantId);
-        if (plant) {
-            let newX = plantStartX + (x - startX);
-            
-            // Constrain to canvas width (with some padding)
-            const padding = 20;
-            newX = Math.max(padding, Math.min(dimensions.width - padding, newX));
-            
-            plant.currentX = newX;
-        }
-    }
-  };
-
-  const handlePointerUp = () => {
-      dragStateRef.current = null;
-  };
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-      e.preventDefault();
-      copyNearestPlant(e.clientX, e.clientY);
-  };
-
-  const handleDoubleClick = (e: React.MouseEvent) => {
-      const { clientX, clientY } = e;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-
-      const baselineY = baselineYRef.current;
-      const isOnBaseline = Math.abs(y - baselineY) < BASELINE_TOLERANCE;
-
-      spawnPlant(x, y, undefined, isOnBaseline);
-  };
-
-
-  return (
-    <div 
-      ref={containerRef} 
-      className="absolute top-0 left-0 right-0 w-full"
-      style={{ height: `${FIXED_HEIGHT}px` }}
-    >
+    return (
+      <div
+        ref={containerRef}
+        className="absolute top-0 left-0 right-0 w-full"
+        style={{ height: `${FIXED_HEIGHT}px` }}
+      >
         {/* Layer 1: Outside World (Background) */}
         <canvas
-            ref={canvasOutsideRef}
-            className="absolute inset-0 w-full h-full pointer-events-none" 
-            style={{ zIndex: 0 }}
+          ref={canvasOutsideRef}
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          style={{ zIndex: 0 }}
         />
-        
+
         {/* Layer 2: Baseline Plants (Foreground, Transparent) */}
         <canvas
-            ref={canvasBaselineRef}
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: 10 }}
+          ref={canvasBaselineRef}
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          style={{ zIndex: 10 }}
         />
-        
+
         {/* Baseline Visualization */}
         <div
-            className="absolute left-0 right-0 pointer-events-none"
-            style={{
-                top: `${baselineYRef.current}px`,
-                height: '1px',
-                backgroundColor: baselineColorRef.current,
-                zIndex: 5,
-            }}
+          className="absolute left-0 right-0 pointer-events-none"
+          style={{
+            top: `${baselineYRef.current}px`,
+            height: '1px',
+            backgroundColor: baselineColorRef.current,
+            zIndex: 5,
+          }}
         />
 
         {/* Layer 3: Interaction Layer (Transparent, Handles Events) */}
         <div
-            className="absolute inset-0 w-full h-full cursor-crosshair"
-            style={{ zIndex: 20, touchAction: 'pan-y' }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
-            onContextMenu={handleContextMenu}
-            onDoubleClick={handleDoubleClick}
-            onTouchMove={(e) => {
-                // Handle touch gesture detection for mobile scrolling vs dragging
-                if (!touchStartRef.current || !dragStateRef.current) return;
-
-                const touch = e.touches[0];
-                if (!touch) return;
-
-                const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
-                const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
-
-                // If vertical movement is greater than horizontal, allow scrolling
-                if (deltaY > deltaX && deltaY > 10) {
-                    // This is likely a scroll gesture, don't prevent default
-                    return;
-                }
-
-                // If horizontal movement is greater, this is likely a drag
-                if (deltaX > deltaY && deltaX > 10) {
-                    e.preventDefault(); // Prevent scrolling during horizontal drag
-                }
-            }}
+          className="absolute inset-0 w-full h-full cursor-crosshair"
+          style={{ zIndex: 20, touchAction: 'pan-y' }}
+          {...handlers}
         />
-    </div>
-  );
-});
+      </div>
+    );
+  }
+);
+
+GardenCanvas.displayName = 'GardenCanvas';
 
 export default GardenCanvas;
