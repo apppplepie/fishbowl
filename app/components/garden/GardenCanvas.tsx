@@ -8,11 +8,11 @@ interface GardenCanvasProps {
   onSettingsCopied: (settings: PlantSettings) => void;
 }
 
-interface BottlePlant {
+interface BaselinePlant {
   id: string;
   originX: number; // Where it was spawned (used for growing logic)
   currentX: number; // Where it is currently displayed (dragged)
-  y: number;
+  y: number; // Baseline Y position
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   settings: PlantSettings; // Keep settings for reference
@@ -56,26 +56,35 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
   
   // Layer 1: The world outside
   const canvasOutsideRef = useRef<HTMLCanvasElement>(null);
-  // Layer 2: The composite view of the bottle contents
-  const canvasInsideRef = useRef<HTMLCanvasElement>(null);
+  // Layer 2: The composite view of the baseline plants
+  const canvasBaselineRef = useRef<HTMLCanvasElement>(null);
 
   const growersRef = useRef<Grower[]>([]);
-  const bottlePlantsRef = useRef<BottlePlant[]>([]);
+  const baselinePlantsRef = useRef<BaselinePlant[]>([]);
   const requestRef = useRef<number | null>(null);
   const plantHistoryRef = useRef<PlantHistoryItem[]>([]);
   
-  const bottleRectRef = useRef<DOMRect | null>(null);
+  // Baseline configuration
+  const baselineYRef = useRef<number>(600); // Default: 60% of 1000px
+  const baselineColorRef = useRef<string>('rgba(0, 0, 0, 0.1)'); // Default baseline color
+  const BASELINE_TOLERANCE = 20; // Pixels tolerance for detecting if on baseline
+  
   const dragStateRef = useRef<DragState | null>(null);
 
   // Touch double-tap detection for mobile
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
   // Touch gesture detection for mobile scrolling vs dragging
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  // Cooldown mechanism to prevent rapid spawning
+  const lastSpawnTimeRef = useRef<number>(0);
+  const SPAWN_COOLDOWN = 500; // 0.5 seconds in milliseconds
 
   const hasInitRef = useRef(false);           // 标记画布是否初始化完毕
   const pendingSpawnsRef = useRef<Array<() => void>>([]); // 存放在 init 前的 spawn 操作
 
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  // 固定高度：1000px，宽度保持响应式
+  const FIXED_HEIGHT = 1000;
+  const [dimensions, setDimensions] = useState({ width: 0, height: FIXED_HEIGHT });
 
   const uuid = () => Math.random().toString(36).substr(2, 9);
 
@@ -101,13 +110,24 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     };
   };
 
-  const spawnPlant = (x: number, y: number, overrideSettings?: PlantSettings, isInsideBottle: boolean = false) => {
+  const spawnPlant = (x: number, y: number, overrideSettings?: PlantSettings, isOnBaseline: boolean = false, skipCooldown: boolean = false) => {
     const s = overrideSettings || settings;
     console.log('[spawnPlant] enter', { x, y, hasInit: hasInitRef.current, dims: dimensions, dpr: window.devicePixelRatio });
 
+    // Cooldown check: prevent rapid spawning (0.5s cooldown)
+    // Skip cooldown when loading plants from database
+    if (!skipCooldown) {
+      const now = Date.now();
+      if (now - lastSpawnTimeRef.current < SPAWN_COOLDOWN) {
+        console.log('[spawnPlant] cooldown active, ignoring spawn');
+        return;
+      }
+      lastSpawnTimeRef.current = now;
+    }
+
     // 如果画布尚未初始化，推迟执行
     if (!hasInitRef.current) {
-      pendingSpawnsRef.current.push(() => spawnPlant(x, y, overrideSettings, isInsideBottle));
+      pendingSpawnsRef.current.push(() => spawnPlant(x, y, overrideSettings, isOnBaseline, skipCooldown));
       console.log('[spawnPlant] deferred - canvas not ready');
       return;
     }
@@ -118,7 +138,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     });
     if (plantHistoryRef.current.length > 50) plantHistoryRef.current.shift();
 
-    if (isInsideBottle) {
+    if (isOnBaseline) {
         // Create an offscreen canvas for this plant at logical pixel size
         // (main canvas already handles DPR scaling)
         const offCanvas = document.createElement('canvas');
@@ -131,18 +151,18 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
         if (offCtx) {
             // Don't scale offscreen context - main canvas handles DPR
             const plantId = uuid();
-            const newBottlePlant: BottlePlant = {
+            const newBaselinePlant: BaselinePlant = {
                 id: plantId,
                 originX: x,
                 currentX: x,
-                y: y,
+                y: baselineYRef.current, // Use baseline Y position
                 canvas: offCanvas,
                 ctx: offCtx,
                 settings: s
             };
 
-            bottlePlantsRef.current.push(newBottlePlant);
-            growersRef.current.push(createGrower(x, y, s, offCtx));
+            baselinePlantsRef.current.push(newBaselinePlant);
+            growersRef.current.push(createGrower(x, baselineYRef.current, s, offCtx));
         }
     } else {
         // Spawn on the outside canvas
@@ -153,32 +173,126 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     }
   };
 
-  const undoLastBottlePlant = () => {
-      const popped = bottlePlantsRef.current.pop();
+  const undoLastBaselinePlant = () => {
+      const popped = baselinePlantsRef.current.pop();
       // Also need to remove any active growers associated with this plant's context to stop them
       if (popped) {
           growersRef.current = growersRef.current.filter(g => g.ctx !== popped.ctx);
       }
   };
 
+  // Get all baseline plants data for saving
+  const getAllBaselinePlants = () => {
+    const containerWidth = dimensions.width || containerRef.current?.offsetWidth || 1000; // Fallback width
+    const baselineY = baselineYRef.current;
+    
+    return baselinePlantsRef.current.map(plant => {
+      // Calculate position relative to container width and baseline
+      const position_x_ratio = plant.currentX / containerWidth;
+      // Baseline plants are always on the baseline, so offset is 0
+      // But we calculate it properly in case plant.y differs (shouldn't happen, but for safety)
+      const position_y_offset = baselineY - plant.y;
+      
+      return {
+        position_x_ratio,
+        position_y_offset,
+        dna: plant.settings,
+      };
+    });
+  };
+
+  // Clear all plants
+  const clearAllPlants = () => {
+    // Clear baseline plants
+    baselinePlantsRef.current.forEach(plant => {
+      growersRef.current = growersRef.current.filter(g => g.ctx !== plant.ctx);
+    });
+    baselinePlantsRef.current = [];
+    
+    // Clear outside plants
+    const outCtx = canvasOutsideRef.current?.getContext('2d');
+    if (outCtx) {
+      growersRef.current = growersRef.current.filter(g => g.ctx !== outCtx);
+    }
+    
+    // Clear canvases
+    if (canvasOutsideRef.current) {
+      const ctx = canvasOutsideRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+        ctx.fillStyle = '#fdfbf7';
+        ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+      }
+    }
+    
+    if (canvasBaselineRef.current) {
+      const ctx = canvasBaselineRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+      }
+    }
+  };
+
+  // Load plants from data
+  const loadPlants = (plantsData: Array<{ position_x_ratio: number; position_y_offset: number; dna: PlantSettings }>) => {
+    clearAllPlants();
+    
+    // Wait for canvas to be initialized before loading plants
+    if (!hasInitRef.current || !dimensions.width) {
+      // Store plants to load later
+      pendingSpawnsRef.current = plantsData.map(plantData => {
+        return () => {
+          const containerWidth = dimensions.width || containerRef.current?.offsetWidth || 1000;
+          const baselineY = baselineYRef.current;
+          const x = containerWidth * plantData.position_x_ratio;
+          const y = baselineY + plantData.position_y_offset;
+          spawnPlant(x, y, plantData.dna, true, true); // Skip cooldown for loading
+        };
+      });
+      return;
+    }
+    
+    const containerWidth = dimensions.width;
+    const baselineY = baselineYRef.current;
+    
+    // Load all plants (skip cooldown for batch loading)
+    // Load immediately without delay to avoid timing issues
+    plantsData.forEach((plantData) => {
+      const x = containerWidth * plantData.position_x_ratio;
+      const y = baselineY + plantData.position_y_offset;
+      
+      // All loaded plants are on baseline (draggable)
+      spawnPlant(x, y, plantData.dna, true, true); // true = skip cooldown
+    });
+  };
+
   useImperativeHandle(ref, () => ({
-    spawn: (x: number, y: number, overrideSettings?: PlantSettings, isInsideBottle?: boolean) => {
-      spawnPlant(x, y, overrideSettings, isInsideBottle);
+    spawn: (x: number, y: number, overrideSettings?: PlantSettings, isOnBaseline?: boolean) => {
+      spawnPlant(x, y, overrideSettings, isOnBaseline);
     },
     undo: () => {
-        undoLastBottlePlant();
+        undoLastBaselinePlant();
     },
-    updateBottleRect: (rect: DOMRect) => {
-        bottleRectRef.current = rect;
-    }
+    setBaselineY: (y: number) => {
+        baselineYRef.current = y;
+    },
+    setBaselineColor: (color: string) => {
+        baselineColorRef.current = color;
+    },
+    getBaselineY: () => baselineYRef.current,
+    getBaselineColor: () => baselineColorRef.current,
+    getAllBaselinePlants,
+    clearAllPlants,
+    loadPlants,
   }));
 
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
+        // 只获取宽度，高度使用固定值
         setDimensions({ 
             width: containerRef.current.offsetWidth, 
-            height: containerRef.current.offsetHeight 
+            height: FIXED_HEIGHT 
         });
       }
     };
@@ -203,7 +317,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       requestRef.current = null;
     }
 
-    [canvasOutsideRef.current, canvasInsideRef.current].forEach(canvas => {
+    [canvasOutsideRef.current, canvasBaselineRef.current].forEach(canvas => {
       if (!canvas) return;
       // Set backing size and css size
       canvas.width = Math.round(dimensions.width * dpr);
@@ -228,9 +342,9 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       ctxOut.fillStyle = '#fdfbf7';
       ctxOut.fillRect(0, 0, dimensions.width, dimensions.height);
     }
-    const ctxIn = canvasInsideRef.current?.getContext('2d');
-    if (ctxIn) {
-      ctxIn.clearRect(0, 0, dimensions.width, dimensions.height);
+    const ctxBaseline = canvasBaselineRef.current?.getContext('2d');
+    if (ctxBaseline) {
+      ctxBaseline.clearRect(0, 0, dimensions.width, dimensions.height);
     }
 
     // 标记初始化完成
@@ -534,15 +648,15 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
     // Remove dead growers
     growersRef.current = growersRef.current.filter(g => g.life < g.maxLife + 50); // Keep +50 to finish animations if needed
 
-    // 2. Composite Bottle Plants
-    if (canvasInsideRef.current) {
-        const ctxIn = canvasInsideRef.current.getContext('2d');
-        if (ctxIn) {
-            ctxIn.clearRect(0, 0, dimensions.width, dimensions.height);
-            bottlePlantsRef.current.forEach(plant => {
+    // 2. Composite Baseline Plants
+    if (canvasBaselineRef.current) {
+        const ctxBaseline = canvasBaselineRef.current.getContext('2d');
+        if (ctxBaseline) {
+            ctxBaseline.clearRect(0, 0, dimensions.width, dimensions.height);
+            baselinePlantsRef.current.forEach(plant => {
                 // Determine offset based on drag
                 const dx = plant.currentX - plant.originX;
-                ctxIn.drawImage(plant.canvas, dx, 0);
+                ctxBaseline.drawImage(plant.canvas, dx, 0);
             });
         }
     }
@@ -592,8 +706,14 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
         touchStartRef.current = { x: clientX, y: clientY, time: Date.now() };
     }
 
-    // Check if we clicked on a bottle plant stem for DRAG
-    const clickedPlant = bottlePlantsRef.current.find(p => Math.abs(x - p.currentX) < 40 && y < p.y && y > p.y - 400); // 40px radius, above origin
+    // Check if we clicked on a baseline plant stem for DRAG
+    const baselineY = baselineYRef.current;
+    const clickedPlant = baselinePlantsRef.current.find(p => {
+        const distX = Math.abs(x - p.currentX);
+        const distY = Math.abs(y - baselineY);
+        // Check if click is near the plant's X position and near the baseline
+        return distX < 40 && distY < 400 && y < baselineY; // 40px radius horizontally, 400px above baseline
+    });
 
     if (clickedPlant) {
         dragStateRef.current = {
@@ -617,14 +737,9 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
 
             if (dist < 50) {
                 // Double tap detected - spawn plant
-                let isInside = false;
-                if (bottleRectRef.current) {
-                    const b = bottleRectRef.current;
-                    if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
-                        isInside = true;
-                    }
-                }
-                spawnPlant(x, y, undefined, isInside);
+                const baselineY = baselineYRef.current;
+                const isOnBaseline = Math.abs(y - baselineY) < BASELINE_TOLERANCE;
+                spawnPlant(x, y, undefined, isOnBaseline);
                 lastTapRef.current = null; // Reset after double tap
                 return;
             }
@@ -652,22 +767,14 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
 
     if (dragStateRef.current) {
         const { plantId, startX, plantStartX } = dragStateRef.current;
-        const plant = bottlePlantsRef.current.find(p => p.id === plantId);
+        const plant = baselinePlantsRef.current.find(p => p.id === plantId);
         if (plant) {
             let newX = plantStartX + (x - startX);
             
-            // Constrain to bottle if possible
-            if (bottleRectRef.current) {
-                const bRect = bottleRectRef.current;
-                const canvasRect = rect;
-                
-                // Convert bottle global rect to canvas relative coords
-                const bottleLeft = bRect.left - canvasRect.left;
-                const bottleRight = bRect.right - canvasRect.left;
-                
-                // Clamp
-                newX = Math.max(bottleLeft + 20, Math.min(bottleRight - 20, newX));
-            }
+            // Constrain to canvas width (with some padding)
+            const padding = 20;
+            newX = Math.max(padding, Math.min(dimensions.width - padding, newX));
+            
             plant.currentX = newX;
         }
     }
@@ -690,20 +797,19 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
       const x = clientX - rect.left;
       const y = clientY - rect.top;
 
-      let isInside = false;
-      if (bottleRectRef.current) {
-          const b = bottleRectRef.current;
-          if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
-              isInside = true;
-          }
-      }
+      const baselineY = baselineYRef.current;
+      const isOnBaseline = Math.abs(y - baselineY) < BASELINE_TOLERANCE;
 
-      spawnPlant(x, y, undefined, isInside);
+      spawnPlant(x, y, undefined, isOnBaseline);
   };
 
 
   return (
-    <div ref={containerRef} className="absolute inset-0">
+    <div 
+      ref={containerRef} 
+      className="absolute top-0 left-0 right-0 w-full"
+      style={{ height: `${FIXED_HEIGHT}px` }}
+    >
         {/* Layer 1: Outside World (Background) */}
         <canvas
             ref={canvasOutsideRef}
@@ -711,11 +817,22 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(({ settings,
             style={{ zIndex: 0 }}
         />
         
-        {/* Layer 2: Inside Bottle (Foreground, Transparent) */}
+        {/* Layer 2: Baseline Plants (Foreground, Transparent) */}
         <canvas
-            ref={canvasInsideRef}
+            ref={canvasBaselineRef}
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ zIndex: 10 }}
+        />
+        
+        {/* Baseline Visualization */}
+        <div
+            className="absolute left-0 right-0 pointer-events-none"
+            style={{
+                top: `${baselineYRef.current}px`,
+                height: '1px',
+                backgroundColor: baselineColorRef.current,
+                zIndex: 5,
+            }}
         />
 
         {/* Layer 3: Interaction Layer (Transparent, Handles Events) */}

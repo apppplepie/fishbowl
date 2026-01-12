@@ -158,7 +158,6 @@ export default function GardenPage() {
   const [importString, setImportString] = useState('');
   
   const canvasRef = useRef<GardenCanvasRef>(null);
-  const bottleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
       if (toastMessage) {
@@ -167,30 +166,36 @@ export default function GardenPage() {
       }
   }, [toastMessage]);
 
-  // Update canvas with bottle bounds on mount/resize
+  // Load saved config on mount
   useEffect(() => {
-      const updateBounds = () => {
-          if (bottleRef.current && canvasRef.current) {
-              const rect = bottleRef.current.getBoundingClientRect();
-              canvasRef.current.updateBottleRect(rect);
-          }
-      };
-      
-      // 延迟一次初始测量，避免在 layout 尚未稳定时读取到 0
-      requestAnimationFrame(updateBounds);
+    const loadSavedConfig = async () => {
+      if (!canvasRef.current) return;
 
-      window.addEventListener('resize', updateBounds);
-      // Also update on scroll since position relative to viewport might change if we use fixed positions,
-      // but here bottle flows with document, so rect relative to viewport changes on scroll.
-      // However, GardenCanvas uses getBoundingClientRect() inside spawn logic too?
-      // Actually GardenCanvas.tsx only uses updateBottleRect to store the rect for drag constraints.
-      // Drag constraints need to be fresh if we scroll.
-      window.addEventListener('scroll', updateBounds);
-      
-      return () => {
-          window.removeEventListener('resize', updateBounds);
-          window.removeEventListener('scroll', updateBounds);
-      };
+      try {
+        const response = await fetch('/api/garden/config?page_id=');
+        const data = await response.json();
+
+        if (data.success && data.config) {
+          // Set baseline
+          const FIXED_HEIGHT = 1000;
+          const baselineY = FIXED_HEIGHT * data.config.baseline_y_ratio;
+          canvasRef.current.setBaselineY(baselineY);
+          canvasRef.current.setBaselineColor(data.config.baseline_color);
+
+          // Load plants if any
+          if (data.plants && data.plants.length > 0) {
+            canvasRef.current.loadPlants(data.plants);
+          }
+        }
+      } catch (error) {
+        console.error('加载保存的配置失败:', error);
+        // Silently fail on load, user can manually reset
+      }
+    };
+
+    // Wait a bit for canvas to initialize
+    const timer = setTimeout(loadSavedConfig, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const updateSettings = (newSettings: Partial<PlantSettings>) => {
@@ -254,33 +259,97 @@ export default function GardenPage() {
         setSettings(parsed);
         setToastMessage("种下了植物!");
   
-        // Trigger spawn at bottle bottom
-        if (bottleRef.current && canvasRef.current) {
-          // bottle rect (viewport coords)
-          const bottleRect = bottleRef.current.getBoundingClientRect();
-
-          // 找到最近的祖先容器，该容器包含画布（GardenCanvas 的 canvases）
-          // 从 bottle 向上查找第一个包含 <canvas> 的祖先（更稳）
-          let containerEl: HTMLElement | null = bottleRef.current;
-          while (containerEl && !containerEl.querySelector('canvas')) {
-            containerEl = containerEl.parentElement;
-          }
-          // 如果没找到包含 canvas 的祖先，退回到 document.body
-          const containerRect = containerEl ? containerEl.getBoundingClientRect() : document.body.getBoundingClientRect();
-
-          // 计算 container-relative CSS px 坐标（这就是 GardenCanvas 使用的坐标系）
-          const x = (bottleRect.left - containerRect.left) + bottleRect.width / 2;
-          const y = (bottleRect.top - containerRect.top) + bottleRect.height - 10;
-
-          // Spawn INSIDE bottle using container-relative coords
-          console.log('IMPORT_SPAWN', { bottleRect: bottleRef.current?.getBoundingClientRect(), containerRect, x, y });
-          canvasRef.current.spawn(x, y, parsed, true);
-
+        // Trigger spawn at baseline center
+        if (canvasRef.current) {
+          // Spawn at center of baseline (baseline Y is 600 by default, center X)
+          const baselineY = 600; // Default baseline position
+          const x = window.innerWidth / 2; // Center horizontally
+          
+          canvasRef.current.spawn(x, baselineY, parsed, true); // true = on baseline
           setImportString(''); // Clear input on success
         }
       }
     } catch (e) {
       // invalid format
+    }
+  };
+
+  const handleSave = async () => {
+    if (!canvasRef.current) {
+      setToastMessage("画布未初始化");
+      return;
+    }
+
+    try {
+      // 获取当前基准线配置和所有植物
+      const baselineY = canvasRef.current.getBaselineY();
+      const baselineColor = canvasRef.current.getBaselineColor();
+      const plants = canvasRef.current.getAllBaselinePlants();
+
+      // 计算基准线相对高度
+      const FIXED_HEIGHT = 1000;
+      const baseline_y_ratio = baselineY / FIXED_HEIGHT;
+
+      // 调用 API 保存
+      const response = await fetch('/api/garden/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          baseline_y_ratio,
+          baseline_color: baselineColor,
+          plants,
+          page_id: null, // 花园主页，可以为 null
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setToastMessage(`已保存 ${data.saved.plants_count} 株植物`);
+      } else {
+        setToastMessage(`保存失败: ${data.error}`);
+      }
+    } catch (error: any) {
+      console.error('保存失败:', error);
+      setToastMessage(`保存失败: ${error.message}`);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!canvasRef.current) {
+      setToastMessage("画布未初始化");
+      return;
+    }
+
+    try {
+      // 调用 API 加载配置
+      const response = await fetch('/api/garden/config?page_id=');
+      const data = await response.json();
+
+      if (!data.success) {
+        setToastMessage(`加载失败: ${data.error}`);
+        return;
+      }
+
+      // 设置基准线
+      const FIXED_HEIGHT = 1000;
+      const baselineY = FIXED_HEIGHT * data.config.baseline_y_ratio;
+      canvasRef.current.setBaselineY(baselineY);
+      canvasRef.current.setBaselineColor(data.config.baseline_color);
+
+      // 加载植物
+      if (data.plants && data.plants.length > 0) {
+        canvasRef.current.loadPlants(data.plants);
+        setToastMessage(`已加载 ${data.plants.length} 株植物`);
+      } else {
+        canvasRef.current.clearAllPlants();
+        setToastMessage("已重置（无保存的植物）");
+      }
+    } catch (error: any) {
+      console.error('加载失败:', error);
+      setToastMessage(`加载失败: ${error.message}`);
     }
   };
   
@@ -357,46 +426,50 @@ export default function GardenPage() {
                 双击试试，左侧挑选植物
               </p>
               <p className="text-slate-500 mt-2 font-medium text-sm">
-                长按获得种子，下滑种入玻璃缸
+                长按获得种子，在基准线上种植可拖动
               </p>
             </div>
 
-            {/* Spacer to push bottle down */}
+            {/* Spacer */}
             <div style={{ flex: 1, minHeight: '30vh' }}></div>
 
-            {/* Glass Bottle Visual - Moved down significantly via flex spacer above */}
-            <div 
-              ref={bottleRef}
-              className="relative z-20 w-80 h-[280px] border-x-2 border-b-2 border-slate-300/60 bg-white/10 backdrop-blur-[2px] rounded-none shadow-xl pointer-events-none mb-4"
-            >
-              {/* Rim */}
-              <div className="absolute top-0 w-full h-1 bg-slate-300/40"></div>
-              {/* Glass Reflections */}
-              <div className="absolute top-4 right-8 w-px h-32 bg-white/30 blur-[1px]"></div>
-              <div className="absolute top-8 right-6 w-2 h-16 bg-white/10 rounded-full blur-sm"></div>
-            </div>
-
-            {/* DNA Input Area & Undo Button */}
-            <div className="relative z-30 w-80 flex gap-2 mb-20">
-              <input 
-                type="text"
-                value={importString}
-                onChange={(e) => {
-                  setImportString(e.target.value);
-                  handleImport(e.target.value);
-                }}
-                placeholder="复制种子..."
-                className="flex-1 px-4 py-3 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg shadow-sm text-center font-mono text-xs focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-slate-400"
-              />
-              <button
-                onClick={handleUndo}
-                className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg px-3 text-slate-500 hover:text-slate-800 hover:bg-white transition-colors"
-                title="Undo last bottle plant"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
+            {/* DNA Input Area & Control Buttons */}
+            <div className="relative z-30 w-80 space-y-2 mb-20">
+              <div className="flex gap-2">
+                <input 
+                  type="text"
+                  value={importString}
+                  onChange={(e) => {
+                    setImportString(e.target.value);
+                    handleImport(e.target.value);
+                  }}
+                  placeholder="复制种子..."
+                  className="flex-1 px-4 py-3 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg shadow-sm text-center font-mono text-xs focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-slate-400"
+                />
+                <button
+                  onClick={handleUndo}
+                  className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg px-3 text-slate-500 hover:text-slate-800 hover:bg-white transition-colors"
+                  title="撤销上一株植物"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSave}
+                  className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium"
+                >
+                  保存配置
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="flex-1 px-4 py-2 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg hover:bg-white transition-colors text-sm font-medium text-slate-700"
+                >
+                  重置配置
+                </button>
+              </div>
             </div>
           </div>
         </PageLayout>

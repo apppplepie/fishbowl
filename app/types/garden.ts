@@ -56,8 +56,14 @@ export interface Grower {
 }
 
 export interface GardenCanvasRef {
-  spawn: (x: number, y: number, settings?: PlantSettings, isInsideBottle?: boolean) => void;
+  spawn: (x: number, y: number, settings?: PlantSettings, isOnBaseline?: boolean) => void;
   undo: () => void;
-  updateBottleRect: (rect: DOMRect) => void;
+  setBaselineY: (y: number) => void;
+  setBaselineColor: (color: string) => void;
+  getBaselineY: () => number;
+  getBaselineColor: () => string;
+  getAllBaselinePlants: () => Array<{ position_x_ratio: number; position_y_offset: number; dna: PlantSettings }>;
+  clearAllPlants: () => void;
+  loadPlants: (plantsData: Array<{ position_x_ratio: number; position_y_offset: number; dna: PlantSettings }>) => void;
 }
 
