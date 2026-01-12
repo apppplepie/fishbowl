@@ -122,19 +122,20 @@ const RootSystem: React.FC<RootSystemProps> = ({
       const sortedSegments = [...rootSegments].sort((a, b) => a.generation - b.generation);
 
       sortedSegments.forEach((segment) => {
-        // 计算透明度：从基线向下逐渐变淡（调整渐变，让根系在更深的地方才消失）
+        // 计算透明度：从基线向下逐渐变淡（使用缓动渐变，让根系更平滑地消失）
         const depth = (segment.y - baselineY) / maxRootLength;
-        const baseAlpha = Math.max(0, 1 - depth * 0.5); // 在更深的地方才完全透明
+        // 使用缓动函数：ease-out 效果，让渐变更平滑
+        const easedDepth = 1 - Math.pow(1 - Math.min(depth, 1), 2);
+        const baseAlpha = Math.max(0, 1 - easedDepth * 0.4); // 缓动渐变，在更远的地方消失
         
-        // 应用动画进度
-        const alpha = baseAlpha * animationProgress;
+        // 应用动画进度和整体透明度（半透明效果）
+        const globalTransparency = 0.2; // 全局透明度：40%（让根系更透明）
+        const alpha = baseAlpha * animationProgress * globalTransparency;
         
         if (alpha <= 0) return;
 
-        // 根系颜色：使用茎的颜色，但稍微调暗
-        const rootColor = segment.generation === 0 
-          ? dna.stemColorStart 
-          : dna.stemColorEnd;
+        // 根系颜色：主干和分支都使用统一的茎起始颜色，但稍微调暗
+        const rootColor = dna.stemColorStart;
 
         const color = parseColor(rootColor);
         // 调暗：减少亮度
@@ -248,7 +249,7 @@ const RootSystem: React.FC<RootSystemProps> = ({
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        zIndex: 2, // 在背景上方，但在植物下方（植物zIndex是10）
+        // zIndex 由父容器控制，这里不设置
       }}
     />
   );

@@ -9,13 +9,21 @@ import Header from './components/Header';
 import PermissionSystemDemo from './components/PermissionSystemDemo';
 import WaveSeparator from './components/background/WaveSeparator';
 import BaselinePlantViewer from './components/garden/BaselinePlantViewer';
+import RootSystem from './components/garden/RootSystem';
 import { theme } from './config/theme';
-import { BaselinePlant } from './types/garden';
+import { BaselinePlant, PlantSettings } from './types/garden';
 import { convertGradient } from './utils/colorConverter';
 import { PRESET_VINE } from './config/plantPresets';
 import { PlantGrowthEngine } from './engine/PlantGrowthEngine';
 
 const { Title, Paragraph } = Typography;
+
+// 根系数据类型
+interface RootData {
+  id: string;
+  x: number;
+  dna: PlantSettings;
+}
 
 export default function Home() {
   const { currentFishbowlTheme } = useAppTheme();
@@ -23,6 +31,7 @@ export default function Home() {
   const [baselineY, setBaselineY] = useState<number | null>(null);
   const [baselinePlants, setBaselinePlants] = useState<BaselinePlant[]>([]);
   const [canvasHeight, setCanvasHeight] = useState(0);
+  const [rootSystems, setRootSystems] = useState<RootData[]>([]); // 根系数据
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const baselineCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -248,7 +257,8 @@ export default function Home() {
     const dpr = window.devicePixelRatio || 1;
 
     const draw = () => {
-      const height = container.scrollHeight;
+      // 固定画布高度为2000px
+      const height = 2000;
       const width = container.clientWidth;
 
       canvas.width = width * dpr;
@@ -286,8 +296,10 @@ export default function Home() {
   // 生成单株植物
   const spawnPlant = useCallback((x: number, y: number) => {
     if (!plantCanvasRef.current) return;
+    if (!scrollContainerRef.current) return;
 
-    const width = plantCanvasRef.current.width;
+    // 使用逻辑宽度，而不是物理像素宽度
+    const width = scrollContainerRef.current.clientWidth;
     const height = canvasHeight;
 
     // 创建离屏 canvas（不考虑 DPR，节省内存）
@@ -298,8 +310,10 @@ export default function Home() {
     const offCtx = offCanvas.getContext('2d');
     if (!offCtx) return;
 
+    const plantId = Math.random().toString(36).substr(2, 9);
+
     const plant: BaselinePlant = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: plantId,
       originX: x,
       currentX: x,
       y: y,
@@ -310,18 +324,27 @@ export default function Home() {
 
     baselinePlantsDataRef.current.push(plant);
     engineRef.current.spawnGrower(x, y, PRESET_VINE, offCtx);
+
+    // 同时添加根系数据
+    setRootSystems(prev => [...prev, {
+      id: plantId,
+      x: x,
+      dna: PRESET_VINE,
+    }]);
   }, [canvasHeight]);
 
   // 合成所有植物到主画布
   const compositeAllPlants = useCallback(() => {
     const canvas = plantCanvasRef.current;
-    if (!canvas) return;
+    const container = scrollContainerRef.current;
+    if (!canvas || !container) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    // 使用逻辑尺寸（因为 ctx 已经 scale(dpr, dpr)）
+    const width = container.clientWidth;
+    const height = canvasHeight;
 
     // 清空画布
     ctx.clearRect(0, 0, width, height);
@@ -331,7 +354,7 @@ export default function Home() {
       const dx = plant.currentX - plant.originX;
       ctx.drawImage(plant.canvas, dx, 0);
     });
-  }, []);
+  }, [canvasHeight]);
 
   // 主更新循环
   const updatePlantGrowth = useCallback(() => {
@@ -456,6 +479,32 @@ export default function Home() {
           position: 'relative',
         }}
       >
+        {/* 根系层 - 在基线下方生长，叠在 box2 背景上 */}
+        {baselineY !== null && canvasHeight > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: `${canvasHeight}px`, // 使用实际高度 2000px
+              pointerEvents: 'none',
+              zIndex: 1, // 在内容之上，根系可见
+            }}
+          >
+            {rootSystems.map((root) => (
+              <RootSystem
+                key={root.id}
+                x={root.x}
+                baselineY={baselineY}
+                dna={root.dna}
+                containerHeight={canvasHeight}
+                animationProgress={1}
+              />
+            ))}
+          </div>
+        )}
+
         {/* 基线画布 - 使用世界坐标，跟随滚动内容（红线层）*/}
         <canvas
           ref={baselineCanvasRef}
@@ -464,9 +513,9 @@ export default function Home() {
             top: 0,
             left: 0,
             width: '100%',
-            height: '100%',
+            // height 由 JavaScript 代码控制（2000px），不在这里设置
             pointerEvents: 'none',
-            zIndex: 1,
+            zIndex: 2, // 在根系之上
           }}
         />
 
@@ -478,9 +527,9 @@ export default function Home() {
             top: 0,
             left: 0,
             width: '100%',
-            height: '100%',
+            // height 由 JavaScript 代码控制（2000px），不在这里设置
             pointerEvents: 'none',
-            zIndex: 2,
+            zIndex: 3, // 在基线之上
           }}
         />
 

@@ -316,7 +316,7 @@ export default function GardenPage() {
               settings={settings}
               clearTrigger={clearTrigger}
               onSettingsCopied={handleSettingsCopied}
-              viewMode="view"
+              // viewMode="view"
             />
 
             {/* 根系系统 - 为每个基线植物渲染根系 */}
