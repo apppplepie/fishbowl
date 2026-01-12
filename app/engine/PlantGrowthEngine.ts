@@ -330,6 +330,18 @@ export class PlantGrowthEngine {
   }
 
   /**
+   * 检查是否所有植物都生长完成
+   */
+  areAllPlantsFinished(): boolean {
+    if (this.growers.length === 0) {
+      return true; // 没有植物时认为已完成
+    }
+    return this.growers.every((grower) => {
+      return grower.life >= grower.maxLife || grower.width < 0.1;
+    });
+  }
+
+  /**
    * 清除所有生长器
    */
   clearAll(): void {

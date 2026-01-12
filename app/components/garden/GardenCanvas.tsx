@@ -53,6 +53,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
     const requestRef = useRef<number | null>(null);
     const lastSpawnTimeRef = useRef<number>(0);
     const SPAWN_COOLDOWN = 500;
+    const MAX_BASELINE_PLANTS = 10; // 防止加载过多离屏 canvas 占满内存
 
     /**
      * 生成植物
@@ -86,6 +87,12 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
         if (plantHistoryRef.current.length > 50) plantHistoryRef.current.shift();
 
         if (isOnBaseline) {
+          // 避免过多离屏 canvas 导致内存爆炸
+          if (baselinePlantsRef.current.length >= MAX_BASELINE_PLANTS) {
+            console.warn(`Baseline plant limit (${MAX_BASELINE_PLANTS}) reached, skip spawn to protect memory.`);
+            return;
+          }
+
           // 创建离屏 canvas
           const result = createOffscreenCanvas(dimensions.width, dimensions.height);
           if (result) {
@@ -149,6 +156,12 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
      * 清除所有植物
      */
     const clearAllPlants = useCallback(() => {
+      // 主动释放离屏 canvas 内存
+      baselinePlantsRef.current.forEach((plant) => {
+        plant.canvas.width = 1;
+        plant.canvas.height = 1;
+      });
+
       baselinePlantsRef.current = [];
       engineRef.current.clearAll();
 
@@ -166,8 +179,11 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
       (plantsData: PlantRenderData[]) => {
         clearAllPlants();
 
+        // 限制加载数量，避免一次性加载过多离屏 canvas
+        const trimmedPlants = plantsData.slice(0, MAX_BASELINE_PLANTS);
+
         if (!hasInitRef.current || !dimensions.width) {
-          pendingSpawnsRef.current = plantsData.map((plantData) => {
+          pendingSpawnsRef.current = trimmedPlants.map((plantData) => {
             return () => {
               const containerWidth = dimensions.width || 1000;
               const baselineY = baselineYRef.current;
@@ -182,7 +198,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
         const containerWidth = dimensions.width;
         const baselineY = baselineYRef.current;
 
-        plantsData.forEach((plantData) => {
+        trimmedPlants.forEach((plantData) => {
           const x = containerWidth * plantData.position_x_ratio;
           const y = baselineY + plantData.position_y_offset;
           spawnPlant(x, y, plantData.dna, true, true);

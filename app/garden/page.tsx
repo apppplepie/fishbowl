@@ -11,6 +11,8 @@ import RootSystem from '../components/garden/RootSystem';
 import { PlantSettings, PlantType, GardenCanvasRef, PlantRenderData } from '../types/garden';
 import { PRESET_VINE, getPlantPreset } from '../config/plantPresets';
 
+const MAX_LOADED_PLANTS = 10; // 避免一次性加载过多离屏 canvas 占满内存
+
 export default function GardenPage() {
   const { isMobile } = useResponsive();
   const [settings, setSettings] = useState<PlantSettings>(PRESET_VINE);
@@ -33,7 +35,7 @@ export default function GardenPage() {
       }
   }, [toastMessage]);
 
-  // 更新植物列表和基线位置
+  // 更新植物列表和基线位置（降低频率以减少内存压力）
   useEffect(() => {
     const updatePlants = () => {
       if (!canvasRef.current) return;
@@ -52,8 +54,8 @@ export default function GardenPage() {
     // 初始更新
     const timer = setTimeout(updatePlants, 600);
     
-    // 定期更新（当植物变化时）
-    const interval = setInterval(updatePlants, 500);
+    // 降低更新频率：从 500ms 改为 2000ms（2秒），减少内存压力
+    const interval = setInterval(updatePlants, 2000);
     
     return () => {
       clearTimeout(timer);
@@ -91,9 +93,13 @@ export default function GardenPage() {
           canvasRef.current.setBaselineY(baselineY);
           canvasRef.current.setBaselineColor(data.config.baseline_color);
 
-          // Load plants if any
+          // Load plants if any (limit to protect memory)
           if (data.plants && data.plants.length > 0) {
-            canvasRef.current.loadPlants(data.plants);
+            const plantsToLoad = data.plants.slice(0, MAX_LOADED_PLANTS);
+            canvasRef.current.loadPlants(plantsToLoad);
+            if (data.plants.length > MAX_LOADED_PLANTS) {
+              setToastMessage(`已加载前 ${MAX_LOADED_PLANTS} 株植物，其余未加载以避免占用过多内存`);
+            }
           }
         }
       } catch (error) {
@@ -230,8 +236,14 @@ export default function GardenPage() {
 
       // 加载植物
       if (data.plants && data.plants.length > 0) {
-        canvasRef.current.loadPlants(data.plants);
-        setToastMessage(`已加载 ${data.plants.length} 株植物`);
+        const plantsToLoad = data.plants.slice(0, MAX_LOADED_PLANTS);
+        canvasRef.current.loadPlants(plantsToLoad);
+
+        if (data.plants.length > MAX_LOADED_PLANTS) {
+          setToastMessage(`已加载前 ${MAX_LOADED_PLANTS} 株，其余未加载以避免内存占用`);
+        } else {
+          setToastMessage(`已加载 ${data.plants.length} 株植物`);
+        }
       } else {
         canvasRef.current.clearAllPlants();
         setToastMessage("已重置（无保存的植物）");
