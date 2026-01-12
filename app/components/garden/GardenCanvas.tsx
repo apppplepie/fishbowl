@@ -19,10 +19,11 @@ interface GardenCanvasProps {
   settings: PlantSettings;
   clearTrigger: number;
   onSettingsCopied: (settings: PlantSettings) => void;
+  viewMode?: 'interactive' | 'view'; // 浏览模式：'interactive' 可交互，'view' 仅浏览
 }
 
 const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
-  ({ settings, clearTrigger, onSettingsCopied }, ref) => {
+  ({ settings, clearTrigger, onSettingsCopied, viewMode = 'interactive' }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Canvas 层引用
@@ -313,7 +314,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
     }, [clearTrigger]);
 
     /**
-     * 交互处理 Hook
+     * 交互处理 Hook（仅在交互模式下启用）
      */
     const { handlers } = useGardenInteraction({
       baselineY: baselineYRef.current,
@@ -330,6 +331,17 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
         }
       },
     });
+
+    // 浏览模式：禁用所有交互事件
+    const emptyHandlers = {
+      onPointerDown: () => {},
+      onPointerMove: () => {},
+      onPointerUp: () => {},
+      onPointerLeave: () => {},
+      onContextMenu: () => {},
+      onDoubleClick: () => {},
+      onTouchMove: () => {},
+    };
 
     return (
       <div
@@ -364,9 +376,14 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
 
         {/* Layer 3: Interaction Layer (Transparent, Handles Events) */}
         <div
-          className="absolute inset-0 w-full h-full cursor-crosshair"
-          style={{ zIndex: 20, touchAction: 'pan-y' }}
-          {...handlers}
+          className="absolute inset-0 w-full h-full"
+          style={{
+            zIndex: 20,
+            touchAction: viewMode === 'view' ? 'none' : 'pan-y',
+            cursor: viewMode === 'view' ? 'default' : 'crosshair',
+            pointerEvents: viewMode === 'view' ? 'none' : 'auto',
+          }}
+          {...(viewMode === 'view' ? emptyHandlers : handlers)}
         />
       </div>
     );
