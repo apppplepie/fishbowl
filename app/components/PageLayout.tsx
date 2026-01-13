@@ -83,20 +83,20 @@ export default function PageLayout({
           zIndex: 9999,
         }}
       >
-        {/* 上边框 */}
+        {/* 上边框 - 从header下方开始（45px），避免与header重叠 */}
         <div style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: '45px',
+          height: '0px',
           background: 'black',
         }} />
         
         {/* 左边框 */}
         <div style={{
           position: 'absolute',
-          top: '45px',
+          top: 0,
           left: 0,
           bottom: 0,
           width: '6px',
@@ -106,7 +106,7 @@ export default function PageLayout({
         {/* 右边框 */}
         <div style={{
           position: 'absolute',
-          top: '45px',
+          top: 0,
           right: 0,
           bottom: 0,
           width: '6px',
@@ -119,7 +119,7 @@ export default function PageLayout({
           bottom: 0,
           left: 0,
           right: 0,
-          height: isMobile ? '10px' : '6px', // 移动端增加高度以覆盖可能的空隙
+          height: 'calc(6px + env(safe-area-inset-bottom, 0px))',
           background: 'black',
         }} />
       </div>
@@ -135,7 +135,7 @@ export default function PageLayout({
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
-          minHeight: isMobile ? '100dvh' : '100vh', // 移动端使用动态视口高度
+          minHeight: '100vh',
         }}
       >
         {/* 盒模型1：顶部区域，使用天空渐变，高度由内容决定 */}
