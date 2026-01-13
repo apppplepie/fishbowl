@@ -719,7 +719,16 @@ export default function Home() {
               overflow: 'hidden',
             }}
           >
-            <Header embedded={true} isVisible={true} />
+            <div 
+              style={{ 
+                zIndex: 10, 
+                position: 'relative',
+                opacity: showNavBar ? 1 : 0,
+                transition: 'opacity 0.3s ease',
+              }}
+            >
+              <Header embedded={true} isVisible={true} />
+            </div>
           </div>
 
           {/* 盒模型1：7vh高的透明顶部区域 */}
