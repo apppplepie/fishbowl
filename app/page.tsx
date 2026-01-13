@@ -48,6 +48,12 @@ export default function Home() {
   const baselinePlantsDataRef = useRef<BaselinePlant[]>([]); // 基线植物数据
   const hasInitializedPlantsRef = useRef(false); // 防止重复初始化
   const MAX_BASELINE_PLANTS = 5; // 最大植物数量
+  const [loadedPlants, setLoadedPlants] = useState<Array<{
+    id: string;
+    position_x_ratio: number;
+    position_y_offset: number;
+    dna: PlantSettings;
+  }> | null>(null); // 从数据库加载的植物数据
 
   // 统一的导航栏更新函数：立即显示 + 防抖隐藏
   const updateNavBar = (scrollTop: number, threshold: number) => {
@@ -294,7 +300,7 @@ export default function Home() {
   }, []);
 
   // 生成单株植物
-  const spawnPlant = useCallback((x: number, y: number) => {
+  const spawnPlant = useCallback((x: number, y: number, settings: PlantSettings = PRESET_VINE) => {
     if (!plantCanvasRef.current) return;
     if (!scrollContainerRef.current) return;
 
@@ -319,17 +325,17 @@ export default function Home() {
       y: y,
       canvas: offCanvas,
       ctx: offCtx,
-      settings: PRESET_VINE,
+      settings: settings,
     };
 
     baselinePlantsDataRef.current.push(plant);
-    engineRef.current.spawnGrower(x, y, PRESET_VINE, offCtx);
+    engineRef.current.spawnGrower(x, y, settings, offCtx);
 
     // 同时添加根系数据
     setRootSystems(prev => [...prev, {
       id: plantId,
       x: x,
-      dna: PRESET_VINE,
+      dna: settings,
     }]);
   }, [canvasHeight]);
 
@@ -379,10 +385,39 @@ export default function Home() {
     growthAnimationRef.current = requestAnimationFrame(updatePlantGrowth);
   }, [compositeAllPlants]);
 
+  // 从数据库加载植物配置（类似 garden/page.tsx 的逻辑）
+  useEffect(() => {
+    const loadPlantsFromDatabase = async () => {
+      try {
+        const response = await fetch('/api/garden/config?page_id=');
+        const data = await response.json();
+
+        if (data.success && data.plants && data.plants.length > 0) {
+          // 限制加载数量以保护内存
+          const plantsToLoad = data.plants.slice(0, MAX_BASELINE_PLANTS);
+          setLoadedPlants(plantsToLoad);
+          if (data.plants.length > MAX_BASELINE_PLANTS) {
+            console.log(`已加载前 ${MAX_BASELINE_PLANTS} 株植物，其余未加载以避免占用过多内存`);
+          }
+        } else {
+          // 没有保存的植物，设置为空数组
+          setLoadedPlants([]);
+        }
+      } catch (error) {
+        console.error('加载植物配置失败:', error);
+        // 加载失败时设置为空数组，使用默认逻辑
+        setLoadedPlants([]);
+      }
+    };
+
+    loadPlantsFromDatabase();
+  }, []);
+
   // 初始化植物系统（仅首次加载）
   useEffect(() => {
-    // 等待基线和画布高度就绪
+    // 等待基线和画布高度就绪，以及植物数据加载完成
     if (!baselineY || !canvasHeight) return;
+    if (loadedPlants === null) return; // 等待数据库加载完成
     if (hasInitializedPlantsRef.current) return; // 防止重复初始化
 
     const canvas = plantCanvasRef.current;
@@ -404,16 +439,19 @@ export default function Home() {
     // 缩放上下文以适配 DPR
     ctx.scale(dpr, dpr);
 
-    // 生成初始植物（沿基线随机分布）
-    const plantCount = Math.min(MAX_BASELINE_PLANTS, 4); // 默认生成 4 株
-    const positions = [0.15, 0.35, 0.65, 0.85]; // X 位置比例
-
-    positions.slice(0, plantCount).forEach((ratio) => {
-      const x = width * ratio;
-      spawnPlant(x, baselineY);
-    });
-
-    console.log(`🌱 已生成 ${plantCount} 株植物，开始生长动画`);
+    // 根据数据库中的植物数据生成植物
+    if (loadedPlants.length > 0) {
+      // 使用数据库中的植物
+      loadedPlants.forEach((plant) => {
+        const x = width * plant.position_x_ratio;
+        const y = baselineY + plant.position_y_offset;
+        spawnPlant(x, y, plant.dna);
+      });
+      console.log(`🌱 已从数据库加载 ${loadedPlants.length} 株植物，开始生长动画`);
+    } else {
+      // 如果没有保存的植物，不生成默认植物（保持空白）
+      console.log('🌱 没有保存的植物，保持空白');
+    }
 
     // 标记已初始化
     hasInitializedPlantsRef.current = true;
@@ -428,7 +466,7 @@ export default function Home() {
         growthAnimationRef.current = null;
       }
     };
-  }, [baselineY, canvasHeight, spawnPlant, updatePlantGrowth]);
+  }, [baselineY, canvasHeight, loadedPlants, spawnPlant, updatePlantGrowth]);
 
   return (
     <>
