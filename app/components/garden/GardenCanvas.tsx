@@ -243,19 +243,110 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
 
     /**
      * 初始化和 Resize 处理
+     * 实现防抖、区分真实 resize 和地址栏变化、延迟处理
      */
     useEffect(() => {
+      let resizeTimer: NodeJS.Timeout | null = null;
+      let scrollEndTimer: NodeJS.Timeout | null = null;
+      let lastWidth = 0;
+      let lastHeight = 0;
+      let isScrolling = false;
+
+      // 记录初始尺寸
+      if (containerRef.current) {
+        lastWidth = containerRef.current.offsetWidth;
+        lastHeight = window.innerHeight;
+      }
+
+      // 检测滚动结束
+      const handleScroll = () => {
+        isScrolling = true;
+        if (scrollEndTimer) {
+          clearTimeout(scrollEndTimer);
+        }
+        scrollEndTimer = setTimeout(() => {
+          isScrolling = false;
+          // 滚动结束后，检查是否需要更新尺寸
+          if (containerRef.current) {
+            const currentWidth = containerRef.current.offsetWidth;
+            // 只有在宽度真正变化时才更新
+            if (Math.abs(currentWidth - lastWidth) > 1) {
+              setDimensions({
+                width: currentWidth,
+                height: FIXED_HEIGHT,
+              });
+              lastWidth = currentWidth;
+            }
+          }
+        }, 150); // 滚动结束后 150ms 再处理
+      };
+
       const handleResize = () => {
-        if (containerRef.current) {
-          setDimensions({
-            width: containerRef.current.offsetWidth,
-            height: FIXED_HEIGHT,
-          });
+        if (!containerRef.current) return;
+
+        const currentWidth = containerRef.current.offsetWidth;
+        const currentHeight = window.innerHeight;
+        const widthChanged = Math.abs(currentWidth - lastWidth) > 1;
+        const heightChanged = Math.abs(currentHeight - lastHeight) > 1;
+
+        // 如果只是高度变化（可能是地址栏显示/隐藏），且宽度没变，忽略
+        if (heightChanged && !widthChanged) {
+          lastHeight = currentHeight;
+          return;
+        }
+
+        // 如果正在滚动，延迟处理
+        if (isScrolling) {
+          return;
+        }
+
+        // 防抖处理：清除之前的定时器
+        if (resizeTimer) {
+          clearTimeout(resizeTimer);
+        }
+
+        // 延迟执行 resize，避免频繁触发
+        resizeTimer = setTimeout(() => {
+          if (containerRef.current) {
+            const finalWidth = containerRef.current.offsetWidth;
+            // 再次检查宽度是否真的变化了（防止在延迟期间又变化）
+            if (Math.abs(finalWidth - lastWidth) > 1) {
+              setDimensions({
+                width: finalWidth,
+                height: FIXED_HEIGHT,
+              });
+              lastWidth = finalWidth;
+              lastHeight = window.innerHeight;
+            }
+          }
+        }, 200); // 200ms 防抖延迟
+      };
+
+      // 初始调用
+      handleResize();
+
+      // 监听事件
+      window.addEventListener('resize', handleResize);
+      // 同时监听 window 和 document 的滚动，确保捕获所有滚动事件
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      document.addEventListener('scroll', handleScroll, { passive: true });
+      // 也监听 touchmove 来检测触摸滚动
+      window.addEventListener('touchmove', handleScroll, { passive: true });
+      document.addEventListener('touchmove', handleScroll, { passive: true });
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('scroll', handleScroll);
+        document.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('touchmove', handleScroll);
+        document.removeEventListener('touchmove', handleScroll);
+        if (resizeTimer) {
+          clearTimeout(resizeTimer);
+        }
+        if (scrollEndTimer) {
+          clearTimeout(scrollEndTimer);
         }
       };
-      window.addEventListener('resize', handleResize);
-      handleResize();
-      return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     /**
