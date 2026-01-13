@@ -9,6 +9,7 @@ import PermissionSystemDemo from './components/PermissionSystemDemo';
 import WaveSeparator from './components/background/WaveSeparator';
 import BaselinePlantViewer from './components/garden/BaselinePlantViewer';
 import RootSystem from './components/garden/RootSystem';
+import Header from './components/Header';
 import { theme } from './config/theme';
 import { BaselinePlant, PlantSettings } from './types/garden';
 import { convertGradient } from './utils/colorConverter';
@@ -42,6 +43,7 @@ export default function Home() {
   const scrollToPositionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const touchEndTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
+  const hasRestoredScrollRef = useRef(false); // 是否已经恢复过滚动位置
 
   // 植物系统引用
   const engineRef = useRef<PlantGrowthEngine>(new PlantGrowthEngine());
@@ -49,6 +51,9 @@ export default function Home() {
   const baselinePlantsDataRef = useRef<BaselinePlant[]>([]); // 基线植物数据
   const hasInitializedPlantsRef = useRef(false); // 防止重复初始化
   const MAX_BASELINE_PLANTS = 5; // 最大植物数量
+
+  // 存储键名
+  const SCROLL_STATE_KEY = 'home_scrolled_to_part2';
   const [loadedPlants, setLoadedPlants] = useState<Array<{
     id: string;
     position_x_ratio: number;
@@ -118,6 +123,34 @@ export default function Home() {
     }, 150);
   };
 
+  // 初始化时检查是否需要恢复滚动位置
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || typeof window === 'undefined') return;
+    if (hasRestoredScrollRef.current) return; // 已经恢复过，不再执行
+
+    // 检查 sessionStorage 中是否有滚动记录
+    const hasScrolledToPart2 = sessionStorage.getItem(SCROLL_STATE_KEY) === 'true';
+    
+    if (hasScrolledToPart2) {
+      // 延迟一下确保页面渲染完成
+      const timer = setTimeout(() => {
+        const snapPoint = window.innerHeight * 0.8;
+        container.scrollTo({
+          top: snapPoint,
+          behavior: 'auto', // 使用 instant 避免动画
+        });
+        // 更新导航栏状态
+        updateNavBar(snapPoint, window.innerHeight * 0.79);
+        hasRestoredScrollRef.current = true;
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    } else {
+      hasRestoredScrollRef.current = true;
+    }
+  }, []);
+
   // 滑动吸附逻辑和滚动位置检测
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -140,6 +173,11 @@ export default function Home() {
         behavior: 'smooth',
       });
 
+      // 如果滚动到 part2，记录状态
+      if (target >= getSnapPoint()) {
+        sessionStorage.setItem(SCROLL_STATE_KEY, 'true');
+      }
+
       // 在滚动结束后更新导航位置
       if (snapToTimer) {
         clearTimeout(snapToTimer);
@@ -158,10 +196,19 @@ export default function Home() {
       const y = container.scrollTop;
       const SNAP_POINT = getSnapPoint();
 
-      // [表情] 已经进入 par2 内容区 → 完全放行
-      if (y >= SNAP_POINT) return;
+      // 已经进入 par2 内容区 → 完全放行，并记录状态
+      if (y >= SNAP_POINT) {
+        // 记录用户已经滚动到 part2
+        sessionStorage.setItem(SCROLL_STATE_KEY, 'true');
+        return;
+      }
 
-      // [表情] 仍在 par1 区域，决定回去还是进 par2
+      // 如果用户手动滚动回顶部（接近 0），清除记录，允许下次重新体验首屏
+      if (y < 50) {
+        sessionStorage.removeItem(SCROLL_STATE_KEY);
+      }
+
+      // 仍在 par1 区域，决定回去还是进 par2
       const target = y < SNAP_POINT * 0.4 ? 0 : SNAP_POINT;
 
       if (Math.abs(y - target) < 5) {
@@ -629,7 +676,12 @@ export default function Home() {
                 color: 'white',
                 marginTop: '40px',
               }}
-              onClick={() => scrollToPosition(window.innerHeight * 0.8)}
+              onClick={() => {
+                const snapPoint = window.innerHeight * 0.8;
+                scrollToPosition(snapPoint);
+                // 记录用户已经滚动到 part2
+                sessionStorage.setItem(SCROLL_STATE_KEY, 'true');
+              }}
             >
               下拉
             </Button>
@@ -667,6 +719,7 @@ export default function Home() {
               overflow: 'hidden',
             }}
           >
+            <Header embedded={true} isVisible={true} />
           </div>
 
           {/* 盒模型1：7vh高的透明顶部区域 */}
