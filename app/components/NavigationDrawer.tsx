@@ -38,7 +38,7 @@ interface NavigationDrawerProps {
  * 响应式：桌面端横向布局，手机端竖向布局
  * 从Header下方弹出，而非全屏
  */
-export default function NavigationDrawer({
+function NavigationDrawer({
   open,
   onClose,
   isLoggedIn,
@@ -339,3 +339,4 @@ export default function NavigationDrawer({
   );
 }
 
+export default React.memo(NavigationDrawer);

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import Header from '../components/Header';
+import { useHeader } from '../contexts/HeaderContext';
 import PageLayout from '../components/PageLayout';
 import GardenCanvas from '../components/garden/GardenCanvas';
 import GardenSidebar from '../components/garden/GardenSidebar';
@@ -15,6 +15,7 @@ const MAX_LOADED_PLANTS = 10; // 避免一次性加载过多离屏 canvas 占满
 
 export default function GardenPage() {
   const { isMobile } = useResponsive();
+  const { setLeftContent } = useHeader();
   const [settings, setSettings] = useState<PlantSettings>(PRESET_VINE);
   const [clearTrigger, setClearTrigger] = useState(0);
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -255,13 +256,36 @@ export default function GardenPage() {
   };
   
 
-  const openDrawer = () => {
+  // 打开抽屉函数 - 使用 useCallback 固定引用
+  const openDrawer = useCallback(() => {
     setDrawerVisible(true);
-  };
+  }, []);
 
-  const toggleSidebar = () => {
+  // 切换侧边栏函数 - 使用 useCallback 固定引用
+  const toggleSidebar = useCallback(() => {
     setSidebarExpanded((prev) => !prev);
-  };
+  }, []);
+
+  // 使用 useMemo 缓存 leftContent，避免每次渲染都创建新元素
+  const leftContentElement = useMemo(
+    () => (
+      <GardenDrawerButton 
+        onClick={openDrawer} 
+        expanded={sidebarExpanded}
+        onToggle={toggleSidebar}
+      />
+    ),
+    [openDrawer, sidebarExpanded, toggleSidebar]
+  );
+
+  // 设置 Header 的 leftContent
+  useEffect(() => {
+    setLeftContent(leftContentElement);
+
+    return () => {
+      setLeftContent(null);
+    };
+  }, [setLeftContent, leftContentElement]);
 
   return (
     <>
@@ -274,17 +298,6 @@ export default function GardenPage() {
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         expanded={sidebarExpanded}
-      />
-
-      {/* Header 独立在最顶部 */}
-      <Header
-        leftContent={
-          <GardenDrawerButton 
-            onClick={openDrawer} 
-            expanded={sidebarExpanded}
-            onToggle={toggleSidebar}
-          />
-        }
       />
 
       {/* 内容区域 - 根据侧边栏状态调整 margin */}

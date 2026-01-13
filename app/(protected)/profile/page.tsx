@@ -5,7 +5,6 @@ import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
-import Header from '../../components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import { useResponsive } from '@/app/hooks/useResponsive';
 
@@ -16,7 +15,6 @@ export default function ProfilePage() {
   const { user: localUser, logout, isLoading } = useAuth();
   const { currentFishbowlTheme } = useAppTheme();
   const { isMobile } = useResponsive();
-
   // 不需要再次获取用户信息，useAuth 已经处理了
   // AuthContext 会自动调用 /api/auth/me 并保持状态同步
 
@@ -59,9 +57,6 @@ export default function ProfilePage() {
 
   return (
     <>
-      {/* Header 独立在最顶部，覆盖在边框上 */}
-      <Header />
-      
       <PageLayout
         theme={currentFishbowlTheme}
         box1Content={

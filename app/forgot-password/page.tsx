@@ -2,16 +2,13 @@
 
 import { Typography, Button } from 'antd';
 import { useRouter } from 'next/navigation';
-import Header from '../components/Header';
 
 const { Title, Paragraph } = Typography;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-
   return (
     <>
-      <Header />
       <div style={{ 
         paddingTop: '8vh',
         minHeight: '100vh', 

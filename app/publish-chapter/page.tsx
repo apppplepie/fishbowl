@@ -22,8 +22,6 @@ import {
   UploadOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import type { UploadFile } from 'antd';
-import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -38,7 +36,6 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { apiGetJson, apiPostJson } from '@/lib/apiClient';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
-
 const { Option } = Select;
 
 /**
@@ -52,7 +49,6 @@ function PublishChapterContent() {
   const { currentFishbowlTheme } = useAppTheme();
   const searchParams = useSearchParams();
   const { isMobile } = useResponsive();
-
   // 从URL参数获取category
   const categoryFromUrl = searchParams.get('category');
 
@@ -369,8 +365,6 @@ function PublishChapterContent() {
 
   return (
     <>
-      <Header />
-
       <PageLayout
         theme={currentFishbowlTheme}
         box1Content={

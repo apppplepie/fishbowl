@@ -21,6 +21,10 @@ export async function authFetch(
 
   if (!ok) {
     // 这里才是真正"登录失效"
+    // 触发 authRefreshFailed 事件，让上层处理
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('authRefreshFailed'));
+    }
     throw new Error('AUTH_EXPIRED');
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, Tag } from 'antd';
 import { UserOutlined, ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { BookCard as BookCardType } from '@/app/types/card';
@@ -25,15 +25,21 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
-  // 当封面图片变化时，重置加载失败状态
-  useEffect(() => {
-    setImageLoadFailed(false);
-  }, [card.coverImage]);
-
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击
     setDeleteModalVisible(true);
   };
+
+  // 处理 coverImage 可能是字符串或对象的情况
+  const coverImageUrl = typeof card.coverImage === 'string' 
+    ? card.coverImage 
+    : card.coverImage?.url;
+  const coverImageTitle = typeof card.coverImage === 'object' 
+    ? card.coverImage?.title 
+    : undefined;
+  
+  // 判断是否为默认封面图片
+  const isDefaultCover = coverImageUrl === '/default-book-cover.jpg';
 
   return (
     <Card
@@ -53,68 +59,62 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
       cover={
         <div style={{
           position: 'relative',
-          height: '280px',
+          width: '100%',
+          height: '280px', // 固定高度
           overflow: 'hidden',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         }}>
-          {(() => {
-            // 处理 coverImage 可能是字符串或对象的情况
-            const coverImageUrl = typeof card.coverImage === 'string' 
-              ? card.coverImage 
-              : card.coverImage?.url;
-            const coverImageTitle = typeof card.coverImage === 'object' 
-              ? card.coverImage?.title 
-              : undefined;
-            
-            // 判断是否为默认封面图片
-            const isDefaultCover = coverImageUrl === '/default-book-cover.jpg';
-
-            // 如果没有封面图片或加载失败，显示占位符
-            if (!coverImageUrl || imageLoadFailed) {
-              return (
-                <div
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  📚 {card.title}
-                </div>
-              );
-            }
-
-            return (
-              <img
-                src={coverImageUrl}
-                alt={coverImageTitle || card.title}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  transition: 'transform 0.3s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                onError={() => {
-                  setImageLoadFailed(true);
-                  // 只在非默认图片加载失败时记录错误
-                  if (!isDefaultCover) {
-                    console.error('BookCard 封面图片加载失败:', coverImageUrl);
-                  }
-                }}
-              />
-            );
-          })()}
+          {/* 占位符 - 始终渲染，避免 conditional render */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              opacity: (!coverImageUrl || imageLoadFailed) ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: 'none',
+            }}
+          >
+            📚 {card.title}
+          </div>
+          {/* 图片 - 始终渲染，使用 opacity 控制显示 */}
+          {coverImageUrl && (
+            <img
+              src={coverImageUrl}
+              alt={coverImageTitle || card.title}
+              width={400}
+              height={280}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: (!imageLoadFailed) ? 1 : 0,
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              onError={() => {
+                setImageLoadFailed(true);
+                // 只在非默认图片加载失败时记录错误
+                if (!isDefaultCover) {
+                  console.error('BookCard 封面图片加载失败:', coverImageUrl);
+                }
+              }}
+            />
+          )}
           {/* 删除按钮 - 删除模式下始终显示 */}
           {showDeleteIcon && (
             <div

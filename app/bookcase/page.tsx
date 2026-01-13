@@ -1,22 +1,50 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { Masonry, Input, Tag, Select, message, Drawer, Button } from 'antd';
 import { SearchOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
-import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
-import CardRenderer from '@/app/components/cards/CardRenderer';
-import ArticleCard from '@/app/components/cards/ArticleCard';
-import ImageCard from '@/app/components/cards/ImageCard';
-import CodeCard from '@/app/components/cards/CodeCard';
-import DiaryCard from '@/app/components/cards/DiaryCard';
-import BookCard from '@/app/components/cards/BookCard';
-import UnifiedNavigator, { UnifiedNavigatorButton } from '@/app/components/sidebar/UnifiedNavigator';
-import { GenericIndexTreeConfig } from '@/app/components/sidebar/GenericTree';
 import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
+
+// 重型组件懒加载 - 减少首屏 JS 体积
+// 卡片组件懒加载（非首屏内容）
+const CardRenderer = dynamic(() => import('@/app/components/cards/CardRenderer'), { 
+  ssr: false 
+});
+
+const ArticleCard = dynamic(() => import('@/app/components/cards/ArticleCard'), { 
+  ssr: false 
+});
+
+const ImageCard = dynamic(() => import('@/app/components/cards/ImageCard'), { 
+  ssr: false 
+});
+
+const CodeCard = dynamic(() => import('@/app/components/cards/CodeCard'), { 
+  ssr: false 
+});
+
+const DiaryCard = dynamic(() => import('@/app/components/cards/DiaryCard'), { 
+  ssr: false 
+});
+
+const BookCard = dynamic(() => import('@/app/components/cards/BookCard'), { 
+  ssr: false 
+});
+
+// 目录/侧边栏懒加载
+const UnifiedNavigator = dynamic(() => import('@/app/components/sidebar/UnifiedNavigator'), { 
+  ssr: false 
+});
+
+const UnifiedNavigatorButton = dynamic(
+  () => import('@/app/components/sidebar/UnifiedNavigator').then(mod => ({ default: mod.UnifiedNavigatorButton })),
+  { ssr: false }
+) as React.ComponentType<{ onClick?: () => void; expanded?: boolean; onToggle?: () => void }>;
 import { mockCards } from '@/app/data/mockCards';
 import type { Card } from '@/app/types/card';
 import { extractBooksFromArticles } from '@/app/utils/bookUtils';
@@ -24,6 +52,7 @@ import { apiGet } from '@/lib/apiClient';
 import { mockBookCards } from '@/app/utils/bookMocks';
 import { cacheArticleList, getCachedArticleList, getArticleCategory, clearBookCache } from '@/app/utils/bookCache';
 import '../styles/articles-filter.css';
+import { useHeader } from '../contexts/HeaderContext';
 
 // 根据屏幕宽度计算列数
 const calculateColumns = (width: number) => {
@@ -136,7 +165,7 @@ function BookcasePageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-
+  const { setLeftContent } = useHeader();
   // 过滤条件状态
   const [allTags, setAllTags] = useState<string[]>([]); // 所有可用标签
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 选中的标签
@@ -157,11 +186,36 @@ function BookcasePageContent() {
   // 侧边栏展开状态（桌面端）
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
 
-  // 切换目录抽屉的函数（移动端）
-  const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);
+  // 切换目录抽屉的函数（移动端）- 使用 useCallback 固定引用
+  const openCategoryDrawer = useCallback(() => {
+    setDrawerVisible(true);
+  }, []);
 
-  // 切换侧边栏展开/收起（桌面端）
-  const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
+  // 切换侧边栏展开/收起（桌面端）- 使用 useCallback 固定引用
+  const toggleSidebar = useCallback(() => {
+    setSidebarExpanded((prev) => !prev);
+  }, []);
+
+  // 使用 useMemo 缓存 leftContent，避免每次渲染都创建新元素
+  const leftContentElement = useMemo(
+    () => (
+      <UnifiedNavigatorButton
+        onClick={openCategoryDrawer}
+        expanded={sidebarExpanded}
+        onToggle={toggleSidebar}
+      />
+    ),
+    [openCategoryDrawer, sidebarExpanded, toggleSidebar]
+  );
+
+  // 设置 Header 的 leftContent
+  useEffect(() => {
+    setLeftContent(leftContentElement);
+
+    return () => {
+      setLeftContent(null);
+    };
+  }, [setLeftContent, leftContentElement]);
 
   // 章节管理成功后的刷新函数
   const handleChapterManageSuccess = () => {
@@ -502,16 +556,6 @@ function BookcasePageContent() {
 
   return (
     <>
-      {/* Header 独立在最顶部，覆盖在边框上 */}
-      <Header
-        leftContent={
-          <UnifiedNavigatorButton 
-            onClick={openCategoryDrawer} 
-            expanded={sidebarExpanded}
-            onToggle={toggleSidebar}
-          />
-        }
-      />
 
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
         <PageLayout

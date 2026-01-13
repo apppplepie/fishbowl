@@ -86,23 +86,65 @@ export async function apiRequest(url: string, options: RequestOptions = {}): Pro
   Object.assign(requestHeaders, headers);
 
   // 发送请求（浏览器自动携带 HttpOnly cookie）
-  let response = await authFetch(url, {
-    ...restOptions,
-    headers: requestHeaders,
-  });
+  // 注意：authFetch 已经处理了 401 和 token 刷新，所以这里只需要捕获可能的 AUTH_EXPIRED 错误
+  let response: Response;
+  try {
+    response = await authFetch(url, {
+      ...restOptions,
+      headers: requestHeaders,
+    });
+  } catch (error: any) {
+    // 捕获 AUTH_EXPIRED 错误（authFetch 在刷新失败时抛出）
+    // authFetch 已经触发了 authRefreshFailed 事件，这里不需要再次触发
+    if (error?.message === 'AUTH_EXPIRED') {
+      console.log('❌ Token 刷新失败，认证已过期');
+      // 返回一个 401 响应，而不是抛出错误
+      // 这样调用者可以通过 response.status 判断，而不是 try-catch
+      return new Response(
+        JSON.stringify({ success: false, error: '认证已过期' }),
+        {
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    // 其他错误继续抛出
+    throw error;
+  }
 
-  // 如果返回401且需要认证，尝试刷新token并重试
+  // authFetch 已经处理了 401 和 token 刷新，所以这里不应该再收到 401
+  // 但如果还是收到了（可能是其他原因），且需要认证，尝试再次刷新
   if (response.status === 401 && requiresAuth) {
-    console.log('🔄 收到 401，尝试刷新 token...');
+    console.log('🔄 收到 401（authFetch 处理后），尝试再次刷新 token...');
     const refreshSuccess = await refreshAccessToken();
     
     if (refreshSuccess) {
       // 刷新成功，重试原始请求（浏览器会自动携带新的 cookie）
       console.log('✅ Token 刷新成功，重试原始请求');
-      response = await authFetch(url, {
-        ...restOptions,
-        headers: requestHeaders,
-      });
+      try {
+        response = await authFetch(url, {
+          ...restOptions,
+          headers: requestHeaders,
+        });
+      } catch (error: any) {
+        // 重试时如果还是失败，返回 401 响应
+        if (error?.message === 'AUTH_EXPIRED') {
+          console.log('❌ 重试时 Token 刷新失败，认证已过期');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('authRefreshFailed'));
+          }
+          return new Response(
+            JSON.stringify({ success: false, error: '认证已过期' }),
+            {
+              status: 401,
+              statusText: 'Unauthorized',
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+        throw error;
+      }
     } else {
       // 刷新失败已经触发了 authRefreshFailed 事件
       // 不需要在这里再次处理

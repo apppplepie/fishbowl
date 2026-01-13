@@ -6,8 +6,6 @@ import { Button, Form, Input, Select, Table, Typography, message, Spin, InputNum
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiGetJson, apiPostJson, apiPutJson } from '@/lib/apiClient';
-import Header from '../../../components/Header';
-
 const { Title, Paragraph } = Typography;
 const { Option } = Select;
 
@@ -161,7 +159,6 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
-
   const handleLogout = () => {
     logout();
   };
@@ -369,7 +366,6 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <Header />
       <div style={{ paddingTop: '8vh', minHeight: '100vh', background: '#f0f2f5', padding: '80px 24px 24px' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <Title level={1}>⚙️ 管理面板</Title>

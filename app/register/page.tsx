@@ -4,14 +4,12 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
-import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const router = useRouter();
-
   const onFinish = async (values: any) => {
     setLoading(true);
     
@@ -59,7 +57,6 @@ export default function RegisterPage() {
 
   return (
     <>
-      <Header />
       <PageLayout
         box1Content={
           <div style={{ 

@@ -5,7 +5,6 @@ import { DownOutlined } from '@ant-design/icons';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppTheme } from './contexts/AppThemeContext';
-import Header from './components/Header';
 import PermissionSystemDemo from './components/PermissionSystemDemo';
 import WaveSeparator from './components/background/WaveSeparator';
 import BaselinePlantViewer from './components/garden/BaselinePlantViewer';
@@ -40,6 +39,8 @@ export default function Home() {
   const isAutoScrolling = useRef(false);
   const hideNavBarTimerRef = useRef<NodeJS.Timeout | null>(null);
   const rafIdRef = useRef<number | null>(null);
+  const scrollToPositionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const touchEndTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
   // 植物系统引用
@@ -108,8 +109,12 @@ export default function Home() {
     updateNavBar(position, threshold);
 
     // 减少完成时间，让响应更快
-    setTimeout(() => {
+    if (scrollToPositionTimerRef.current) {
+      clearTimeout(scrollToPositionTimerRef.current);
+    }
+    scrollToPositionTimerRef.current = setTimeout(() => {
       isAutoScrolling.current = false;
+      scrollToPositionTimerRef.current = null;
     }, 150);
   };
 
@@ -122,6 +127,7 @@ export default function Home() {
     const getThreshold = () => window.innerHeight * 0.79; // 导航栏显示阈值
 
     let scrollEndTimer: NodeJS.Timeout | null = null;
+    let snapToTimer: NodeJS.Timeout | null = null;
     let lastScrollTop = container.scrollTop;
     let lastScrollTime = Date.now();
     let isScrolling = false;
@@ -135,9 +141,13 @@ export default function Home() {
       });
 
       // 在滚动结束后更新导航位置
-      setTimeout(() => {
+      if (snapToTimer) {
+        clearTimeout(snapToTimer);
+      }
+      snapToTimer = setTimeout(() => {
         isAutoScrolling.current = false;
         updateNavBar(container.scrollTop, getThreshold()); // 确保状态同步
+        snapToTimer = null;
       }, 30);
     };
 
@@ -207,8 +217,12 @@ export default function Home() {
     };
 
     const onTouchEnd = () => {
-      setTimeout(() => {
+      if (touchEndTimerRef.current) {
+        clearTimeout(touchEndTimerRef.current);
+      }
+      touchEndTimerRef.current = setTimeout(() => {
         checkSnap();
+        touchEndTimerRef.current = null;
       }, 30);
     };
 
@@ -239,6 +253,18 @@ export default function Home() {
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
+      }
+      if (scrollToPositionTimerRef.current) {
+        clearTimeout(scrollToPositionTimerRef.current);
+        scrollToPositionTimerRef.current = null;
+      }
+      if (touchEndTimerRef.current) {
+        clearTimeout(touchEndTimerRef.current);
+        touchEndTimerRef.current = null;
+      }
+      if (snapToTimer) {
+        clearTimeout(snapToTimer);
+        snapToTimer = null;
       }
     };
   }, []);
@@ -641,9 +667,6 @@ export default function Home() {
               overflow: 'hidden',
             }}
           >
-            {showNavBar && (
-              <Header embedded={true} />
-            )}
           </div>
 
           {/* 盒模型1：7vh高的透明顶部区域 */}

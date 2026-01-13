@@ -34,7 +34,7 @@ export interface UnifiedNavigatorProps {
   drawerSize?: number;             // 抽屉宽度（默认280）
 }
 
-export default function UnifiedNavigator({
+function UnifiedNavigator({
   treeConfig,
   visible = false,
   expanded = false,
@@ -185,3 +185,4 @@ export function UnifiedNavigatorButton({
   );
 }
 
+export default React.memo(UnifiedNavigator);

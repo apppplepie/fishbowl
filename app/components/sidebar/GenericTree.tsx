@@ -152,7 +152,7 @@ interface GenericIndexTreeProps {
  * 通用索引树组件
  * 用于显示分类+文章的混合树结构
  */
-export default function GenericIndexTree({
+function GenericIndexTree({
   config,
   currentArticleId,
   onArticleClick,
@@ -810,3 +810,4 @@ export default function GenericIndexTree({
   );
 }
 
+export default React.memo(GenericIndexTree);

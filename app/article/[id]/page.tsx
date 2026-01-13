@@ -1,38 +1,68 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, Breadcrumb } from 'antd';
-import type { MenuProps } from 'antd';
-import { ThunderboltOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import { Button, Input, message, Modal, Select, Tag, Divider, Space, Breadcrumb } from 'antd';
 
 const { Option } = Select;
-import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, CopyOutlined, CameraOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, CameraOutlined } from '@ant-design/icons';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '@/app/components/PageLayout';
-import Header from '@/app/components/Header';
-import UnifiedNavigator, { UnifiedNavigatorButton } from '@/app/components/sidebar/UnifiedNavigator';
-import { GenericIndexTreeConfig } from '@/app/components/sidebar/GenericTree';
-import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
+import { useHeader } from '@/app/contexts/HeaderContext';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
-import CommentSection from '@/app/components/CommentSection';
-import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { ACCESS_LEVELS } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
-import BlockEditor from '@/app/components/blocks/BlockEditor';
 import TextBlock from '@/app/components/blocks/TextBlock';
-import ImageBlock from '@/app/components/blocks/ImageBlock';
-import CodeBlock from '@/app/components/blocks/CodeBlock';
 import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
-import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
-import { formatTimeToMinute } from '@/app/utils/timeFormat';
+import type { EditMode } from '@/app/components/float/ArticleEditFloat';
+
+// 重型组件懒加载 - 减少首屏 JS 体积
+// 编辑器只有在编辑模式才需要
+const BlockEditor = dynamic(() => import('@/app/components/blocks/BlockEditor'), { 
+  ssr: false,
+  loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>加载编辑器...</div>
+});
+
+// 编辑悬浮按钮（包含权限判断）懒加载
+const ArticleEditFloat = dynamic(() => import('@/app/components/float/ArticleEditFloat'), { 
+  ssr: false 
+});
+
+// 评论区（通常很重）懒加载，且非首屏可延迟加载
+const CommentSection = dynamic(() => import('@/app/components/CommentSection'), { 
+  ssr: false,
+  loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>加载评论区...</div>
+});
+
+// 图片模态只有点击图片才需要
+const ImageCardModal = dynamic(() => import('@/app/components/ImageCardModal'), { 
+  ssr: false 
+});
+
+// 目录/侧边栏懒加载
+const UnifiedNavigator = dynamic(() => import('@/app/components/sidebar/UnifiedNavigator'), { 
+  ssr: false 
+});
+
+const UnifiedNavigatorButton = dynamic(
+  () => import('@/app/components/sidebar/UnifiedNavigator').then(mod => ({ default: mod.UnifiedNavigatorButton })),
+  { ssr: false }
+) as React.ComponentType<{ onClick?: () => void; expanded?: boolean; onToggle?: () => void }>;
+
+// 代码块和图片块懒加载（非首屏内容）
+const CodeBlock = dynamic(() => import('@/app/components/blocks/CodeBlock'), { 
+  ssr: false 
+});
+
+const ImageBlock = dynamic(() => import('@/app/components/blocks/ImageBlock'), { 
+  ssr: false 
+});
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
-import type { Block as BlockType } from '@/app/types/block';
-import { apiGet, apiPutJson, apiDeleteJson, apiPostJson, apiGetJson } from '@/lib/apiClient';
+import { apiGet, apiPutJson, apiDeleteJson, apiPostJson } from '@/lib/apiClient';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
 import {
   getArticleWithBlocks,
@@ -41,8 +71,6 @@ import {
   type ImageBlockContent,
   type CodeBlockContent
 } from '@/app/data/mockDatabase';
-
-const { TextArea } = Input;
 
 /**
  * 文章详情页面
@@ -54,8 +82,9 @@ export default function ArticlePage() {
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
   const { currentFishbowlTheme } = useAppTheme();
-  const { isLoggedIn, user, getToken } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const { canEdit: canEditArticle } = useCanEditArticle(articleId);
+  const { setLeftContent } = useHeader();
 
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
@@ -106,6 +135,37 @@ export default function ArticlePage() {
 
   // 侧边栏展开状态（桌面端）
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
+
+  // 打开目录抽屉的函数（移动端）- 使用 useCallback 固定引用
+  const openCategoryDrawer = useCallback(() => {
+    setDrawerVisible(true);
+  }, []);
+  
+  // 切换侧边栏展开/收起（桌面端）- 使用 useCallback 固定引用
+  const toggleSidebar = useCallback(() => {
+    setSidebarExpanded((prev) => !prev);
+  }, []);
+
+  // 使用 useMemo 缓存 leftContent，避免每次渲染都创建新元素
+  const leftContentElement = useMemo(
+    () => (
+      <UnifiedNavigatorButton
+        onClick={openCategoryDrawer}
+        expanded={sidebarExpanded}
+        onToggle={toggleSidebar}
+      />
+    ),
+    [openCategoryDrawer, sidebarExpanded, toggleSidebar]
+  );
+
+  // 设置 Header 的 leftContent
+  useEffect(() => {
+    setLeftContent(leftContentElement);
+
+    return () => {
+      setLeftContent(null);
+    };
+  }, [setLeftContent, leftContentElement]);
 
   /**
    * 获取分类路径
@@ -225,12 +285,6 @@ export default function ArticlePage() {
 
   // 编辑时的临时数据
   const [editedArticle, setEditedArticle] = useState<any>(null);
-
-  // 打开图片查看器
-  const handleImageClick = (imageContent: ImageBlockContent) => {
-    setSelectedImage(imageContent);
-    setIsImageModalVisible(true);
-  };
 
   // 处理文章点击 - 编辑模式下需要确认
   const handleArticleClick = (newArticleId: string) => {
@@ -523,12 +577,6 @@ export default function ArticlePage() {
     }
   };
 
-  // 切换目录抽屉的函数（移动端）
-  const openCategoryDrawer = () => setDrawerVisible(!drawerVisible);
-
-  // 切换侧边栏展开/收起（桌面端）
-  const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
-
   // 复制分享链接处理
   const handleShare = async () => {
     try {
@@ -803,16 +851,6 @@ export default function ArticlePage() {
         onExpandedChange={setSidebarExpanded}
       />
 
-      {/* Header 覆盖在PageLayout顶部边框上 */}
-      <Header
-        leftContent={
-          <UnifiedNavigatorButton
-            onClick={openCategoryDrawer}
-            expanded={sidebarExpanded}
-            onToggle={toggleSidebar}
-          />
-        }
-      />
 
       {/* 编辑悬浮按钮 - 使用后端API统一判断权限 */}
       {isLoggedIn && article && user && canEditArticle && (

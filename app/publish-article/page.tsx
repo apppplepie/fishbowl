@@ -23,7 +23,6 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
-import Header from '@/app/components/Header';
 import PageLayout from '@/app/components/PageLayout';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -80,7 +79,6 @@ export default function PublishArticlePage() {
   ]);
   
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-
   // 自动保存相关
   const lastSavedBlocksRef = useRef<string>('');
 
@@ -331,8 +329,6 @@ export default function PublishArticlePage() {
 
   return (
     <>
-      <Header />
-      
       <PageLayout
         theme={currentFishbowlTheme}
         box1Content={

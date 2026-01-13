@@ -28,32 +28,47 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
       styles={{ body: { padding: 0 } }}
       onClick={onClick}
     >
-      {/* 图片区域 */}
-      <div style={{ position: 'relative' }}>
-        {!imgLoaded && (
-          <div style={{
-            width: '100%',
-            height: '300px',
-            background: '#f0f0f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            加载中...
-          </div>
-        )}
+      {/* 图片区域 - 固定尺寸，避免 CLS */}
+      <div style={{ 
+        position: 'relative',
+        width: '100%',
+        aspectRatio: '4/3', // 固定宽高比
+        overflow: 'hidden',
+        background: '#f0f0f0',
+      }}>
+        {/* 占位符 - 始终渲染，避免 conditional render */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#f0f0f0',
+          opacity: imgLoaded ? 0 : 1,
+          transition: 'opacity 0.3s ease',
+          pointerEvents: 'none',
+        }}>
+          加载中...
+        </div>
+        {/* 图片 - 始终渲染，使用 opacity 控制显示 */}
         <img
           src={card.coverImage?.url || card.imageUrl || card.firstImageUrl}
           alt={card.coverImage?.title || card.title}
+          width={400}
+          height={300}
           onLoad={() => setImgLoaded(true)}
           onError={() => {
             console.error('ImageCard 图片加载失败:', card.coverImage?.url || card.imageUrl || card.firstImageUrl);
             setImgLoaded(true); // 即使加载失败也隐藏加载状态
           }}
           style={{
+            position: 'absolute',
+            inset: 0,
             width: '100%',
-            display: imgLoaded ? 'block' : 'none',
-            transition: 'transform 0.3s ease',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: imgLoaded ? 1 : 0,
+            transition: 'opacity 0.3s ease, transform 0.3s ease',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'scale(1.05)';

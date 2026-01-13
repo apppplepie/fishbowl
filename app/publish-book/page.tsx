@@ -19,8 +19,7 @@ import {
   EyeOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import type { UploadFile } from 'antd';
-import Header from '@/app/components/Header';
+import type { UploadFile } from 'antd'; 
 import PageLayout from '@/app/components/PageLayout';
 import TagInput from '@/app/components/TagInput';
 import type { Block } from '@/app/types/block';
@@ -42,7 +41,6 @@ function PublishBookPage() {
   // 封面图片状态
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-
   // 组件挂载时尝试加载草稿
   useEffect(() => {
     // 确保在客户端环境中
@@ -362,8 +360,6 @@ function PublishBookPage() {
 
   return (
     <>
-      <Header />
-
       <PageLayout
         box1Content={
           <div style={{ padding: '16px 24px' }}>

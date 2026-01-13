@@ -9,39 +9,86 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export async function GET(req: NextRequest) {
   try {
-    // 1. 验证用户登录
+    // 1. 尝试获取当前用户（允许未登录）
     const currentUser = getCurrentUser(req);
-
-    if (!currentUser) {
-      return NextResponse.json(
-        { success: false, error: '未登录或token已过期' },
-        { status: 401 }
-      );
-    }
+    const ADMIN_USER_ID = 'd67b823a-2336-4931-8c5e-02c7724297f0';
 
     // 2. 获取查询参数
     const { searchParams } = new URL(req.url);
     const pageId = searchParams.get('page_id') || null;
 
-    // 3. 查询用户配置
+    let userId = currentUser?.id;
+    let useAdminFallback = false;
+
+    // 3. 如果未登录或没有用户ID，使用管理员ID作为回退
+    if (!userId) {
+      userId = ADMIN_USER_ID;
+      useAdminFallback = true;
+    }
+
+    // 4. 查询用户配置
     const configs = await query<any[]>(
       `SELECT id, baseline_y_ratio, baseline_color, updated_at
        FROM user_garden_configs
        WHERE user_id = ? AND (page_id = ? OR (page_id IS NULL AND ? IS NULL))
        LIMIT 1`,
-      [currentUser.id, pageId, pageId]
+      [userId, pageId, pageId]
     );
 
-    // 4. 查询该用户在该页面的所有植物
+    // 5. 查询该用户在该页面的所有植物
     const plants = await query<any[]>(
       `SELECT id, position_x_ratio, position_y_offset, dna_json, created_at
        FROM plant_instances
        WHERE user_id = ? AND (page_id = ? OR (page_id IS NULL AND ? IS NULL))
        ORDER BY created_at ASC`,
-      [currentUser.id, pageId, pageId]
+      [userId, pageId, pageId]
     );
 
-    // 5. 返回结果
+    // 6. 如果当前用户没有植物且不是管理员回退，尝试使用管理员的花园配置
+    if (plants.length === 0 && !useAdminFallback && userId !== ADMIN_USER_ID) {
+      const adminConfigs = await query<any[]>(
+        `SELECT id, baseline_y_ratio, baseline_color, updated_at
+         FROM user_garden_configs
+         WHERE user_id = ? AND (page_id = ? OR (page_id IS NULL AND ? IS NULL))
+         LIMIT 1`,
+        [ADMIN_USER_ID, pageId, pageId]
+      );
+
+      const adminPlants = await query<any[]>(
+        `SELECT id, position_x_ratio, position_y_offset, dna_json, created_at
+         FROM plant_instances
+         WHERE user_id = ? AND (page_id = ? OR (page_id IS NULL AND ? IS NULL))
+         ORDER BY created_at ASC`,
+        [ADMIN_USER_ID, pageId, pageId]
+      );
+
+      // 如果管理员有植物，使用管理员的配置和植物
+      if (adminPlants.length > 0) {
+        const adminConfig = adminConfigs.length > 0 ? adminConfigs[0] : {
+          baseline_y_ratio: 0.6,
+          baseline_color: 'rgba(0, 0, 0, 0.1)',
+        };
+
+        return NextResponse.json({
+          success: true,
+          config: {
+            baseline_y_ratio: parseFloat(adminConfig.baseline_y_ratio),
+            baseline_color: adminConfig.baseline_color,
+            updated_at: adminConfig.updated_at,
+          },
+          plants: adminPlants.map(plant => ({
+            id: plant.id,
+            position_x_ratio: parseFloat(plant.position_x_ratio),
+            position_y_offset: parseFloat(plant.position_y_offset),
+            dna: JSON.parse(plant.dna_json),
+            created_at: plant.created_at,
+          })),
+        });
+      }
+      // 如果管理员也没有植物，继续使用当前用户的配置（即使没有植物）
+    }
+
+    // 7. 返回结果
     if (configs.length === 0) {
       // 没有配置，返回默认值
       return NextResponse.json({

@@ -1,36 +1,68 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, Breadcrumb, Skeleton } from 'antd';
 import type { MenuProps } from 'antd';
-
 const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CopyOutlined, CameraOutlined } from '@ant-design/icons';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '@/app/components/PageLayout';
-import Header from '@/app/components/Header';
-import UnifiedNavigator, { UnifiedNavigatorButton } from '@/app/components/sidebar/UnifiedNavigator';
-import { GenericIndexTreeConfig } from '@/app/components/sidebar/GenericTree';
-import ArticleEditFloat, { EditMode } from '@/app/components/float/ArticleEditFloat';
+import { useHeader } from '@/app/contexts/HeaderContext';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
-import CommentSection from '@/app/components/CommentSection';
-import ImageCardModal from '@/app/components/ImageCardModal';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { useBookStore } from '@/app/stores/useBookStore';
-import BlockEditor from '@/app/components/blocks/BlockEditor';
 import TextBlock from '@/app/components/blocks/TextBlock';
-import ImageBlock from '@/app/components/blocks/ImageBlock';
-import CodeBlock from '@/app/components/blocks/CodeBlock';
-import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
-import { formatTimeToMinute } from '@/app/utils/timeFormat';
-import type { Block as BlockType } from '@/app/types/block';
-import { ACCESS_LEVELS } from '@/app/types/block';
+import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
+import type { EditMode } from '@/app/components/float/ArticleEditFloat';
+
+// 重型组件懒加载 - 减少首屏 JS 体积
+// 编辑器只有在编辑模式才需要
+const BlockEditor = dynamic(() => import('@/app/components/blocks/BlockEditor'), { 
+  ssr: false,
+  loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>加载编辑器...</div>
+});
+
+// 编辑悬浮按钮（包含权限判断）懒加载
+const ArticleEditFloat = dynamic(() => import('@/app/components/float/ArticleEditFloat'), { 
+  ssr: false 
+});
+
+// 评论区（通常很重）懒加载，且非首屏可延迟加载
+const CommentSection = dynamic(() => import('@/app/components/CommentSection'), { 
+  ssr: false,
+  loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>加载评论区...</div>
+});
+
+// 图片模态只有点击图片才需要
+const ImageCardModal = dynamic(() => import('@/app/components/ImageCardModal'), { 
+  ssr: false 
+});
+
+// 目录/侧边栏懒加载
+const UnifiedNavigator = dynamic(() => import('@/app/components/sidebar/UnifiedNavigator'), { 
+  ssr: false 
+});
+
+const UnifiedNavigatorButton = dynamic(
+  () => import('@/app/components/sidebar/UnifiedNavigator').then(mod => ({ default: mod.UnifiedNavigatorButton })),
+  { ssr: false }
+) as React.ComponentType<{ onClick?: () => void; expanded?: boolean; onToggle?: () => void }>;
+
+// 代码块和图片块懒加载（非首屏内容）
+const CodeBlock = dynamic(() => import('@/app/components/blocks/CodeBlock'), { 
+  ssr: false 
+});
+
+const ImageBlock = dynamic(() => import('@/app/components/blocks/ImageBlock'), { 
+  ssr: false 
+});
 import {
   getArticleWithBlocks,
   type Block,
@@ -41,9 +73,6 @@ import {
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 import { getChapterLabel } from '@/app/utils/chapterNumbering';
 import { apiGet, apiPutJson, apiDeleteJson, apiPostJson } from '@/lib/apiClient';
-import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
-
-const { TextArea } = Input;
 
 /**
  * 文章内容骨架屏组件
@@ -94,6 +123,7 @@ export default function BookPage() {
   const { currentFishbowlTheme } = useAppTheme();
   const { isLoggedIn, user } = useAuth();
   const { canEdit: canEditArticle } = useCanEditArticle(articleId);
+  const { setLeftContent } = useHeader();
   // 从URL参数获取分类信息，优先使用URL参数中的category
   const urlCategory = searchParams.get('category');
 
@@ -118,8 +148,11 @@ export default function BookPage() {
   // 编辑模式状态
   const [editMode, setEditMode] = useState<EditMode>('view');
 
-  // 配置消息提示位置，避免被 header 遮挡
+  // 配置消息提示位置，避免被 header 遮挡（防止重复执行）
+  const messageConfigInited = useRef(false);
   useEffect(() => {
+    if (messageConfigInited.current) return;
+    messageConfigInited.current = true;
     message.config({
       top: 60, // header 45px + 15px 间距
       duration: 2,
@@ -684,13 +717,44 @@ export default function BookPage() {
     });
   };
 
-  // 图片点击处理
-  const handleImageClick = (imageContent: ImageBlockContent) => {
+  // 图片点击处理 - 使用 useCallback 固定引用
+  const handleImageClick = useCallback((imageContent: ImageBlockContent) => {
     setSelectedImage(imageContent);
     setIsImageModalVisible(true);
-  };
+  }, []);
 
-  // 显示骨架屏或加载状态
+  // 打开目录抽屉的函数（移动端）- 使用 useCallback 固定引用
+  const openCategoryDrawer = useCallback(() => {
+    setDrawerVisible(true);
+  }, []);
+
+  // 切换侧边栏展开/收起（桌面端）- 使用 useCallback 固定引用
+  const toggleSidebar = useCallback(() => {
+    setSidebarExpanded((prev) => !prev);
+  }, []);
+
+  // 使用 useMemo 缓存 leftContent，避免每次渲染都创建新元素
+  const leftContentElement = useMemo(
+    () => (
+      <UnifiedNavigatorButton 
+        onClick={openCategoryDrawer} 
+        expanded={sidebarExpanded}
+        onToggle={toggleSidebar}
+      />
+    ),
+    [openCategoryDrawer, sidebarExpanded, toggleSidebar]
+  );
+
+  // 设置 Header 的 leftContent
+  useEffect(() => {
+    setLeftContent(leftContentElement);
+
+    return () => {
+      setLeftContent(null);
+    };
+  }, [setLeftContent, leftContentElement]);
+
+  // 显示骨架屏或加载状态（所有 Hook 必须在早期返回之前）
   if (!book || contentLoadingState === 'loading') {
     return <ArticleContentSkeleton />;
   }
@@ -709,12 +773,6 @@ export default function BookPage() {
       </div>
     );
   }
-
-  // 打开目录抽屉的函数（移动端）
-  const openCategoryDrawer = () => setDrawerVisible(true);
-
-  // 切换侧边栏展开/收起（桌面端）
-  const toggleSidebar = () => setSidebarExpanded(!sidebarExpanded);
 
   // 导出页面为长图
   const exportPageAsLongImage = async (): Promise<string> => {
@@ -823,13 +881,34 @@ export default function BookPage() {
       let stableFrames = 0;
       const requiredStableFrames = 10; // 等待10帧
       let lastHeight = 0;
+      let rafId: number | null = null;
+      let timeoutId: NodeJS.Timeout | null = null;
+      let isResolved = false;
+
+      const cleanup = () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      };
 
       const checkStability = () => {
+        // 如果已经 resolve，不再继续执行
+        if (isResolved) {
+          return;
+        }
+
         const currentHeight = document.documentElement.scrollHeight;
 
         if (currentHeight === lastHeight) {
           stableFrames++;
           if (stableFrames >= requiredStableFrames) {
+            isResolved = true;
+            cleanup();
             resolve();
             return;
           }
@@ -838,13 +917,17 @@ export default function BookPage() {
           lastHeight = currentHeight;
         }
 
-        requestAnimationFrame(checkStability);
+        // 保存 rafId 以便清理
+        rafId = requestAnimationFrame(checkStability);
       };
 
       // 延迟开始检查，给初始渲染一些时间
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
+        if (isResolved) {
+          return;
+        }
         lastHeight = document.documentElement.scrollHeight;
-        requestAnimationFrame(checkStability);
+        rafId = requestAnimationFrame(checkStability);
       }, 100);
     });
   };
@@ -960,18 +1043,12 @@ export default function BookPage() {
         onExpandedChange={setSidebarExpanded}
       />
 
-      {/* Header 独立在最顶部，覆盖在边框上 */}
-      <Header
-        leftContent={
-          <UnifiedNavigatorButton 
-            onClick={openCategoryDrawer} 
-            expanded={sidebarExpanded}
-            onToggle={toggleSidebar}
-          />
-        }
-      />
 
-      <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
+      <div style={{ 
+        transform: isMobile ? 'translateX(0)' : (sidebarExpanded ? 'translateX(280px)' : 'translateX(0)'),
+        transition: 'transform 0.3s ease',
+        willChange: 'transform'
+      }}>
         <PageLayout
           theme={currentFishbowlTheme}
           box1Content={

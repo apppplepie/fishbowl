@@ -16,7 +16,7 @@ interface GardenSidebarProps {
   expanded?: boolean; // 桌面端：侧边栏是否展开
 }
 
-export default function GardenSidebar({
+function GardenSidebar({
   settings,
   updateSettings,
   applyPreset,
@@ -88,3 +88,4 @@ export default function GardenSidebar({
   );
 }
 
+export default React.memo(GardenSidebar);
