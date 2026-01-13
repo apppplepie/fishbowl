@@ -1,23 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import { Masonry, Spin, message } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '../components/PageLayout';
+import Header from '../components/Header';
+import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
+import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
 import { apiGet } from '@/lib/apiClient';
-
-// 重型组件懒加载 - 减少首屏 JS 体积
-// 绘画卡片组件懒加载
-const DrawingGalleryCard = dynamic(() => import('../components/cards/DrawingGalleryCard'), { 
-  ssr: false 
-});
-
-// 发布悬浮按钮懒加载
-const GalleryPublishFloat = dynamic(() => import('../components/float/GalleryPublishFloat'), { 
-  ssr: false 
-});
 
 // 注入动画样式
 if (typeof document !== 'undefined') {
@@ -69,7 +60,6 @@ const GalleryImage: React.FC<{
       style={{
         position: 'relative',
         width: '100%',
-        aspectRatio: '4/3', // 固定宽高比，避免 CLS
         cursor: 'pointer',
         borderRadius: 6,
         overflow: 'hidden',
@@ -77,52 +67,37 @@ const GalleryImage: React.FC<{
       }}
       onClick={onClick}
     >
-      {/* 占位图 - 始终渲染，避免 conditional render */}
-      <div style={{ 
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        opacity: imgLoaded ? 0 : 1,
-        transition: 'opacity 0.3s ease',
-        pointerEvents: 'none',
-      }}>
-        <svg
-          viewBox="0 0 400 300"
-          style={{ width: '100%', height: '100%', display: 'block' }}
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden
-        >
-          <rect width="400" height="300" fill="#f0f0f0" />
-          <path d="M200 120 L200 180 M170 150 L230 150" stroke="#d0d0d0" strokeWidth="4" strokeLinecap="round" />
-        </svg>
-      </div>
+      {/* 占位图 */}
+      {!imgLoaded && (
+        <div style={{ width: '100%', paddingTop: '75%', position: 'relative' }}>
+          <svg
+            viewBox="0 0 400 300"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden
+          >
+            <rect width="400" height="300" fill="#f0f0f0" />
+            <path d="M200 120 L200 180 M170 150 L230 150" stroke="#d0d0d0" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+        </div>
+      )}
 
-      {/* 真实图片 - 始终渲染，使用 opacity 控制显示 */}
+      {/* 真实图片 */}
       <img
         src={article.cover_image_url}
         alt={article.title ?? '作品封面'}
-        width={400}
-        height={300}
         onLoad={() => setImgLoaded(true)}
         style={{
-          position: 'absolute',
-          inset: 0,
           width: '100%',
-          height: '100%',
+          maxHeight: 500,
           objectFit: 'cover',
-          opacity: imgLoaded ? 1 : 0,
-          transition: 'opacity 0.3s ease, transform 0.32s ease, filter 0.32s ease',
+          display: imgLoaded ? 'block' : 'none',
+          transition: 'transform 0.32s ease, filter 0.32s ease',
           transformOrigin: 'center center',
+          borderRadius: 0,
         }}
-        onMouseEnter={(e) => { 
-          (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.04)'; 
-          (e.currentTarget as HTMLImageElement).style.filter = 'brightness(0.98)'; 
-        }}
-        onMouseLeave={(e) => { 
-          (e.currentTarget as HTMLImageElement).style.transform = 'scale(1)'; 
-          (e.currentTarget as HTMLImageElement).style.filter = 'none'; 
-        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.04)'; (e.currentTarget as HTMLImageElement).style.filter = 'brightness(0.98)'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLImageElement).style.filter = 'none'; }}
       />
     </div>
   );
@@ -141,6 +116,7 @@ export default function GalleryPage() {
     // SSR guard: 默认 3，客户端会在 useEffect 里修正
     return typeof window !== 'undefined' ? calculateColumns(window.innerWidth) : 3;
   });
+
   const ITEMS_PER_PAGE = 20;
 
   // refs 用于在事件回调中读取最新状态，避免闭包带来的 stale 问题
@@ -276,6 +252,9 @@ export default function GalleryPage() {
 
   return (
     <>
+      {/* Header 独立在最顶部，覆盖在边框上 */}
+      <Header />
+      
       <PageLayout
         theme={currentFishbowlTheme}
         box2Style={{ padding: '40px 6px' }}

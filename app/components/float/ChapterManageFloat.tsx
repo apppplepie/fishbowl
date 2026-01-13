@@ -243,19 +243,21 @@ const SortableItem: React.FC<{
             <span>
               {icon} {formattedLabel}
               <span style={{ marginLeft: '8px' }}>
-                <Plus
-                  size={14}
-                  style={{ color: '#52c41a', cursor: 'pointer', marginRight: 8 }}
-                  onClick={(e) => { e.stopPropagation(); onAddCategory(node.id); }}
-                  title="新建子目录"
-                />
-                {isEmpty && (
-                  <Trash2
+                <span title="新建子目录">
+                  <Plus
                     size={14}
-                    style={{ color: '#ff4d4f', cursor: 'pointer' }}
-                    onClick={(e) => { e.stopPropagation(); onDeleteCategory(node.id, node.name || ''); }}
-                    title="删除目录"
+                    style={{ color: '#52c41a', cursor: 'pointer', marginRight: 8 }}
+                    onClick={(e) => { e.stopPropagation(); onAddCategory(node.id); }}
                   />
+                </span>
+                {isEmpty && (
+                  <span title="删除目录">
+                    <Trash2
+                      size={14}
+                      style={{ color: '#ff4d4f', cursor: 'pointer' }}
+                      onClick={(e) => { e.stopPropagation(); onDeleteCategory(node.id, node.name || ''); }}
+                    />
+                  </span>
                 )}
               </span>
             </span>
@@ -496,8 +498,6 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       okText: '确认',
       okType: 'danger',
       cancelText: '取消',
-      maskClosable: false,
-      keyboard: false,
       onOk: async () => {
         try {
           const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/categories/${categoryId}`);
@@ -903,7 +903,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       <FloatButton
         icon={<List size={20} />}
         tooltip={tooltipProp("章节管理")}
-        onClick={(e) => { e?.stopPropagation(); showModal(); }}
+        onClick={() => { showModal(); }}
       />
 
       <Modal
@@ -912,10 +912,9 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
         onCancel={handleCancel}
         footer={null}
         width="90%"
-        style={{ maxWidth: '720px' }}
+        styles={{ body: { maxWidth: '720px' } }}
         maskClosable={false}
-        destroyOnHidden={true}
-        keyboard={false}
+        destroyOnClose={true}
         getContainer={false}
       >
         <div style={{ padding: '20px 0' }} onClick={(e) => e.stopPropagation()}>
@@ -1019,12 +1018,11 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       <Modal
         title="新建目录"
         open={newCategoryModalOpen}
-        onOk={(e) => { e?.stopPropagation(); handleConfirmAddCategory(); }}
-        onCancel={(e) => { e?.stopPropagation(); setNewCategoryModalOpen(false); setNewCategoryName(''); }}
+        onOk={() => { handleConfirmAddCategory(); }}
+        onCancel={() => { setNewCategoryModalOpen(false); setNewCategoryName(''); }}
         okText="确认"
         cancelText="取消"
         maskClosable={false}
-        keyboard={false}
         getContainer={false}
       >
         <div style={{ padding: '20px 0' }} onClick={(e) => e.stopPropagation()}>
@@ -1032,7 +1030,12 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
             placeholder="请输入目录名称"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
-            onPressEnter={(e) => { e.stopPropagation(); handleConfirmAddCategory(); }}
+            onKeyDown={(e) => { 
+              if (e.key === 'Enter') {
+                e.stopPropagation(); 
+                handleConfirmAddCategory(); 
+              }
+            }}
             maxLength={50}
             autoFocus
           />
