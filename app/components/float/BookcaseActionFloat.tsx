@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, message } from 'antd';
-import { PlusOutlined, BookOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons';
+import { FloatButton, message } from '@/app/components/ui';
+import { Plus, Book, FileText, Trash2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ChapterManageFloat from './ChapterManageFloat';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -89,13 +89,13 @@ export default function BookcaseActionFloat({
         <FloatButton.Group
           trigger="click"
           type="primary"
-          style={{ right: 24, bottom: 24 }}
-          icon={<PlusOutlined />}
+          style={{ right: 24, bottom: 40 }}
+          icon={<Plus size={20} />}
           tooltip={tooltipProp("操作菜单")}
         >
           {/* 发布章节按钮 */}
           <FloatButton
-            icon={<FileTextOutlined />}
+            icon={<FileText size={20} />}
             tooltip={tooltipProp("发布章节")}
             onClick={handlePublishChapter}
           />
@@ -116,13 +116,13 @@ export default function BookcaseActionFloat({
         <FloatButton.Group
           trigger="click"
           type="primary"
-          style={{ right: 24, bottom: 24 }}
-          icon={<BookOutlined />}
+          style={{ right: 24, bottom: 40 }}
+          icon={<Book size={20} />}
           tooltip={tooltipProp("操作菜单")}
         >
           {/* 发布新书按钮 */}
           <FloatButton
-            icon={<BookOutlined />}
+            icon={<Book size={20} />}
             tooltip={tooltipProp("发布新书")}
             onClick={handlePublishBook}
           />
@@ -137,7 +137,7 @@ export default function BookcaseActionFloat({
           {/* 删除书籍按钮 - 仅管理员可见 */}
           {isAdmin && (
             <FloatButton
-              icon={<DeleteOutlined />}
+              icon={<Trash2 size={20} />}
               tooltip={tooltipProp(deleteMode ? "退出删除模式" : "删除书籍")}
               onClick={handleDeleteBookClick}
               style={{

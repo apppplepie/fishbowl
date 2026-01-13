@@ -1,17 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal } from 'antd';
-import { 
-  EditOutlined, 
-  CloseOutlined, 
-  EyeOutlined,
-  SaveOutlined,
-  DeleteOutlined,
-  ExclamationCircleOutlined,
-  FileTextOutlined,
-  MenuOutlined,
-} from '@ant-design/icons';
+import { FloatButton, Modal } from '@/app/components/ui';
+import { Edit, X, Eye, Save, Trash2, AlertCircle, FileText, Menu } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ChapterManageFloat from './ChapterManageFloat';
 
@@ -114,7 +105,7 @@ export default function ArticleEditFloat({
   const handleDelete = () => {
     Modal.confirm({
       title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
+      icon: <AlertCircle size={20} />,
       content: '确定要删除这篇文章吗？此操作不可恢复。',
       okText: '确认删除',
       okType: 'danger',
@@ -136,18 +127,18 @@ export default function ArticleEditFloat({
         <FloatButton.Group
           trigger="click"
           style={{ insetInlineEnd: 24 }}
-          icon={<MenuOutlined />}
+          icon={<Menu size={20} />}
           tooltip={tooltipProp('操作')}
           type="primary"
         >
           <FloatButton
-            icon={<EditOutlined />}
+            icon={<Edit size={20} />}
             tooltip={tooltipProp('编辑文章')}
             onClick={onEdit}
           />
           {isBookPage && (
             <FloatButton
-              icon={<FileTextOutlined />}
+              icon={<FileText size={20} />}
               tooltip={tooltipProp('发布章节')}
               onClick={handlePublishChapter}
             />
@@ -161,14 +152,14 @@ export default function ArticleEditFloat({
           )} */}
           {isArticlePage && (
             <FloatButton
-              icon={<FileTextOutlined />}
+              icon={<FileText size={20} />}
               tooltip={tooltipProp('写文章')}
               onClick={handlePublishArticle}
             />
           )}
           {onDelete && (
             <FloatButton
-              icon={<DeleteOutlined />}
+              icon={<Trash2 size={20} />}
               tooltip={tooltipProp('删除文章')}
               onClick={handleDelete}
             />
@@ -179,10 +170,10 @@ export default function ArticleEditFloat({
     
     return (
       <FloatButton
-        icon={<EditOutlined />}
+        icon={<Edit size={20} />}
         tooltip={tooltipProp('编辑文章')}
         type="primary"
-        style={{ insetInlineEnd: 24 }}
+        style={{ insetInlineEnd: 24, bottom: 40 }}
         onClick={onEdit}
       />
     );
@@ -193,23 +184,26 @@ export default function ArticleEditFloat({
     return (
       <FloatButton.Group
         trigger="click"
-        style={{ insetInlineEnd: 24 }}
-        icon={<EditOutlined />}
+        style={{ insetInlineEnd: 24, bottom: 40 }}
+        icon={<Edit size={20} />}
         tooltip={tooltipProp('编辑中')}
         type="primary"
       >
         <FloatButton
-          icon={<SaveOutlined />}
+          icon={<Save size={20} />}
           tooltip={tooltipProp('保存')}
-          onClick={onSave}
+          onClick={() => {
+            console.log('💾 点击保存按钮');
+            onSave();
+          }}
         />
         <FloatButton
-          icon={<EyeOutlined />}
+          icon={<Eye size={20} />}
           tooltip={tooltipProp('预览')}
           onClick={onPreview}
         />
         <FloatButton
-          icon={<CloseOutlined />}
+          icon={<X size={20} />}
           tooltip={tooltipProp('取消')}
           onClick={onCancel}
         />
@@ -222,18 +216,21 @@ export default function ArticleEditFloat({
     return (
       <FloatButton.Group
         trigger="click"
-        style={{ insetInlineEnd: 24 }}
-        icon={<EyeOutlined />}
+        style={{ insetInlineEnd: 24, bottom: 40 }}
+        icon={<Eye size={20} />}
         tooltip={tooltipProp('预览中')}
         type="primary"
       >
         <FloatButton
-          icon={<SaveOutlined />}
+          icon={<Save size={20} />}
           tooltip={tooltipProp('保存')}
-          onClick={onSave}
+          onClick={() => {
+            console.log('💾 点击保存按钮');
+            onSave();
+          }}
         />
         <FloatButton
-          icon={<EditOutlined />}
+          icon={<Edit size={20} />}
           tooltip={tooltipProp('继续编辑')}
           onClick={() => onCancel()} // 返回编辑模式
         />

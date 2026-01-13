@@ -1,0 +1,79 @@
+/* UI 组件 CSS 变量系统 */
+:root {
+  /* 颜色 - 主色调 */
+  --ui-color-primary: #1890ff;
+  --ui-color-primary-hover: #40a9ff;
+  --ui-color-primary-active: #096dd9;
+  --ui-color-success: #52c41a;
+  --ui-color-warning: #faad14;
+  --ui-color-error: #f5222d;
+  --ui-color-info: #1890ff;
+  
+  /* 颜色 - 文本 */
+  --ui-color-text: rgba(0, 0, 0, 0.85);
+  --ui-color-text-secondary: rgba(0, 0, 0, 0.65);
+  --ui-color-text-disabled: rgba(0, 0, 0, 0.25);
+  --ui-color-text-inverse: #ffffff;
+  
+  /* 颜色 - 边框 */
+  --ui-color-border: #d9d9d9;
+  --ui-color-border-light: #f0f0f0;
+  --ui-color-border-dark: #bfbfbf;
+  
+  /* 颜色 - 背景 */
+  --ui-color-bg: #ffffff;
+  --ui-color-bg-secondary: #fafafa;
+  --ui-color-bg-hover: #f5f5f5;
+  --ui-color-bg-active: #e6f7ff;
+  --ui-color-bg-disabled: #f5f5f5;
+  
+  /* 颜色 - 遮罩 */
+  --ui-color-mask: rgba(0, 0, 0, 0.45);
+  
+  /* 间距 */
+  --ui-spacing-xs: 4px;
+  --ui-spacing-sm: 8px;
+  --ui-spacing-md: 16px;
+  --ui-spacing-lg: 24px;
+  --ui-spacing-xl: 32px;
+  
+  /* 字体 */
+  --ui-font-size-sm: 12px;
+  --ui-font-size-base: 14px;
+  --ui-font-size-lg: 16px;
+  --ui-font-size-xl: 20px;
+  --ui-font-size-xxl: 24px;
+  
+  /* 字体粗细 */
+  --ui-font-weight-normal: 400;
+  --ui-font-weight-medium: 500;
+  --ui-font-weight-semibold: 600;
+  
+  /* 行高 */
+  --ui-line-height-sm: 1.5;
+  --ui-line-height-base: 1.5715;
+  --ui-line-height-lg: 1.75;
+  
+  /* 圆角 */
+  --ui-border-radius-sm: 2px;
+  --ui-border-radius-base: 4px;
+  --ui-border-radius-lg: 8px;
+  --ui-border-radius-xl: 12px;
+  
+  /* 阴影 */
+  --ui-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --ui-shadow-base: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --ui-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --ui-shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.12);
+  
+  /* 过渡 */
+  --ui-transition-base: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ui-transition-fast: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+  
+  /* Z-index */
+  --ui-z-index-modal: 1000;
+  --ui-z-index-message: 1010;
+  --ui-z-index-dropdown: 1050;
+  --ui-z-index-tooltip: 1060;
+}
+

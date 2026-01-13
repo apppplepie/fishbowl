@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Button, Input, message, Modal, Select, Tag, Divider, Space, Breadcrumb } from 'antd';
-
+import { Button, Input, Modal, Tag, Divider, Space, Breadcrumb, message } from '@/app/components/ui';
+import { Select } from 'antd'; // 暂时保留，后续实现
 const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, CameraOutlined } from '@ant-design/icons';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';

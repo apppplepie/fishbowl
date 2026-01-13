@@ -10,15 +10,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 // UI imports
-import { FloatButton, Modal, message, Spin, Empty, Input } from 'antd';
-import {
-  UnorderedListOutlined,
-  PlusOutlined,
-  DeleteOutlined,
-  ExclamationCircleOutlined,
-  CaretDownOutlined,
-  CaretRightOutlined
-} from '@ant-design/icons';
+import { FloatButton, Modal, message, Input } from '@/app/components/ui';
+import { Spin, Empty } from 'antd'; // 暂时保留，后续实现
+import { List, Plus, Trash2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Drag & drop imports
 import {
@@ -241,7 +235,7 @@ const SortableItem: React.FC<{
       >
         {isCategory && hasChildren && (
           <span style={{ marginRight: '6px', cursor: 'pointer' }}>
-            {isExpanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
         )}
         <span style={{ flex: 1 }}>
@@ -249,14 +243,16 @@ const SortableItem: React.FC<{
             <span>
               {icon} {formattedLabel}
               <span style={{ marginLeft: '8px' }}>
-                <PlusOutlined
-                  style={{ color: '#52c41a', cursor: 'pointer', marginRight: 8, fontSize: 12 }}
+                <Plus
+                  size={14}
+                  style={{ color: '#52c41a', cursor: 'pointer', marginRight: 8 }}
                   onClick={(e) => { e.stopPropagation(); onAddCategory(node.id); }}
                   title="新建子目录"
                 />
                 {isEmpty && (
-                  <DeleteOutlined
-                    style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: 12 }}
+                  <Trash2
+                    size={14}
+                    style={{ color: '#ff4d4f', cursor: 'pointer' }}
                     onClick={(e) => { e.stopPropagation(); onDeleteCategory(node.id, node.name || ''); }}
                     title="删除目录"
                   />
@@ -495,7 +491,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
     e?.stopPropagation();
     Modal.confirm({
       title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
+      icon: <AlertCircle size={20} />,
       content: `确定要删除目录"${categoryName}"吗？只有空目录才能删除。`,
       okText: '确认',
       okType: 'danger',
@@ -905,7 +901,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       `}</style>
 
       <FloatButton
-        icon={<UnorderedListOutlined />}
+        icon={<List size={20} />}
         tooltip={tooltipProp("章节管理")}
         onClick={(e) => { e?.stopPropagation(); showModal(); }}
       />

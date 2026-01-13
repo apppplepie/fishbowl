@@ -3,16 +3,8 @@
 // Force recompile - updated import structure
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, message, Modal } from 'antd';
-import {
-  PlusOutlined,
-  SaveOutlined,
-  EyeOutlined,
-  CloseOutlined,
-  MenuOutlined,
-  CheckOutlined,
-  DeleteOutlined
-} from '@ant-design/icons';
+import { FloatButton, message, Modal } from '@/app/components/ui';
+import { Menu, Check, Eye, Trash2 } from 'lucide-react';
 import type { FormInstance } from 'antd/es/form';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -164,42 +156,42 @@ export default function FloatingActions({
     <FloatButton.Group
       open={open}
       onOpenChange={setOpen}
-      icon={<MenuOutlined />}
+      icon={<Menu size={20} />}
       trigger="click"
       style={{
         insetInlineEnd: position?.right ?? 24,
-        bottom: position?.bottom ?? 24
+        bottom: position?.bottom ?? 40
       }}
       className={className}
       tooltip={tooltipProp('操作')}
       type="primary"
     >
       <FloatButton
-        icon={<CheckOutlined />}
+        icon={<Check size={20} />}
         tooltip={tooltipProp('发布文章')}
         onClick={onPublish}
       />
       {/* {blocks.length > 0 ? (
         <FloatButton
-          icon={<SaveOutlined />}
+          icon={<Save size={20} />}
           tooltip={{ title: '保存草稿', placement: 'left' }}
           onClick={onSave}
         />
       ) : (
         <FloatButton
-          icon={<SaveOutlined />}
+          icon={<Save size={20} />}
           tooltip={{ title: '读取草稿', placement: 'left' }}
           onClick={onLoadDraft || (() => {})}
         />
       )} */}
       <FloatButton
-        icon={<EyeOutlined />}
+        icon={<Eye size={20} />}
         tooltip={tooltipProp(isPreviewMode ? '退出预览' : '预览')}
         type={isPreviewMode ? 'primary' : 'default'}
         onClick={handlePreviewToggle}
       />
       <FloatButton
-        icon={<DeleteOutlined />}
+        icon={<Trash2 size={20} />}
         tooltip={tooltipProp('退出页面')}
         onClick={handleExit}
         style={{ backgroundColor: '#ff4d4f' }}

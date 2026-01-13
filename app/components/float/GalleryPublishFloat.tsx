@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, Form, Input, Upload, message, Button, Segmented } from 'antd';
-import { PlusOutlined, CloudUploadOutlined } from '@ant-design/icons';
+import { FloatButton, Modal, message } from '@/app/components/ui';
+import { Form, Input, Upload, Button, Segmented } from 'antd'; // 暂时保留，后续实现
+import { Plus, CloudUpload } from 'lucide-react';
 import type { UploadFile, UploadProps } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
 import CategoryTreeSelect from '../CategoryTreeSelect';
@@ -134,9 +135,15 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
   
       // 设置默认分类和计算排序
       const categoryId = values.category_id || 'cat_drawing';
-      
+
       // 计算 order_index：找到当前分类下最大的 order 值 + 1
-      const orderInCategory = await getNextOrderIndex(categoryId);
+      let orderInCategory = 0;
+      try {
+        orderInCategory = await getNextOrderIndex(categoryId);
+      } catch (error) {
+        console.warn('计算排序失败，使用默认顺序:', error);
+        // 继续发布，后端可能会自动处理
+      }
   
       // 创建文章
       const data = await apiPostJson<{ success: boolean; error?: string }>('/api/articles', {
@@ -214,9 +221,9 @@ function uploadFileWithProgress(file: File, onProgress: (p: number) => void) {
   return (
     <>
       <FloatButton
-        icon={<PlusOutlined />}
+        icon={<Plus size={20} />}
         type="primary"
-        style={{ right: 24, bottom: 24 }}
+        style={{ right: 24, bottom: 40 }}
         onClick={() => setOpen(true)}
         tooltip={tooltipProp("发布到照片墙")}
       />
@@ -392,7 +399,7 @@ function uploadFileWithProgress(file: File, onProgress: (p: number) => void) {
             >
               {fileList.length < 10 && (
                 <div>
-                  <CloudUploadOutlined />
+                  <CloudUpload size={24} />
                   <div style={{ marginTop: 8 }}>上传图片</div>
                 </div>
               )}

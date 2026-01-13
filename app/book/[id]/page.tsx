@@ -2,16 +2,14 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Button, Input, message, Modal, Select, Tag, Dropdown, Divider, Space, Breadcrumb, Skeleton } from 'antd';
-import type { MenuProps } from 'antd';
+import { Button, Input, Modal, Tag, Divider, Space, Breadcrumb, Skeleton, message } from '@/app/components/ui';
+import { Select, Dropdown } from 'antd'; // 暂时保留，后续实现
 const { Option } = Select;
-import { LikeOutlined, ShareAltOutlined, MessageOutlined, UnorderedListOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CopyOutlined, CameraOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CameraOutlined } from '@ant-design/icons';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '@/app/components/PageLayout';
 import { useHeader } from '@/app/contexts/HeaderContext';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
-import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
-import TagInput from '@/app/components/TagInput';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
@@ -65,11 +63,7 @@ const ImageBlock = dynamic(() => import('@/app/components/blocks/ImageBlock'), {
 });
 import {
   getArticleWithBlocks,
-  type Block,
-  type TextBlockContent,
-  type ImageBlockContent,
-  type CodeBlockContent
-} from '@/app/data/mockDatabase';
+  type ImageBlockContent} from '@/app/data/mockDatabase';
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 import { getChapterLabel } from '@/app/utils/chapterNumbering';
 import { apiGet, apiPutJson, apiDeleteJson, apiPostJson } from '@/lib/apiClient';

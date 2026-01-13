@@ -27,7 +27,6 @@ export default function PageLayout({
   box1Content,
   box1Style,
   box2Style,
-  containerPaddingTop = '45px',
   hideBox1 = false,
 }: PageLayoutProps) {
   const { isMobile } = useResponsive();
@@ -120,7 +119,7 @@ export default function PageLayout({
           bottom: 0,
           left: 0,
           right: 0,
-          height: '6px',
+          height: isMobile ? '10px' : '6px', // 移动端增加高度以覆盖可能的空隙
           background: 'black',
         }} />
       </div>
@@ -129,14 +128,14 @@ export default function PageLayout({
       <div
         className="fishbowl-layout"
         style={{
-          paddingTop: containerPaddingTop,
+          paddingTop: isMobile ? '0' : '0px',
           paddingLeft: isMobile ? '0' : '6px',
           paddingRight: isMobile ? '0' : '6px',
           paddingBottom: isMobile ? '0' : '6px',
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
-          minHeight: '100vh',
+          minHeight: isMobile ? '100dvh' : '100vh', // 移动端使用动态视口高度
         }}
       >
         {/* 盒模型1：顶部区域，使用天空渐变，高度由内容决定 */}

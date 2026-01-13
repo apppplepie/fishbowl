@@ -121,6 +121,7 @@ textarea,
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh; /* 移动端使用动态视口高度，覆盖上面的 100vh */
   width: 100%;
   position: relative;
   /* 只隐藏横向溢出，避免把页面内容（尤其是瀑布流/长列表）在纵向裁剪掉 */

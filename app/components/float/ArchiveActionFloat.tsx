@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, Form, Input, Select, message, Button } from 'antd';
-import { PlusOutlined, EditOutlined, BookOutlined, FileTextOutlined } from '@ant-design/icons';
+import { FloatButton, Modal, message } from '@/app/components/ui';
+import { Form, Input, Select, Button } from 'antd'; // 暂时保留，后续实现
+import { Plus, Edit, Book, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiPostJson } from '@/lib/apiClient';
@@ -125,20 +126,20 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
       <FloatButton.Group
         trigger="click"
         type="primary"
-        style={{ right: 24, bottom: 24 }}
-        icon={<PlusOutlined />}
+        style={{ right: 24, bottom: 40 }}
+        icon={<Plus size={20} />}
         tooltip={tooltipProp("操作菜单")}
       >
         {/* 写文章按钮 */}
         <FloatButton
-          icon={<FileTextOutlined />}
+          icon={<FileText size={20} />}
           tooltip={tooltipProp("写文章")}
           onClick={handlePublishArticle}
         />
 
         {/* 写日志按钮 */}
         <FloatButton
-          icon={<EditOutlined />}
+          icon={<Edit size={20} />}
           tooltip={tooltipProp("写日志")}
           onClick={() => setDiaryModalOpen(true)}
         />

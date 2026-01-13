@@ -7,6 +7,7 @@ import "./globals.css";
 import { AppThemeProvider } from "./contexts/AppThemeContext";
 import { AppThemeBody } from "@/app/components/AppThemeBody";
 import GlobalLayout from "./components/GlobalLayout";
+import { MessageContainer, ConfirmModalProvider } from "@/app/components/ui";
 
 export const metadata: Metadata = {
   title: "Fishbowl",
@@ -33,9 +34,12 @@ export default function RootLayout({
           <AntdRegistry>
             <Providers>
               <MessageConfig />
-              <GlobalLayout>
-                {children}
-              </GlobalLayout>
+              <ConfirmModalProvider>
+                <MessageContainer />
+                <GlobalLayout>
+                  {children}
+                </GlobalLayout>
+              </ConfirmModalProvider>
             </Providers>
           </AntdRegistry>
         </AppThemeBody>

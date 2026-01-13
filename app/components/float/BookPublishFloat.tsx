@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, Input, message, Button, Spin } from 'antd';
-import { PlusOutlined, FileTextOutlined, DeleteOutlined, BookOutlined } from '@ant-design/icons';
+import { FloatButton, Modal, message } from '@/app/components/ui';
+import { Input, Button, Spin } from 'antd'; // 暂时保留，后续实现
+import { Plus, FileText, Trash2, Book } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ChapterManageFloat from './ChapterManageFloat';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -153,14 +154,14 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
           type="primary"
           style={{
             right: 24,
-            bottom: 24,
+            bottom: 40,
           }}
-          icon={<PlusOutlined />}
+          icon={<Plus size={20} />}
           tooltip={tooltipProp("操作菜单")}
         >
           {/* 发布章节按钮 */}
           <FloatButton
-            icon={<FileTextOutlined />}
+            icon={<FileText size={20} />}
             tooltip={tooltipProp("发布章节")}
             onClick={() => router.push(`/publish-chapter?category=${categoryFromUrl}`)}
           />
@@ -170,7 +171,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
         <Modal
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <DeleteOutlined style={{ color: '#ff4d4f' }} />
+              <Trash2 size={16} style={{ color: '#ff4d4f' }} />
               删除书籍
             </div>
           }
@@ -210,7 +211,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
               border: '1px solid #ffccc7',
               borderRadius: '6px'
             }}>
-              <DeleteOutlined style={{ color: '#ff4d4f', fontSize: '16px' }} />
+              <Trash2 size={16} style={{ color: '#ff4d4f' }} />
               <div>
                 <div style={{ fontWeight: 500, color: '#d4380d', marginBottom: '4px' }}>
                   危险操作：删除书籍
@@ -271,14 +272,14 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
           type="primary"
           style={{
             right: 24,
-            bottom: 24,
+            bottom: 40,
           }}
-          icon={<BookOutlined />}
+          icon={<Book size={20} />}
           tooltip={tooltipProp("操作菜单")}
         >
           {/* 发布新书按钮 */}
           <FloatButton
-            icon={<BookOutlined />}
+            icon={<Book size={20} />}
             tooltip={tooltipProp("发布新书")}
             onClick={() => router.push('/publish-book')}
           />
@@ -289,7 +290,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
           {/* 删除书籍按钮 - 仅管理员可见 */}
           {isAdmin && (
             <FloatButton
-              icon={<DeleteOutlined />}
+              icon={<Trash2 size={20} />}
               tooltip={tooltipProp("删除书籍")}
               onClick={handleDeleteBookClick}
               style={{ backgroundColor: '#ff4d4f', color: 'white' }}
@@ -301,7 +302,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
         <Modal
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <DeleteOutlined style={{ color: '#ff4d4f' }} />
+              <Trash2 size={16} style={{ color: '#ff4d4f' }} />
               删除书籍
             </div>
           }
@@ -341,7 +342,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
               border: '1px solid #ffccc7',
               borderRadius: '6px'
             }}>
-              <DeleteOutlined style={{ color: '#ff4d4f', fontSize: '16px' }} />
+              <Trash2 size={16} style={{ color: '#ff4d4f' }} />
               <div>
                 <div style={{ fontWeight: 500, color: '#d4380d', marginBottom: '4px' }}>
                   危险操作：删除书籍
