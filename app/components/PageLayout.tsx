@@ -71,59 +71,6 @@ export default function PageLayout({
 
   return (
     <>
-      {/* 固定黑框 - 始终显示在视口 */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          pointerEvents: 'none', // 让点击事件穿透
-          zIndex: 9999,
-        }}
-      >
-        {/* 上边框 - 从header下方开始（45px），避免与header重叠 */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '0px',
-          background: 'black',
-        }} />
-        
-        {/* 左边框 */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: '6px',
-          background: 'black',
-        }} />
-        
-        {/* 右边框 */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: '6px',
-          background: 'black',
-        }} />
-        
-        {/* 下边框 */}
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 'calc(6px + env(safe-area-inset-bottom, 0px))',
-          background: 'black',
-        }} />
-      </div>
-
       {/* 内容区域 */}
       <div
         className="fishbowl-layout"
