@@ -20,8 +20,14 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
   // 固定 main 的 style 对象，避免每次渲染都创建新对象
   const mainStyle = useMemo(() => ({ paddingTop: isHomePage ? '0' : '45px' }), [isHomePage]);
 
-  // 阶段 4：PageShell 功能开关（试点页面：/gallery）
-  const ENABLE_PAGE_SHELL = pathname === '/gallery';
+  // 阶段 4：PageShell 功能开关
+  const ENABLE_PAGE_SHELL = [
+    '/gallery',
+    '/register',
+    '/publish-article',
+    '/publish-book',
+    '/publish-chapter',
+  ].includes(pathname);
 
   // 调试日志
   console.log('🏗️ GlobalLayout 渲染:', { pathname, isHomePage, ENABLE_PAGE_SHELL });

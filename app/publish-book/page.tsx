@@ -20,7 +20,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd'; 
-import PageLayout from '@/app/components/PageLayout';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 import TagInput from '@/app/components/TagInput';
 import type { Block } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -37,10 +37,41 @@ function PublishBookPage() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
+  const { setConfig } = usePageShell();
 
   // 封面图片状态
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  // 设置页面配置
+  useEffect(() => {
+    setConfig({
+      box1Content: (
+        <div style={{ padding: '16px 24px' }}>
+          <h2 style={{
+            margin: 0,
+            color: 'white',
+            fontSize: '20px',
+            fontWeight: 600,
+          }}>
+            📚 发布新书
+          </h2>
+          <p style={{
+            margin: '8px 0 0 0',
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: '14px',
+          }}>
+            为你的书架添加一本新书
+          </p>
+        </div>
+      ),
+      box2Style: { padding: '40px 20px' },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig]);
+
   // 组件挂载时尝试加载草稿
   useEffect(() => {
     // 确保在客户端环境中
@@ -360,30 +391,6 @@ function PublishBookPage() {
 
   return (
     <>
-      <PageLayout
-        box1Content={
-          <div style={{ padding: '16px 24px' }}>
-            <h2 style={{
-              margin: 0,
-              color: 'white',
-              fontSize: '20px',
-              fontWeight: 600,
-            }}>
-              📚 发布新书
-            </h2>
-            <p style={{
-              margin: '8px 0 0 0',
-              color: 'rgba(255,255,255,0.8)',
-              fontSize: '14px',
-            }}>
-              为你的书架添加一本新书
-            </p>
-          </div>
-        }
-        box1BgColor="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-        box2BgColor="#f5f5f5"
-        box2Style={{ padding: '40px 20px' }}
-      >
         <div style={{
           maxWidth: '800px',
           margin: '0 auto',
@@ -613,7 +620,6 @@ function PublishBookPage() {
             </Card> */}
           </Form>
         </div>
-      </PageLayout>
 
       <FloatingActions
         onPublish={() => form.submit()}

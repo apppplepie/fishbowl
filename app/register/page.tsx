@@ -1,15 +1,36 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
-import PageLayout from '@/app/components/PageLayout';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const router = useRouter();
+  const { setConfig } = usePageShell();
+  // 设置页面配置
+  useEffect(() => {
+    setConfig({
+      box1Content: (
+        <div style={{ 
+          padding: '12px 24px',
+          color: 'white',
+          fontSize: '14px',
+        }}>
+          首页 / 用户注册
+        </div>
+      ),
+      box2Style: { padding: '40px 20px' },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig]);
+
   const onFinish = async (values: any) => {
     setLoading(true);
     
@@ -57,26 +78,12 @@ export default function RegisterPage() {
 
   return (
     <>
-      <PageLayout
-        box1Content={
-          <div style={{ 
-            padding: '12px 24px',
-            color: 'white',
-            fontSize: '14px',
-          }}>
-            首页 / 用户注册
-          </div>
-        }
-        box1BgColor="rgba(0, 0, 0, 0.7)"
-        box2BgColor="#f5f5f5"
-      >
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '600px',
-          padding: '40px 20px',
-        }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '600px',
+      }}>
           <Card
             style={{
               width: '100%',
@@ -196,8 +203,7 @@ export default function RegisterPage() {
               </Form.Item>
             </Form>
           </Card>
-        </div>
-      </PageLayout>
+      </div>
     </>
   );
 }

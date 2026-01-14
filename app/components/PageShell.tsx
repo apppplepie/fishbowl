@@ -77,7 +77,12 @@ function PageShell({ children }: { children: React.ReactNode }) {
   }, [config, currentFishbowlTheme]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', minHeight: '100vh' }}>
+    <div style={{ 
+      position: 'relative', 
+      width: '100%', 
+      minHeight: '100vh',
+      paddingTop: '45px', // 为 Header 留出空间
+    }}>
       {/* Box1 - 永远显示*/}
       <div className="page-shell-box1" style={{ position: 'relative', width: '100%', zIndex: 1 }}>
         <SkySection theme={currentTheme}>

@@ -22,7 +22,7 @@ import {
   UploadOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import PageLayout from '@/app/components/PageLayout';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
@@ -49,8 +49,45 @@ function PublishChapterContent() {
   const { currentFishbowlTheme } = useAppTheme();
   const searchParams = useSearchParams();
   const { isMobile } = useResponsive();
+  const { setConfig } = usePageShell();
   // 从URL参数获取category
   const categoryFromUrl = searchParams.get('category');
+
+  // 设置页面配置
+  useEffect(() => {
+    setConfig({
+      box1Content: (
+        <div style={{ padding: '16px 24px' }}>
+          <h2 style={{
+            margin: 0,
+            color: 'white',
+            fontSize: '20px',
+            fontWeight: 600,
+          }}>
+            📄 发布章节
+          </h2>
+          {!isLoggedIn && (
+            <div style={{
+              marginTop: '12px',
+              padding: '8px 12px',
+              background: 'rgba(255,100,100,0.3)',
+              borderRadius: '6px',
+              fontSize: '13px',
+              color: 'white',
+              fontWeight: 500,
+            }}>
+              ⚠️ 未登录状态 - 请先登录
+            </div>
+          )}
+        </div>
+      ),
+      box2Style: { padding: isMobile ? '40px 12px' : '40px 24px' },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig, isLoggedIn, isMobile]);
 
   // 页面加载时自动读取草稿
   React.useEffect(() => {
@@ -365,35 +402,6 @@ function PublishChapterContent() {
 
   return (
     <>
-      <PageLayout
-        theme={currentFishbowlTheme}
-        box1Content={
-          <div style={{ padding: '16px 24px' }}>
-            <h2 style={{
-              margin: 0,
-              color: 'white',
-              fontSize: '20px',
-              fontWeight: 600,
-            }}>
-              📄 发布章节
-            </h2>
-            {!isLoggedIn && (
-              <div style={{
-                marginTop: '12px',
-                padding: '8px 12px',
-                background: 'rgba(255,100,100,0.3)',
-                borderRadius: '6px',
-                fontSize: '13px',
-                color: 'white',
-                fontWeight: 500,
-              }}>
-                ⚠️ 未登录状态 - 请先登录
-              </div>
-            )}
-          </div>
-        }
-        box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
-      >
         <div style={{
           maxWidth: '1200px',
           margin: '0 auto',
@@ -632,7 +640,6 @@ function PublishChapterContent() {
             </Card>
           </Form>
         </div>
-      </PageLayout>
 
       <FloatingActions
         onPublish={() => form.submit()}

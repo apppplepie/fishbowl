@@ -23,7 +23,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
-import PageLayout from '@/app/components/PageLayout';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
@@ -50,6 +50,43 @@ export default function PublishArticlePage() {
   const router = useRouter();
   const { currentFishbowlTheme } = useAppTheme();
   const { isMobile } = useResponsive();
+  const { setConfig } = usePageShell();
+  // 设置页面配置
+  useEffect(() => {
+    setConfig({
+      box1Content: (
+        <div style={{ padding: '16px 24px' }}>
+          <h2 style={{
+            margin: 0,
+            color: 'white',
+            fontSize: '20px',
+            fontWeight: 600,
+          }}>
+            ✍️ 创作文章
+          </h2>
+          {!isLoggedIn && (
+            <div style={{
+              marginTop: '12px',
+              padding: '8px 12px',
+              background: 'rgba(255,100,100,0.3)',
+              borderRadius: '6px',
+              fontSize: '13px',
+              color: 'white',
+              fontWeight: 500,
+            }}>
+              ⚠️ 未登录状态 - 请先登录
+            </div>
+          )}
+        </div>
+      ),
+      box2Style: { padding: isMobile ? '40px 12px' : '40px 24px' },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig, isLoggedIn, isMobile]);
+
   // 页面加载时自动读取草稿
   React.useEffect(() => {
     const draftStr = localStorage.getItem('article-draft');
@@ -329,35 +366,6 @@ export default function PublishArticlePage() {
 
   return (
     <>
-      <PageLayout
-        theme={currentFishbowlTheme}
-        box1Content={
-          <div style={{ padding: '16px 24px' }}>
-            <h2 style={{
-              margin: 0,
-              color: 'white',
-              fontSize: '20px',
-              fontWeight: 600,
-            }}>
-              ✍️ 创作文章
-            </h2>
-            {!isLoggedIn && (
-              <div style={{
-                marginTop: '12px',
-                padding: '8px 12px',
-                background: 'rgba(255,100,100,0.3)',
-                borderRadius: '6px',
-                fontSize: '13px',
-                color: 'white',
-                fontWeight: 500,
-              }}>
-                ⚠️ 未登录状态 - 请先登录
-              </div>
-            )}
-          </div>
-        }
-        box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
-      >
         <div style={{ 
           maxWidth: '1200px', 
           margin: '0 auto',
@@ -655,7 +663,6 @@ export default function PublishArticlePage() {
             </Card> */}
           </Form>
         </div>
-      </PageLayout>
 
       <FloatingActions
         onPublish={() => form.submit()}
