@@ -13,6 +13,10 @@ export interface PageShellConfig {
   box1Style?: CSSProperties;
   box2Style?: CSSProperties;
   themeOverride?: Theme; // 可选：覆盖全局主题（特殊场景使用）
+  
+  // 侧边栏配置
+  sidebarWidth?: number;      // 侧边栏宽度（默认 0，表示无侧边栏）
+  sidebarExpanded?: boolean;  // 侧边栏是否展开
 }
 
 /**
@@ -35,6 +39,8 @@ const defaultConfig: PageShellConfig = {
   box1Style: undefined,
   box2Style: undefined,
   themeOverride: undefined,
+  sidebarWidth: 0,
+  sidebarExpanded: false,
 };
 
 /**
@@ -52,6 +58,8 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
         hasBox1Style: !!newConfig.box1Style,
         hasBox2Style: !!newConfig.box2Style,
         hasThemeOverride: !!newConfig.themeOverride,
+        sidebarWidth: newConfig.sidebarWidth,
+        sidebarExpanded: newConfig.sidebarExpanded,
       }
     });
 
@@ -67,6 +75,8 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
         hasBox1Style: !!updated.box1Style,
         hasBox2Style: !!updated.box2Style,
         hasThemeOverride: !!updated.themeOverride,
+        sidebarWidth: updated.sidebarWidth,
+        sidebarExpanded: updated.sidebarExpanded,
       });
 
       return updated;

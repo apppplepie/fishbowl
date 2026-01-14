@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
+import { useResponsive } from '@/app/hooks/useResponsive';
 import SkySection from './background/SkySection';
 import WaterSection from './background/WaterSection';
 import WaveSeparator from './background/WaveSeparator';
@@ -10,6 +11,12 @@ import WaveSeparator from './background/WaveSeparator';
 function PageShell({ children }: { children: React.ReactNode }) {
   const { config } = usePageShell();
   const { currentFishbowlTheme } = useAppTheme(); // 直接读取全局主题
+  const { isMobile } = useResponsive(); // 响应式判断
+
+  // 计算侧边栏偏移量
+  const sidebarOffset = !isMobile && config.sidebarExpanded 
+    ? (config.sidebarWidth || 0) 
+    : 0;
 
   console.log('[PageShell] 组件开始渲染:', {
     globalTheme: currentFishbowlTheme ? {
@@ -22,7 +29,11 @@ function PageShell({ children }: { children: React.ReactNode }) {
       hasBox1Style: !!config.box1Style,
       hasBox2Style: !!config.box2Style,
       hasThemeOverride: !!config.themeOverride,
-    }
+      sidebarWidth: config.sidebarWidth,
+      sidebarExpanded: config.sidebarExpanded,
+    },
+    isMobile,
+    sidebarOffset,
   });
 
   const defaultTheme = {
@@ -72,9 +83,12 @@ function PageShell({ children }: { children: React.ReactNode }) {
         hasBox1Style: !!config.box1Style,
         hasBox2Style: !!config.box2Style,
         hasThemeOverride: !!config.themeOverride,
-      }
+        sidebarWidth: config.sidebarWidth,
+        sidebarExpanded: config.sidebarExpanded,
+      },
+      sidebarOffset,
     });
-  }, [config, currentFishbowlTheme]);
+  }, [config, currentFishbowlTheme, sidebarOffset]);
 
   return (
     <div style={{ 
@@ -82,6 +96,8 @@ function PageShell({ children }: { children: React.ReactNode }) {
       width: '100%', 
       minHeight: '100vh',
       paddingTop: '45px', // 为 Header 留出空间
+      marginLeft: sidebarOffset, // 侧边栏偏移
+      transition: 'margin-left 0.3s ease', // 流畅过渡
     }}>
       {/* Box1 - 永远显示*/}
       <div className="page-shell-box1" style={{ position: 'relative', width: '100%', zIndex: 1 }}>
