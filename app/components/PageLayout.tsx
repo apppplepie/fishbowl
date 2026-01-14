@@ -1,8 +1,10 @@
 'use client';
 
-import { ReactNode, CSSProperties } from 'react';
+import { ReactNode, CSSProperties, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { Theme } from '@/app/types/background';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 import SkySection from './background/SkySection';
 import WaterSection from './background/WaterSection';
 import WaveSeparator from './background/WaveSeparator';
@@ -27,9 +29,17 @@ export default function PageLayout({
   box1Content,
   box1Style,
   box2Style,
+  containerPaddingTop,
   hideBox1 = false,
 }: PageLayoutProps) {
   const { isMobile } = useResponsive();
+  const pathname = usePathname();
+  const { setConfig } = usePageShell();
+
+  // 阶段 4：如果 Shell 已启用（试点页面），则不显示 box1/box2，不渲染内容
+  // Shell 会负责显示 box1/box2 背景和内容
+  // 注意：新模式下，页面直接写入 Context，PageLayout 不再同步配置
+  const isShellEnabled = pathname === '/gallery';
 
   // 辅助函数：处理背景色/渐变，避免重复包装 linear-gradient
   const processBg = (bg: string) => {
@@ -69,6 +79,12 @@ export default function PageLayout({
 
   const currentTheme = theme || defaultTheme;
 
+  // 如果 Shell 启用，不渲染任何内容（内容已通过 Context 传递到 Shell）
+  if (isShellEnabled) {
+    return null; // Shell 模式下，内容由 Shell 负责渲染
+  }
+
+  // 传统模式：显示完整的 box1/box2 结构
   return (
     <>
       {/* 内容区域 */}

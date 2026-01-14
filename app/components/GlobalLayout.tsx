@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import Header from './Header';
 import { useHeader } from '../contexts/HeaderContext';
+import PageShell from './PageShell';
 
 /**
  * 全局 Layout 组件
@@ -18,6 +19,12 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
 
   // 固定 main 的 style 对象，避免每次渲染都创建新对象
   const mainStyle = useMemo(() => ({ paddingTop: isHomePage ? '0' : '45px' }), [isHomePage]);
+
+  // 阶段 4：PageShell 功能开关（试点页面：/gallery）
+  const ENABLE_PAGE_SHELL = pathname === '/gallery';
+
+  // 调试日志
+  console.log('🏗️ GlobalLayout 渲染:', { pathname, isHomePage, ENABLE_PAGE_SHELL });
 
   return (
     <>
@@ -78,14 +85,21 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
           }} />
         </div>
       )}
-      
-      {/* 主内容区域 */}
-      <main style={mainStyle}>
-        {children}
-      </main>
+
+      {/* ===== 关键修改 ===== */}
+      {ENABLE_PAGE_SHELL ? (
+        /* PageShell 模式 - children 渲染在 PageShell 的 Box2 里 */
+        <PageShell>
+          {children}
+        </PageShell>
+      ) : (
+        /* 传统模式 */
+        <main style={mainStyle}>
+          {children}
+        </main>
+      )}
     </>
   );
 }
 
 export default React.memo(GlobalLayout);
-
