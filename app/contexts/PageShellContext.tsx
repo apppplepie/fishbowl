@@ -5,19 +5,14 @@ import { Theme } from '@/app/types/background';
 
 /**
  * PageShell 配置接口
- * 包含所有 PageLayout 的配置选项
+ * 包含页面特定的配置选项（不包含主题，主题从 AppThemeContext 读取）
  */
 export interface PageShellConfig {
   box1Content: ReactNode | null;
-  box2Content?: ReactNode | null; // 支持 JSX / null
-  box2ContentRenderer?: () => ReactNode; // 新增：函数形式动态渲染
-  theme?: Theme;
   hideBox1?: boolean;
   box1Style?: CSSProperties;
   box2Style?: CSSProperties;
-  box1BgColor?: string; // 向后兼容，用于生成默认 theme
-  box2BgColor?: string; // 向后兼容，用于生成默认 theme
-  containerPaddingTop?: string;
+  themeOverride?: Theme; // 可选：覆盖全局主题（特殊场景使用）
 }
 
 /**
@@ -36,14 +31,10 @@ const PageShellContext = createContext<PageShellContextType | undefined>(undefin
  */
 const defaultConfig: PageShellConfig = {
   box1Content: null,
-  box2Content: null,
-  theme: undefined, // 不设置默认主题，让页面自己决定
   hideBox1: false,
   box1Style: undefined,
   box2Style: undefined,
-  box1BgColor: '#4CAF50',
-  box2BgColor: '#f5f5f5',
-  containerPaddingTop: undefined,
+  themeOverride: undefined,
 };
 
 /**
@@ -56,11 +47,11 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
   const setConfig = useCallback((newConfig: Partial<PageShellConfig>) => {
     console.log('[PageShellProvider] setConfig 被调用:', {
       newConfig: {
-        ...newConfig,
-        theme: newConfig.theme ? { id: newConfig.theme.id, name: newConfig.theme.name } : undefined,
         hasBox1Content: !!newConfig.box1Content,
-        hasBox2Content: !!newConfig.box2Content,
-        hasBox2ContentRenderer: !!newConfig.box2ContentRenderer,
+        hideBox1: newConfig.hideBox1,
+        hasBox1Style: !!newConfig.box1Style,
+        hasBox2Style: !!newConfig.box2Style,
+        hasThemeOverride: !!newConfig.themeOverride,
       }
     });
 
@@ -71,11 +62,11 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
       };
 
       console.log('[PageShellProvider] config 状态更新:', {
-        prevTheme: prev.theme ? { id: prev.theme.id, name: prev.theme.name } : undefined,
-        newTheme: updated.theme ? { id: updated.theme.id, name: updated.theme.name } : undefined,
         hasBox1Content: !!updated.box1Content,
-        hasBox2Content: !!updated.box2Content,
-        hasBox2ContentRenderer: !!updated.box2ContentRenderer,
+        hideBox1: updated.hideBox1,
+        hasBox1Style: !!updated.box1Style,
+        hasBox2Style: !!updated.box2Style,
+        hasThemeOverride: !!updated.themeOverride,
       });
 
       return updated;

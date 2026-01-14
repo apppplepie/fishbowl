@@ -83,9 +83,6 @@ export default function PageShellContextTest() {
       <div style={{ marginBottom: '4px' }}>
         hideBox1: {config.hideBox1 ? '✅ true' : '✅ false（默认值）'}
       </div>
-      <div style={{ marginBottom: '4px' }}>
-        theme: {config.theme ? `✅ ${config.theme.name}` : '✅ undefined（默认值）'}
-      </div>
       <div style={{ marginBottom: '4px', fontSize: '10px', color: '#4ade80' }}>
         ✅ 所有默认值正确！
       </div>

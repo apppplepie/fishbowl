@@ -2,28 +2,26 @@
 
 import React, { useEffect } from 'react';
 import { usePageShell } from '@/app/contexts/PageShellContext';
+import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import SkySection from './background/SkySection';
 import WaterSection from './background/WaterSection';
 import WaveSeparator from './background/WaveSeparator';
 
 function PageShell({ children }: { children: React.ReactNode }) {
   const { config } = usePageShell();
+  const { currentFishbowlTheme } = useAppTheme(); // 直接读取全局主题
 
-  console.log('[PageShell] 组件开始渲染，接收到 config:', {
+  console.log('[PageShell] 组件开始渲染:', {
+    globalTheme: currentFishbowlTheme ? {
+      id: currentFishbowlTheme.id,
+      name: currentFishbowlTheme.name,
+    } : null,
     config: {
-      hasTheme: !!config.theme,
-      theme: config.theme ? {
-        id: config.theme.id,
-        name: config.theme.name,
-        hasSkyGradient: !!config.theme.skyGradient,
-        hasWaterGradient: !!config.theme.waterGradient,
-        skyGradient: config.theme.skyGradient?.substring(0, 50) + '...',
-        waterGradient: config.theme.waterGradient?.substring(0, 50) + '...'
-      } : null,
       hideBox1: config.hideBox1,
       hasBox1Content: !!config.box1Content,
-      box1Style: config.box1Style,
-      box2Style: config.box2Style,
+      hasBox1Style: !!config.box1Style,
+      hasBox2Style: !!config.box2Style,
+      hasThemeOverride: !!config.themeOverride,
     }
   });
 
@@ -52,54 +50,50 @@ function PageShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const currentTheme = config.theme || defaultTheme;
+  // 主题优先级：页面覆盖 > 全局主题 > 默认主题
+  const currentTheme = config.themeOverride || currentFishbowlTheme || defaultTheme;
 
   console.log('[PageShell] 使用的主题:', {
-    isUsingDefault: !config.theme,
-    currentThemeId: currentTheme.id,
-    currentThemeName: currentTheme.name,
-    themeSource: config.theme ? 'from config' : 'default fallback'
+    themeId: currentTheme.id,
+    themeName: currentTheme.name,
+    themeSource: config.themeOverride ? 'page override' : (currentFishbowlTheme ? 'global theme' : 'default fallback')
   });
 
-  // 监听配置变化
+  // 监听配置和主题变化
   useEffect(() => {
-    console.log('[PageShell] config 发生变化:', {
+    console.log('[PageShell] config 或主题发生变化:', {
+      globalTheme: currentFishbowlTheme ? {
+        id: currentFishbowlTheme.id,
+        name: currentFishbowlTheme.name,
+      } : null,
       config: {
-        hasTheme: !!config.theme,
-        theme: config.theme ? {
-          id: config.theme.id,
-          name: config.theme.name,
-          hasSkyGradient: !!config.theme.skyGradient,
-          hasWaterGradient: !!config.theme.waterGradient
-        } : null,
         hideBox1: config.hideBox1,
         hasBox1Content: !!config.box1Content,
-        box1Style: config.box1Style,
-        box2Style: config.box2Style,
+        hasBox1Style: !!config.box1Style,
+        hasBox2Style: !!config.box2Style,
+        hasThemeOverride: !!config.themeOverride,
       }
     });
-  }, [config]);
+  }, [config, currentFishbowlTheme]);
 
   return (
     <div style={{ position: 'relative', width: '100%', minHeight: '100vh' }}>
-      {/* Box1 - 只在有内容或不隐藏时显示 */}
-      {!config.hideBox1 && (
-        <div className="page-shell-box1" style={{ position: 'relative', width: '100%', zIndex: 1 }}>
-          <SkySection theme={currentTheme}>
-            <div
-              style={{
-                padding: '20px',
-                width: '100%',
-                boxSizing: 'border-box',
-                minHeight: config.box1Content ? '160px' : '0px',
-                ...config.box1Style,
-              }}
-            >
-              {config.box1Content}
-            </div>
-          </SkySection>
-        </div>
-      )}
+      {/* Box1 - 永远显示*/}
+      <div className="page-shell-box1" style={{ position: 'relative', width: '100%', zIndex: 1 }}>
+        <SkySection theme={currentTheme}>
+          <div
+            style={{
+              padding: '20px',
+              width: '100%',
+              boxSizing: 'border-box',
+              minHeight: '100px',
+              ...config.box1Style,
+            }}
+          >
+            {config.box1Content}
+          </div>
+        </SkySection>
+      </div>
 
       {/* 波浪分隔器 */}
       <div

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Masonry, Spin, message } from 'antd';
 import { useRouter } from 'next/navigation';
-import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
 import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
@@ -100,19 +99,7 @@ export default function GalleryPage() {
   console.log('[GalleryPage] 组件渲染开始 - 时间戳:', Date.now());
 
   const router = useRouter();
-  const { currentFishbowlTheme, mounted } = useAppTheme();
   const { setConfig } = usePageShell();
-
-  console.log('[GalleryPage] hooks 初始化完成:', {
-    hasCurrentFishbowlTheme: !!currentFishbowlTheme,
-    mounted,
-    currentFishbowlTheme: currentFishbowlTheme ? {
-      id: currentFishbowlTheme.id,
-      name: currentFishbowlTheme.name,
-      hasSkyGradient: !!currentFishbowlTheme.skyGradient,
-      hasWaterGradient: !!currentFishbowlTheme.waterGradient
-    } : null
-  });
 
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,15 +109,7 @@ export default function GalleryPage() {
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [columns, setColumns] = useState<number>(() => typeof window !== 'undefined' ? calculateColumns(window.innerWidth) : 3);
 
-  console.log('[GalleryPage] 组件状态更新:', {
-    hasCurrentFishbowlTheme: !!currentFishbowlTheme,
-    currentFishbowlTheme: currentFishbowlTheme ? {
-      id: currentFishbowlTheme.id,
-      name: currentFishbowlTheme.name,
-      hasSkyGradient: !!currentFishbowlTheme.skyGradient,
-      hasWaterGradient: !!currentFishbowlTheme.waterGradient
-    } : null,
-    mounted,
+  console.log('[GalleryPage] 组件状态:', {
     articlesCount: articles.length,
     loading,
     loadingMore,
@@ -138,11 +117,6 @@ export default function GalleryPage() {
   });
 
   const ITEMS_PER_PAGE = 20;
-
-  // 监听 mounted 状态变化
-  useEffect(() => {
-    console.log('[GalleryPage] mounted 状态变化:', mounted);
-  }, [mounted]);
 
   // refs 防闭包 stale
   const offsetRef = useRef(offset);
@@ -243,27 +217,21 @@ export default function GalleryPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // 只设置主题配置，内容直接渲染（无闭包问题）
+  // 设置页面配置（主题由 PageShell 自动从全局读取）
   useEffect(() => {
-    if (currentFishbowlTheme) {
-      console.log('[GalleryPage] 设置 PageShell 主题配置:', {
-        themeId: currentFishbowlTheme.id,
-        themeName: currentFishbowlTheme.name,
-      });
+    console.log('[GalleryPage] 设置 PageShell 配置');
 
-      setConfig({
-        theme: currentFishbowlTheme,
-        box1Content: null,
-        hideBox1: false,
-        box2Style: { padding: '40px 6px' },
-      });
-    }
+    setConfig({
+      box1Content: null,
+      hideBox1: false,
+      box2Style: { padding: '40px 6px' },
+    });
 
     return () => {
       console.log('[GalleryPage] 清理配置');
-      setConfig({ box1Content: null, theme: undefined });
+      setConfig({ box1Content: null });
     };
-  }, [setConfig, currentFishbowlTheme]);
+  }, [setConfig]);
 
   console.log('[GalleryPage] 即将渲染 JSX');
 
