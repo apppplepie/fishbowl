@@ -130,6 +130,11 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
       const popped = baselinePlantsRef.current.pop();
       if (popped) {
         engineRef.current.removeByContext(popped.ctx);
+        // 释放离屏 canvas 内存
+        if (popped.canvas) {
+          popped.canvas.width = 1;
+          popped.canvas.height = 1;
+        }
       }
     }, []);
 
@@ -158,8 +163,14 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
     const clearAllPlants = useCallback(() => {
       // 主动释放离屏 canvas 内存
       baselinePlantsRef.current.forEach((plant) => {
-        plant.canvas.width = 1;
-        plant.canvas.height = 1;
+        if (plant.canvas) {
+          plant.canvas.width = 1;
+          plant.canvas.height = 1;
+        }
+        // 从引擎中移除
+        if (plant.ctx) {
+          engineRef.current.removeByContext(plant.ctx);
+        }
       });
 
       baselinePlantsRef.current = [];
@@ -423,6 +434,52 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
         engineRef.current.removeByContext(outCtx);
       }
     }, [clearTrigger]);
+
+    /**
+     * 组件卸载时的资源清理
+     * 确保所有资源在组件卸载时被正确释放，防止内存泄漏
+     */
+    useEffect(() => {
+      return () => {
+        // 1. 停止动画循环
+        if (requestRef.current !== null) {
+          cancelAnimationFrame(requestRef.current);
+          requestRef.current = null;
+        }
+
+        // 2. 清空挂起的生成函数
+        pendingSpawnsRef.current = [];
+
+        // 3. 释放所有离屏 Canvas 内存
+        baselinePlantsRef.current.forEach((plant) => {
+          if (plant.canvas) {
+            plant.canvas.width = 1;
+            plant.canvas.height = 1;
+          }
+          // 从引擎中移除
+          if (plant.ctx) {
+            engineRef.current.removeByContext(plant.ctx);
+          }
+        });
+        baselinePlantsRef.current = [];
+
+        // 4. 清理引擎
+        engineRef.current.clearAll();
+
+        // 5. 清理层管理器
+        if (layerManagerRef.current) {
+          layerManagerRef.current.clearOutsideLayer('#fdfbf7');
+          layerManagerRef.current.clearBaselineLayer();
+          layerManagerRef.current = null;
+        }
+
+        // 6. 清空历史记录
+        plantHistoryRef.current = [];
+
+        // 7. 重置初始化标记
+        hasInitRef.current = false;
+      };
+    }, []);
 
     /**
      * 交互处理 Hook（仅在交互模式下启用）
