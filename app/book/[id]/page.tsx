@@ -1019,7 +1019,7 @@ export default function BookPage() {
                     title: (
                       <a
                         style={{
-                          color: 'white',
+                          color: '#000',
                           textDecoration: 'none',
                           backgroundColor: 'transparent',
                           border: 'none',
@@ -1027,7 +1027,7 @@ export default function BookPage() {
                           transition: 'color 0.2s ease'
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
                         onClick={() => router.push('/bookcase')}
                       >
                         书橱
@@ -1054,7 +1054,7 @@ export default function BookPage() {
                           <a
                             key={category.id}
                             style={{
-                              color: 'white',
+                              color: '#000',
                               textDecoration: 'none',
                               backgroundColor: 'transparent',
                               border: 'none',
@@ -1062,7 +1062,7 @@ export default function BookPage() {
                               transition: 'color 0.2s ease'
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
                             onClick={() => router.push(`/bookcase?category=${category.id}`)}
                           >
                             {displayName}
@@ -1072,12 +1072,12 @@ export default function BookPage() {
                     }),
                   // 当前书籍标题
                   {
-                    title: <span style={{ color: 'white' }}>{book?.title}</span>,
+                    title: <span style={{ color: '#000' }}>{book?.title}</span>,
                   },
                 ]}
-                separator={<span style={{ color: 'white' }}>/</span>}
+                separator={<span style={{ color: '#000' }}>/</span>}
                 style={{
-                  color: 'white',
+                  color: '#000',
                   fontSize: '14px',
                   marginBottom: '16px',
                 }}
@@ -1102,7 +1102,7 @@ export default function BookPage() {
                         fontWeight: 'bold',
                         border: 'none',
                         background: 'transparent',
-                        color: 'white',
+                        color: '#000',
                         padding: 0,
                         marginBottom: '8px',
                       }}
@@ -1112,7 +1112,7 @@ export default function BookPage() {
                     <h1 style={{
                       fontSize: '28px',
                       fontWeight: 'bold',
-                      color: 'white',
+                      color: '#000',
                       margin: '0 0 8px 0',
                       lineHeight: '1.2',
                     }}>

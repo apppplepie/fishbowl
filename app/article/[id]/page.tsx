@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Button, Input, Modal, Tag, Divider, Space, Breadcrumb, message } from '@/app/components/ui';
+import { TagBox1 } from '@/app/components/box1';
 import { Select } from 'antd'; // 暂时保留，后续实现
 const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, CameraOutlined } from '@ant-design/icons';
@@ -881,7 +882,7 @@ export default function ArticlePage() {
                     title: (
                       <a
                         style={{
-                          color: 'white',
+                          color: '#000',
                           textDecoration: 'none',
                           backgroundColor: 'transparent',
                           border: 'none',
@@ -889,7 +890,7 @@ export default function ArticlePage() {
                           transition: 'color 0.2s ease'
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
                         onClick={() => router.push('/')}
                       >
                         首页
@@ -902,7 +903,7 @@ export default function ArticlePage() {
                       title: (
                         <a
                           style={{
-                            color: 'white',
+                            color: '#000',
                             textDecoration: 'none',
                             backgroundColor: 'transparent',
                             border: 'none',
@@ -910,7 +911,7 @@ export default function ArticlePage() {
                             transition: 'color 0.2s ease'
                           }}
                           onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
                           onClick={() => router.push(`/archive?category=${cat.id}`)}
                         >
                           {cat.name}
@@ -923,7 +924,7 @@ export default function ArticlePage() {
                         title: (
                           <a
                             style={{
-                              color: 'white',
+                              color: '#000',
                               textDecoration: 'none',
                               backgroundColor: 'transparent',
                               border: 'none',
@@ -931,7 +932,7 @@ export default function ArticlePage() {
                               transition: 'color 0.2s ease'
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
                             onClick={() => router.push('/archive')}
                           >
                             文章归档
@@ -942,12 +943,12 @@ export default function ArticlePage() {
                   ),
                   // 当前文章标题
                   {
-                    title: <span style={{ color: 'white' }}>{article?.title}</span>,
+                    title: <span style={{ color: '#000' }}>{article?.title}</span>,
                   },
                 ]}
-                separator={<span style={{ color: 'white' }}>/</span>}
+                separator={<span style={{ color: '#000' }}>/</span>}
                 style={{
-                  color: 'white',
+                  color: '#000',
                   fontSize: '14px',
                   marginBottom: '16px',
                 }}
@@ -972,7 +973,7 @@ export default function ArticlePage() {
                         fontWeight: 'bold',
                         border: 'none',
                         background: 'transparent',
-                        color: 'white',
+                        color: '#000',
                         padding: 0,
                         marginBottom: '8px',
                       }}
@@ -982,7 +983,7 @@ export default function ArticlePage() {
                     <h1 style={{
                       fontSize: '28px',
                       fontWeight: 'bold',
-                      color: 'white',
+                      color: '#000',
                       margin: '0 0 8px 0',
                       lineHeight: '1.2',
                     }}>
@@ -1006,24 +1007,16 @@ export default function ArticlePage() {
                   </div> */}
 
                   {/* 标签 */}
-                  {(editMode === 'edit' ? editedArticle?.tags : (editMode === 'preview' ? editedArticle?.tags : article?.tags))?.length > 0 && (
-                    <div style={{ marginTop: '12px' }}>
-                      <Space wrap>
-                        {(editMode === 'edit' ? editedArticle?.tags : (editMode === 'preview' ? editedArticle?.tags : article?.tags)).map((tag: string, index: number) => (
-                          <Tag
-                            key={index}
-                            id={tag}
-                            style={{
-                              padding: '4px 12px',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {tag}
-                          </Tag>
-                        ))}
-                      </Space>
-                    </div>
-                  )}
+                  <TagBox1
+                    tags={editMode === 'edit' ? (editedArticle?.tags || []) : (editMode === 'preview' ? (editedArticle?.tags || []) : (article?.tags || []))}
+                    editMode={editMode === 'edit'}
+                    onTagsChange={(tags) => {
+                      if (editedArticle) {
+                        setEditedArticle({ ...editedArticle, tags });
+                      }
+                    }}
+                    maxTags={10}
+                  />
                 </div>
               </div>
             </div>

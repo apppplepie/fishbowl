@@ -7,4 +7,5 @@ export { default as BreadcrumbBox1 } from './BreadcrumbBox1';
 export { default as SearchBox1 } from './SearchBox1';
 export { default as TitleBox1 } from './TitleBox1';
 export { default as EmptyBox1 } from './EmptyBox1';
+export { default as TagBox1 } from './TagBox1';
 
