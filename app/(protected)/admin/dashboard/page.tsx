@@ -2,7 +2,8 @@
 
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import type { GetRef, InputRef, TableProps } from 'antd';
-import { Button, Form, Input, Select, Table, Typography, message, Spin, InputNumber, Switch, Modal } from 'antd';
+import { Button, Form, Input, Select, Table, Typography, message, InputNumber, Switch, Modal } from 'antd';
+import { Spin } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiGetJson, apiPostJson, apiPutJson } from '@/lib/apiClient';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Breadcrumb } from '@/app/components/ui';
 
@@ -15,6 +15,11 @@ export interface BreadcrumbBox1Props {
 /**
  * 面包屑导航 Box1 组件
  * 支持文章、书籍等不同类型的面包屑导航
+ * 
+ * 优化说明：
+ * - 使用 useMemo 缓存 breadcrumbItems，避免每次渲染都创建新对象
+ * - 使用 useCallback 缓存事件处理器，避免创建新的函数引用
+ * - 这样可以避免内存泄漏，特别是在路由切换时
  */
 export default function BreadcrumbBox1({ 
   type, 
@@ -24,12 +29,30 @@ export default function BreadcrumbBox1({
   style 
 }: BreadcrumbBox1Props) {
   const router = useRouter();
-  const [breadcrumbItems, setBreadcrumbItems] = useState<any[]>([]);
 
-  useEffect(() => {
+  // 缓存鼠标事件处理器，避免每次渲染都创建新函数
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.currentTarget.style.color = '#1890ff';
+  }, []);
+
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.currentTarget.style.color = 'white';
+  }, []);
+
+  // 缓存路由跳转处理器
+  const handleHomeClick = useCallback(() => {
+    router.push('/');
+  }, [router]);
+
+  const handleBookcaseClick = useCallback(() => {
+    router.push('/bookcase');
+  }, [router]);
+
+  // 使用 useMemo 缓存 breadcrumbItems，避免不必要的重新创建
+  const breadcrumbItems = useMemo(() => {
     if (type === 'custom' && customItems) {
       // 自定义面包屑
-      const items = customItems.map(item => ({
+      return customItems.map(item => ({
         title: item.onClick ? (
           <a
             style={{
@@ -38,8 +61,8 @@ export default function BreadcrumbBox1({
               transition: 'color 0.2s ease',
               cursor: 'pointer',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             onClick={item.onClick}
           >
             {item.title}
@@ -48,8 +71,6 @@ export default function BreadcrumbBox1({
           <span style={{ color: 'white' }}>{item.title}</span>
         ),
       }));
-      setBreadcrumbItems(items);
-      return;
     }
 
     if (type === 'article') {
@@ -64,15 +85,15 @@ export default function BreadcrumbBox1({
                 transition: 'color 0.2s ease',
                 cursor: 'pointer',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-              onClick={() => router.push('/')}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleHomeClick}
             >
               首页
             </a>
           ),
         },
-        ...categoryPath.map((category, index) => ({
+        ...categoryPath.map((category) => ({
           title: (
             <a
               key={category.id}
@@ -82,8 +103,8 @@ export default function BreadcrumbBox1({
                 transition: 'color 0.2s ease',
                 cursor: 'pointer',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
               onClick={() => router.push(`/archive?category=${category.id}`)}
             >
               {category.name}
@@ -91,7 +112,7 @@ export default function BreadcrumbBox1({
           ),
         })),
       ];
-      setBreadcrumbItems(items);
+      return items;
     }
 
     if (type === 'book') {
@@ -106,9 +127,9 @@ export default function BreadcrumbBox1({
                 transition: 'color 0.2s ease',
                 cursor: 'pointer',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
-              onClick={() => router.push('/bookcase')}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleBookcaseClick}
             >
               书橱
             </a>
@@ -124,8 +145,8 @@ export default function BreadcrumbBox1({
                 transition: 'color 0.2s ease',
                 cursor: 'pointer',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'white')}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
               onClick={() => router.push(`/bookcase?category=${category.id}`)}
             >
               {category.name}
@@ -133,9 +154,11 @@ export default function BreadcrumbBox1({
           ),
         })),
       ];
-      setBreadcrumbItems(items);
+      return items;
     }
-  }, [type, articleId, categoryPath, customItems, router]);
+
+    return [];
+  }, [type, articleId, categoryPath, customItems, router, handleMouseEnter, handleMouseLeave, handleHomeClick, handleBookcaseClick]);
 
   return (
     <div style={{ padding: '16px 24px', ...style }}>

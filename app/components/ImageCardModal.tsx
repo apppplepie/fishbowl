@@ -171,7 +171,7 @@ const ImageCardModal: React.FC<ImageCardModalProps> = ({
       {/* 加载状态 */}
       {showLoading && (
         <div style={{ color: '#fff', fontSize: '16px' }}>
-          加载中...
+          {/* 加载中... */}
         </div>
       )}
 

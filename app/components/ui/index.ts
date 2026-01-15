@@ -27,5 +27,8 @@ export type { SpaceProps } from './Space';
 export { default as FloatButton } from './FloatButton';
 export type { FloatButtonProps, FloatButtonGroupProps, FloatButtonBackTopProps } from './FloatButton';
 
+export { default as Spin, Empty, LoadEnd } from './Spin';
+export type { SpinProps, EmptyProps, LoadEndProps } from './Spin';
+
 export { message, MessageContainer } from './message';
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { Typography, Avatar, Button, Spin, message, Tag } from 'antd';
+import { Typography, Avatar, Button, message, Tag } from 'antd';
+import { Spin } from '@/app/components/ui';
 import { UserOutlined, LogoutOutlined, SettingOutlined, MailOutlined, UserSwitchOutlined, CrownOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';

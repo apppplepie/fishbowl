@@ -662,7 +662,7 @@ function PublishChapterContent() {
  */
 export default function PublishChapterPage() {
   return (
-    <Suspense fallback={<div>加载中...</div>}>
+    <Suspense fallback={<div> </div>}>
       <PublishChapterContent />
     </Suspense>
   );

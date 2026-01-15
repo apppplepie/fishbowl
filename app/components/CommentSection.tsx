@@ -349,7 +349,7 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
           textAlign: 'center',
           borderRadius: '8px',
         }}>
-          <div style={{ fontSize: '16px' }}>加载中...</div>
+          {/* <div style={{ fontSize: '16px' }}>加载中...</div> */}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

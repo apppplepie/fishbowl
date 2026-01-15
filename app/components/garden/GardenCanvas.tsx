@@ -228,6 +228,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
 
     /**
      * 主更新循环
+     * 使用 ref 来避免闭包问题，确保总是使用最新的值
      */
     const update = useCallback(() => {
       // 更新生长引擎
@@ -238,7 +239,10 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
         layerManagerRef.current.compositeBaselinePlants(baselinePlantsRef.current, baselineYRef.current);
       }
 
-      requestRef.current = requestAnimationFrame(update);
+      // 检查组件是否已卸载
+      if (requestRef.current !== null) {
+        requestRef.current = requestAnimationFrame(update);
+      }
     }, []);
 
     /**

@@ -982,3 +982,53 @@
   right: auto;
   bottom: auto;
 }
+
+/* ===== Spin Loading Component ===== */
+
+.ui-spin-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.ui-spin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ui-spin-icon {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--ui-color-border);
+  border-top-color: var(--ui-color-primary);
+  border-radius: 50%;
+  animation: ui-spin 1s linear infinite;
+}
+
+.ui-spin-small .ui-spin-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.ui-spin-large .ui-spin-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.ui-spin-tip {
+  color: var(--ui-color-text-secondary);
+  font-size: var(--ui-font-size-sm);
+  text-align: center;
+}
+
+.ui-spin-container {
+  transition: opacity 0.3s ease;
+}
+
+.ui-spin-blur {
+  opacity: 0.5;
+  filter: blur(1px);
+  pointer-events: none;
+}

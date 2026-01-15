@@ -38,8 +38,11 @@ export default function GardenPage() {
 
   // 更新植物列表和基线位置（降低频率以减少内存压力）
   useEffect(() => {
+    let isMounted = true;
+    
     const updatePlants = () => {
-      if (!canvasRef.current) return;
+      // 检查组件是否已卸载
+      if (!isMounted || !canvasRef.current) return;
       
       const plants = canvasRef.current.getAllBaselinePlants();
       const baseline = canvasRef.current.getBaselineY();
@@ -59,6 +62,7 @@ export default function GardenPage() {
     const interval = setInterval(updatePlants, 2000);
     
     return () => {
+      isMounted = false;
       clearTimeout(timer);
       clearInterval(interval);
     };

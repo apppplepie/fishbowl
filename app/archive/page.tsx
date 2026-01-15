@@ -10,6 +10,7 @@ import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import PageLayout from '@/app/components/PageLayout';
 import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import { apiGet } from '@/lib/apiClient';
+import { Empty, LoadEnd } from '@/app/components/ui';
 
 // 重型组件懒加载 - 减少首屏 JS 体积
 // 卡片组件懒加载（非首屏内容）
@@ -512,18 +513,14 @@ function ArticlesPageContent() {
         }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
-              加载中...
+              {/* 加载中... */}
             </div>
           ) : filteredCards.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '60px 20px', 
-              color: '#999',
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
-              <div style={{ fontSize: '16px', marginBottom: '8px' }}>未找到匹配的文章</div>
-              <div style={{ fontSize: '14px' }}>试试调整筛选条件或搜索其他关键词？</div>
-            </div>
+            <Empty
+              icon="🔍"
+              title="未找到匹配的文章"
+              description="试试调整筛选条件或搜索其他关键词？"
+            />
           ) : (
             <>
               <Masonry
@@ -560,15 +557,7 @@ function ArticlesPageContent() {
 
               {/* 没有更多数据提示 */}
               {!hasMore && filteredCards.length > 0 && (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px 0',
-                  color: '#999',
-                  fontSize: '14px',
-                }}>
-                  <div style={{ marginBottom: '8px' }}>✨</div>
-                  已经到底了，没有更多内容啦~
-                </div>
+                <LoadEnd />
               )}
             </>
           )}

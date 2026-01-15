@@ -138,6 +138,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
         style={{
           flex: '1 0 auto',
           width: '100%',
+          minHeight: '600px',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',

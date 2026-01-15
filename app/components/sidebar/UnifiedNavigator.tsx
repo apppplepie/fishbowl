@@ -79,6 +79,8 @@ function UnifiedNavigator({
     if (onArticleClick) {
       onArticleClick(articleId);
     }
+    // 注意：如果没有回调，不在这里处理路由跳转
+    // 让 GenericTree 使用 articleNavigationPattern 进行路由跳转
   };
 
   // 渲染树内容
@@ -86,7 +88,9 @@ function UnifiedNavigator({
     <GenericTree
       config={treeConfig}
       currentArticleId={currentArticleId}
-      onArticleClick={handleArticleClick}
+      // 只在有 onArticleClick 回调时传递 handleArticleClick
+      // 如果没有回调，传递 undefined，让 GenericTree 使用 articleNavigationPattern
+      onArticleClick={onArticleClick ? handleArticleClick : undefined}
       onCategoryClick={handleCategoryClick}
     />
   );

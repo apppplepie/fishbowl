@@ -171,9 +171,9 @@ export default function DrawingGalleryCard({ article, onClick, onTitleClick, sty
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 2, pointerEvents: 'none'
           }}>
-            <div style={{
+            {/* <div style={{
               padding: '6px 10px', borderRadius: 9999, background: 'rgba(0,0,0,0.35)', color: '#fff', fontSize: 13
-            }}>加载中…</div>
+            }}>加载中…</div> */}
           </div>
         )}
 

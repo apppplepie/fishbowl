@@ -412,6 +412,12 @@ export default function Home() {
     }]);
   }, [canvasHeight]);
 
+  // 使用 ref 存储 canvasHeight，避免闭包问题
+  const canvasHeightRef = useRef(canvasHeight);
+  useEffect(() => {
+    canvasHeightRef.current = canvasHeight;
+  }, [canvasHeight]);
+
   // 合成所有植物到主画布
   const compositeAllPlants = useCallback(() => {
     const canvas = plantCanvasRef.current;
@@ -423,7 +429,7 @@ export default function Home() {
 
     // 使用逻辑尺寸（因为 ctx 已经 scale(dpr, dpr)）
     const width = container.clientWidth;
-    const height = canvasHeight;
+    const height = canvasHeightRef.current;
 
     // 清空画布
     ctx.clearRect(0, 0, width, height);
@@ -433,10 +439,13 @@ export default function Home() {
       const dx = plant.currentX - plant.originX;
       ctx.drawImage(plant.canvas, dx, 0);
     });
-  }, [canvasHeight]);
+  }, []); // 移除 canvasHeight 依赖，使用 ref 代替
 
   // 主更新循环
   const updatePlantGrowth = useCallback(() => {
+    // 检查组件是否已卸载
+    if (growthAnimationRef.current === null) return;
+
     // 更新生长引擎
     engineRef.current.update();
 
@@ -454,16 +463,25 @@ export default function Home() {
       return;
     }
 
-    // 继续下一帧
-    growthAnimationRef.current = requestAnimationFrame(updatePlantGrowth);
+    // 继续下一帧（仅在未卸载时）
+    if (growthAnimationRef.current !== null) {
+      growthAnimationRef.current = requestAnimationFrame(updatePlantGrowth);
+    }
   }, [compositeAllPlants]);
 
   // 从数据库加载植物配置（类似 garden/page.tsx 的逻辑）
   useEffect(() => {
+    const abortController = new AbortController();
+    
     const loadPlantsFromDatabase = async () => {
       try {
-        const response = await fetch('/api/garden/config?page_id=');
+        const response = await fetch('/api/garden/config?page_id=', {
+          signal: abortController.signal,
+        });
         const data = await response.json();
+
+        // 检查是否已取消
+        if (abortController.signal.aborted) return;
 
         if (data.success && data.plants && data.plants.length > 0) {
           // 限制加载数量以保护内存
@@ -476,14 +494,23 @@ export default function Home() {
           // 没有保存的植物，设置为空数组
           setLoadedPlants([]);
         }
-      } catch (error) {
+      } catch (error: any) {
+        // 忽略取消错误
+        if (error.name === 'AbortError') return;
+        
         console.error('加载植物配置失败:', error);
         // 加载失败时设置为空数组，使用默认逻辑
-        setLoadedPlants([]);
+        if (!abortController.signal.aborted) {
+          setLoadedPlants([]);
+        }
       }
     };
 
     loadPlantsFromDatabase();
+    
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   // 初始化植物系统（仅首次加载）

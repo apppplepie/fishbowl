@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Masonry, Spin, message } from 'antd';
+import { Masonry, message } from 'antd';
+import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
@@ -244,9 +245,11 @@ export default function GalleryPage() {
             <Spin size="large" />
           </div>
         ) : articles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '100px 20px', color: '#999' }}>
-            <p style={{ fontSize: 16, marginBottom: 8 }}>还没有作品</p>
-          </div>
+          <Empty
+            icon="🎨"
+            title="还没有作品"
+            description="快来发布你的第一件作品吧！"
+          />
         ) : (
           <>
             <Masonry
@@ -267,9 +270,7 @@ export default function GalleryPage() {
               </div>
             )}
             {!hasMore && articles.length > 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#999', fontSize: 14 }}>
-                没了
-              </div>
+              <LoadEnd message="没了" />
             )}
           </>
         )}
