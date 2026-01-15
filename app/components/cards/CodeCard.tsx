@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, Tag } from 'antd';
 import { CodeOutlined, EyeOutlined, MessageOutlined } from '@ant-design/icons';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
+import { useCardBackground } from '@/app/components/ui/useCardBackground';
 
 interface CodeCardProps {
   card: {
@@ -29,6 +30,9 @@ interface CodeCardProps {
  * 适合技术文章、代码示例分享
  */
 export default function CodeCard({ card, onClick }: CodeCardProps) {
+  // 使用卡片背景颜色 Hook，基于代码卡片 ID 生成独特的渐变色
+  const colors = useCardBackground(card.id || '');
+  
   // 代码预览（最多显示5行）
   const codeLines = card.codePreview 
     ? card.codePreview.split('\n').slice(0, 5) 
@@ -40,7 +44,10 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
       style={{ 
         borderRadius: '12px',
         overflow: 'hidden',
-        border: '1px solid #e8e8e8',
+        background: colors.background,
+        border: `1px solid ${colors.borderColor}`,
+        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
+        transition: 'all 0.3s ease',
       }}
       styles={{ body: { padding: 0 } }}
       onClick={onClick}
@@ -48,7 +55,6 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
       {/* 标题区域 */}
       <div style={{
         padding: '20px 20px 16px 20px',
-        background: '#fff',
       }}>
         <div style={{
           display: 'flex',
@@ -56,12 +62,12 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
           gap: '8px',
           marginBottom: '12px',
         }}>
-          <CodeOutlined style={{ fontSize: '20px', color: '#1890ff' }} />
+          <CodeOutlined style={{ fontSize: '20px', color: colors.textColor, opacity: 0.8 }} />
           <h3 style={{
             margin: 0,
             fontSize: '18px',
             fontWeight: 600,
-            color: '#1a1a1a',
+            color: colors.textColor,
             flex: 1,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -96,7 +102,8 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
           <p style={{
             margin: 0,
             fontSize: '14px',
-            color: '#666',
+            color: colors.textColor,
+            opacity: 0.8,
             lineHeight: '1.6',
             display: '-webkit-box',
             WebkitLineClamp: 2,
@@ -113,8 +120,8 @@ export default function CodeCard({ card, onClick }: CodeCardProps) {
         background: '#282c34',
         padding: '16px 20px',
         position: 'relative',
-        borderTop: '2px solid #1890ff',
-        borderBottom: '2px solid #1890ff',
+        borderTop: `2px solid ${colors.borderColor}`,
+        borderBottom: `2px solid ${colors.borderColor}`,
       }}>
         {/* 语言标签 */}
         {card.codeLanguage && (

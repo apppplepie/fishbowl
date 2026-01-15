@@ -5,6 +5,7 @@ import { Card, Tag } from 'antd';
 import { ClockCircleOutlined, EyeOutlined, MessageOutlined } from '@ant-design/icons';
 import type { ArticleCard as ArticleCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
+import { useCardBackground } from '@/app/components/ui/useCardBackground';
 
 interface ArticleCardProps {
   card: ArticleCardType | any; // 支持数据库返回的格式
@@ -17,6 +18,9 @@ interface ArticleCardProps {
  */
 export default function ArticleCard({ card, onClick }: ArticleCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  
+  // 使用卡片背景颜色 Hook，基于文章 ID 生成独特的渐变色
+  const colors = useCardBackground(card.id || card._id?.toString() || '');
 
   return (
     <Card
@@ -24,6 +28,10 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
       style={{ 
         borderRadius: '12px',
         overflow: 'hidden',
+        background: colors.background,
+        border: `1px solid ${colors.borderColor}`,
+        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
+        transition: 'all 0.3s ease',
       }}
       styles={{ body: { padding: '20px' } }}
       onClick={onClick}
@@ -55,6 +63,7 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         fontSize: '18px',
         fontWeight: 600,
         lineHeight: '1.4',
+        color: colors.textColor,
       }}>
         {card.title}
       </h3>
@@ -63,7 +72,8 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
       {card.excerpt && (
         <p style={{
           margin: '0 0 16px 0',
-          color: '#666',
+          color: colors.textColor,
+          opacity: 0.8,
           fontSize: '14px',
           lineHeight: '1.6',
           display: '-webkit-box',
@@ -82,13 +92,14 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingTop: '12px',
-        borderTop: '1px solid #f0f0f0',
+        borderTop: `1px solid ${colors.borderColor}`,
         fontSize: '12px',
-        color: '#999',
+        color: colors.textColor,
+        opacity: 0.6,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* <span>✍️ {card.author}</span> */}
-          <span style={{ color: '#999', fontSize: '12px' }}>
+          <span style={{ fontSize: '12px' }}>
             {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}
           </span>
         </div>

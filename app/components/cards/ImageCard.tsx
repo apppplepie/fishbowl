@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Card, Tag } from 'antd';
 import type { ImageCard as ImageCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
+import { useCardBackground } from '@/app/components/ui/useCardBackground';
 
 interface ImageCardProps {
   card: ImageCardType | any; // 支持数据库返回的格式
@@ -16,6 +17,9 @@ interface ImageCardProps {
  */
 export default function ImageCard({ card, onClick }: ImageCardProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
+  
+  // 使用卡片背景颜色 Hook，基于图片卡片 ID 生成独特的渐变色
+  const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
 
   return (
     <Card
@@ -24,20 +28,24 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
         borderRadius: '12px',
         overflow: 'hidden',
         cursor: 'pointer',
+        background: colors.background,
+        border: `1px solid ${colors.borderColor}`,
+        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
+        transition: 'all 0.3s ease',
       }}
       styles={{ body: { padding: 0 } }}
       onClick={onClick}
     >
       {/* 图片区域 */}
-      <div style={{ position: 'relative', width: '100%', minHeight: '300px' }}>
+      <div style={{ position: 'relative', width: '100%' }}>
         {!imgLoaded && (
           <div style={{
             position: 'absolute',
             top: 0,
             left: 0,
             width: '100%',
-            height: '100%',
-            background: '#f0f0f0',
+            minHeight: '300px',
+            background: colors.background,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -57,11 +65,12 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
           style={{
             width: '100%',
             height: 'auto',
+            display: 'block',
+            objectFit: 'contain', // 保持图片原始宽高比，不拉伸
             opacity: imgLoaded ? 1 : 0,
             transition: 'opacity 0.3s ease, transform 0.3s ease',
             position: 'relative',
             zIndex: 2,
-            display: 'block',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'scale(1.05)';
@@ -80,6 +89,7 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
               margin: '0 0 8px 0',
               fontSize: '16px',
               fontWeight: 600,
+              color: colors.textColor,
             }}>
               {card.title}
             </h4>
@@ -108,7 +118,8 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
           {(card.description || card.excerpt) && (
             <p style={{
               margin: 0,
-              color: '#666',
+              color: colors.textColor,
+              opacity: 0.8,
               fontSize: '14px',
               lineHeight: '1.5',
               display: '-webkit-box',

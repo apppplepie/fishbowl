@@ -7,67 +7,95 @@ export interface GradientConfig {
   }
   
   /**
-   * A simple, fast hashing function (djb2 implementation)
+   * 改进的哈希函数，使用多种哈希策略确保更好的分布
    * Returns a deterministic integer for any given string.
    */
   function hashString(str: string): number {
-    let hash = 5381;
+    // 组合多个哈希值以获得更好的分布
+    let hash1 = 5381;
+    let hash2 = 52711;
+    
     for (let i = 0; i < str.length; i++) {
-      hash = (hash * 33) ^ str.charCodeAt(i);
+      const char = str.charCodeAt(i);
+      hash1 = ((hash1 << 5) + hash1) ^ char; // hash1 * 33 ^ char
+      hash2 = ((hash2 << 7) + hash2) ^ char; // hash2 * 128 + hash2 ^ char
     }
-    return Math.abs(hash);
+    
+    // 组合两个哈希值
+    return Math.abs((hash1 ^ (hash2 >>> 16)));
+  }
+  
+  /**
+   * 生成多个独立的哈希值用于不同的颜色参数
+   */
+  function generateHashSeeds(id: string): number[] {
+    const seeds: number[] = [];
+    // 为不同部分生成不同的种子
+    seeds.push(hashString(id));
+    seeds.push(hashString(id + '_hue'));
+    seeds.push(hashString(id + '_sat'));
+    seeds.push(hashString(id + '_light'));
+    seeds.push(hashString(id + '_angle'));
+    return seeds;
   }
   
   /**
    * Maps a number to a range [min, max]
    */
   function mapRange(value: number, min: number, max: number): number {
-    return min + (value % (max - min));
+    return min + (value % (max - min + 1));
   }
   
   /**
    * Generates a deterministic gradient configuration based on an ID.
+   * 改进版：确保渐变更明显
    */
   export function generateVisualsFromId(id: string): GradientConfig {
-    const seed = hashString(id);
+    const seeds = generateHashSeeds(id);
+    const [mainSeed, hueSeed, satSeed, lightSeed, angleSeed] = seeds;
   
     // Strategy Selector
-    const strategy = seed % 100;
+    const strategy = mainSeed % 100;
     
-    const baseHue = mapRange(seed, 0, 360);
-    const angle = mapRange(seed >> 5, 0, 360);
+    // 使用独立的种子生成不同的参数，增加变化
+    const baseHue = mapRange(hueSeed, 0, 360);
+    const angle = mapRange(angleSeed, 0, 360);
   
     let h1, s1, l1, h2, s2, l2;
   
     if (strategy < 40) {
+      // 鲜艳渐变：高饱和度，中等明度
       h1 = baseHue;
-      s1 = mapRange(seed >> 2, 85, 100); 
-      l1 = mapRange(seed >> 3, 68, 78); 
+      s1 = mapRange(satSeed, 75, 95); 
+      l1 = mapRange(lightSeed, 65, 75); 
       
-      const hueShift = mapRange(seed >> 4, 15, 45);
+      // 增加色相偏移，让渐变更明显
+      const hueShift = mapRange(mainSeed >> 4, 30, 80);
       h2 = (baseHue + hueShift) % 360;
-      s2 = s1 - 5;
-      l2 = l1 + 10;
+      s2 = mapRange(satSeed >> 2, 70, 90);
+      l2 = mapRange(lightSeed >> 2, 75, 85);
   
     } else if (strategy < 80) {
+      // 柔和渐变：中等饱和度，高明度
       h1 = baseHue;
-      s1 = mapRange(seed >> 2, 60, 90);
-      l1 = mapRange(seed >> 3, 88, 96);
+      s1 = mapRange(satSeed, 55, 75);
+      l1 = mapRange(lightSeed, 85, 93);
   
-      const hueShift = mapRange(seed >> 4, 30, 80); 
+      const hueShift = mapRange(mainSeed >> 4, 40, 120); 
       h2 = (baseHue + hueShift) % 360;
-      s2 = s1 + 5;
-      l2 = l1 - 6;
+      s2 = mapRange(satSeed >> 2, 60, 80);
+      l2 = mapRange(lightSeed >> 2, 80, 90);
   
     } else {
+      // 活力渐变：高饱和度，明度差异大
       h1 = baseHue;
-      s1 = mapRange(seed >> 2, 90, 100); 
-      l1 = mapRange(seed >> 3, 76, 86);  
+      s1 = mapRange(satSeed, 80, 100); 
+      l1 = mapRange(lightSeed, 70, 80);  
   
-      const hueShift = mapRange(seed >> 4, 40, 100); 
+      const hueShift = mapRange(mainSeed >> 4, 60, 150); 
       h2 = (baseHue + hueShift) % 360;
-      s2 = s1;
-      l2 = l1 + 8;
+      s2 = mapRange(satSeed >> 2, 75, 95);
+      l2 = mapRange(lightSeed >> 2, 82, 92);
     }
   
     const background = `linear-gradient(${angle}deg, hsl(${h1}, ${s1}%, ${l1}%), hsl(${h2}, ${s2}%, ${l2}%))`;

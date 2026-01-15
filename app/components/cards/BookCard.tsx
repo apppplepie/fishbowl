@@ -6,6 +6,7 @@ import { UserOutlined, ClockCircleOutlined, DeleteOutlined } from '@ant-design/i
 import type { BookCard as BookCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import DeleteBookModal from '@/app/components/modal/DeleteBookModal';
+import { useCardBackground } from '@/app/components/ui/useCardBackground';
 
 interface BookCardProps {
   card: BookCardType;
@@ -24,6 +25,9 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
+  
+  // 使用卡片背景颜色 Hook，基于书籍 ID 生成独特的渐变色
+  const colors = useCardBackground(card.id?.toString() || (card as any)._id?.toString() || '');
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击
@@ -47,15 +51,28 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
       style={{
         borderRadius: '16px',
         overflow: 'hidden',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+        background: colors.background,
+        border: `1px solid ${colors.borderColor}`,
+        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
         transition: 'all 0.3s ease',
         opacity: showDeleteIcon ? 0.9 : 1,
         cursor: showDeleteIcon ? 'default' : 'pointer',
+        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
       }}
       styles={{ body: { padding: '16px' } }}
       onClick={showDeleteIcon ? undefined : onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={(e) => {
+        setIsHovered(true);
+        if (!showDeleteIcon) {
+          e.currentTarget.style.boxShadow = `0 8px 25px ${colors.shadowColor}, 0 4px 12px rgba(0,0,0,0.15)`;
+        }
+      }}
+      onMouseLeave={(e) => {
+        setIsHovered(false);
+        if (!showDeleteIcon) {
+          e.currentTarget.style.boxShadow = `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`;
+        }
+      }}
       cover={
         <div style={{
           position: 'relative',
@@ -172,7 +189,7 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
         fontSize: '20px',
         fontWeight: 700,
         lineHeight: '1.3',
-        color: '#1a1a1a',
+        color: colors.textColor,
         display: '-webkit-box',
         WebkitLineClamp: 2,
         WebkitBoxOrient: 'vertical',
@@ -185,7 +202,8 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
       {card.description && (
         <p style={{
           margin: '0 0 16px 0',
-          color: '#666',
+          color: colors.textColor,
+          opacity: 0.8,
           fontSize: '14px',
           lineHeight: '1.5',
           display: '-webkit-box',
@@ -204,14 +222,15 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingTop: '12px',
-        borderTop: '1px solid #f0f0f0',
+        borderTop: `1px solid ${colors.borderColor}`,
       }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
           fontSize: '13px',
-          color: '#666'
+          color: colors.textColor,
+          opacity: 0.7,
         }}>
           <UserOutlined />
           <span>{card.author}</span>
@@ -221,20 +240,14 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
           alignItems: 'center',
           gap: '4px',
           fontSize: '12px',
-          color: '#999'
+          color: colors.textColor,
+          opacity: 0.6,
         }}>
           <ClockCircleOutlined />
           <span>{formatRelativeTime(card.updatedAt)}</span>
         </div>
       </div>
 
-      {/* 悬停效果样式 */}
-      <style jsx>{`
-        .ant-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
-        }
-      `}</style>
 
       {/* 删除书籍确认对话框 */}
       <DeleteBookModal

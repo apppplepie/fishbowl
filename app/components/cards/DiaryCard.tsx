@@ -4,6 +4,7 @@ import React from 'react';
 import { Card } from 'antd';
 import type { DiaryCard as DiaryCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
+import { useCardBackground } from '@/app/components/ui/useCardBackground';
 
 interface DiaryCardProps {
   card: DiaryCardType | any; // 支持数据库返回的格式
@@ -62,52 +63,18 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
 
   const { status, location, content } = extractDiaryData();
 
-  // 根据状态/随机生成渐变背景色
-  const getCardGradient = () => {
-    // 状态对应的颜色（合并了心情和天气）
-    const statusColors: { [key: string]: string } = {
-      // 心情
-      '😊': 'linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%)', // 开心 - 黄色
-      '😢': 'linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%)', // 难过 - 蓝紫色
-      '😍': 'linear-gradient(135deg, #fbc2eb 0%, #f093fb 100%)', // 幸福 - 粉紫色
-      '😤': 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', // 生气 - 红橙色
-      '😴': 'linear-gradient(135deg, #c1dfc4 0%, #deecdd 100%)', // 困倦 - 淡绿色
-      '🤔': 'linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)', // 思考 - 紫黄色
-      '💪': 'linear-gradient(135deg, #f77062 0%, #fe5196 100%)', // 充满动力 - 红粉色
-      '😌': 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', // 平静 - 淡紫蓝色
-      // 天气
-      '☀️': 'linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%)', // 晴天 - 金黄色
-      '⛅': 'linear-gradient(135deg, #fbc8d4 0%, #9795f0 100%)', // 多云 - 粉蓝色
-      '☁️': 'linear-gradient(135deg, #d7dde8 0%, #b8c6db 100%)', // 阴天 - 灰蓝色
-      '🌧️': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', // 雨天 - 蓝色
-      '⛈️': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // 雷雨 - 深紫色
-      '🌨️': 'linear-gradient(135deg, #e6e9f0 0%, #eef1f5 100%)', // 雪天 - 白色
-      '🌙': 'linear-gradient(135deg, #2e3192 0%, #1bffff 100%)', // 夜晚 - 深蓝色
-    };
+  // 使用卡片背景颜色 Hook，基于日记 ID 生成独特的渐变色
+  const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
 
-    // 随机颜色库
-    const randomColors = [
-      'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      'linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%)',
-      'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-      'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
-      'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)',
-      'linear-gradient(135deg, #fdcbf1 0%, #e6dee9 100%)',
-      'linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)',
-      'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)',
-    ];
-
-    // 优先使用状态颜色
-    if (status && statusColors[status]) {
-      return statusColors[status];
-    }
-    
-    // 使用卡片 ID 或标题生成一个稳定的随机索引（避免每次渲染颜色都变）
-    const seed = card.id || card.title || '';
-    const hashCode = seed.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-    const index = hashCode % randomColors.length;
-    
-    return randomColors[index];
+  // 判断是否为表情符号（简单的emoji检测）
+  const isEmoji = (str: string): boolean => {
+    if (!str || str.trim() === '') return false;
+    // 过滤掉常见的非表情文本
+    const nonEmojiTexts = ['published', 'draft', 'archived', 'deleted'];
+    if (nonEmojiTexts.includes(str.toLowerCase())) return false;
+    // 简单的emoji检测：检查是否包含emoji字符（Unicode范围）
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/u;
+    return emojiRegex.test(str);
   };
 
   return (
@@ -115,8 +82,10 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
       hoverable
       style={{ 
         borderRadius: '12px',
-        background: getCardGradient(),
-        border: 'none',
+        background: colors.background,
+        border: `1px solid ${colors.borderColor}`,
+        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
+        transition: 'all 0.3s ease',
       }}
       styles={{ body: { padding: '20px' } }}
       onClick={onClick}
@@ -127,31 +96,32 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
           margin: '0 0 8px 0',
           fontSize: '16px',
           fontWeight: 600,
-          color: '#333',
+          color: colors.textColor,
         }}>
           {card.title}
         </h4>
       )}
 
       {/* 日期和状态 */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '12px',
-        fontSize: '12px',
-        color: '#666',
-      }}>
-        {/* <span>📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}</span> */}
-        {status && <span>{status}</span>}
-      </div>
+      {status && isEmoji(status) && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'flex-start',
+          alignItems: 'center',
+          marginBottom: '12px',
+          fontSize: '16px',
+        }}>
+          <span>{status}</span>
+        </div>
+      )}
 
       {/* 日志内容 */}
       <p style={{
         margin: '0 0 12px 0',
         fontSize: '15px',
         lineHeight: '1.8',
-        color: '#333',
+        color: colors.textColor,
+        opacity: 0.9,
         whiteSpace: 'pre-wrap',
         display: '-webkit-box',
         WebkitLineClamp: 4,
@@ -167,9 +137,10 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
           display: 'flex',
           gap: '12px',
           fontSize: '12px',
-          color: '#999',
+          color: colors.textColor,
+          opacity: 0.6,
           paddingTop: '12px',
-          borderTop: '1px solid rgba(0,0,0,0.1)',
+          borderTop: `1px solid ${colors.borderColor}`,
         }}>
           <span>📍 {location}</span>
         </div>
