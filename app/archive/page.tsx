@@ -463,8 +463,8 @@ function ArticlesPageContent() {
               alignItems: isMobile ? 'stretch' : 'flex-end',
               justifyContent: isMobile ? 'flex-start' : 'space-between',
             }}>
-              {/* 左侧：标签搜索筛选 */}
-              {/* <div style={{ flex: 1 }}>
+              {/* 左侧：标签搜索筛选
+              <div style={{ flex: 1 }}>
                 <Select
                   mode="tags"
                   value={selectedTags}
@@ -518,7 +518,7 @@ function ArticlesPageContent() {
               <div style={{
                 marginTop: '12px',
                 fontSize: '13px',
-                color: 'rgba(255, 255, 255, 0.9)',
+                color: 'rgba(0, 0, 0, 0.9)',
               }}>
                 {selectedCategoryId && (selectedTags.length > 0 || searchKeyword) && <span> · </span>}
                 {selectedTags.length > 0 && (
@@ -551,7 +551,6 @@ function ArticlesPageContent() {
             </div>
           ) : filteredCards.length === 0 ? (
             <Empty
-              icon="🔍"
               title="未找到匹配的文章"
               description="试试调整筛选条件或搜索其他关键词？"
             />

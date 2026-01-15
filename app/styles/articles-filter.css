@@ -53,13 +53,19 @@
   height: 40px !important;
 }
 
-.search-input-transparent .ant-input {
+.search-input-transparent .ant-input,
+.search-input-transparent .ant-input-search-input,
+.search-input-transparent input.ant-input,
+.search-input-transparent .ant-input-affix-wrapper input {
   background: transparent !important;
-  color: white !important;
+  color: black !important;
 }
 
-.search-input-transparent .ant-input::placeholder {
-  color: rgba(255, 255, 255, 0.7) !important;
+.search-input-transparent .ant-input::placeholder,
+.search-input-transparent .ant-input-search-input::placeholder,
+.search-input-transparent input.ant-input::placeholder,
+.search-input-transparent .ant-input-affix-wrapper input::placeholder {
+  color: rgba(0, 0, 0, 0.45) !important;
 }
 
 .search-input-transparent .ant-input-clear-icon,
