@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Tag } from 'antd';
 import type { ImageCard as ImageCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
+import { AreaChartOutlined, PictureOutlined } from '@ant-design/icons';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
+import { Tag, Card } from '@/app/components/ui';
 
 interface ImageCardProps {
   card: ImageCardType | any; // 支持数据库返回的格式
@@ -24,17 +25,9 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
   return (
     <Card
       hoverable
-      style={{ 
-        borderRadius: '12px',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        background: colors.background,
-        border: `1px solid ${colors.borderColor}`,
-        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
-        transition: 'all 0.3s ease',
-      }}
-      styles={{ body: { padding: 0 } }}
+      id={card.id?.toString() || card._id?.toString() || ''}
       onClick={onClick}
+      bodyStyle={{ padding: 0 }}
     >
       {/* 图片区域 */}
       <div style={{ position: 'relative', width: '100%' }}>
@@ -85,30 +78,38 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
       {(card.title || card.description || card.excerpt) && (
         <div style={{ padding: '16px' }}>
           {card.title && (
-            <h4 style={{ 
-              margin: '0 0 8px 0',
-              fontSize: '16px',
-              fontWeight: 600,
-              color: colors.textColor,
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
             }}>
-              {card.title}
-            </h4>
+              <PictureOutlined style={{ fontSize: '20px'}} />
+              <h3 style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: 600,
+                color: colors.textColor,
+                flex: 1,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {card.title}
+              </h3>
+            </div>
           )}
 
           {/* 标签 */}
           {card.tags && card.tags.length > 0 && (
             <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {card.tags.slice(0, 5).map((tag: string, index: number) => {
-                const colors = ['cyan', 'blue', 'geekblue', 'purple', 'magenta', 'red', 'volcano', 'orange', 'gold', 'green'];
-                const color = colors[index % colors.length];
-                return (
-                  <Tag key={index} color={color}>
-                    {tag}
-                  </Tag>
-                );
-              })}
+              {card.tags.slice(0, 5).map((tag: string, index: number) => (
+                <Tag key={index} id={tag}>
+                  {tag}
+                </Tag>
+              ))}
               {card.tags.length > 5 && (
-                <Tag color="default">
+                <Tag id={`more-${card.id || card._id || ''}`}>
                   +{card.tags.length - 5}
                 </Tag>
               )}

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Tag, Input, AutoComplete, Space, message } from 'antd';
+import { Input, AutoComplete, Space, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { apiGetJson, apiPostJson } from '@/lib/apiClient';
+import { Tag } from '@/app/components/ui';
 
 interface TagInputProps {
   value?: string[];
@@ -159,9 +160,9 @@ export default function TagInput({
         {value.map((tag, index) => (
           <Tag
             key={index}
+            id={tag}
             closable
             onClose={() => removeTag(tag)}
-            color="blue"
             style={{ padding: '4px 8px', fontSize: '14px' }}
           >
             {tag}

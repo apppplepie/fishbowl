@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Tag } from 'antd';
-import { ClockCircleOutlined, EyeOutlined, MessageOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, EditOutlined} from '@ant-design/icons';
 import type { ArticleCard as ArticleCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
+import { Tag, Card } from '@/app/components/ui';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 
 interface ArticleCardProps {
@@ -18,56 +18,55 @@ interface ArticleCardProps {
  */
 export default function ArticleCard({ card, onClick }: ArticleCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
-  
-  // 使用卡片背景颜色 Hook，基于文章 ID 生成独特的渐变色
+
+  // 使用卡片背景颜色 Hook，基于文章 ID 生成独特的渐变色（用于文本和边框颜色）
   const colors = useCardBackground(card.id || card._id?.toString() || '');
 
   return (
     <Card
       hoverable
-      style={{ 
-        borderRadius: '12px',
-        overflow: 'hidden',
-        background: colors.background,
-        border: `1px solid ${colors.borderColor}`,
-        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
-        transition: 'all 0.3s ease',
-      }}
-      styles={{ body: { padding: '20px' } }}
+      id={card.id || card._id?.toString() || ''}
       onClick={onClick}
-      cover={undefined}
+      bodyStyle={{ padding: '20px' }}
     >
+
+
+      {/* 标题 */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '12px',
+      }}>
+          <EditOutlined style={{ fontSize: '20px'}} />
+        <h3 style={{
+          margin: 0,
+          fontSize: '18px',
+          fontWeight: 600,
+          color: colors.textColor,
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {card.title}
+        </h3>
+      </div>
       {/* 标签 */}
       {card.tags && card.tags.length > 0 && (
         <div style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-          {card.tags.slice(0, 5).map((tag: string, index: number) => {
-            const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
-            const color = colors[index % colors.length];
-            return (
-              <Tag key={index} color={color}>
-                {tag}
-              </Tag>
-            );
-          })}
+          {card.tags.slice(0, 5).map((tag: string, index: number) => (
+            <Tag key={index} id={tag}>
+              {tag}
+            </Tag>
+          ))}
           {card.tags.length > 5 && (
-            <Tag color="default">
+            <Tag id={`more-${card.id}`}>
               +{card.tags.length - 5}
             </Tag>
           )}
         </div>
       )}
-
-      {/* 标题 */}
-      <h3 style={{
-        margin: '0 0 12px 0',
-        fontSize: '18px',
-        fontWeight: 600,
-        lineHeight: '1.4',
-        color: colors.textColor,
-      }}>
-        {card.title}
-      </h3>
-
       {/* 摘要 - 只有当有摘要时才显示 */}
       {card.excerpt && (
         <p style={{
@@ -94,20 +93,20 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         paddingTop: '12px',
         borderTop: `1px solid ${colors.borderColor}`,
         fontSize: '12px',
-        color: colors.textColor,
         opacity: 0.6,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* <span>✍️ {card.author}</span> */}
+          <span>{card.author}</span>
           <span style={{ fontSize: '12px' }}>
             {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {card.readTime && <span><ClockCircleOutlined /> {card.readTime}min</span>}
-          {(card.likes !== undefined && card.likes !== null) && <span> {card.likes}</span>}
+          {/* {(card.likes !== undefined && card.likes !== null) && <span> {card.likes}</span>} */}
           {/* {(card.comments !== undefined && card.comments !== null) && <span><MessageOutlined /> {card.comments}</span>} */}
         </div>
+
       </div>
     </Card>
   );

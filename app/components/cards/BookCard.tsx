@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Tag } from 'antd';
-import { UserOutlined, ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
+import { UserOutlined, ClockCircleOutlined, DeleteOutlined, ReadOutlined } from '@ant-design/icons';
 import type { BookCard as BookCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import DeleteBookModal from '@/app/components/modal/DeleteBookModal';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
+import { Card } from '@/app/components/ui';
 
 interface BookCardProps {
   card: BookCardType;
@@ -48,31 +48,13 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
   return (
     <Card
       hoverable={!showDeleteIcon}
+      id={card.id?.toString() || (card as any)._id?.toString() || ''}
+      onClick={showDeleteIcon ? undefined : onClick}
       style={{
-        borderRadius: '16px',
-        overflow: 'hidden',
-        background: colors.background,
-        border: `1px solid ${colors.borderColor}`,
-        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
-        transition: 'all 0.3s ease',
         opacity: showDeleteIcon ? 0.9 : 1,
         cursor: showDeleteIcon ? 'default' : 'pointer',
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
       }}
-      styles={{ body: { padding: '16px' } }}
-      onClick={showDeleteIcon ? undefined : onClick}
-      onMouseEnter={(e) => {
-        setIsHovered(true);
-        if (!showDeleteIcon) {
-          e.currentTarget.style.boxShadow = `0 8px 25px ${colors.shadowColor}, 0 4px 12px rgba(0,0,0,0.15)`;
-        }
-      }}
-      onMouseLeave={(e) => {
-        setIsHovered(false);
-        if (!showDeleteIcon) {
-          e.currentTarget.style.boxShadow = `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`;
-        }
-      }}
+      bodyStyle={{ padding: '16px' }}
       cover={
         <div style={{
           position: 'relative',
@@ -99,7 +81,7 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
               pointerEvents: 'none',
             }}
           >
-            📚 {card.title}
+             {card.title}
           </div>
           {/* 图片 - 始终渲染，使用 opacity 控制显示 */}
           {coverImageUrl && (
@@ -184,19 +166,26 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
     >
 
       {/* 书名 */}
-      <h3 style={{
-        margin: '0 0 8px 0',
-        fontSize: '20px',
-        fontWeight: 700,
-        lineHeight: '1.3',
-        color: colors.textColor,
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '12px',
       }}>
-        {card.title}
-      </h3>
+        <ReadOutlined style={{ fontSize: '20px'}} />
+        <h3 style={{
+          margin: 0,
+          fontSize: '18px',
+          fontWeight: 600,
+          color: colors.textColor,
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {card.title}
+        </h3>
+      </div>
 
       {/* 简介 - 只有当有简介时才显示 */}
       {card.description && (

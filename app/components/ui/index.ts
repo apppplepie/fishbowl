@@ -32,3 +32,6 @@ export type { SpinProps, EmptyProps, LoadEndProps } from './Spin';
 
 export { message, MessageContainer } from './message';
 
+export { default as Card } from './Card';
+export type { CardProps } from './Card';
+

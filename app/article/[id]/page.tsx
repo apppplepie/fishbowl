@@ -1009,22 +1009,18 @@ export default function ArticlePage() {
                   {(editMode === 'edit' ? editedArticle?.tags : (editMode === 'preview' ? editedArticle?.tags : article?.tags))?.length > 0 && (
                     <div style={{ marginTop: '12px' }}>
                       <Space wrap>
-                        {(editMode === 'edit' ? editedArticle?.tags : (editMode === 'preview' ? editedArticle?.tags : article?.tags)).map((tag: string, index: number) => {
-                          const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
-                          const color = colors[index % colors.length];
-                          return (
-                            <Tag
-                              key={index}
-                              color={color}
-                              style={{
-                                padding: '4px 12px',
-                                fontWeight: 500,
-                              }}
-                            >
-                              {tag}
-                            </Tag>
-                          );
-                        })}
+                        {(editMode === 'edit' ? editedArticle?.tags : (editMode === 'preview' ? editedArticle?.tags : article?.tags)).map((tag: string, index: number) => (
+                          <Tag
+                            key={index}
+                            id={tag}
+                            style={{
+                              padding: '4px 12px',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {tag}
+                          </Tag>
+                        ))}
                       </Space>
                     </div>
                   )}
@@ -1211,10 +1207,10 @@ export default function ArticlePage() {
                     <Space>
                       {editedArticle?.editorBlocks && (
                         <>
-                          <Tag color="blue">{editedArticle.editorBlocks.length} 个块</Tag>
-                          <Tag color="green">{editedArticle.editorBlocks.filter((b: any) => b.type === 'text').length} 文字</Tag>
-                          <Tag color="orange">{editedArticle.editorBlocks.filter((b: any) => b.type === 'image').length} 图片</Tag>
-                          <Tag color="purple">{editedArticle.editorBlocks.filter((b: any) => b.type === 'code').length} 代码</Tag>
+                          <Tag id="stats-blocks">{editedArticle.editorBlocks.length} 个块</Tag>
+                          <Tag id="stats-text">{editedArticle.editorBlocks.filter((b: any) => b.type === 'text').length} 文字</Tag>
+                          <Tag id="stats-image">{editedArticle.editorBlocks.filter((b: any) => b.type === 'image').length} 图片</Tag>
+                          <Tag id="stats-code">{editedArticle.editorBlocks.filter((b: any) => b.type === 'code').length} 代码</Tag>
                         </>
                       )}
                     </Space>

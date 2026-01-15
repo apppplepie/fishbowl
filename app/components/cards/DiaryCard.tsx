@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Card } from 'antd';
 import type { DiaryCard as DiaryCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
+import { Card } from '@/app/components/ui';
+import { InsertRowAboveOutlined } from '@ant-design/icons';
 
 interface DiaryCardProps {
   card: DiaryCardType | any; // 支持数据库返回的格式
@@ -77,30 +78,60 @@ export default function DiaryCard({ card, onClick }: DiaryCardProps) {
     return emojiRegex.test(str);
   };
 
+  // 格式化日期：从月份开始显示到分钟 (MM-DD HH:mm)
+  const formatDateFromMonth = (dateString: string | Date | undefined | null): string => {
+    if (!dateString) {
+      return '未知日期';
+    }
+
+    const date = new Date(dateString);
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date string:', dateString);
+      return '未知日期';
+    }
+
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${month}-${day} ${hours}:${minutes}`;
+  };
+
+  // 获取发布日期
+  const publishDate = card.updatedAt || card.publishedAt || card.createdAt;
+  const formattedDate = formatDateFromMonth(publishDate);
+
   return (
     <Card
       hoverable
-      style={{ 
-        borderRadius: '12px',
-        background: colors.background,
-        border: `1px solid ${colors.borderColor}`,
-        boxShadow: `0 4px 16px -4px ${colors.shadowColor}, 0 2px 8px -2px rgba(0,0,0,0.08)`,
-        transition: 'all 0.3s ease',
-      }}
-      styles={{ body: { padding: '20px' } }}
+      id={card.id?.toString() || card._id?.toString() || ''}
       onClick={onClick}
+      bodyStyle={{ padding: '20px' }}
     >
       {/* 标题（日期） */}
-      {card.title && (
-        <h4 style={{
-          margin: '0 0 8px 0',
-          fontSize: '16px',
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '12px',
+      }}>
+        <InsertRowAboveOutlined style={{ fontSize: '20px'}} />
+        <h3 style={{
+          margin: 0,
+          fontSize: '18px',
           fontWeight: 600,
           color: colors.textColor,
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
         }}>
-          {card.title}
-        </h4>
-      )}
+          {formattedDate}
+        </h3>
+      </div>
 
       {/* 日期和状态 */}
       {status && isEmoji(status) && (
