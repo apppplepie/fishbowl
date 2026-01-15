@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Button, Input, Modal, Tag, Divider, Space, Breadcrumb, Skeleton, message } from '@/app/components/ui';
+import { Button, Input, Modal, Tag, Divider, Space, Breadcrumb, message } from '@/app/components/ui';
 import { Select, Dropdown } from 'antd'; // 暂时保留，后续实现
 const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CameraOutlined } from '@ant-design/icons';
@@ -67,42 +67,6 @@ import {
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 import { getChapterLabel } from '@/app/utils/chapterNumbering';
 import { apiGet, apiPutJson, apiDeleteJson, apiPostJson } from '@/lib/apiClient';
-
-/**
- * 文章内容骨架屏组件
- */
-const ArticleContentSkeleton: React.FC = () => (
-  <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-    {/* 标题骨架 */}
-    <div style={{ marginBottom: '24px' }}>
-      <Skeleton active title={{ width: '60%' }} paragraph={false} />
-      <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-        <Skeleton.Button active size="small" style={{ width: '80px' }} />
-        <Skeleton.Button active size="small" style={{ width: '60px' }} />
-        <Skeleton.Button active size="small" style={{ width: '70px' }} />
-      </div>
-    </div>
-
-    {/* 内容骨架 */}
-    <div style={{ marginBottom: '32px' }}>
-      <Skeleton active paragraph={{ rows: 6, width: ['100%', '95%', '90%', '85%', '100%', '80%'] }} />
-      <div style={{ height: '16px' }} /> {/* 段落间距 */}
-      <Skeleton active paragraph={{ rows: 4, width: ['90%', '100%', '85%', '95%'] }} />
-      <div style={{ height: '16px' }} />
-      <Skeleton active paragraph={{ rows: 8, width: ['100%', '88%', '92%', '85%', '100%', '90%', '95%', '80%'] }} />
-    </div>
-
-    {/* 操作区域骨架 */}
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0', borderTop: '1px solid #f0f0f0' }}>
-      <div style={{ display: 'flex', gap: '16px' }}>
-        <Skeleton.Button active size="small" style={{ width: '60px' }} />
-        <Skeleton.Button active size="small" style={{ width: '60px' }} />
-        <Skeleton.Button active size="small" style={{ width: '60px' }} />
-      </div>
-      <Skeleton.Button active size="small" style={{ width: '40px' }} />
-    </div>
-  </div>
-);
 
 /**
  * 书籍详情页面
@@ -748,9 +712,9 @@ export default function BookPage() {
     };
   }, [setLeftContent, leftContentElement]);
 
-  // 显示骨架屏或加载状态（所有 Hook 必须在早期返回之前）
+  // 显示加载状态（所有 Hook 必须在早期返回之前）
   if (!book || contentLoadingState === 'loading') {
-    return <ArticleContentSkeleton />;
+    return null;
   }
 
   if (contentLoadingState === 'error') {
@@ -1203,6 +1167,7 @@ export default function BookPage() {
           <div
             style={{
               maxWidth: '800px',
+              minHeight: '100vh',
               margin: '0 auto',
               padding: isMobile ? '20px 16px' : '40px 20px',
               background: 'rgba(255, 255, 255, 0.9)',
@@ -1221,30 +1186,43 @@ export default function BookPage() {
               // 渲染书籍内容
               <div>
                 {book.blocks && book.blocks.map((block: any, index: number) => {
+                  // 每个块延迟递增，让它们依次渐显
+                  const delay = index * 0.1; // 每个块延迟0.1秒
+                  const blockStyle = {
+                    marginBottom: block.type === 'text' ? (isMobile ? '16px' : '24px') : '24px',
+                    animation: 'fadeInUp 1s ease-out forwards',
+                    animationDelay: `${delay}s`,
+                    opacity: 0,
+                  };
+
                   switch (block.type) {
                     case 'text':
                       return (
-                        <div key={block.id || index} style={{ marginBottom: isMobile ? '16px' : '24px' }}>
+                        <div key={block.id || index} className="book-content-block" style={blockStyle}>
                           <TextBlock block={block} mode="view" />
                         </div>
                       );
 
                     case 'image':
                       return (
-                        <div key={block.id || index} style={{ marginBottom: '24px' }}>
+                        <div key={block.id || index} className="book-content-block" style={blockStyle}>
                           <ImageBlock block={block} mode="view" />
                         </div>
                       );
 
                     case 'code':
                       return (
-                        <div key={block.id || index} style={{ marginBottom: '24px' }}>
+                        <div key={block.id || index} className="book-content-block" style={blockStyle}>
                           <CodeBlock block={block} mode="view" />
                         </div>
                       );
 
                     case 'placeholder':
-                      return <PlaceholderBlock key={block.id || index} block={block as any} />;
+                      return (
+                        <div key={block.id || index} className="book-content-block" style={blockStyle}>
+                          <PlaceholderBlock block={block as any} />
+                        </div>
+                      );
 
                     default:
                       return null;

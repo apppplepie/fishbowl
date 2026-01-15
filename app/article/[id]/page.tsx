@@ -1193,6 +1193,7 @@ export default function ArticlePage() {
             <div
               style={{
                 background: 'white',
+                minHeight: '100vh',
                 padding: isMobile ? (editMode === 'edit' ? '16px 8px' : '20px 12px') : '40px',
                 borderRadius: isMobile ? '8px' : '8px',
                 marginBottom: isMobile ? '16px' : '24px',
@@ -1230,19 +1231,30 @@ export default function ArticlePage() {
               ) : (
                 // 浏览/预览模式 - 渲染块内容
                 <div>
-                  {(editMode === 'preview' && editedArticle ? editedArticle.blocks : article?.blocks || []).map((block: any, index: number) => (
-                    <div key={block.id} style={{ marginBottom: '32px' }}>
-                      {block.type === 'text' ? (
-                        <TextBlock block={block} mode="view" />
-                      ) : block.type === 'image' ? (
-                        <ImageBlock block={block} mode="view" />
-                      ) : block.type === 'code' ? (
-                        <CodeBlock block={block} mode="view" />
-                      ) : block.type === 'placeholder' ? (
-                        <PlaceholderBlock block={block as any} />
-                      ) : null}
-                    </div>
-                  ))}
+                  {(editMode === 'preview' && editedArticle ? editedArticle.blocks : article?.blocks || []).map((block: any, index: number) => {
+                    // 每个块延迟递增，让它们依次渐显
+                    const delay = index * 0.1; // 每个块延迟0.1秒
+                    const blockStyle = {
+                      marginBottom: '32px',
+                      animation: 'fadeInUp 1s ease-out forwards',
+                      animationDelay: `${delay}s`,
+                      opacity: 0,
+                    };
+
+                    return (
+                      <div key={block.id} className="book-content-block" style={blockStyle}>
+                        {block.type === 'text' ? (
+                          <TextBlock block={block} mode="view" />
+                        ) : block.type === 'image' ? (
+                          <ImageBlock block={block} mode="view" />
+                        ) : block.type === 'code' ? (
+                          <CodeBlock block={block} mode="view" />
+                        ) : block.type === 'placeholder' ? (
+                          <PlaceholderBlock block={block as any} />
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

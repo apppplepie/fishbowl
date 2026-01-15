@@ -523,15 +523,17 @@ function ArticlesPageContent() {
             />
           ) : (
             <>
-              <Masonry
-                columns={columns}
-                gutter={8}
-                items={filteredCards.map((card) => ({
-                  key: `card-${card.id}`,
-                  data: card,
-                }))}
-                itemRender={({ data }) => renderCard(data)}
-              />
+              <div style={{ minHeight: '400px' }}>
+                <Masonry
+                  columns={columns}
+                  gutter={8}
+                  items={filteredCards.map((card) => ({
+                    key: `card-${card.id}`,
+                    data: card,
+                  }))}
+                  itemRender={({ data }) => renderCard(data)}
+                />
+              </div>
 
               {/* 加载更多提示 */}
               {loadingMore && (

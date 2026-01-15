@@ -29,17 +29,21 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
       onClick={onClick}
     >
       {/* 图片区域 */}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', width: '100%', minHeight: '300px' }}>
         {!imgLoaded && (
           <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
             width: '100%',
-            height: '300px',
+            height: '100%',
             background: '#f0f0f0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            zIndex: 1,
           }}>
-            加载中...
+            {/* 加载中... */}
           </div>
         )}
         <img
@@ -52,8 +56,12 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
           }}
           style={{
             width: '100%',
-            display: imgLoaded ? 'block' : 'none',
-            transition: 'transform 0.3s ease',
+            height: 'auto',
+            opacity: imgLoaded ? 1 : 0,
+            transition: 'opacity 0.3s ease, transform 0.3s ease',
+            position: 'relative',
+            zIndex: 2,
+            display: 'block',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'scale(1.05)';
