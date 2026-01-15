@@ -1,9 +1,10 @@
 'use client';
 
-const { Title, Text } = Typography;
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tab, User, Notification } from '../types';
-import { GlassCard } from './GlassCard';
+import { FakeGlassCard } from '@/app/components/ui';
+import { usePageShell } from '@/app/contexts/PageShellContext';
+import { useResponsive } from '@/app/hooks/useResponsive';
 import { 
   Sparkles, 
   ShieldCheck, 
@@ -174,7 +175,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
         const isOpen = activeTab === section.id;
         
         return (
-          <GlassCard 
+          <FakeGlassCard 
             key={section.id} 
             className={`
               overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
@@ -232,9 +233,52 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
             >
               {section.content}
             </div>
-          </GlassCard>
+          </FakeGlassCard>
         );
       })}
     </div>
   );
 };
+
+// 默认导出的页面组件
+export default function ProfilePage() {
+  const [activeTab, setActiveTab] = useState<Tab | null>(null);
+  const { setConfig } = usePageShell();
+  const { isMobile } = useResponsive();
+
+  // 设置页面配置
+  useEffect(() => {
+    setConfig({
+      box1Content: null, // box1 空着
+      box2Style: { padding: isMobile ? '40px 12px' : '40px 24px' },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig, isMobile]);
+
+  // 模拟用户数据
+  const user: User = {
+    name: 'Alex Chen',
+    handle: 'alexchen',
+    role: 'Cultivator',
+  };
+
+  // 模拟通知数据
+  const notification: Notification = {
+    user: 'Sarah Kim',
+    action: 'This is a beautiful piece of work!',
+    context: 'Article: Digital Gardens',
+    time: '2h ago',
+  };
+
+  return (
+    <ContentArea 
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      user={user}
+      notification={notification}
+    />
+  );
+}

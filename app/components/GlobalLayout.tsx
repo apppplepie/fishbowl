@@ -27,6 +27,7 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
     '/publish-article',
     '/publish-book',
     '/publish-chapter',
+    '/profile',
   ].includes(pathname);
 
   // 调试日志
