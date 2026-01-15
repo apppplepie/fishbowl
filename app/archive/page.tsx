@@ -7,7 +7,7 @@ import { SearchOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
-import PageLayout from '@/app/components/PageLayout';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import { apiGet } from '@/lib/apiClient';
 import { Empty, LoadEnd } from '@/app/components/ui';
@@ -66,6 +66,7 @@ const calculateColumns = (width: number) => {
 function ArticlesPageContent() {
   const { isMobile } = useResponsive();
   const { currentFishbowlTheme } = useAppTheme();
+  const { setConfig } = usePageShell();
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -126,6 +127,29 @@ function ArticlesPageContent() {
       setSelectedCategoryId(categoryParam);
     }
   }, [searchParams]);
+
+  // 检查时间戳参数，强制刷新数据（用于从文章编辑页跳转回来时刷新）
+  useEffect(() => {
+    const timestampParam = searchParams.get('t');
+    
+    if (timestampParam) {
+      console.log('检测到时间戳参数，强制刷新归档数据');
+      // 清除保存的状态，确保重新加载
+      sessionStorage.removeItem('archiveState');
+      sessionStorage.removeItem('archiveLastRefresh');
+      // 强制刷新数据（使用当前选中的分类或 URL 中的分类）
+      const categoryParam = searchParams.get('category');
+      loadArticles(0, false, categoryParam || selectedCategoryId);
+      // 移除 URL 中的时间戳参数，避免重复刷新
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('t');
+      const newUrl = newSearchParams.toString() 
+        ? `${pathname}?${newSearchParams.toString()}` 
+        : pathname;
+      router.replace(newUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, pathname, router]);
 
   // 监听页面导航变化，强制刷新数据（解决HTTPS环境下跳转回来不刷新的问题）
   useEffect(() => {
@@ -395,6 +419,66 @@ function ArticlesPageContent() {
   // 控制 box2 整体渐显动画
   const [showBox2, setShowBox2] = useState(false);
 
+  // 创建 box1Content（需要响应状态变化）
+  const box1Content = useMemo(() => (
+    <div style={{ padding: '16px 24px' }}>
+      {/* 桌面端：左右布局，移动端：上下布局 */}
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '12px',
+        alignItems: isMobile ? 'stretch' : 'flex-end',
+        justifyContent: isMobile ? 'flex-start' : 'space-between',
+      }}>
+        {/* 右侧：关键词搜索 */}
+        <div style={{ width: isMobile ? '100%' : '320px' }}>
+          <Input.Search
+            className="search-input-transparent"
+            placeholder="搜索标题、作者、摘要..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onSearch={(value) => setSearchKeyword(value)}
+            size="large"
+            enterButton={<SearchOutlined />}
+            allowClear
+            style={{ width: '100%' }}
+          />
+        </div>
+      </div>
+
+      {/* 筛选结果提示 */}
+      {(selectedTags.length > 0 || searchKeyword || selectedCategoryId) && (
+        <div style={{
+          marginTop: '12px',
+          fontSize: '13px',
+          color: 'rgba(0, 0, 0, 0.9)',
+        }}>
+          {selectedCategoryId && (selectedTags.length > 0 || searchKeyword) && <span> · </span>}
+          {selectedTags.length > 0 && (
+            <span>已选 <strong>{selectedTags.length}</strong> 个标签</span>
+          )}
+          {selectedTags.length > 0 && searchKeyword && <span> · </span>}
+          {searchKeyword && (
+            <span>搜索 "<strong>{searchKeyword}</strong>"</span>
+          )}
+          <span> · 找到 <strong>{filteredCards.length}</strong> 篇文章</span>
+        </div>
+      )}
+    </div>
+  ), [isMobile, searchKeyword, selectedTags, selectedCategoryId, filteredCards.length]);
+
+  // 设置页面配置
+  useEffect(() => {
+    setConfig({
+      box1Content,
+      box2Style: { padding: isMobile ? '40px 12px' : '40px 24px' },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig, box1Content, isMobile]);
+
   // 当加载完成且有内容时，触发 box2 渐显动画（先停顿0.5秒）
   useEffect(() => {
     if (!loading && filteredCards.length > 0) {
@@ -449,92 +533,7 @@ function ArticlesPageContent() {
 
   return (
     <>
-      
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
-        <PageLayout
-          theme={currentFishbowlTheme}
-          box1Content={
-          <div style={{ padding: '16px 24px' }}>
-            {/* 桌面端：左右布局，移动端：上下布局 */}
-            <div style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: '12px',
-              alignItems: isMobile ? 'stretch' : 'flex-end',
-              justifyContent: isMobile ? 'flex-start' : 'space-between',
-            }}>
-              {/* 左侧：标签搜索筛选
-              <div style={{ flex: 1 }}>
-                <Select
-                  mode="tags"
-                  value={selectedTags}
-                  onChange={setSelectedTags}
-                  placeholder="搜索或输入标签，空格/回车添加"
-                  style={{ width: '100%' }}
-                  size="large"
-                  className="tag-select-transparent"
-                  maxTagCount="responsive"
-                  tokenSeparators={[' ']} // 空格自动分隔
-                  tagRender={(props) => {
-                    const { label, value } = props;
-                    const colors = ['magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan', 'blue', 'geekblue', 'purple'];
-                    const tagIndex = allTags.indexOf(value as string);
-                    const color = tagIndex >= 0 
-                      ? colors[tagIndex % colors.length]
-                      : 'default'; // 临时标签用默认颜色
-                    
-                    return (
-                      <Tag
-                        color={color}
-                        closable={false}
-                        style={{ marginRight: 3 }}
-                      >
-                        {label}
-                      </Tag>
-                    );
-                  }}
-                  options={allTags.map(tag => ({ label: tag, value: tag }))}
-                />
-              </div> */}
-
-              {/* 右侧：关键词搜索 */}
-              <div style={{ width: isMobile ? '100%' : '320px' }}>
-                <Input.Search
-                  className="search-input-transparent"
-                  placeholder="搜索标题、作者、摘要..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  onSearch={(value) => setSearchKeyword(value)}
-                  size="large"
-                  enterButton={<SearchOutlined />}
-                  allowClear
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </div>
-
-            {/* 筛选结果提示 */}
-            {(selectedTags.length > 0 || searchKeyword || selectedCategoryId) && (
-              <div style={{
-                marginTop: '12px',
-                fontSize: '13px',
-                color: 'rgba(0, 0, 0, 0.9)',
-              }}>
-                {selectedCategoryId && (selectedTags.length > 0 || searchKeyword) && <span> · </span>}
-                {selectedTags.length > 0 && (
-                  <span>已选 <strong>{selectedTags.length}</strong> 个标签</span>
-                )}
-                {selectedTags.length > 0 && searchKeyword && <span> · </span>}
-                {searchKeyword && (
-                  <span>搜索 "<strong>{searchKeyword}</strong>"</span>
-                )}
-                <span> · 找到 <strong>{filteredCards.length}</strong> 篇文章</span>
-              </div>
-            )}
-          </div>
-        }
-        box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
-      >
         {/* 瀑布流容器 - 整体渐显动画 */}
         <div style={{ 
           maxWidth: '1400px', 
@@ -601,7 +600,6 @@ function ArticlesPageContent() {
             </>
           )}
         </div>
-        </PageLayout>
       </div>
 
       {/* 统一的归档分类导航组件（自动适配移动端/桌面端） */}

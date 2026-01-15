@@ -7,7 +7,7 @@ import { Select, Dropdown } from 'antd'; // 暂时保留，后续实现
 const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CameraOutlined } from '@ant-design/icons';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
-import PageLayout from '@/app/components/PageLayout';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useHeader } from '@/app/contexts/HeaderContext';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -79,6 +79,7 @@ export default function BookPage() {
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
   const { currentFishbowlTheme } = useAppTheme();
+  const { setConfig } = usePageShell();
   const { isLoggedIn, user } = useAuth();
   const { canEdit: canEditArticle } = useCanEditArticle(articleId);
   const { setLeftContent } = useHeader();
@@ -171,7 +172,7 @@ export default function BookPage() {
    */
   const scrollToTop = useCallback(() => {
     // 使用 requestAnimationFrame 确保在下一帧执行，DOM 已渲染
-    requestAnimationFrame(() => {
+    const rafId = requestAnimationFrame(() => {
       // 方法1: 同时设置多个可能的滚动容器（兼容不同浏览器）
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
@@ -186,14 +187,10 @@ export default function BookPage() {
           container.scrollTop = 0;
         }
       });
-      
-      // 方法4: 延迟执行一次，确保在移动端也能生效
-      setTimeout(() => {
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        window.scrollTo({ top: 0, behavior: 'auto' }); // 使用 auto 确保立即执行
-      }, 100);
     });
+    
+    // 返回清理函数（虽然通常不需要，但为了完整性）
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   /**
@@ -327,9 +324,13 @@ export default function BookPage() {
         window.history.replaceState({}, '', newUrl);
 
         // 滚动到顶部（延迟执行，确保内容已渲染）
-        setTimeout(() => {
-          scrollToTop();
-        }, 50);
+        // 使用 requestAnimationFrame 确保在下一帧执行
+        requestAnimationFrame(() => {
+          // 检查是否还在目标文章页面（防止快速翻页导致的状态混乱）
+          if (window.location.pathname === `/book/${targetArticleId}`) {
+            scrollToTop();
+          }
+        });
 
         console.log('虚拟翻页成功:', targetArticleId);
       } else {
@@ -474,9 +475,28 @@ export default function BookPage() {
 
   // 初始化加载
   useEffect(() => {
-    if (articleId) {
-      loadBook(articleId);
-    }
+    if (!articleId) return;
+    
+    let isMounted = true;
+    
+    const loadBookSafely = async () => {
+      try {
+        // 注意：loadBook 内部会调用多个 setState
+        // 如果组件卸载，这些 setState 会触发 React 警告，但不会导致内存泄漏
+        // 因为 React 会自动忽略已卸载组件的状态更新
+        await loadBook(articleId);
+      } catch (error) {
+        if (isMounted) {
+          console.error('加载书籍失败:', error);
+        }
+      }
+    };
+    
+    loadBookSafely();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [articleId]);
 
   // 监听文章ID变化，滚动到顶部（处理从目录点击文章的情况）
@@ -492,13 +512,29 @@ export default function BookPage() {
 
   // 预加载下一篇文章（只在导航信息变化且缓存中没有时预加载）
   useEffect(() => {
-    if (navigation && navigation.nextArticleId && !articleCache.has(navigation.nextArticleId)) {
-      // 后台预加载下一篇文章（如果缓存中没有）
-      // 注意：fetchArticleContent 内部会检查缓存，所以这里即使调用也不会重复请求
-      fetchArticleContent(navigation.nextArticleId).catch(error => {
-        console.log('预加载失败:', error); // 不显示错误，只记录日志
-      });
+    if (!navigation?.nextArticleId || articleCache.has(navigation.nextArticleId)) {
+      return;
     }
+    
+    let isMounted = true;
+    
+    // 后台预加载下一篇文章（如果缓存中没有）
+    // 注意：fetchArticleContent 内部会检查缓存，所以这里即使调用也不会重复请求
+    fetchArticleContent(navigation.nextArticleId)
+      .then(() => {
+        if (!isMounted) {
+          console.log('组件已卸载，忽略预加载结果');
+        }
+      })
+      .catch(error => {
+        if (isMounted) {
+          console.log('预加载失败:', error); // 不显示错误，只记录日志
+        }
+      });
+    
+    return () => {
+      isMounted = false;
+    };
   }, [navigation?.nextArticleId, articleCache, fetchArticleContent]);
 
   // 点赞处理
@@ -626,6 +662,13 @@ export default function BookPage() {
 
         // 重新加载数据
         loadBook(articleId);
+        
+        // 如果当前文章有分类，跳转到书橱页并刷新（显示最新数据）
+        if (book.category_id) {
+          setTimeout(() => {
+            router.push(`/bookcase?category=${book.category_id}&t=${Date.now()}`);
+          }, 1000);
+        }
       } else {
         message.error(result.error || '保存失败');
       }
@@ -660,7 +703,10 @@ export default function BookPage() {
               console.log('已清除文章所属书籍的缓存:', articleCategoryId);
             }
 
-            router.push('/bookcase');
+            // 跳转到书橱页，并添加时间戳参数强制刷新
+            setTimeout(() => {
+              router.push(`/bookcase?t=${Date.now()}`);
+            }, 1000);
           } else {
             message.error(result.error || '删除失败');
           }
@@ -711,6 +757,162 @@ export default function BookPage() {
       setLeftContent(null);
     };
   }, [setLeftContent, leftContentElement]);
+
+  // 创建 box1Content（需要响应状态变化）- 必须在所有早期返回之前
+  const box1Content = useMemo(() => {
+    if (!book) return null;
+    
+    return (
+      <div style={{ padding: '16px 24px' }}>
+        {/* 面包屑导航 */}
+        <Breadcrumb
+          items={[
+            // 书橱
+            {
+              title: (
+                <a
+                  style={{
+                    color: '#000',
+                    textDecoration: 'none',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    transition: 'color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
+                  onClick={() => router.push('/bookcase')}
+                >
+                  书橱
+                </a>
+              ),
+            },
+            // 从当前文章追溯父级到 cat_bookcase 根目录
+            ...categoryPath
+              .filter(cat => cat.id !== 'root' && cat.id !== 'cat_bookcase')
+              .map((category, index) => {
+                // 优先从缓存获取章节标签，没有则用 API 返回的 depth + chapter_index 计算
+                let chapterLabel = chapterLabelCache.getLabel(category.id);
+                if (!chapterLabel && category.depth && category.chapter_index) {
+                  chapterLabel = getChapterLabel(category.depth, category.chapter_index);
+                }
+                
+                // 组合显示：章节标签 + 名称（如 "第1卷 起始篇"）
+                const displayName = chapterLabel 
+                  ? `${chapterLabel} ${category.name}`
+                  : category.name;
+                
+                return {
+                  title: (
+                    <a
+                      key={category.id}
+                      style={{
+                        color: '#000',
+                        textDecoration: 'none',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        padding: 0,
+                        transition: 'color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
+                      onClick={() => router.push(`/bookcase?category=${category.id}`)}
+                    >
+                      {displayName}
+                    </a>
+                  ),
+                };
+              }),
+            // 当前书籍标题
+            {
+              title: <span style={{ color: '#000' }}>{book.title}</span>,
+            },
+          ]}
+          separator={<span style={{ color: '#000' }}>/</span>}
+          style={{
+            color: '#000',
+            fontSize: '14px',
+            marginBottom: '16px',
+          }}
+        />
+
+        {/* 书籍标题和操作区 */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: '16px',
+        }}>
+          <div style={{ flex: 1 }}>
+            {/* 书籍标题 */}
+            {editMode === 'edit' ? (
+              <Input
+                value={book.title}
+                onChange={(e) => setBook({ ...book, title: e.target.value })}
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#000',
+                  padding: 0,
+                  marginBottom: '8px',
+                }}
+                placeholder="请输入书籍标题"
+              />
+            ) : (
+              <h1 style={{
+                fontSize: '28px',
+                fontWeight: 'bold',
+                color: '#000',
+                margin: '0 0 8px 0',
+                lineHeight: '1.2',
+              }}>
+                {book.title}
+              </h1>
+            )}
+
+            {/* 标签 */}
+            {book.tags && book.tags.length > 0 && (
+              <div style={{ marginTop: '12px' }}>
+                <Space wrap>
+                  {book.tags.map((tag: string, index: number) => (
+                    <Tag
+                      key={index}
+                      id={tag}
+                      style={{
+                        padding: '4px 12px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {tag}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }, [isMobile, categoryPath, book, editMode, chapterLabelCache, router]);
+
+  // 设置页面配置 - 必须在所有早期返回之前
+  useEffect(() => {
+    setConfig({
+      box1Content,
+      box2Style: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+      },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig, box1Content]);
 
   // 显示加载状态（所有 Hook 必须在早期返回之前）
   if (!book || contentLoadingState === 'loading') {
@@ -1007,158 +1209,6 @@ export default function BookPage() {
         transition: 'transform 0.3s ease',
         willChange: 'transform'
       }}>
-        <PageLayout
-          theme={currentFishbowlTheme}
-          box1Content={
-            <div style={{ padding: '16px 24px' }}>
-              {/* 面包屑导航 */}
-              <Breadcrumb
-                items={[
-                  // 书橱
-                  {
-                    title: (
-                      <a
-                        style={{
-                          color: '#000',
-                          textDecoration: 'none',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          padding: 0,
-                          transition: 'color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                        onClick={() => router.push('/bookcase')}
-                      >
-                        书橱
-                      </a>
-                    ),
-                  },
-                  // 从当前文章追溯父级到 cat_bookcase 根目录
-                  ...categoryPath
-                    .filter(cat => cat.id !== 'root' && cat.id !== 'cat_bookcase')
-                    .map((category, index) => {
-                      // 优先从缓存获取章节标签，没有则用 API 返回的 depth + chapter_index 计算
-                      let chapterLabel = chapterLabelCache.getLabel(category.id);
-                      if (!chapterLabel && category.depth && category.chapter_index) {
-                        chapterLabel = getChapterLabel(category.depth, category.chapter_index);
-                      }
-                      
-                      // 组合显示：章节标签 + 名称（如 "第1卷 起始篇"）
-                      const displayName = chapterLabel 
-                        ? `${chapterLabel} ${category.name}`
-                        : category.name;
-                      
-                      return {
-                        title: (
-                          <a
-                            key={category.id}
-                            style={{
-                              color: '#000',
-                              textDecoration: 'none',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              padding: 0,
-                              transition: 'color 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                            onClick={() => router.push(`/bookcase?category=${category.id}`)}
-                          >
-                            {displayName}
-                          </a>
-                        ),
-                      };
-                    }),
-                  // 当前书籍标题
-                  {
-                    title: <span style={{ color: '#000' }}>{book?.title}</span>,
-                  },
-                ]}
-                separator={<span style={{ color: '#000' }}>/</span>}
-                style={{
-                  color: '#000',
-                  fontSize: '14px',
-                  marginBottom: '16px',
-                }}
-              />
-
-              {/* 书籍标题和操作区 */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: '16px',
-              }}>
-                <div style={{ flex: 1 }}>
-                  {/* 书籍标题 */}
-                  {editMode === 'edit' ? (
-                    <Input
-                      value={book.title}
-                      onChange={(e) => setBook({ ...book, title: e.target.value })}
-                      style={{
-                        fontSize: '28px',
-                        fontWeight: 'bold',
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#000',
-                        padding: 0,
-                        marginBottom: '8px',
-                      }}
-                      placeholder="请输入书籍标题"
-                    />
-                  ) : (
-                    <h1 style={{
-                      fontSize: '28px',
-                      fontWeight: 'bold',
-                      color: '#000',
-                      margin: '0 0 8px 0',
-                      lineHeight: '1.2',
-                    }}>
-                      {book.title}
-                    </h1>
-                  )}
-
-                  {/* 书籍信息 */}
-                  {/* <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    fontSize: '14px',
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    flexWrap: 'wrap',
-                  }}>
-                    <span>更新时间：{formatTimeToMinute(book.last_modified || book.publish_date)}</span>
-                    <span>阅读量：{book.likes || 0}</span>
-                  </div> */}
-
-                  {/* 标签 */}
-                  {book.tags && book.tags.length > 0 && (
-                    <div style={{ marginTop: '12px' }}>
-                      <Space wrap>
-                        {book.tags.map((tag: string, index: number) => (
-                          <Tag
-                            key={index}
-                            id={tag}
-                            style={{
-                              padding: '4px 12px',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {tag}
-                          </Tag>
-                        ))}
-                      </Space>
-                    </div>
-                  )}
-                </div>
-
-               
-              </div>
-            </div>
-          }
-        >
           {/* 书籍内容 */}
           <div
             style={{
@@ -1365,8 +1415,6 @@ export default function BookPage() {
               />
             </div>
           </div>
-
-        </PageLayout>
       </div>
 
       {/* 图片模态框 */}

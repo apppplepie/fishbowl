@@ -8,7 +8,7 @@ import { Select } from 'antd'; // 暂时保留，后续实现
 const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, CameraOutlined } from '@ant-design/icons';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
-import PageLayout from '@/app/components/PageLayout';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useHeader } from '@/app/contexts/HeaderContext';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
@@ -83,6 +83,7 @@ export default function ArticlePage() {
   const articleId = params.id as string;
   const { isMobile } = useResponsive();
   const { currentFishbowlTheme } = useAppTheme();
+  const { setConfig } = usePageShell();
   const { isLoggedIn, user } = useAuth();
   const { canEdit: canEditArticle } = useCanEditArticle(articleId);
   const { setLeftContent } = useHeader();
@@ -518,9 +519,9 @@ export default function ArticlePage() {
 
       if (data.success) {
         message.success('文章删除成功');
-        // 跳转到归档页面
+        // 跳转到归档页面，并添加时间戳参数强制刷新
         setTimeout(() => {
-          router.push('/archive');
+          router.push(`/archive?t=${Date.now()}`);
         }, 1000);
       } else {
         message.error(data.error || '删除失败');
@@ -717,13 +718,34 @@ export default function ArticlePage() {
       let stableFrames = 0;
       const requiredStableFrames = 10; // 等待10帧
       let lastHeight = 0;
+      let rafId: number | null = null;
+      let timeoutId: NodeJS.Timeout | null = null;
+      let isResolved = false;
+
+      const cleanup = () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      };
 
       const checkStability = () => {
+        // 如果已经 resolve，不再继续执行
+        if (isResolved) {
+          return;
+        }
+
         const currentHeight = document.documentElement.scrollHeight;
 
         if (currentHeight === lastHeight) {
           stableFrames++;
           if (stableFrames >= requiredStableFrames) {
+            isResolved = true;
+            cleanup();
             resolve();
             return;
           }
@@ -732,13 +754,17 @@ export default function ArticlePage() {
           lastHeight = currentHeight;
         }
 
-        requestAnimationFrame(checkStability);
+        // 保存 rafId 以便清理
+        rafId = requestAnimationFrame(checkStability);
       };
 
       // 延迟开始检查，给初始渲染一些时间
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
+        if (isResolved) {
+          return;
+        }
         lastHeight = document.documentElement.scrollHeight;
-        requestAnimationFrame(checkStability);
+        rafId = requestAnimationFrame(checkStability);
       }, 100);
     });
   };
@@ -829,6 +855,157 @@ export default function ArticlePage() {
     exitExportMode(exportState);
   };
 
+  // 创建 box1Content（需要响应状态变化）
+  const box1Content = useMemo(() => (
+    <div style={{ padding: '16px 24px' }}>
+      <Breadcrumb
+        items={[
+          // 首页
+          {
+            title: (
+              <a
+                style={{
+                  color: '#000',
+                  textDecoration: 'none',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
+                onClick={() => router.push('/')}
+              >
+                首页
+              </a>
+            ),
+          },
+          // 如果有分类路径，显示分类层级
+          ...(categoryPath.length > 0
+            ? categoryPath.map((cat, index) => ({
+              title: (
+                <a
+                  style={{
+                    color: '#000',
+                    textDecoration: 'none',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    transition: 'color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
+                  onClick={() => router.push(`/archive?category=${cat.id}`)}
+                >
+                  {cat.name}
+                </a>
+              ),
+            }))
+            : [
+              // 如果没有分类路径，显示文章归档
+              {
+                title: (
+                  <a
+                    style={{
+                      color: '#000',
+                      textDecoration: 'none',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      transition: 'color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
+                    onClick={() => router.push('/archive')}
+                  >
+                    文章归档
+                  </a>
+                ),
+              },
+            ]
+          ),
+          // 当前文章标题
+          {
+            title: <span style={{ color: '#000' }}>{article?.title}</span>,
+          },
+        ]}
+        separator={<span style={{ color: '#000' }}>/</span>}
+        style={{
+          color: '#000',
+          fontSize: '14px',
+          marginBottom: '16px',
+        }}
+      />
+
+      {/* 文章标题和信息区 */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '16px',
+      }}>
+        <div style={{ flex: 1 }}>
+          {/* 文章标题 */}
+          {editMode === 'edit' ? (
+            <Input
+              value={editedArticle?.title || ''}
+              onChange={(e) => editedArticle && setEditedArticle({ ...editedArticle, title: e.target.value })}
+              style={{
+                fontSize: '28px',
+                fontWeight: 'bold',
+                border: 'none',
+                background: 'transparent',
+                color: '#000',
+                padding: 0,
+                marginBottom: '8px',
+              }}
+              placeholder="请输入文章标题"
+            />
+          ) : (
+            <h1 style={{
+              fontSize: '28px',
+              fontWeight: 'bold',
+              color: '#000',
+              margin: '0 0 8px 0',
+              lineHeight: '1.2',
+            }}>
+              {editMode === 'preview' ? editedArticle?.title : article?.title}
+            </h1>
+          )}
+
+          {/* 标签 */}
+          <TagBox1
+            tags={editMode === 'edit' ? (editedArticle?.tags || []) : (editMode === 'preview' ? (editedArticle?.tags || []) : (article?.tags || []))}
+            editMode={editMode === 'edit'}
+            onTagsChange={(tags) => {
+              if (editedArticle) {
+                setEditedArticle({ ...editedArticle, tags });
+              }
+            }}
+            maxTags={10}
+          />
+        </div>
+      </div>
+    </div>
+  ), [isMobile, categoryPath, article, editedArticle, editMode, router]);
+
+  // 设置页面配置
+  useEffect(() => {
+    setConfig({
+      box1Content,
+      box2Style: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+      },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig, box1Content]);
+
   return (
     <>
       {/* 统一的文章导航组件（自动适配移动端/桌面端） */}
@@ -871,162 +1048,6 @@ export default function ArticlePage() {
       )}
 
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
-        <PageLayout
-          theme={currentFishbowlTheme}
-          box1Content={
-            <div style={{ padding: '16px 24px' }}>
-              <Breadcrumb
-                items={[
-                  // 首页
-                  {
-                    title: (
-                      <a
-                        style={{
-                          color: '#000',
-                          textDecoration: 'none',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          padding: 0,
-                          transition: 'color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                        onClick={() => router.push('/')}
-                      >
-                        首页
-                      </a>
-                    ),
-                  },
-                  // 如果有分类路径，显示分类层级
-                  ...(categoryPath.length > 0
-                    ? categoryPath.map((cat, index) => ({
-                      title: (
-                        <a
-                          style={{
-                            color: '#000',
-                            textDecoration: 'none',
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            padding: 0,
-                            transition: 'color 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                          onClick={() => router.push(`/archive?category=${cat.id}`)}
-                        >
-                          {cat.name}
-                        </a>
-                      ),
-                    }))
-                    : [
-                      // 如果没有分类路径，显示文章归档
-                      {
-                        title: (
-                          <a
-                            style={{
-                              color: '#000',
-                              textDecoration: 'none',
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              padding: 0,
-                              transition: 'color 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                            onClick={() => router.push('/archive')}
-                          >
-                            文章归档
-                          </a>
-                        ),
-                      },
-                    ]
-                  ),
-                  // 当前文章标题
-                  {
-                    title: <span style={{ color: '#000' }}>{article?.title}</span>,
-                  },
-                ]}
-                separator={<span style={{ color: '#000' }}>/</span>}
-                style={{
-                  color: '#000',
-                  fontSize: '14px',
-                  marginBottom: '16px',
-                }}
-              />
-
-              {/* 文章标题和信息区 */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: '16px',
-              }}>
-                <div style={{ flex: 1 }}>
-                  {/* 文章标题 */}
-                  {editMode === 'edit' ? (
-                    <Input
-                      value={editedArticle?.title || ''}
-                      onChange={(e) => editedArticle && setEditedArticle({ ...editedArticle, title: e.target.value })}
-                      style={{
-                        fontSize: '28px',
-                        fontWeight: 'bold',
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#000',
-                        padding: 0,
-                        marginBottom: '8px',
-                      }}
-                      placeholder="请输入文章标题"
-                    />
-                  ) : (
-                    <h1 style={{
-                      fontSize: '28px',
-                      fontWeight: 'bold',
-                      color: '#000',
-                      margin: '0 0 8px 0',
-                      lineHeight: '1.2',
-                    }}>
-                      {editMode === 'preview' ? editedArticle?.title : article?.title}
-                    </h1>
-                  )}
-
-                  {/* 文章信息 */}
-                  {/* <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    fontSize: '14px',
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    flexWrap: 'wrap',
-                  }}>
-                    <span>作者：{editMode === 'edit' ? editedArticle?.author : (editMode === 'preview' ? editedArticle?.author : article?.author)}</span>
-                    <span>日期：{editMode === 'edit' 
-                      ? (editedArticle?.last_modified ? formatTimeToMinute(editedArticle.last_modified) : formatTimeToMinute(new Date().toISOString()))
-                      : formatTimeToMinute(editMode === 'preview' ? editedArticle?.last_modified : article?.last_modified)}</span>
-                  </div> */}
-
-                  {/* 标签 */}
-                  <TagBox1
-                    tags={editMode === 'edit' ? (editedArticle?.tags || []) : (editMode === 'preview' ? (editedArticle?.tags || []) : (article?.tags || []))}
-                    editMode={editMode === 'edit'}
-                    onTagsChange={(tags) => {
-                      if (editedArticle) {
-                        setEditedArticle({ ...editedArticle, tags });
-                      }
-                    }}
-                    maxTags={10}
-                  />
-                </div>
-              </div>
-            </div>
-          }
-          box2Style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-          }}
-        >
           <div style={{
             width: '100%',
             maxWidth: '900px',
@@ -1306,7 +1327,6 @@ export default function ArticlePage() {
               />
             </div>
           </div>
-        </PageLayout>
       </div>
 
       {/* 图片查看器 */}

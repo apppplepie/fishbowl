@@ -28,7 +28,11 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
     '/publish-book',
     '/publish-chapter',
     '/profile',
-  ].includes(pathname);
+    '/archive',
+    '/bookcase',
+    '/article',
+    '/book',
+  ].some(path => pathname === path || pathname.startsWith(path + '/'));
 
   // 调试日志
   console.log('🏗️ GlobalLayout 渲染:', { pathname, isHomePage, ENABLE_PAGE_SHELL });

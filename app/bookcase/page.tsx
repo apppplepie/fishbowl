@@ -5,9 +5,9 @@ import dynamic from 'next/dynamic';
 import { Masonry, Input, Tag, Select, message, Drawer, Button } from 'antd';
 import { SearchOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
-import PageLayout from '@/app/components/PageLayout';
+import { usePageShell } from '@/app/contexts/PageShellContext';
 import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
 import { Empty, LoadEnd } from '@/app/components/ui';
 
@@ -157,6 +157,7 @@ export { preloadAllBookArticleLists };
 function BookcasePageContent() {
   const { isMobile } = useResponsive();
   const { currentFishbowlTheme } = useAppTheme();
+  const { setConfig } = usePageShell();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [columns, setColumns] = useState<number>(3);
@@ -174,6 +175,7 @@ function BookcasePageContent() {
 
   // 从URL参数获取category
   const categoryFromUrl = searchParams.get('category');
+  const pathname = usePathname();
 
   // 目录抽屉状态（移动端）
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -413,11 +415,34 @@ function BookcasePageContent() {
     };
   }, [loading]);
 
+  // 检查时间戳参数，强制刷新数据（用于从书籍编辑页跳转回来时刷新）
+  useEffect(() => {
+    const timestampParam = searchParams.get('t');
+    
+    if (timestampParam) {
+      console.log('检测到时间戳参数，强制刷新书橱数据');
+      // 强制刷新数据
+      loadBookcaseArticles(0, false);
+      // 移除 URL 中的时间戳参数，避免重复刷新
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('t');
+      const newUrl = newSearchParams.toString() 
+        ? `${pathname}?${newSearchParams.toString()}` 
+        : pathname;
+      router.replace(newUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, pathname, router]);
+
   // 初次加载和category变化时重新加载
   useEffect(() => {
+    const timestampParam = searchParams.get('t');
+    // 如果有时戳参数，上面的 useEffect 会处理，这里跳过
+    if (timestampParam) return;
+    
     console.log('加载数据库书籍数据，category:', categoryFromUrl);
     loadBookcaseArticles(0, false);
-  }, [categoryFromUrl]);
+  }, [categoryFromUrl, searchParams]);
 
   // 过滤文章
   const filteredCards = useMemo(() => {
@@ -507,6 +532,65 @@ function BookcasePageContent() {
   // 控制 box2 整体渐显动画
   const [showBox2, setShowBox2] = useState(false);
 
+  // 创建 box1Content（需要响应状态变化）
+  const box1Content = useMemo(() => (
+    <div style={{ padding: '16px 24px' }}>
+      {/* 桌面端：左右布局，移动端：上下布局 */}
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '12px',
+        alignItems: isMobile ? 'stretch' : 'flex-end',
+        justifyContent: isMobile ? 'flex-start' : 'space-between',
+      }}>
+        {/* 右侧：关键词搜索 */}
+        <div style={{ width: isMobile ? '100%' : '320px' }}>
+          <Input.Search
+            className="search-input-transparent"
+            placeholder="搜索标题、作者、摘要..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onSearch={(value) => setSearchKeyword(value)}
+            size="large"
+            enterButton={<SearchOutlined />}
+            allowClear
+            style={{ width: '100%' }}
+          />
+        </div>
+      </div>
+
+      {/* 筛选结果提示 */}
+      {(selectedTags.length > 0 || searchKeyword) && (
+        <div style={{
+          marginTop: '12px',
+          fontSize: '13px',
+          color: 'rgba(255, 255, 255, 0.9)',
+        }}>
+          {selectedTags.length > 0 && (
+            <span>已选 <strong>{selectedTags.length}</strong> 个标签</span>
+          )}
+          {selectedTags.length > 0 && searchKeyword && <span> · </span>}
+          {searchKeyword && (
+            <span>搜索 "<strong>{searchKeyword}</strong>"</span>
+          )}
+          <span> · 找到 <strong>{filteredCards.length}</strong> 篇文章</span>
+        </div>
+      )}
+    </div>
+  ), [isMobile, searchKeyword, selectedTags, filteredCards.length]);
+
+  // 设置页面配置
+  useEffect(() => {
+    setConfig({
+      box1Content,
+      box2Style: { padding: isMobile ? '40px 12px' : '40px 24px' },
+    });
+
+    return () => {
+      setConfig({ box1Content: null });
+    };
+  }, [setConfig, box1Content, isMobile]);
+
   // 当加载完成且有内容时，触发 box2 渐显动画（先停顿0.5秒）
   useEffect(() => {
     if (!showLoading && filteredCards.length > 0) {
@@ -588,58 +672,7 @@ function BookcasePageContent() {
 
   return (
     <>
-
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
-        <PageLayout
-          theme={currentFishbowlTheme}
-          box1Content={
-          <div style={{ padding: '16px 24px' }}>
-            {/* 桌面端：左右布局，移动端：上下布局 */}
-            <div style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: '12px',
-              alignItems: isMobile ? 'stretch' : 'flex-end',
-              justifyContent: isMobile ? 'flex-start' : 'space-between',
-            }}>
-
-              {/* 右侧：关键词搜索 */}
-              <div style={{ width: isMobile ? '100%' : '320px' }}>
-                <Input.Search
-                  className="search-input-transparent"
-                  placeholder="搜索标题、作者、摘要..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  onSearch={(value) => setSearchKeyword(value)}
-                  size="large"
-                  enterButton={<SearchOutlined />}
-                  allowClear
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </div>
-
-            {/* 筛选结果提示 */}
-            {(selectedTags.length > 0 || searchKeyword) && (
-              <div style={{
-                marginTop: '12px',
-                fontSize: '13px',
-                color: 'rgba(255, 255, 255, 0.9)',
-              }}>
-                {selectedTags.length > 0 && (
-                  <span>已选 <strong>{selectedTags.length}</strong> 个标签</span>
-                )}
-                {selectedTags.length > 0 && searchKeyword && <span> · </span>}
-                {searchKeyword && (
-                  <span>搜索 "<strong>{searchKeyword}</strong>"</span>
-                )}
-                <span> · 找到 <strong>{filteredCards.length}</strong> 篇文章</span>
-              </div>
-            )}
-          </div>
-        }
-        box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
-      >
         {/* 瀑布流容器 - 整体渐显动画 */}
         <div style={{
           maxWidth: '1400px',
@@ -705,7 +738,6 @@ function BookcasePageContent() {
             </>
           )}
         </div>
-        </PageLayout>
       </div>
 
       {/* 统一的书籍分类导航组件（自动适配移动端/桌面端） */}
