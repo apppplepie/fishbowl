@@ -18,10 +18,10 @@ export const AppThemeBody: React.FC<AppThemeBodyProps> = ({ children }) => {
   // 计算合并后的渐变和最深颜色
   const { mergedGradient, deepestColor } = useMemo(() => {
     if (!mounted) {
-      // 默认值（noir 主题）
+      // 默认值（coral 主题）
       return {
-        mergedGradient: 'linear-gradient(to bottom, #f3f4f6 0%, #d1d5db 20%, #9ca3af 40%, #6b7280 60%, #374151 80%, #000000 100%)',
-        deepestColor: '#000000'
+        mergedGradient: 'linear-gradient(to bottom, #ffedd5 0%, #fef3c7 25%, #fef9c3 50%, #99f6e4 75%, #14b8a6 100%)',
+        deepestColor: '#14b8a6'
       };
     }
 

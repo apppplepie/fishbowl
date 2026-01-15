@@ -39,7 +39,7 @@ interface AppThemeProviderProps {
 
 export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) => {
   // 修复 hydration mismatch：始终使用默认值初始化，在客户端加载后恢复
-  const [activeFishbowlThemeId, setActiveFishbowlThemeId] = useState<string>('noir');
+  const [activeFishbowlThemeId, setActiveFishbowlThemeId] = useState<string>('coral');
   const [skyHue, setSkyHue] = useState(20);
   const [waterHue, setWaterHue] = useState(190);
   const [mounted, setMounted] = useState(false);

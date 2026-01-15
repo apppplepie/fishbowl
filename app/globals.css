@@ -15,14 +15,13 @@
 
 body {
   /* 全局背景色 - 使用主题背景渐变，通过 CSS 变量动态设置 */
-  /* 默认值：与默认主题 'noir' 一致的渐变，避免加载闪烁 */
+  /* 默认值：与默认主题 'coral' 一致的渐变，避免加载闪烁 */
   background: var(--theme-body-gradient, linear-gradient(to bottom, 
-    #f3f4f6 0%,      /* gray-100 - 天空顶部 */
-    #d1d5db 20%,     /* gray-300 - 天空中部 */
-    #9ca3af 40%,     /* gray-400 - 天空底部 */
-    #6b7280 60%,     /* gray-500 - 水面 */
-    #374151 80%,     /* gray-700 - 水中 */
-    #000000 100%     /* black - 水底 */
+    #ffedd5 0%,      /* orange-100 - 天空顶部 */
+    #fef3c7 25%,     /* amber-100 - 天空中部 */
+    #fef9c3 50%,     /* yellow-100 - 天空底部/水面开始 */
+    #99f6e4 75%,     /* teal-200 - 水中 */
+    #14b8a6 100%     /* teal-500 - 水底 */
   ));
   background-attachment: fixed;
   color: var(--foreground);
@@ -32,7 +31,7 @@ body {
   overflow-x: hidden;
   min-height: 100vh;
   /* 移动端上拉下拉的背景底色 - 使用主题最深颜色 */
-  background-color: var(--theme-body-bg-color, #000000);
+  background-color: var(--theme-body-bg-color, #14b8a6);
 
   /* 全局禁止缩放，防止双击和手势缩放 */
   touch-action: manipulation;
