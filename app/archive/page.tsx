@@ -392,18 +392,26 @@ function ArticlesPageContent() {
     // 其他类型的卡片可以弹出模态框或其他操作
   };
 
+  // 控制 box2 整体渐显动画
+  const [showBox2, setShowBox2] = useState(false);
+
+  // 当加载完成且有内容时，触发 box2 渐显动画（先停顿0.5秒）
+  useEffect(() => {
+    if (!loading && filteredCards.length > 0) {
+      // 先停顿0.5秒，然后触发渐显动画
+      const timer = setTimeout(() => {
+        setShowBox2(true);
+      }, 500); // 0.5秒延迟
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowBox2(false);
+    }
+  }, [loading, filteredCards.length]);
+
   // 根据文章类型渲染对应的卡片
   const renderCard = (article: any, index: number) => {
     const handleClick = () => handleCardClick(article);
-
-    // 每个卡片延迟递增，让它们依次渐显
-    const delay = index * 0.3; // 每个卡片延迟0.1秒
-    const wrapperStyle: React.CSSProperties = {
-      animation: 'fadeInUp 1s ease-out forwards',
-      animationDelay: `${delay}s`,
-      opacity: 0,
-      willChange: 'opacity, transform', // 性能优化
-    };
 
     let cardComponent: React.ReactNode;
     switch (article.type) {
@@ -433,7 +441,7 @@ function ArticlesPageContent() {
     }
 
     return (
-      <div className="book-content-block" style={wrapperStyle}>
+      <div className="book-content-block">
         {cardComponent}
       </div>
     );
@@ -527,11 +535,15 @@ function ArticlesPageContent() {
         }
         box2Style={{ padding: isMobile ? '40px 12px' : '40px 24px' }}
       >
-        {/* 瀑布流容器 */}
+        {/* 瀑布流容器 - 整体渐显动画 */}
         <div style={{ 
           maxWidth: '1400px', 
           margin: '0 auto',
           width: '100%',
+          opacity: showBox2 ? 1 : 0,
+          transform: showBox2 ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'opacity 1s ease-out, transform 1s ease-out',
+          willChange: 'opacity, transform', // GPU 加速
         }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
