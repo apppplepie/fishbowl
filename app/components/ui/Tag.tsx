@@ -37,24 +37,31 @@ const Tag: React.FC<TagProps> = ({
         borderColor: color,
       };
     }
+    
     // 使用 id 或 children（标签文本）作为标识符生成渐变
     const identifier = id || (typeof children === 'string' ? children : String(children));
     const baseVisuals = generateVisualsFromId(identifier);
     
-    // 提取主色调并创建更鲜亮的纯色背景
-    // 从渐变中提取第一个 HSL 值，提高饱和度和明度
-    const gradientMatch = baseVisuals.background.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+    // 解析渐变字符串，整体提高饱和度和明度
+    // 格式：linear-gradient(angle, hsl(h1, s1%, l1%), hsl(h2, s2%, l2%))
+    const gradientMatch = baseVisuals.background.match(/linear-gradient\((\d+)deg,\s*hsl\((\d+),\s*(\d+)%,\s*(\d+)%\),\s*hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)\)/);
+    
     if (gradientMatch) {
-      const [, h, s, l] = gradientMatch;
-      const hue = parseInt(h);
-      // 提高饱和度到 85-100%，提高明度到 60-75%，使其更鲜亮
-      const saturation = Math.min(100, parseInt(s) + 20);
-      const lightness = Math.min(80, parseInt(l) + 10);
+      const [, angle, h1, s1, l1, h2, s2, l2] = gradientMatch;
+      
+      // 整体提高饱和度和明度（提高 10-15%）
+      const boostSaturation = 12; // 提高饱和度
+      const boostLightness = 8;   // 提高明度
+      
+      const newS1 = Math.min(100, parseInt(s1) + boostSaturation);
+      const newL1 = Math.min(90, parseInt(l1) + boostLightness);
+      const newS2 = Math.min(100, parseInt(s2) + boostSaturation);
+      const newL2 = Math.min(90, parseInt(l2) + boostLightness);
+      
       return {
         ...baseVisuals,
-        background: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
-        textColor: 'black', // 使用白色文字，在鲜亮背景上更清晰
-        borderColor: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
+        background: `linear-gradient(${angle}deg, hsl(${h1}, ${newS1}%, ${newL1}%), hsl(${h2}, ${newS2}%, ${newL2}%))`,
+        borderColor: `hsla(${h1}, ${newS1}%, 50%, 0.3)`,
       };
     }
     

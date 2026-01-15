@@ -35,3 +35,6 @@ export { message, MessageContainer } from './message';
 export { default as Card } from './Card';
 export type { CardProps } from './Card';
 
+export { FakeGlassCard } from './FakeGlassCard';
+export type { FakeGlassCardProps } from './FakeGlassCard';
+
