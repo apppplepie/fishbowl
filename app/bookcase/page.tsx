@@ -505,26 +505,41 @@ function BookcasePageContent() {
   };
 
   // 根据文章类型渲染对应的卡片
-  const renderCard = (article: any) => {
+  const renderCard = (article: any, index: number) => {
     const handleClick = () => handleCardClick(article);
 
+    // 每个卡片延迟递增，让它们依次渐显
+    const delay = index * 0.3; // 每个卡片延迟0.1秒
+    const wrapperStyle: React.CSSProperties = {
+      animation: 'fadeInUp 1s ease-out forwards',
+      animationDelay: `${delay}s`,
+      opacity: 0,
+      willChange: 'opacity, transform', // 性能优化
+    };
+
+    let cardComponent: React.ReactNode;
     switch (article.type) {
       case 'text':
-        return <ArticleCard key={article.id} card={article} onClick={handleClick} />;
+        cardComponent = <ArticleCard key={article.id} card={article} onClick={handleClick} />;
+        break;
       case 'image':
-        return <ImageCard key={article.id} card={article} onClick={handleClick} />;
+        cardComponent = <ImageCard key={article.id} card={article} onClick={handleClick} />;
+        break;
       case 'drawing':
         // 绘画类型使用 ImageCard 显示，但添加特殊标识
-        return <ImageCard key={article.id} card={{
+        cardComponent = <ImageCard key={article.id} card={{
           ...article,
           description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
         }} onClick={handleClick} />;
+        break;
       case 'code':
-        return <CodeCard key={article.id} card={article} onClick={handleClick} />;
+        cardComponent = <CodeCard key={article.id} card={article} onClick={handleClick} />;
+        break;
       case 'diary':
-        return <DiaryCard key={article.id} card={article} onClick={handleClick} />;
+        cardComponent = <DiaryCard key={article.id} card={article} onClick={handleClick} />;
+        break;
       case 'book':
-        return (
+        cardComponent = (
           <BookCard 
             key={article.id} 
             card={article} 
@@ -549,10 +564,18 @@ function BookcasePageContent() {
             }}
           />
         );
+        break;
       default:
         // 兼容 mock 数据的其他类型
-        return <CardRenderer key={article.id} card={article} onClick={handleClick} />;
+        cardComponent = <CardRenderer key={article.id} card={article} onClick={handleClick} />;
+        break;
     }
+
+    return (
+      <div className="book-content-block" style={wrapperStyle}>
+        {cardComponent}
+      </div>
+    );
   };
 
   return (
@@ -634,7 +657,11 @@ function BookcasePageContent() {
                   key: `card-${card.id}`,
                   data: card,
                 }))}
-                itemRender={({ data }) => renderCard(data)}
+                itemRender={({ data }) => {
+                  // 通过 filteredCards 查找索引
+                  const index = filteredCards.findIndex(card => card.id === data.id);
+                  return renderCard(data, index >= 0 ? index : 0);
+                }}
               />
 
               {/* 加载更多提示 */}
