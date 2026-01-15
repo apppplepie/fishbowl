@@ -129,6 +129,10 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
         style={{ right: 24, bottom: 40 }}
         icon={<Plus size={20} />}
         tooltip={tooltipProp("操作菜单")}
+        backTop={{
+          visibilityHeight: 100,
+          tooltip: tooltipProp("返回顶部"),
+        }}
       >
         {/* 写文章按钮 */}
         <FloatButton
@@ -142,12 +146,6 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
           icon={<Edit size={20} />}
           tooltip={tooltipProp("写日志")}
           onClick={() => setDiaryModalOpen(true)}
-        />
-
-        {/* 返回顶部按钮 */}
-        <FloatButton.BackTop
-          tooltip={tooltipProp("返回顶部")}
-          visibilityHeight={100}
         />
       </FloatButton.Group>
 

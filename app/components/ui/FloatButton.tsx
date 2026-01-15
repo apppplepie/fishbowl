@@ -70,6 +70,7 @@ export interface FloatButtonGroupProps {
   style?: React.CSSProperties;
   className?: string;
   children?: React.ReactNode;
+  backTop?: boolean | { visibilityHeight?: number; tooltip?: string | { title: string; placement?: 'left' | 'right' | 'top' | 'bottom' } };
 }
 
 const FloatButtonGroup: React.FC<FloatButtonGroupProps> = ({
@@ -82,10 +83,19 @@ const FloatButtonGroup: React.FC<FloatButtonGroupProps> = ({
   style,
   className = '',
   children,
+  backTop = true, // 默认启用返回顶部按钮
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
+  
+  // 返回顶部按钮的可见性状态
+  const [backTopVisible, setBackTopVisible] = useState(false);
+  
+  // 返回顶部配置
+  const backTopConfig = typeof backTop === 'object' ? backTop : {};
+  const backTopVisibilityHeight = backTopConfig.visibilityHeight ?? 400;
+  const backTopTooltip = backTopConfig.tooltip ?? '返回顶部';
 
   const handleToggle = () => {
     const newOpen = !open;
@@ -114,6 +124,33 @@ const FloatButtonGroup: React.FC<FloatButtonGroupProps> = ({
         setInternalOpen(false);
       }
     }
+  };
+
+  // 返回顶部按钮的滚动检测逻辑
+  useEffect(() => {
+    if (backTop === false) {
+      return; // 如果禁用了返回顶部，不监听滚动
+    }
+
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      setBackTopVisible(scrollTop > backTopVisibilityHeight);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // 初始检查
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [backTop, backTopVisibilityHeight]);
+
+  // 返回顶部按钮的点击处理
+  const handleBackTopClick = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
   };
 
   const groupClasses = [
@@ -162,6 +199,26 @@ const FloatButtonGroup: React.FC<FloatButtonGroupProps> = ({
           }
           return child;
         })}
+        {/* 自动添加返回顶部按钮 */}
+        {backTop !== false && backTopVisible && (
+          <div
+            className="ui-float-button-group-item"
+            style={{
+              transitionDelay: `${React.Children.count(children) * 30}ms`,
+            }}
+          >
+            <FloatButton
+              icon={
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m18 15-6-6-6 6" />
+                </svg>
+              }
+              type="primary"
+              tooltip={backTopTooltip}
+              onClick={handleBackTopClick}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
