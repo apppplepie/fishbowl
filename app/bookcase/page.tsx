@@ -115,7 +115,8 @@ const preloadAllBookArticleLists = async () => {
   }
 };
 
-export { preloadAllBookArticleLists };
+// 注意：此函数仅在本文件内部使用，不需要导出
+// Next.js App Router 的页面文件不应该有命名导出（除了 metadata、generateStaticParams 等特定配置）
 
 /**
  * 书架页面
