@@ -5,20 +5,21 @@ import './MasonryGrid.css';
 
 // --- 配置常量 ---
 const SPAN_TOLERANCE_PIXELS = 2; // 容忍 2px 以内的微小高度变化，防止高分屏下的次像素抖动
-const MIN_COLUMNS = 2; // 最少列数
+const DEFAULT_MIN_COLUMNS = 1; // 默认最少列数
 const MAX_COLUMNS = 4; // 最多列数
 const MIN_COLUMN_WIDTH = 280; // 每列最小宽度（px）
 
 interface MasonryGridProps {
   children: React.ReactNode;
   className?: string;
+  minColumns?: number; // 新增：允许外部控制最小列数
 }
 
 interface ChildElementProps {
   className?: string;
 }
 
-export default function MasonryGrid({ children, className = '' }: MasonryGridProps) {
+export default function MasonryGrid({ children, className = '', minColumns = DEFAULT_MIN_COLUMNS }: MasonryGridProps) {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const roRef = useRef<ResizeObserver | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -29,8 +30,8 @@ export default function MasonryGrid({ children, className = '' }: MasonryGridPro
   const calculateColumns = (containerWidth: number): number => {
     // CSS Grid 的 fr 单位会自动处理 gap，所以只需基于最小列宽计算
     let cols = Math.floor(containerWidth / MIN_COLUMN_WIDTH);
-    // 限制在 MIN_COLUMNS 和 MAX_COLUMNS 之间
-    cols = Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, cols));
+    // 限制在 minColumns 和 MAX_COLUMNS 之间
+    cols = Math.max(minColumns, Math.min(MAX_COLUMNS, cols));
     return cols;
   };
 
@@ -132,9 +133,16 @@ export default function MasonryGrid({ children, className = '' }: MasonryGridPro
     const initRaf = requestAnimationFrame(() => calculateAll(grid));
 
     if (typeof ResizeObserver !== 'undefined') {
+      let roRafId: number | null = null;
       const ro = new ResizeObserver((entries) => {
         if (!grid) return;
-        requestAnimationFrame(() => {
+        
+        // 防抖：取消之前的 RAF，避免频繁触发
+        if (roRafId !== null) {
+          cancelAnimationFrame(roRafId);
+        }
+        
+        roRafId = requestAnimationFrame(() => {
             const { rowHeight, rowGap } = getGridMetrics(grid);
             const unit = rowHeight + rowGap || 1;
 
@@ -154,6 +162,7 @@ export default function MasonryGrid({ children, className = '' }: MasonryGridPro
                     applySpanIfNeeded(el, span, h);
                 }
             });
+            roRafId = null;
         });
       });
       roRef.current = ro;
@@ -206,7 +215,7 @@ export default function MasonryGrid({ children, className = '' }: MasonryGridPro
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
     };
-  }, []); // 无依赖，避免重复监听
+  }, [minColumns]); // 添加 minColumns 依赖，以便在 props 变化时更新
 
   // ... Render 部分不变 ...
   return (
@@ -225,4 +234,3 @@ export default function MasonryGrid({ children, className = '' }: MasonryGridPro
     </div>
   );
 }
-

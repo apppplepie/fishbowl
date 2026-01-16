@@ -80,6 +80,7 @@ export default function ArchiveClient({
     const loadingRef = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const prevConfigRef = useRef<any | null>(null);
+    const prevInitialArticlesRef = useRef(initialArticles); // 用于追踪 initialArticles 变化
 
     const ITEMS_PER_PAGE = 15;
 
@@ -245,6 +246,18 @@ export default function ArchiveClient({
 
     // 注释掉：服务端已经提供初始数据，不需要客户端再次加载
     // 移除此 useEffect 避免重复加载和 React Strict Mode 的双重调用问题
+
+    // ✅ 同步 initialArticles 到 cards 状态（修复页面切换时的闪烁问题）
+    useEffect(() => {
+        // 只在 initialArticles 引用改变时才更新
+        if (initialArticles !== prevInitialArticlesRef.current) {
+            prevInitialArticlesRef.current = initialArticles;
+            if (initialArticles.length > 0) {
+                setCards(initialArticles);
+                setOffset(initialArticles.length);
+            }
+        }
+    }, [initialArticles]);
 
     // ✅ 组件卸载时清理资源，防止内存泄漏
     useEffect(() => {
@@ -437,7 +450,7 @@ export default function ArchiveClient({
                     ) : (
                         <>
                             <div style={{ minHeight: '400px' }}>
-                                <MasonryGrid>
+                                <MasonryGrid minColumns={2}>
                                     {filteredCards.map((card, index) => (
                                         <div key={card.id}>
                                             {renderCard(card, index)}

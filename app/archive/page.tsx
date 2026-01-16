@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { headers } from 'next/headers';
 import ArchiveClient from './ArchiveClient';
 import '../styles/articles-filter.css';
 
@@ -21,12 +22,22 @@ async function getInitialArticles(categoryId?: string | null) {
       params.append('categoryId', categoryId);
     }
 
+    // 获取请求的 headers，包括 Cookie（用于身份认证）
+    // 这是安全的，因为：
+    // 1. 服务端到服务端的内部请求，不会暴露给客户端
+    // 2. HttpOnly Cookie 中的 token 无法被客户端 JavaScript 访问
+    // 3. 只传递必要的 Cookie header，不传递其他敏感信息
+    const headersList = await headers();
+    const cookieHeader = headersList.get('cookie');
+
     const response = await fetch(
       `${baseUrl}/api/articles/list?${params.toString()}`,
       {
         next: { revalidate: 60 }, // ISR: 60秒缓存
         headers: {
           'Content-Type': 'application/json',
+          // 传递 Cookie header，让服务端 API 能识别用户身份和权限
+          ...(cookieHeader ? { Cookie: cookieHeader } : {}),
         },
       }
     );
