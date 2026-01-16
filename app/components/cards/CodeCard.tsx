@@ -6,7 +6,7 @@ import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Tag, Card } from '@/app/components/ui';
 
-interface CodeCardProps {
+export interface CodeCardProps {
   card: {
     id: string;
     title: string;
@@ -15,21 +15,22 @@ interface CodeCardProps {
     updatedAt?: string;
     publishedAt?: string;
     createdAt?: string;
-    codePreview?: string; // 第一个代码块的预览
-    codeLanguage?: string; // 第一个代码块的语言
-    codeBlockCount?: number; // 代码块数量
-    tags?: string[]; // 标签
+    codePreview?: string;
+    codeLanguage?: string;
+    codeBlockCount?: number;
+    tags?: string[];
     likes?: number;
     comments?: number;
   };
   onClick?: () => void;
+  priority?: boolean;
 }
 
 /**
  * 代码主导卡片 - 方案A：代码预览式
  * 适合技术文章、代码示例分享
  */
-export default function CodeCard({ card, onClick }: CodeCardProps) {
+export default function CodeCard({ card, onClick, priority = false }: CodeCardProps) {
   // 使用卡片背景颜色 Hook，基于代码卡片 ID 生成独特的渐变色
   const colors = useCardBackground(card.id || '');
   

@@ -1,25 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ClockCircleOutlined, EditOutlined} from '@ant-design/icons';
 import type { ArticleCard as ArticleCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { Tag, Card } from '@/app/components/ui';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 
-interface ArticleCardProps {
-  card: ArticleCardType | any; // 支持数据库返回的格式
+export interface ArticleCardProps {
+  card: ArticleCardType | any;
   onClick?: () => void;
+  priority?: boolean;
 }
 
 /**
  * B. 文章主导卡片
  * 标题+摘要+封面图，适合博客文章、长篇内容
  */
-export default function ArticleCard({ card, onClick }: ArticleCardProps) {
-  const [imageLoaded, setImageLoaded] = useState(false);
-
-  // 使用卡片背景颜色 Hook，基于文章 ID 生成独特的渐变色（用于文本和边框颜色）
+export default function ArticleCard({ card, onClick, priority = false }: ArticleCardProps) {
+  // 使用卡片背景颜色 Hook，基于文章 ID 生成独特的渐变色
   const colors = useCardBackground(card.id || card._id?.toString() || '');
 
   return (
@@ -96,7 +95,7 @@ export default function ArticleCard({ card, onClick }: ArticleCardProps) {
         opacity: 0.6,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span>{card.author}</span>
+          {/* <span>{card.author}</span> */}
           <span style={{ fontSize: '12px' }}>
             {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}
           </span>

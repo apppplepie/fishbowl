@@ -209,3 +209,25 @@ textarea,
   opacity: 0;
 }
 
+/* 图片 hover 缩放效果 */
+.hover-scale-image {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale-image:hover {
+  transform: scale(1.05);
+}
+
+/* 归档页面骨架屏 */
+.archive-skeleton-item {
+  background: #f0f0f0;
+  border-radius: 8px;
+  height: 300px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+

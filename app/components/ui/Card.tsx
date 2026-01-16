@@ -34,6 +34,9 @@ export default function Card({
   // 合并样式
   const cardStyle: React.CSSProperties = useMemo(() => ({
     position: 'relative',
+    width: '100%', /* 强制占满父容器宽度 */
+    maxWidth: '100%', /* 防止内容撑开 */
+    boxSizing: 'border-box',
     borderRadius: '12px',
     overflow: 'hidden',
     cursor: hoverable || onClick ? 'pointer' : 'default',

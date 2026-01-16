@@ -24,7 +24,7 @@ export interface PageShellConfig {
  */
 interface PageShellContextType {
   config: PageShellConfig;
-  setConfig: (config: Partial<PageShellConfig>) => void;
+  setConfig: (config: Partial<PageShellConfig> | ((prev: PageShellConfig) => Partial<PageShellConfig>)) => void;
   resetConfig: () => void;
 }
 
@@ -50,23 +50,25 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
   const [config, setConfigState] = useState<PageShellConfig>(defaultConfig);
 
   // 固定 setConfig 引用
-  const setConfig = useCallback((newConfig: Partial<PageShellConfig>) => {
+  const setConfig = useCallback((newConfig: Partial<PageShellConfig> | ((prev: PageShellConfig) => Partial<PageShellConfig>)) => {
+    const actualConfig = typeof newConfig === 'function' ? newConfig(config) : newConfig;
+
     console.log('[PageShellProvider] setConfig 被调用:', {
       newConfig: {
-        hasBox1Content: !!newConfig.box1Content,
-        hideBox1: newConfig.hideBox1,
-        hasBox1Style: !!newConfig.box1Style,
-        hasBox2Style: !!newConfig.box2Style,
-        hasThemeOverride: !!newConfig.themeOverride,
-        sidebarWidth: newConfig.sidebarWidth,
-        sidebarExpanded: newConfig.sidebarExpanded,
+        hasBox1Content: !!actualConfig.box1Content,
+        hideBox1: actualConfig.hideBox1,
+        hasBox1Style: !!actualConfig.box1Style,
+        hasBox2Style: !!actualConfig.box2Style,
+        hasThemeOverride: !!actualConfig.themeOverride,
+        sidebarWidth: actualConfig.sidebarWidth,
+        sidebarExpanded: actualConfig.sidebarExpanded,
       }
     });
 
     setConfigState((prev) => {
       const updated = {
         ...prev,
-        ...newConfig,
+        ...actualConfig,
       };
 
       console.log('[PageShellProvider] config 状态更新:', {

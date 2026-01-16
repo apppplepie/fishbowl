@@ -7,16 +7,17 @@ import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Card } from '@/app/components/ui';
 import { InsertRowAboveOutlined } from '@ant-design/icons';
 
-interface DiaryCardProps {
-  card: DiaryCardType | any; // 支持数据库返回的格式
+export interface DiaryCardProps {
+  card: DiaryCardType | any;
   onClick?: () => void;
+  priority?: boolean;
 }
 
 /**
  * C. 日志卡片
  * 简短文字记录，适合每日感想、随笔
  */
-export default function DiaryCard({ card, onClick }: DiaryCardProps) {
+export default function DiaryCard({ card, onClick, priority = false }: DiaryCardProps) {
   // 从 excerpt 或 content 中提取日志内容和元信息
   const extractDiaryData = () => {
     const rawContent = card.content || card.excerpt || '';

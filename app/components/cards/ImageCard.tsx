@@ -1,26 +1,28 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import type { ImageCard as ImageCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { AreaChartOutlined, PictureOutlined } from '@ant-design/icons';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Tag, Card } from '@/app/components/ui';
 
-interface ImageCardProps {
-  card: ImageCardType | any; // 支持数据库返回的格式
+export interface ImageCardProps {
+  card: ImageCardType | any;
   onClick?: () => void;
+  priority?: boolean;
 }
 
 /**
  * A. 图片主导卡片
  * 大图展示，适合摄影作品、视觉内容
  */
-export default function ImageCard({ card, onClick }: ImageCardProps) {
+export default function ImageCard({ card, onClick, priority = false }: ImageCardProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
-  
-  // 使用卡片背景颜色 Hook，基于图片卡片 ID 生成独特的渐变色
   const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
+
+
 
   return (
     <Card
@@ -29,48 +31,36 @@ export default function ImageCard({ card, onClick }: ImageCardProps) {
       onClick={onClick}
       bodyStyle={{ padding: 0 }}
     >
-      {/* 图片区域 */}
-      <div style={{ position: 'relative', width: '100%' }}>
-        {!imgLoaded && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            minHeight: '300px',
-            background: colors.background,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1,
-          }}>
-            {/* 加载中... */}
-          </div>
-        )}
-        <img
+      <div style={{ 
+        position: 'relative', 
+        width: '100%',
+        maxWidth: '100%',
+        aspectRatio: '3 / 2',
+        background: colors.background,
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+      }}>
+        <Image
           src={card.coverImage?.url || card.imageUrl || card.firstImageUrl}
           alt={card.coverImage?.title || card.title}
+          fill
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1440px) 25vw, 400px" 
+          /* 响应式尺寸: 小屏2列(50%), 中屏3列(33%), 大屏4列(25%) */
+          style={{
+            objectFit: 'cover',
+            transition: 'transform 0.3s ease',
+            maxWidth: '100%', /* 防止撑开父容器 */
+          }}
+          className="hover-scale-image"
           onLoad={() => setImgLoaded(true)}
           onError={() => {
             console.error('ImageCard 图片加载失败:', card.coverImage?.url || card.imageUrl || card.firstImageUrl);
-            setImgLoaded(true); // 即使加载失败也隐藏加载状态
+            setImgLoaded(true);
           }}
-          style={{
-            width: '100%',
-            height: 'auto',
-            display: 'block',
-            objectFit: 'contain', // 保持图片原始宽高比，不拉伸
-            opacity: imgLoaded ? 1 : 0,
-            transition: 'opacity 0.3s ease, transform 0.3s ease',
-            position: 'relative',
-            zIndex: 2,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
+          loading={priority ? 'eager' : 'lazy'} // ✅ 首屏立即加载
+          priority={priority} // ✅ 首屏优先级
+          placeholder="blur"
+          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI2NyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI2NyIgZmlsbD0iI2YwZjBmMCIvPjwvc3ZnPg=="
         />
       </div>
 

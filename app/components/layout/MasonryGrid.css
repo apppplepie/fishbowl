@@ -1,0 +1,77 @@
+/* MasonryGrid 样式 - 动态列数，响应式布局 */
+.masonry-grid {
+  display: grid;
+  /* 使用 CSS 变量动态控制列数和列宽 */
+  grid-template-columns: repeat(var(--masonry-columns, 3), 1fr);
+  grid-auto-rows: 4px;
+  gap: 2px;
+  width: 100%;
+  max-width: 100%; /* 充满容器 */
+  padding: 0 0px; /* 左右留白 */
+  margin: 0 auto; /* 居中对齐 */
+  box-sizing: border-box;
+  /* 防止滚动条出现/消失导致的宽度变化 */
+  scrollbar-gutter: stable;
+  /* 平滑过渡列数变化，但要快速以减少抖动感 */
+  transition: grid-template-columns 200ms ease-out;
+}
+
+/* 响应式列数：最少 2 列，最多 4 列，根据容器宽度自动调整 */
+
+.masonry-item {
+  /* 确保每个项占满列宽 */
+  display: block;
+  width: 100%;
+  max-width: 100%; /* 强制限制最大宽度 */
+  box-sizing: border-box;
+  /* 确保能正确跟随内容高度 - Grid会自动处理高度，但需要确保内容不被限制 */
+  min-height: 0;
+  min-width: 0; /* 防止内容撑开 */
+  /* 防止内容溢出影响布局 */
+  padding: 8px; /* 留出空间给悬停放大 */
+  overflow: visible; /* 允许卡片悬停时超出 */
+  /* grid-row-end 由 JS 动态计算并写入 inline style */
+  transition: opacity 240ms ease, transform 240ms ease;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* 确保卡片内的所有内容都受宽度约束 */
+.masonry-item > * {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 强制约束图片和媒体内容 */
+.masonry-item img,
+.masonry-item video,
+.masonry-item picture {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 防止文本溢出 */
+.masonry-item * {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 当 JS 设置了 gridRowEnd 后，使项淡入（等待 JS 先设置好） */
+.masonry-item[style] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 平滑的渐显动画（备份） */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

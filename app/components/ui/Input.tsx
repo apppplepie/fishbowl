@@ -226,9 +226,100 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
 
 TextArea.displayName = 'Input.TextArea';
 
-// 将 Password 和 TextArea 附加到 Input
+// Search Input
+export interface SearchProps extends Omit<InputProps, 'type'> {
+  enterButton?: React.ReactNode | boolean;
+  loading?: boolean;
+  onSearch?: (value: string, event?: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLInputElement>) => void;
+  onPressEnter?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+}
+
+const Search = forwardRef<HTMLInputElement, SearchProps>(
+  ({ enterButton = false, loading = false, onSearch, onPressEnter, ...props }, ref) => {
+    const [searchValue, setSearchValue] = React.useState(String(props.value || ''));
+
+    React.useEffect(() => {
+      if (props.value !== undefined) {
+        setSearchValue(String(props.value));
+      }
+    }, [props.value]);
+
+    const handleSearch = (e?: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLInputElement>) => {
+      if (onSearch) {
+        onSearch(searchValue, e);
+      }
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        handleSearch(e);
+      }
+      if (onPressEnter) {
+        onPressEnter(e);
+      }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchValue(e.target.value);
+      if (props.onChange) {
+        props.onChange(e);
+      }
+    };
+
+    const renderEnterButton = () => {
+      if (!enterButton) return null;
+
+      const buttonContent = loading ? (
+        <span className="ui-input-search-loading">
+          <svg viewBox="0 0 1024 1024" width="14" height="14" fill="currentColor">
+            <path d="M512 1024c-69.1 0-136.2-13.5-199.3-40.2C251.7 958 197 921.6 151.2 873c-15.5-16.5-30.4-33.9-44.3-52.4-41.2-55-70.9-118.5-87.7-186.7C6.3 631.2 0 574.1 0 512s6.3-119.2 19.2-181.9c16.8-68.2 46.5-131.7 87.7-186.7 13.9-18.5 28.8-35.9 44.3-52.4C197 42.4 251.7 6 308.7 1.2 371.8-25.5 438.9-39 508-39c69.1 0 136.2 13.5 199.3 40.2 57 8.8 111.7 45.2 157.5 93.8 15.5 16.5 30.4 33.9 44.3 52.4 41.2 55 70.9 118.5 87.7 186.7C1017.7 392.8 1024 449.9 1024 512s-6.3 119.2-19.2 181.9c-16.8 68.2-46.5 131.7-87.7 186.7-13.9 18.5-28.8 35.9-44.3 52.4C825 981.6 770.3 1018 713.3 1022.8 650.2 1049.5 583.1 1063 514 1063zM512 85c-56.6 0-112.1 11.2-164.7 33.2-50.5 21.1-96.4 51.4-135.7 89.7-13.2 13-25.4 26.9-36.4 41.5-32.8 43.7-56.8 94.8-70.8 149.5C90.6 436.8 85 473.9 85 512s5.6 75.2 14.4 111.1c14 54.7 38 105.8 70.8 149.5 11 14.6 23.2 28.5 36.4 41.5 39.3 38.3 85.2 68.6 135.7 89.7C399.9 925.8 455.4 937 512 937c56.6 0 112.1-11.2 164.7-33.2 50.5-21.1 96.4-51.4 135.7-89.7 13.2-13 25.4-26.9 36.4-41.5 32.8-43.7 56.8-94.8 70.8-149.5C933.4 587.2 939 550.1 939 512s-5.6-75.2-14.4-111.1c-14-54.7-38-105.8-70.8-149.5-11-14.6-23.2-28.5-36.4-41.5-39.3-38.3-85.2-68.6-135.7-89.7C624.1 96.2 568.6 85 512 85z"/>
+          </svg>
+        </span>
+      ) : enterButton === true ? (
+        <svg viewBox="0 0 1024 1024" width="14" height="14" fill="currentColor">
+          <path d="M909.6 854.5L649.9 594.8c-6.3-6.3-14.7-9.8-23.6-9.8s-17.3 3.5-23.6 9.8L114.4 854.5c-8.2 8.2-12.8 19.1-12.8 30.7 0 11.6 4.6 22.5 12.8 30.7 8.2 8.2 19.1 12.8 30.7 12.8h726.6c11.6 0 22.5-4.6 30.7-12.8 8.2-8.2 12.8-19.1 12.8-30.7 0-11.6-4.6-22.5-12.8-30.7zM512 640c70.7 0 133.8-25.9 184.9-77.1 51.2-51.2 77.1-114.3 77.1-184.9S748.1 193.1 696.9 144C645.8 92.9 582.7 67 512 67s-133.8 25.9-184.9 77.1C275.9 194.1 250 257.2 250 328c0 70.7 25.9 133.8 77.1 184.9C378.2 614.1 441.3 640 512 640z"/>
+        </svg>
+      ) : (
+        enterButton
+      );
+
+      return (
+        <span className="ui-input-search-button" onClick={handleSearch}>
+          {buttonContent}
+        </span>
+      );
+    };
+
+    return (
+      <span className="ui-input-search">
+        <Input
+          ref={ref}
+          {...props}
+          value={searchValue}
+          onChange={handleChange}
+          onKeyPress={handleKeyPress}
+          suffix={renderEnterButton()}
+        />
+      </span>
+    );
+  }
+);
+
+Search.displayName = 'Input.Search';
+
+// 定义复合组件接口
+interface InputComponent extends React.ForwardRefExoticComponent<InputProps & React.RefAttributes<HTMLInputElement>> {
+  Password: typeof Password;
+  TextArea: typeof TextArea;
+  Search: typeof Search;
+}
+
+// 将 Password、TextArea 和 Search 附加到 Input
 (Input as any).Password = Password;
 (Input as any).TextArea = TextArea;
+(Input as any).Search = Search;
 
-export default Input;
+const InputWithComponents = Input as InputComponent;
+
+export default InputWithComponents;
 
