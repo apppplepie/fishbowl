@@ -28,7 +28,7 @@
   min-height: 0;
   min-width: 0; /* 防止内容撑开 */
   /* 防止内容溢出影响布局 */
-  padding: 8px; /* 留出空间给悬停放大 */
+  padding: 4px; /* 留出空间给悬停放大 */
   overflow: visible; /* 允许卡片悬停时超出 */
   /* grid-row-end 由 JS 动态计算并写入 inline style */
   transition: opacity 240ms ease, transform 240ms ease;

@@ -57,10 +57,12 @@ export default function ArchiveClient({
     // 使用服务端预取的数据初始化
     const [cards, setCards] = useState<any[]>(initialArticles);
     const [loading, setLoading] = useState(false); // 首屏已由 server 渲染，不需要 loading
+    const [showLoading, setShowLoading] = useState(false); // 延迟显示加载中文字
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [offset, setOffset] = useState(initialOffset || initialArticles.length);
     const offsetRef = useRef(offset); // 用于 IntersectionObserver
+    const loadingDelayTimerRef = useRef<number | null>(null); // 用于延迟显示加载中
     const { setLeftContent } = useHeader();
 
     // 过滤条件状态
@@ -140,6 +142,13 @@ export default function ArchiveClient({
                 setLoadingMore(true);
             } else {
                 setLoading(true);
+                // 延迟 500ms 显示"加载中"文字，避免闪烁
+                if (loadingDelayTimerRef.current) {
+                    clearTimeout(loadingDelayTimerRef.current);
+                }
+                loadingDelayTimerRef.current = window.setTimeout(() => {
+                    setShowLoading(true);
+                }, 500);
             }
 
             const params = new URLSearchParams({
@@ -193,8 +202,14 @@ export default function ArchiveClient({
             console.error('加载文章失败:', error);
         } finally {
             setLoading(false);
+            setShowLoading(false);
             setLoadingMore(false);
             loadingRef.current = false;
+            // 清除延迟定时器
+            if (loadingDelayTimerRef.current) {
+                clearTimeout(loadingDelayTimerRef.current);
+                loadingDelayTimerRef.current = null;
+            }
         }
     }, []);
 
@@ -228,13 +243,22 @@ export default function ArchiveClient({
         };
     }, [hasMore, selectedCategoryId, loadArticles]);
 
-    // 如果没有初始数据，加载第一页
+    // 注释掉：服务端已经提供初始数据，不需要客户端再次加载
+    // 移除此 useEffect 避免重复加载和 React Strict Mode 的双重调用问题
+
+    // ✅ 组件卸载时清理资源，防止内存泄漏
     useEffect(() => {
-        if (initialArticles.length === 0) {
-            loadArticles(0, false, selectedCategoryId);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // 只在首次挂载时执行
+        return () => {
+            // 取消所有请求
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            // 清除延迟定时器
+            if (loadingDelayTimerRef.current) {
+                clearTimeout(loadingDelayTimerRef.current);
+            }
+        };
+    }, []);
 
     // ✅ 防抖搜索 - 350ms 延迟
     useEffect(() => {
@@ -244,8 +268,8 @@ export default function ArchiveClient({
                 setOffset(0);
                 setHasMore(true);
                 loadArticles(0, false, selectedCategoryId, { search: searchKeyword });
-            } else if (searchKeyword === '' && cards.length > 0) {
-                // 清空搜索时，重新加载
+            } else if (searchKeyword === '') {
+                // 清空搜索时，重新加载（仅当关键词从非空变为空时）
                 setOffset(0);
                 setHasMore(true);
                 loadArticles(0, false, selectedCategoryId);
@@ -253,7 +277,8 @@ export default function ArchiveClient({
         }, 350);
 
         return () => clearTimeout(timeoutId);
-    }, [searchKeyword, selectedCategoryId, loadArticles]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchKeyword, selectedCategoryId]); // 移除 loadArticles 依赖，避免不必要的重新创建
 
     // 过滤文章（仅用于客户端标签筛选，搜索由服务端处理）
     const filteredCards = useMemo(() => {
@@ -369,7 +394,7 @@ export default function ArchiveClient({
             return {
                 ...prev,
                 box1Content,
-                box2Style: { padding: isMobile ? '40px 6px' : '40px 12px' },
+                // 移除 box2Style，让内容区域自然显示，无内容时保持空白
             };
         });
 
@@ -398,10 +423,9 @@ export default function ArchiveClient({
                     maxWidth: '1400px',
                     margin: '0 auto',
                     width: '100%',
-                    padding: isMobile ? '0 6px' : '0 10px',
                     boxSizing: 'border-box',
                 }}>
-                    {loading ? (
+                    {showLoading ? (
                         <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
                             加载中...
                         </div>

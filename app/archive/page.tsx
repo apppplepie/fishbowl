@@ -52,29 +52,7 @@ async function getInitialArticles(categoryId?: string | null) {
   }
 }
 
-// 骨架屏组件
-function ArchiveSkeleton() {
-  return (
-    <div style={{ 
-      maxWidth: '1400px', 
-      margin: '0 auto',
-      padding: '40px 24px',
-    }}>
-      <div style={{ 
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-        gap: '16px',
-      }}>
-        {[...Array(6)].map((_, i) => (
-          <div 
-            key={i} 
-            className="archive-skeleton-item"
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
+// 移除骨架屏 - 加载时显示空白，保持背景透明
 
 // 主页面组件
 export default async function ArchivePage({ 
@@ -86,7 +64,7 @@ export default async function ArchivePage({
   const { articles, hasMore } = await getInitialArticles(searchParams.category);
 
   return (
-    <Suspense fallback={<ArchiveSkeleton />}>
+    <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
       {/* 所有卡片都在 ArchiveClient 的 MasonryGrid 里统一渲染 */}
       <ArchiveClient 
         initialArticles={articles}
