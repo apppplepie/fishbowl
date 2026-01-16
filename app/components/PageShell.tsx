@@ -149,7 +149,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
           <div
             style={{
               padding: '40px 20px 20px',
-              minHeight: '300px',
+              minHeight: '1000px',
               width: '100%',
               boxSizing: 'border-box',
               flex: '1 0 auto',
