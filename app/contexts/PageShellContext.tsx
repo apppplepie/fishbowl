@@ -50,22 +50,24 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
   const [config, setConfigState] = useState<PageShellConfig>(defaultConfig);
 
   // 固定 setConfig 引用
+  // ✅ 使用函数式更新避免闭包问题，不需要依赖 config
   const setConfig = useCallback((newConfig: Partial<PageShellConfig> | ((prev: PageShellConfig) => Partial<PageShellConfig>)) => {
-    const actualConfig = typeof newConfig === 'function' ? newConfig(config) : newConfig;
-
-    console.log('[PageShellProvider] setConfig 被调用:', {
-      newConfig: {
-        hasBox1Content: !!actualConfig.box1Content,
-        hideBox1: actualConfig.hideBox1,
-        hasBox1Style: !!actualConfig.box1Style,
-        hasBox2Style: !!actualConfig.box2Style,
-        hasThemeOverride: !!actualConfig.themeOverride,
-        sidebarWidth: actualConfig.sidebarWidth,
-        sidebarExpanded: actualConfig.sidebarExpanded,
-      }
-    });
-
     setConfigState((prev) => {
+      // 在函数式更新内部计算 actualConfig，使用 prev 而不是外部的 config
+      const actualConfig = typeof newConfig === 'function' ? newConfig(prev) : newConfig;
+
+      console.log('[PageShellProvider] setConfig 被调用:', {
+        newConfig: {
+          hasBox1Content: !!actualConfig.box1Content,
+          hideBox1: actualConfig.hideBox1,
+          hasBox1Style: !!actualConfig.box1Style,
+          hasBox2Style: !!actualConfig.box2Style,
+          hasThemeOverride: !!actualConfig.themeOverride,
+          sidebarWidth: actualConfig.sidebarWidth,
+          sidebarExpanded: actualConfig.sidebarExpanded,
+        }
+      });
+
       const updated = {
         ...prev,
         ...actualConfig,
@@ -83,7 +85,7 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
 
       return updated;
     });
-  }, []);
+  }, []); // ✅ 依赖项可以是空数组，因为使用了函数式更新
 
   // 固定 resetConfig 引用
   const resetConfig = useCallback(() => {
