@@ -1,10 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, Suspense, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-// remove antd Masonry and Input, keep others if needed (Tag, Select, etc. are used?)
-// Checked usage: Tag, Select are not used in the read file content.
-// message, Drawer, Button are not used.
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
@@ -13,33 +10,15 @@ import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
 import { Empty, LoadEnd, Input } from '@/app/components/ui';
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
 
-// 重型组件懒加载 - 减少首屏 JS 体积
-// 卡片组件懒加载（非首屏内容）
-const CardRenderer = dynamic(() => import('@/app/components/cards/CardRenderer'), { 
-  ssr: false 
-});
+// 卡片组件 - 首屏直接加载（启用 SSR）
+import CardRenderer from '@/app/components/cards/CardRenderer';
+import ArticleCard from '@/app/components/cards/ArticleCard';
+import ImageCard from '@/app/components/cards/ImageCard';
+import CodeCard from '@/app/components/cards/CodeCard';
+import DiaryCard from '@/app/components/cards/DiaryCard';
+import BookCard from '@/app/components/cards/BookCard';
 
-const ArticleCard = dynamic(() => import('@/app/components/cards/ArticleCard'), { 
-  ssr: false 
-});
-
-const ImageCard = dynamic(() => import('@/app/components/cards/ImageCard'), { 
-  ssr: false 
-});
-
-const CodeCard = dynamic(() => import('@/app/components/cards/CodeCard'), { 
-  ssr: false 
-});
-
-const DiaryCard = dynamic(() => import('@/app/components/cards/DiaryCard'), { 
-  ssr: false 
-});
-
-const BookCard = dynamic(() => import('@/app/components/cards/BookCard'), { 
-  ssr: false 
-});
-
-// 目录/侧边栏懒加载
+// 目录/侧边栏 - 非关键路径，懒加载
 const UnifiedNavigator = dynamic(() => import('@/app/components/sidebar/UnifiedNavigator'), { 
   ssr: false 
 });
@@ -163,6 +142,8 @@ function BookcasePageContent() {
   const offsetRef = useRef(offset);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const loadingRef = useRef(false); // 防止重复触发加载
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const loadingDelayTimerRef = useRef<number | null>(null);
 
   // 过滤条件状态
   const [allTags, setAllTags] = useState<string[]>([]); // 所有可用标签
@@ -185,16 +166,21 @@ function BookcasePageContent() {
   // 侧边栏展开状态（桌面端）
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
   
+  // 延迟加载导航组件
+  const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
+  
   // 保存配置引用
   const prevConfigRef = useRef<any | null>(null);
 
   // 切换目录抽屉的函数（移动端）- 使用 useCallback 固定引用
   const openCategoryDrawer = useCallback(() => {
+    setShouldLoadNavigator(true); // 首次打开时加载组件
     setDrawerVisible(true);
   }, []);
 
   // 切换侧边栏展开/收起（桌面端）- 使用 useCallback 固定引用
   const toggleSidebar = useCallback(() => {
+    setShouldLoadNavigator(true); // 首次打开时加载组件
     setSidebarExpanded((prev) => !prev);
   }, []);
 
@@ -224,34 +210,60 @@ function BookcasePageContent() {
       offsetRef.current = offset;
   }, [offset]);
 
-  // 章节管理成功后的刷新函数
-  const handleChapterManageSuccess = () => {
-    console.log('章节管理成功，刷新页面和侧边栏');
-    // 清除当前书籍的文章列表缓存，因为目录结构可能发生变化
-    if (categoryFromUrl) {
-      clearBookCache(categoryFromUrl);
-    }
-    // 刷新当前页面数据
-    setOffset(0);
-    setHasMore(true);
-    loadBookcaseArticles(0, false);
-    // 刷新侧边栏（通过更新key强制重新渲染）
-    setSidebarKey(prev => prev + 1);
-  };
-
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
+
+  // 强制滚动到顶部
+  useEffect(() => {
+    // 禁用自动滚动恢复
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    
+    // 强制滚动到顶部
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    // 重置侧边栏状态
+    setSidebarExpanded(false);
+    
+    // 组件卸载时恢复默认行为
+    return () => {
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
+  }, []);
 
   // 加载所有可用标签和预缓存书籍文章列表
   useEffect(() => {
+    const abortController = new AbortController();
+    let preloadTimer: NodeJS.Timeout | null = null;
+    
     async function loadTags() {
       try {
-        const response = await apiGet('/api/tags', { requiresAuth: false });
+        const response = await apiGet('/api/tags', { 
+          requiresAuth: false,
+          signal: abortController.signal 
+        });
+        
+        // 检查是否返回了 HTML（错误页面）
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('API 返回了非 JSON 响应');
+          return;
+        }
+        
         const result = await response.json();
 
         if (result.success) {
           setAllTags(result.tags.map((tag: any) => tag.name));
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.log('加载标签请求已取消');
+          return;
+        }
         console.error('加载标签失败:', error);
       }
     }
@@ -260,28 +272,66 @@ function BookcasePageContent() {
 
     // 后台预缓存所有书籍的文章列表，提升用户体验
     // 使用 setTimeout 避免阻塞页面初次加载
-    setTimeout(() => {
-      preloadAllBookArticleLists();
+    preloadTimer = setTimeout(() => {
+      if (!abortController.signal.aborted) {
+        preloadAllBookArticleLists();
+      }
     }, 2000); // 2秒后开始预缓存，给页面加载让路
+    
+    return () => {
+      abortController.abort();
+      if (preloadTimer) {
+        clearTimeout(preloadTimer);
+      }
+    };
   }, []);
 
 
   // 加载书架文章数据
-  const loadBookcaseArticles = useCallback(async (currentOffset: number, append: boolean = false) => {
+  const loadBookcaseArticles = useCallback(async (currentOffset: number, append: boolean = false, categoryId?: string | null) => {
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       if (append) {
         setLoadingMore(true);
       } else {
         setLoading(true);
+        // 延迟 500ms 显示"加载中"文字，避免闪烁
+        if (loadingDelayTimerRef.current) {
+          clearTimeout(loadingDelayTimerRef.current);
+        }
+        loadingDelayTimerRef.current = window.setTimeout(() => {
+          setShowLoading(true);
+        }, 500);
       }
       loadingRef.current = true;
 
       let articles: any[] = [];
 
+      // 使用传入的 categoryId 或当前的 categoryFromUrl
+      const targetCategory = categoryId !== undefined ? categoryId : categoryFromUrl;
+
       // 根据是否有category参数决定加载逻辑
-      if (!categoryFromUrl || categoryFromUrl === 'cat_bookcase') {
+      if (!targetCategory || targetCategory === 'cat_bookcase') {
         // 书橱根目录：一次性获取所有书籍分类及其第一篇文章
-        const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: true });
+        const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { 
+          requiresAuth: true,
+          signal: controller.signal
+        });
+        
+        // 检查响应类型
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('API 返回了非 JSON 响应（可能是 HTML 错误页面）');
+          throw new Error('API 返回了非 JSON 响应');
+        }
+        
         const result = await response.json();
 
         if (response.ok && result.success) {
@@ -340,18 +390,29 @@ function BookcasePageContent() {
         }
       } else {
         // 具体分类目录：显示该目录及其所有子目录下的所有article
-        console.log('加载分类目录:', categoryFromUrl);
+        console.log('加载分类目录:', targetCategory);
 
         // 直接调用API，让API自己处理递归获取所有子分类的文章
         const params = new URLSearchParams({
           status: 'published',
           limit: '1000', // 获取该分类及其所有子分类的所有文章
           offset: '0',
-          categoryId: categoryFromUrl,
+          categoryId: targetCategory,
           orderByPath: 'true', // 按path和order_index排序
         });
 
-        const response = await apiGet(`/api/articles/list?${params.toString()}`, { requiresAuth: false });
+        const response = await apiGet(`/api/articles/list?${params.toString()}`, { 
+          requiresAuth: false,
+          signal: controller.signal
+        });
+        
+        // 检查响应类型
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('API 返回了非 JSON 响应（可能是 HTML 错误页面）');
+          throw new Error('API 返回了非 JSON 响应');
+        }
+        
         const result = await response.json();
 
         let allArticles: any[] = [];
@@ -365,7 +426,7 @@ function BookcasePageContent() {
 
         // 缓存有序的文章ID列表，用于文章切换功能
         const articleIds = allArticles.map(article => article.id.toString());
-        cacheArticleList(categoryFromUrl, articleIds);
+        cacheArticleList(targetCategory, articleIds);
 
         // 应用分页
         const startIndex = currentOffset;
@@ -382,7 +443,11 @@ function BookcasePageContent() {
         setOffset(endIndex);
       }
 
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('请求已取消');
+        return;
+      }
       console.error('加载文章失败:', error);
       if (!append) {
         // 使用 mock 数据
@@ -395,29 +460,45 @@ function BookcasePageContent() {
       }
     } finally {
       setLoading(false);
+      setShowLoading(false);
       setLoadingMore(false);
       loadingRef.current = false;
+      // 清除延迟定时器
+      if (loadingDelayTimerRef.current) {
+        clearTimeout(loadingDelayTimerRef.current);
+        loadingDelayTimerRef.current = null;
+      }
     }
-  }, [categoryFromUrl, ITEMS_PER_PAGE]);
+  }, []);
 
-  // 延迟显示加载动画，避免快速切换时的闪烁
+  // 章节管理成功后的刷新函数
+  const handleChapterManageSuccess = useCallback(() => {
+    console.log('章节管理成功，刷新页面和侧边栏');
+    // 清除当前书籍的文章列表缓存，因为目录结构可能发生变化
+    if (categoryFromUrl) {
+      clearBookCache(categoryFromUrl);
+    }
+    // 刷新当前页面数据
+    setOffset(0);
+    setHasMore(true);
+    loadBookcaseArticles(0, false, categoryFromUrl);
+    // 刷新侧边栏（通过更新key强制重新渲染）
+    setSidebarKey(prev => prev + 1);
+  }, [categoryFromUrl, loadBookcaseArticles]);
+
+  // ✅ 组件卸载时清理资源，防止内存泄漏
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    
-    if (loading) {
-      // 延迟0ms后才显示加载动画
-      timer = setTimeout(() => {
-        setShowLoading(true);
-      }, 0);
-    } else {
-      // 加载完成，立即隐藏
-      setShowLoading(false);
-    }
-
     return () => {
-      if (timer) clearTimeout(timer);
+      // 取消所有请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      // 清除延迟定时器
+      if (loadingDelayTimerRef.current) {
+        clearTimeout(loadingDelayTimerRef.current);
+      }
     };
-  }, [loading]);
+  }, []);
 
   // 检查时间戳参数，强制刷新数据（用于从书籍编辑页跳转回来时刷新）
   useEffect(() => {
@@ -426,7 +507,9 @@ function BookcasePageContent() {
     if (timestampParam) {
       console.log('检测到时间戳参数，强制刷新书橱数据');
       // 强制刷新数据
-      loadBookcaseArticles(0, false);
+      setOffset(0);
+      setHasMore(true);
+      loadBookcaseArticles(0, false, categoryFromUrl);
       // 移除 URL 中的时间戳参数，避免重复刷新
       const newSearchParams = new URLSearchParams(searchParams.toString());
       newSearchParams.delete('t');
@@ -441,12 +524,15 @@ function BookcasePageContent() {
   // 初次加载和category变化时重新加载
   useEffect(() => {
     const timestampParam = searchParams.get('t');
-    // 如果有时戳参数，上面的 useEffect 会处理，这里跳过
+    // 如果有时间戳参数，上面的 useEffect 会处理，这里跳过
     if (timestampParam) return;
     
     console.log('加载数据库书籍数据，category:', categoryFromUrl);
-    loadBookcaseArticles(0, false);
-  }, [categoryFromUrl, searchParams, loadBookcaseArticles]);
+    setOffset(0);
+    setHasMore(true);
+    loadBookcaseArticles(0, false, categoryFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFromUrl]);
 
   // 过滤文章
   const filteredCards = useMemo(() => {
@@ -469,7 +555,7 @@ function BookcasePageContent() {
     return filtered;
   }, [cards, selectedTags, searchKeyword]);
 
-  // 使用 IntersectionObserver 代替 scroll 事件
+  // ✅ 使用 IntersectionObserver 代替 scroll 事件（使用 offsetRef 避免闭包问题）
   useEffect(() => {
       if (!hasMore) return;
 
@@ -479,7 +565,10 @@ function BookcasePageContent() {
       const observer = new IntersectionObserver(
           (entries) => {
               if (entries[0].isIntersecting && !loadingRef.current) {
-                  loadBookcaseArticles(offsetRef.current, true);
+                  loadingRef.current = true;
+                  loadBookcaseArticles(offsetRef.current, true, categoryFromUrl).finally(() => {
+                      loadingRef.current = false;
+                  });
               }
           },
           {
@@ -494,7 +583,7 @@ function BookcasePageContent() {
       return () => {
           observer.disconnect();
       };
-  }, [hasMore, loadBookcaseArticles]);
+  }, [hasMore, categoryFromUrl, loadBookcaseArticles]);
 
   // 点击卡片处理
   const handleCardClick = (card: any) => {
@@ -573,31 +662,25 @@ function BookcasePageContent() {
   }, [setConfig, box1Content]);
 
   // 根据文章类型渲染对应的卡片
-  const renderCard = (article: any, index: number) => {
+  const renderCard = useCallback((article: any, index: number) => {
     const handleClick = () => handleCardClick(article);
 
-    let cardComponent: React.ReactNode;
     switch (article.type) {
       case 'text':
-        cardComponent = <ArticleCard key={article.id} card={article} onClick={handleClick} />;
-        break;
+        return <ArticleCard key={article.id} card={article} onClick={handleClick} />;
       case 'image':
-        cardComponent = <ImageCard key={article.id} card={article} onClick={handleClick} />;
-        break;
+        return <ImageCard key={article.id} card={article} onClick={handleClick} />;
       case 'drawing':
-        cardComponent = <ImageCard key={article.id} card={{
+        return <ImageCard key={article.id} card={{
           ...article,
           description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
         }} onClick={handleClick} />;
-        break;
       case 'code':
-        cardComponent = <CodeCard key={article.id} card={article} onClick={handleClick} />;
-        break;
+        return <CodeCard key={article.id} card={article} onClick={handleClick} />;
       case 'diary':
-        cardComponent = <DiaryCard key={article.id} card={article} onClick={handleClick} />;
-        break;
+        return <DiaryCard key={article.id} card={article} onClick={handleClick} />;
       case 'book':
-        cardComponent = (
+        return (
           <BookCard 
             key={article.id} 
             card={article} 
@@ -611,20 +694,16 @@ function BookcasePageContent() {
               }
               setOffset(0);
               setHasMore(true);
-              loadBookcaseArticles(0, false);
+              loadBookcaseArticles(0, false, categoryFromUrl);
               setSidebarKey(prev => prev + 1);
               setDeleteMode(false);
             }}
           />
         );
-        break;
       default:
-        cardComponent = <CardRenderer key={article.id} card={article} onClick={handleClick} />;
-        break;
+        return <CardRenderer key={article.id} card={article} onClick={handleClick} />;
     }
-
-    return cardComponent;
-  };
+  }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles]);
 
   return (
     <>
@@ -641,7 +720,7 @@ function BookcasePageContent() {
         }}>
           {showLoading ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
-              加载中...
+              {/* 加载中... */}
             </div>
           ) : filteredCards.length === 0 ? (
             <Empty
@@ -652,7 +731,7 @@ function BookcasePageContent() {
           ) : (
             <>
               <div style={{ minHeight: '400px' }}>
-                <MasonryGrid minColumns={1}>
+                <MasonryGrid minColumns={2}>
                   {filteredCards.map((card, index) => (
                     <div key={card.id}>
                       {renderCard(card, index)}
@@ -695,35 +774,38 @@ function BookcasePageContent() {
         </div>
       </div>
 
-      <UnifiedNavigator
-        treeConfig={{
-          apiEndpoint: '/api/categories/{id}/tree-with-articles',
-          startCategoryId: 'cat_bookcase',
-          emptyText: '暂无书籍',
-          forceOpenRootKeys: true,
-          categoryNavigationPattern: '/bookcase?category={categoryId}',
-          articleNavigationPattern: '/book/{articleId}',
-          stylePrefix: 'book-category',
-          showArticleCount: false,
-          dataFormat: 'flat-tree',
-          findBookRoot: false,
-          defaultOpenMode: 'all',
-        }}
-        refreshKey={sidebarKey}
-        visible={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
-        selectedCategoryId={categoryFromUrl}
-        expanded={sidebarExpanded}
-        onExpandedChange={setSidebarExpanded}
-        onCategorySelect={(categoryId) => {
-          if (categoryId) {
-            router.push(`/bookcase?category=${categoryId}`);
-          } else {
-            router.push('/bookcase');
-          }
-        }}
-        drawerPaddingTop={true}
-      />
+      {/* 延迟加载导航组件，只有在用户打开时才加载 */}
+      {shouldLoadNavigator && (
+        <UnifiedNavigator
+          treeConfig={{
+            apiEndpoint: '/api/categories/{id}/tree-with-articles',
+            startCategoryId: 'cat_bookcase',
+            emptyText: '暂无书籍',
+            forceOpenRootKeys: true,
+            categoryNavigationPattern: '/bookcase?category={categoryId}',
+            articleNavigationPattern: '/book/{articleId}',
+            stylePrefix: 'book-category',
+            showArticleCount: false,
+            dataFormat: 'flat-tree',
+            findBookRoot: false,
+            defaultOpenMode: 'all',
+          }}
+          refreshKey={sidebarKey}
+          visible={drawerVisible}
+          onClose={() => setDrawerVisible(false)}
+          selectedCategoryId={categoryFromUrl}
+          expanded={sidebarExpanded}
+          onExpandedChange={setSidebarExpanded}
+          onCategorySelect={(categoryId) => {
+            if (categoryId) {
+              router.push(`/bookcase?category=${categoryId}`);
+            } else {
+              router.push('/bookcase');
+            }
+          }}
+          drawerPaddingTop={true}
+        />
+      )}
 
       <BookcaseActionFloat
         onChapterManageSuccess={handleChapterManageSuccess}
@@ -745,9 +827,5 @@ function BookcasePageContent() {
 }
 
 export default function BookcasePage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <BookcasePageContent />
-    </Suspense>
-  );
+  return <BookcasePageContent />;
 }

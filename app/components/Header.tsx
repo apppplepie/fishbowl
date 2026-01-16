@@ -28,7 +28,8 @@ interface HeaderProps {
 
 function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps) {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState<number>(1024);
+  const [windowWidth, setWindowWidth] = useState<number | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const { isLoggedIn, username, logout } = useAuth();
   const { isMobile } = useResponsive();
   const pathname = usePathname();
@@ -42,12 +43,24 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     // initHeavyIfAny();
   }, []);
 
-  // resize listener
+  // 标记组件已挂载，避免 hydration 不匹配
   useEffect(() => {
-    const updateWindowWidth = () => setWindowWidth(window.innerWidth || 1024);
+    setIsMounted(true);
+  }, []);
+
+  // resize listener - 只在客户端挂载后更新，避免 hydration 不匹配
+  useEffect(() => {
+    // 确保只在客户端执行
+    if (typeof window === 'undefined') return;
+    
+    const updateWindowWidth = () => setWindowWidth(window.innerWidth);
+    // 立即更新窗口宽度（此时组件已挂载）
     updateWindowWidth();
+    
     window.addEventListener('resize', updateWindowWidth);
-    return () => window.removeEventListener('resize', updateWindowWidth);
+    return () => {
+      window.removeEventListener('resize', updateWindowWidth);
+    };
   }, []);
 
   // login prompt listener
@@ -96,7 +109,11 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
 
   // 3) 生成 menuItems：只创建 label（因 pathname 会影响字体粗细，此处允许依赖 pathname）
   const menuItems = useMemo((): MenuProps['items'] => {
-    const showText = !isMobile && windowWidth > 568;
+    // 使用稳定的判断逻辑，避免 hydration 不匹配
+    // 在服务端和客户端首次渲染时，windowWidth 是 null，所以默认为 true（显示文本）
+    // 只有在客户端挂载并获取到实际窗口宽度后才使用真实判断
+    const effectiveWidth = windowWidth ?? 1024;
+    const showText = !isMobile && effectiveWidth > 568;
 
     const build = (itemsSource: Array<{ path: string; label: string; icon?: string }>) =>
       itemsSource.map(item => ({
@@ -106,10 +123,8 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
           <span style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
-            fontWeight: pathname === item.path ? 600 : 500,
           }}>
-            {item.icon && getIcon(item.icon)}
+            {item.icon && <span style={{ marginRight: '6px' }}>{getIcon(item.icon)}</span>}
             <span>{item.label}</span>
           </span>
         ) : (
@@ -122,7 +137,6 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
           </span>
         ),
         // NOTE: 不在这里给 onClick，统一由 Menu onClick 处理（减少函数创建）
-        // suppressHydrationWarning: true, // 可以保留或移除
       }));
 
     const publicItems = build(publicNavigationItems);
@@ -130,7 +144,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     const protectedItems = build(protectedNavigationItems);
     if (protectedItems.length === 0) return publicItems;
     return [...publicItems, ...protectedItems];
-  }, [isMobile, windowWidth, pathname, isLoggedIn, getIcon]);
+  }, [isMobile, windowWidth, isMounted, pathname, isLoggedIn, getIcon]);
 
   // memo style objects to avoid new object refs each render
   const containerStyle = useMemo(() => ({
@@ -151,14 +165,14 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     position: 'relative' as const,
     height: '45px',
     minHeight: '45px',
-    background: theme.colors.black,
+    background: '#000000',
     display: 'flex' as const,
     alignItems: 'center' as const,
     padding: isMobile ? '0 12px' : '0 24px',
     zIndex: 10001,
     pointerEvents: (isVisible ? 'auto' : 'none') as 'auto' | 'none',
     width: '100%',
-  }), [theme.colors.black, isMobile, isVisible]);
+  }), [isMobile, isVisible]);
 
   const centerStyle = useMemo(() => ({
     position: 'absolute' as const,
@@ -207,7 +221,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
               style={{
                 border: 'none',
                 background: 'transparent',
-                color: theme.text.primaryDark,
+                color: '#ffffff',
                 fontSize: isMobile ? 14 : 15,
                 fontWeight: 500,
                 lineHeight: '45px',
@@ -226,14 +240,14 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
                   gap: 6,
                   fontWeight: 500,
                   cursor: 'pointer',
-                  color: theme.text.primaryDark,
+                  color: '#ffffff',
                   fontSize: isMobile ? 14 : 15,
                   padding: '4px 8px',
                   borderRadius: 4,
                   transition: 'background-color 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  if (!isMobile) (e.currentTarget as HTMLElement).style.backgroundColor = theme.background.hover;
+                  if (!isMobile) (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                 }}
                 onMouseLeave={(e) => {
                   if (!isMobile) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
@@ -249,7 +263,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
                 icon={<LoginOutlined />}
                 onClick={openLoginModal}
                 style={{
-                  color: theme.text.primaryDark,
+                  color: '#ffffff',
                   border: 'none',
                   padding: isMobile ? '4px 8px' : '4px 12px',
                   height: 'auto',

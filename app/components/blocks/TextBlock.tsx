@@ -359,7 +359,10 @@ export default function TextBlock({
   if (mode === 'view') {
     const textContent = block.parsedContent as any;
     return (
-      <div>
+      <div style={{
+        width: '100%',
+        boxSizing: 'border-box',
+      }}>
         {/* Access Level 显示 */}
         <div style={{
           position: 'relative',

@@ -232,8 +232,8 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
           color: colors.textColor,
           opacity: 0.6,
         }}>
-          <ClockCircleOutlined />
-          <span>{formatRelativeTime(card.updatedAt)}</span>
+          {/* <ClockCircleOutlined />
+          <span>{formatRelativeTime(card.updatedAt)}</span> */}
         </div>
       </div>
 

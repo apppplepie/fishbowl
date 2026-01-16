@@ -138,13 +138,24 @@ export default function ArticlePage() {
   // 侧边栏展开状态（桌面端）
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
 
+  // 延迟加载导航组件，只有在用户打开时才加载
+  const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
+
+  // 延迟加载点赞和评论，优化首屏加载速度
+  const [shouldLoadInteractions, setShouldLoadInteractions] = useState(false);
+
+  // 文章内容渐显状态（等待 box1 加载完成）
+  const [contentVisible, setContentVisible] = useState(false);
+
   // 打开目录抽屉的函数（移动端）- 使用 useCallback 固定引用
   const openCategoryDrawer = useCallback(() => {
+    setShouldLoadNavigator(true); // 首次打开时加载组件
     setDrawerVisible(true);
   }, []);
   
   // 切换侧边栏展开/收起（桌面端）- 使用 useCallback 固定引用
   const toggleSidebar = useCallback(() => {
+    setShouldLoadNavigator(true); // 首次打开时加载组件
     setSidebarExpanded((prev) => !prev);
   }, []);
 
@@ -267,8 +278,53 @@ export default function ArticlePage() {
     loadArticle();
   }, [articleId, router]);
 
-  // 检查点赞状态
+  // 等待文章加载完成后渐显内容
   useEffect(() => {
+    if (article) {
+      // 短暂延迟后显示内容，让 box1 有时间渲染
+      const timer = setTimeout(() => {
+        setContentVisible(true);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setContentVisible(false);
+    }
+  }, [article]);
+
+  // 强制滚动到顶部，避免浏览器恢复滚动位置
+  useEffect(() => {
+    // 禁用自动滚动恢复
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    
+    // 强制滚动到顶部
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    // 组件卸载时恢复默认行为
+    return () => {
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
+  }, []);
+
+  // 延迟加载点赞和评论等交互功能（500ms 后加载，优化首屏速度）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShouldLoadInteractions(true);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 检查点赞状态（懒加载）
+  useEffect(() => {
+    if (!shouldLoadInteractions) return;
+    
     async function checkLikeStatus() {
       try {
         const response = await apiGet(`/api/articles/${articleId}/like`);
@@ -283,7 +339,7 @@ export default function ArticlePage() {
     }
 
     checkLikeStatus();
-  }, [articleId]);
+  }, [articleId, shouldLoadInteractions]);
 
   // 编辑时的临时数据
   const [editedArticle, setEditedArticle] = useState<any>(null);
@@ -1008,26 +1064,28 @@ export default function ArticlePage() {
 
   return (
     <>
-      {/* 统一的文章导航组件（自动适配移动端/桌面端） */}
-      <UnifiedNavigator
-        treeConfig={{
-          apiEndpoint: '/api/categories/tree-with-articles',
-          emptyText: '暂无文章',
-          forceOpenRootKeys: true,
-          categoryNavigationPattern: '/archive?category={categoryId}',
-          articleNavigationPattern: '/article/{articleId}',
-          stylePrefix: 'article-index-sidebar',
-          showArticleCount: true,
-          dataFormat: 'tree-with-articles',
-          defaultOpenMode: 'current-article-path',
-        }}
-        currentArticleId={articleId}
-        onArticleClick={handleArticleClick}
-        visible={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
-        expanded={sidebarExpanded}
-        onExpandedChange={setSidebarExpanded}
-      />
+      {/* 统一的文章导航组件（自动适配移动端/桌面端） - 延迟加载，只有在用户打开时才加载 */}
+      {shouldLoadNavigator && (
+        <UnifiedNavigator
+          treeConfig={{
+            apiEndpoint: '/api/categories/tree-with-articles',
+            emptyText: '暂无文章',
+            forceOpenRootKeys: true,
+            categoryNavigationPattern: '/archive?category={categoryId}',
+            articleNavigationPattern: '/article/{articleId}',
+            stylePrefix: 'article-index-sidebar',
+            showArticleCount: true,
+            dataFormat: 'tree-with-articles',
+            defaultOpenMode: 'current-article-path',
+          }}
+          currentArticleId={articleId}
+          onArticleClick={handleArticleClick}
+          visible={drawerVisible}
+          onClose={() => setDrawerVisible(false)}
+          expanded={sidebarExpanded}
+          onExpandedChange={setSidebarExpanded}
+        />
+      )}
 
 
       {/* 编辑悬浮按钮 - 使用后端API统一判断权限 */}
@@ -1047,11 +1105,21 @@ export default function ArticlePage() {
         />
       )}
 
-      <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), transition: 'margin-left 0.3s ease' }}>
+      <div style={{ 
+        marginLeft: isMobile ? 0 : (sidebarExpanded ? '280px' : '0'), 
+        transition: 'margin-left 0.3s ease',
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+      }}>
           <div style={{
             width: '100%',
-            maxWidth: '900px',
-            padding: isMobile ? '16px 12px' : '40px 24px',
+            maxWidth: '800px',
+            minWidth: isMobile ? 'auto' : '600px',
+            padding: isMobile ? '20px 16px' : '40px 20px',
+            opacity: contentVisible ? 1 : 0,
+            transition: 'opacity 0.3s ease',
+            boxSizing: 'border-box',
           }}>
             {/* 模式提示 */}
             {editMode !== 'view' && (
@@ -1202,15 +1270,18 @@ export default function ArticlePage() {
             {/* Part 2: 文章主体内容 */}
             <div
               style={{
-                background: 'white',
+                background: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(8px)',
                 minHeight: '100vh',
                 padding: isMobile ? (editMode === 'edit' ? '16px 8px' : '20px 12px') : '40px',
-                borderRadius: isMobile ? '8px' : '8px',
-                marginBottom: isMobile ? '16px' : '24px',
-                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                borderRadius: '12px',
+                marginBottom: isMobile ? '20px' : '40px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 lineHeight: '1.8',
                 fontSize: isMobile ? '15px' : '16px',
                 color: '#333',
+                width: '100%',
+                boxSizing: 'border-box',
               }}
               data-content-area
             >
@@ -1274,8 +1345,8 @@ export default function ArticlePage() {
               style={{
                 background: 'white',
                 padding: isMobile ? '20px 12px' : '32px 40px',
-                borderRadius: isMobile ? '8px' : '8px',
-                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                borderRadius: '12px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
               }}
               data-export-hide
             >
@@ -1318,13 +1389,15 @@ export default function ArticlePage() {
                 </Button>
               </div>
 
-              {/* 评论区 */}
-              <CommentSection
-                articleId={articleId}
-                currentUser={user ? { username: user.username, avatar: user.avatar_url, role: user.role } : null}
-                isLoggedIn={isLoggedIn}
-                onCommentCountChange={setCommentsCount}
-              />
+              {/* 评论区 - 懒加载 */}
+              {shouldLoadInteractions && (
+                <CommentSection
+                  articleId={articleId}
+                  currentUser={user ? { username: user.username, avatar: user.avatar_url, role: user.role } : null}
+                  isLoggedIn={isLoggedIn}
+                  onCommentCountChange={setCommentsCount}
+                />
+              )}
             </div>
           </div>
       </div>

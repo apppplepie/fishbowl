@@ -125,7 +125,10 @@ export default function CodeBlock({
   if (mode === 'view') {
     const codeContent = block.parsedContent as any;
     return (
-      <div>
+      <div style={{
+        width: '100%',
+        boxSizing: 'border-box',
+      }}>
         {/* Access Level 显示 */}
         <div
           style={{
@@ -156,6 +159,8 @@ export default function CodeBlock({
           padding: '20px',
           overflow: 'auto',
           position: 'relative',
+          width: '100%',
+          boxSizing: 'border-box',
         }}>
           {/* 复制按钮 */}
           <Button

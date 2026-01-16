@@ -74,9 +74,14 @@ export default function ArchiveClient({
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-    // 侧边栏展开状态（桌面端）
-    const [sidebarExpanded, setSidebarExpanded] = useState(false);
-    const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  // 侧边栏展开状态（桌面端）
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // 进入页面时重置侧边栏状态
+  useEffect(() => {
+    setSidebarExpanded(false);
+  }, []);
     const loadingRef = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const prevConfigRef = useRef<any | null>(null);
@@ -259,6 +264,26 @@ export default function ArchiveClient({
         }
     }, [initialArticles]);
 
+    // ✅ 强制滚动到顶部，阻止浏览器恢复滚动位置
+    useEffect(() => {
+        // 禁用自动滚动恢复
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        
+        // 强制滚动到顶部
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        
+        // 组件卸载时恢复默认行为
+        return () => {
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'auto';
+            }
+        };
+    }, []);
+
     // ✅ 组件卸载时清理资源，防止内存泄漏
     useEffect(() => {
         return () => {
@@ -440,7 +465,7 @@ export default function ArchiveClient({
                 }}>
                     {showLoading ? (
                         <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
-                            加载中...
+                            {/* 加载中... */}
                         </div>
                     ) : filteredCards.length === 0 ? (
                         <Empty

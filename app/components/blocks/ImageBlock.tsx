@@ -75,7 +75,10 @@ export default function ImageBlock({
   // 浏览模式渲染
   if (mode === 'view') {
     return (
-      <div>
+      <div style={{
+        width: '100%',
+        boxSizing: 'border-box',
+      }}>
         {/* Access Level 显示 */}
         <div
           style={{

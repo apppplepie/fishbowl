@@ -163,6 +163,21 @@ export default function BookPage() {
   // 侧边栏展开状态（桌面端）
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
 
+  // 延迟加载导航组件，只有在用户打开时才加载
+  const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
+
+  // 延迟加载点赞和评论，优化首屏加载速度（延迟2秒，确保主内容先加载）
+  const [shouldLoadInteractions, setShouldLoadInteractions] = useState(false);
+
+  // 延迟加载导航按钮（上一页/下一页）
+  const [shouldLoadNavigation, setShouldLoadNavigation] = useState(false);
+
+  // 延迟加载编辑功能
+  const [shouldLoadEditFloat, setShouldLoadEditFloat] = useState(false);
+
+  // 内容渐显状态（等待 box1 加载完成）
+  const [contentVisible, setContentVisible] = useState(false);
+
   // 章节标签缓存
   const chapterLabelCache = useChapterLabelCacheOptional();
 
@@ -473,6 +488,53 @@ export default function BookPage() {
   };
 
 
+  // 强制滚动到顶部，避免浏览器恢复滚动位置
+  useEffect(() => {
+    // 禁用自动滚动恢复
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    
+    // 强制滚动到顶部
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    // 组件卸载时恢复默认行为
+    return () => {
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
+  }, []);
+
+  // 延迟加载点赞和评论等交互功能（2秒后加载，确保主内容先完全展示）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShouldLoadInteractions(true);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 延迟加载导航按钮（1.5秒后加载）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShouldLoadNavigation(true);
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 延迟加载编辑功能（1秒后加载）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShouldLoadEditFloat(true);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // 初始化加载
   useEffect(() => {
     if (!articleId) return;
@@ -510,7 +572,21 @@ export default function BookPage() {
     }
   }, [articleId, scrollToTop]);
 
-  // 预加载下一篇文章（只在导航信息变化且缓存中没有时预加载）
+  // 等待内容加载完成后立即显示（移除不必要的延迟）
+  useEffect(() => {
+    if (contentLoadingState === 'loaded') {
+      // 使用 requestAnimationFrame 确保 DOM 已准备好
+      const rafId = requestAnimationFrame(() => {
+        setContentVisible(true);
+      });
+      
+      return () => cancelAnimationFrame(rafId);
+    } else {
+      setContentVisible(false);
+    }
+  }, [contentLoadingState]);
+
+  // 预加载下一篇文章（只在导航信息变化且缓存中没有时预加载，延迟5秒后执行）
   useEffect(() => {
     if (!navigation?.nextArticleId || articleCache.has(navigation.nextArticleId)) {
       return;
@@ -518,22 +594,28 @@ export default function BookPage() {
     
     let isMounted = true;
     
-    // 后台预加载下一篇文章（如果缓存中没有）
-    // 注意：fetchArticleContent 内部会检查缓存，所以这里即使调用也不会重复请求
-    fetchArticleContent(navigation.nextArticleId)
-      .then(() => {
-        if (!isMounted) {
-          console.log('组件已卸载，忽略预加载结果');
-        }
-      })
-      .catch(error => {
-        if (isMounted) {
-          console.log('预加载失败:', error); // 不显示错误，只记录日志
-        }
-      });
+    // 延迟5秒后预加载，确保不影响首屏加载
+    const timer = setTimeout(() => {
+      if (!isMounted || !navigation?.nextArticleId) return;
+      
+      // 后台预加载下一篇文章（如果缓存中没有）
+      // 注意：fetchArticleContent 内部会检查缓存，所以这里即使调用也不会重复请求
+      fetchArticleContent(navigation.nextArticleId)
+        .then(() => {
+          if (!isMounted) {
+            console.log('组件已卸载，忽略预加载结果');
+          }
+        })
+        .catch(error => {
+          if (isMounted) {
+            console.log('预加载失败:', error); // 不显示错误，只记录日志
+          }
+        });
+    }, 5000);
     
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
   }, [navigation?.nextArticleId, articleCache, fetchArticleContent]);
 
@@ -729,11 +811,13 @@ export default function BookPage() {
 
   // 打开目录抽屉的函数（移动端）- 使用 useCallback 固定引用
   const openCategoryDrawer = useCallback(() => {
+    setShouldLoadNavigator(true); // 首次打开时加载组件
     setDrawerVisible(true);
   }, []);
-
+  
   // 切换侧边栏展开/收起（桌面端）- 使用 useCallback 固定引用
   const toggleSidebar = useCallback(() => {
+    setShouldLoadNavigator(true); // 首次打开时加载组件
     setSidebarExpanded((prev) => !prev);
   }, []);
 
@@ -1180,46 +1264,54 @@ export default function BookPage() {
 
   return (
     <>
-      {/* 统一的章节导航组件（自动适配移动端/桌面端） */}
-      <UnifiedNavigator
-        treeConfig={{
-          apiEndpoint: '/api/categories/{id}/tree-with-articles',
-          startCategoryId: 'cat_bookcase',
-          emptyText: '暂无内容',
-          forceOpenRootKeys: false,
-          categoryNavigationPattern: '/bookcase?category={categoryId}',
-          articleNavigationPattern: '/book/{articleId}',
-          stylePrefix: 'chapter-index-sidebar',
-          showArticleCount: false,
-          dataFormat: 'flat-tree',
-          findBookRoot: false,
-          defaultOpenMode: 'current-article-path',
-        }}
-        currentArticleId={storeCurrentArticleId || articleId}
-        onArticleClick={handleArticleClick}
-        visible={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
-        expanded={sidebarExpanded}
-        onExpandedChange={setSidebarExpanded}
-      />
+      {/* 统一的章节导航组件（自动适配移动端/桌面端） - 延迟加载，只有在用户打开时才加载 */}
+      {shouldLoadNavigator && (
+        <UnifiedNavigator
+          treeConfig={{
+            apiEndpoint: '/api/categories/{id}/tree-with-articles',
+            startCategoryId: 'cat_bookcase',
+            emptyText: '暂无内容',
+            forceOpenRootKeys: false,
+            categoryNavigationPattern: '/bookcase?category={categoryId}',
+            articleNavigationPattern: '/book/{articleId}',
+            stylePrefix: 'chapter-index-sidebar',
+            showArticleCount: false,
+            dataFormat: 'flat-tree',
+            findBookRoot: false,
+            defaultOpenMode: 'current-article-path',
+          }}
+          currentArticleId={storeCurrentArticleId || articleId}
+          onArticleClick={handleArticleClick}
+          visible={drawerVisible}
+          onClose={() => setDrawerVisible(false)}
+          expanded={sidebarExpanded}
+          onExpandedChange={setSidebarExpanded}
+        />
+      )}
 
 
       <div style={{ 
         transform: isMobile ? 'translateX(0)' : (sidebarExpanded ? 'translateX(280px)' : 'translateX(0)'),
-        transition: 'transform 0.3s ease',
-        willChange: 'transform'
+        opacity: contentVisible ? 1 : 0,
+        transition: 'transform 0.3s ease, opacity 0.2s ease',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
       }}>
           {/* 书籍内容 */}
           <div
             style={{
+              width: '100%',
               maxWidth: '800px',
+              minWidth: isMobile ? 'auto' : '600px',
               minHeight: '100vh',
-              margin: '0 auto',
               padding: isMobile ? '20px 16px' : '40px 20px',
               background: 'rgba(255, 255, 255, 0.9)',
               backdropFilter: 'blur(8px)',
               borderRadius: '12px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              boxSizing: 'border-box',
             }}
             data-content-area
           >
@@ -1229,16 +1321,11 @@ export default function BookPage() {
                 onChange={(blocks) => setBook({ ...book, blocks })}
               />
             ) : (
-              // 渲染书籍内容
+              // 渲染书籍内容（简化动画，移除延迟，提升性能）
               <div>
                 {book.blocks && book.blocks.map((block: any, index: number) => {
-                  // 每个块延迟递增，让它们依次渐显
-                  const delay = index * 0.1; // 每个块延迟0.1秒
                   const blockStyle = {
                     marginBottom: block.type === 'text' ? (isMobile ? '16px' : '24px') : '24px',
-                    animation: 'fadeInUp 1s ease-out forwards',
-                    animationDelay: `${delay}s`,
-                    opacity: 0,
                   };
 
                   switch (block.type) {
@@ -1278,11 +1365,11 @@ export default function BookPage() {
             )}
           </div>
 
-          {/* 文章导航 */}
-          {navigation && !navigationLoading && (navigation.canGoPrev || navigation.canGoNext) && (
+          {/* 文章导航 - 延迟加载 */}
+          {shouldLoadNavigation && navigation && !navigationLoading && (navigation.canGoPrev || navigation.canGoNext) && (
             <div style={{
+              width: '100%',
               maxWidth: '800px',
-              margin: '0 auto',
               padding: isMobile ? '12px 8px 0' : '40px 20px 0',
               display: 'grid',
               gridTemplateColumns: '1fr auto 1fr',
@@ -1351,9 +1438,12 @@ export default function BookPage() {
           {/* 互动按钮 */}
           <div
             style={{
+              width: '100%',
               maxWidth: '800px',
+              minWidth: isMobile ? 'auto' : '600px',
               margin: '0 auto',
               padding: isMobile ? '20px 8px' : '40px 20px',
+              boxSizing: 'border-box',
             }}
             data-export-hide
           >
@@ -1362,8 +1452,8 @@ export default function BookPage() {
               style={{
                 background: 'white',
                 padding: isMobile ? '20px 12px' : '32px 40px',
-                borderRadius: isMobile ? '8px' : '8px',
-                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                borderRadius: '12px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
               }}
               data-export-hide
             >
@@ -1407,12 +1497,15 @@ export default function BookPage() {
               </div>
 
               {/* 评论区 */}
-              <CommentSection
-                articleId={currentArticleId}
-                isLoggedIn={isLoggedIn}
-                currentUser={user}
-                onCommentCountChange={setCommentsCount}
-              />
+              {/* 评论区 - 懒加载 */}
+              {shouldLoadInteractions && (
+                <CommentSection
+                  articleId={currentArticleId}
+                  isLoggedIn={isLoggedIn}
+                  currentUser={user}
+                  onCommentCountChange={setCommentsCount}
+                />
+              )}
             </div>
           </div>
       </div>
@@ -1424,8 +1517,8 @@ export default function BookPage() {
         imageUrl={selectedImage?.url || ''}
       />
 
-      {/* 编辑悬浮按钮 - 使用后端API统一判断权限 */}
-      {isLoggedIn && user && book && canEditArticle && (
+      {/* 编辑悬浮按钮 - 使用后端API统一判断权限，延迟加载 */}
+      {shouldLoadEditFloat && isLoggedIn && user && book && canEditArticle && (
         <ArticleEditFloat
           mode={editMode}
           onEdit={() => handleEditModeChange('edit')}
