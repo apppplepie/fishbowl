@@ -56,32 +56,36 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
       // 在函数式更新内部计算 actualConfig，使用 prev 而不是外部的 config
       const actualConfig = typeof newConfig === 'function' ? newConfig(prev) : newConfig;
 
-      console.log('[PageShellProvider] setConfig 被调用:', {
-        newConfig: {
-          hasBox1Content: !!actualConfig.box1Content,
-          hideBox1: actualConfig.hideBox1,
-          hasBox1Style: !!actualConfig.box1Style,
-          hasBox2Style: !!actualConfig.box2Style,
-          hasThemeOverride: !!actualConfig.themeOverride,
-          sidebarWidth: actualConfig.sidebarWidth,
-          sidebarExpanded: actualConfig.sidebarExpanded,
-        }
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[PageShellProvider] setConfig 被调用:', {
+          newConfig: {
+            hasBox1Content: !!actualConfig.box1Content,
+            hideBox1: actualConfig.hideBox1,
+            hasBox1Style: !!actualConfig.box1Style,
+            hasBox2Style: !!actualConfig.box2Style,
+            hasThemeOverride: !!actualConfig.themeOverride,
+            sidebarWidth: actualConfig.sidebarWidth,
+            sidebarExpanded: actualConfig.sidebarExpanded,
+          }
+        });
+      }
 
       const updated = {
         ...prev,
         ...actualConfig,
       };
 
-      console.log('[PageShellProvider] config 状态更新:', {
-        hasBox1Content: !!updated.box1Content,
-        hideBox1: updated.hideBox1,
-        hasBox1Style: !!updated.box1Style,
-        hasBox2Style: !!updated.box2Style,
-        hasThemeOverride: !!updated.themeOverride,
-        sidebarWidth: updated.sidebarWidth,
-        sidebarExpanded: updated.sidebarExpanded,
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[PageShellProvider] config 状态更新:', {
+          hasBox1Content: !!updated.box1Content,
+          hideBox1: updated.hideBox1,
+          hasBox1Style: !!updated.box1Style,
+          hasBox2Style: !!updated.box2Style,
+          hasThemeOverride: !!updated.themeOverride,
+          sidebarWidth: updated.sidebarWidth,
+          sidebarExpanded: updated.sidebarExpanded,
+        });
+      }
 
       return updated;
     });

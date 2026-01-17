@@ -1,87 +1,72 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, ReactNode } from 'react';
 
 interface ResponsiveContextType {
   isMobile: boolean;
   screenWidth: number;
+  mounted: boolean; // 用于渐显策略
 }
 
 const ResponsiveContext = createContext<ResponsiveContextType | undefined>(undefined);
 
 /**
- * 响应式 Provider
- * 提供全局的响应式状态，确保所有组件使用相同的 isMobile 值
- * 
- * ⚠️ SSR Hydration 修复说明：
- * 为了避免服务器端渲染（SSR）和客户端水合（Hydration）不匹配的问题：
- * 1. 初始状态始终使用固定值（isMobile=false, screenWidth=1920），与服务器端保持一致
- * 2. 不在 useState 初始化时检查 window，因为这会导致服务器和客户端渲染不同的内容
- * 3. 使用 useEffect（而非 useLayoutEffect）在客户端水合完成后更新为实际的窗口尺寸
- * 4. 这样可以确保初次渲染时 DOM 结构完全一致，避免 React hydration mismatch 错误
- * 
- * 🚀 性能优化说明：
- * 1. 添加 100ms 防抖机制，避免 resize 事件频繁触发重渲染
- * 2. 只在值真正变化时才更新状态（使用函数式 setState 比较前后值）
- * 3. 防止页面路由切换时的状态抖动，减少 CPU 负载
- * 
- * 权衡：用户可能会看到短暂的布局闪烁（从桌面布局切换到移动布局），但这是 SSR 安全的标准做法
+ * 响应式 Provider - 移动端优先渐显策略
+ * 初始值设为移动端，客户端挂载后渐显更新到真实值
+ * 优点：
+ * 1. 移动端用户（占大多数）体验最佳，无闪烁
+ * 2. 桌面端用户看到轻微的渐显而非突然跳变
+ * 3. SSR 和首次渲染保持一致
  */
 export function ResponsiveProvider({ children }: { children: ReactNode }) {
-  // 始终使用固定的初始值，确保服务器端和客户端初始渲染一致
-  const [isMobile, setIsMobile] = useState(false);
-  const [screenWidth, setScreenWidth] = useState(1920);
+  // 移动端优先：初始值设为移动端（更符合实际用户分布）
+  const [isMobile, setIsMobile] = useState(true);
+  const [screenWidth, setScreenWidth] = useState(375); // iPhone 标准宽度
+  const [mounted, setMounted] = useState(false);
 
+  // 使用 useLayoutEffect 在首次绘制前更新为真实值
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const w = window.innerWidth;
+    const mobile = w < 768;
+    
+    // 更新为真实值
+    setScreenWidth(w);
+    setIsMobile(mobile);
+    // 标记已挂载，触发渐显
+    setMounted(true);
+  }, []);
+
+  // 监听 resize 事件
   useEffect(() => {
-    // 此 effect 只在客户端水合（hydration）完成后运行
+    if (typeof window === 'undefined') return;
+    
     let timeoutId: number | null = null;
     
-    const checkResponsive = () => {
-      const width = window.innerWidth;
-      const mobile = width < 768;
-      
-      // ✅ 只在值真正变化时才更新状态，避免不必要的重渲染
-      setScreenWidth(prevWidth => {
-        if (prevWidth !== width) {
-          return width;
-        }
-        return prevWidth;
-      });
-      
-      setIsMobile(prevMobile => {
-        if (prevMobile !== mobile) {
-          return mobile;
-        }
-        return prevMobile;
+    const update = () => {
+      const w = window.innerWidth;
+      setScreenWidth(prev => prev !== w ? w : prev);
+      setIsMobile(prev => {
+        const mobile = w < 768;
+        return prev !== mobile ? mobile : prev;
       });
     };
 
-    // 初始检测（在 hydration 之后）
-    checkResponsive();
-
-    // ✅ 监听窗口大小变化（带防抖，避免频繁触发重渲染）
     const handleResize = () => {
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
-      }
-      timeoutId = window.setTimeout(() => {
-        checkResponsive();
-        timeoutId = null;
-      }, 100); // 100ms 防抖，平衡响应速度和性能
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(update, 150); // 防抖 150ms
     };
 
     window.addEventListener('resize', handleResize);
-    
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
-      }
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
 
   return (
-    <ResponsiveContext.Provider value={{ isMobile, screenWidth }}>
+    <ResponsiveContext.Provider value={{ isMobile, screenWidth, mounted }}>
       {children}
     </ResponsiveContext.Provider>
   );

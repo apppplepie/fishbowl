@@ -7,16 +7,17 @@ import { useResponsiveContext } from '../contexts/ResponsiveContext';
  * 检测设备屏幕大小，用于适配移动端和桌面端
  * 
  * 现在使用全局 Context 来确保所有页面使用相同的响应式状态
+ * 支持渐显策略：mounted 状态用于控制内容的渐显效果
  */
 export function useResponsive(breakpoint: number = 768) {
-  const { isMobile: contextIsMobile, screenWidth } = useResponsiveContext();
+  const { isMobile: contextIsMobile, screenWidth, mounted } = useResponsiveContext();
   
   // 如果使用默认断点（768），直接返回 Context 中的值
   if (breakpoint === 768) {
-    return { isMobile: contextIsMobile };
+    return { isMobile: contextIsMobile, mounted };
   }
   
   // 如果使用自定义断点，基于 screenWidth 计算
-  return { isMobile: screenWidth < breakpoint };
+  return { isMobile: screenWidth < breakpoint, mounted };
 }
 

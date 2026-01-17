@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
@@ -828,5 +828,9 @@ function BookcasePageContent() {
 }
 
 export default function BookcasePage() {
-  return <BookcasePageContent />;
+  return (
+    <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>}>
+      <BookcasePageContent />
+    </Suspense>
+  );
 }

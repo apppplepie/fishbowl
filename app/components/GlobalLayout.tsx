@@ -20,23 +20,6 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
   // 固定 main 的 style 对象，避免每次渲染都创建新对象
   const mainStyle = useMemo(() => ({ paddingTop: isHomePage ? '0' : '45px' }), [isHomePage]);
 
-  // 阶段 4：PageShell 功能开关
-  const ENABLE_PAGE_SHELL = [
-    '/gallery',
-    '/register',
-    '/publish-article',
-    '/publish-book',
-    '/publish-chapter',
-    '/profile',
-    '/archive',
-    '/bookcase',
-    '/article',
-    '/book',
-  ].some(path => pathname === path || pathname.startsWith(path + '/'));
-
-  // 调试日志
-  console.log('🏗️ GlobalLayout 渲染:', { pathname, isHomePage, ENABLE_PAGE_SHELL });
-
   return (
     <>
       {/* Header 永驻，不随路由卸载（首页除外） */}
@@ -97,14 +80,13 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* ===== 关键修改 ===== */}
-      {ENABLE_PAGE_SHELL ? (
-        /* PageShell 模式 - children 渲染在 PageShell 的 Box2 里 */
+      {/* PageShell 永驻，不随路由卸载（首页除外） */}
+      {!isHomePage ? (
         <PageShell>
           {children}
         </PageShell>
       ) : (
-        /* 传统模式 */
+        /* 首页使用传统模式 */
         <main style={mainStyle}>
           {children}
         </main>

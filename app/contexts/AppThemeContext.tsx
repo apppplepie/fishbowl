@@ -48,38 +48,26 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
   React.useLayoutEffect(() => {
     if (typeof window !== 'undefined') {
       setMounted(true);
-      console.log('[AppThemeProvider] 设置 mounted = true');
     }
   }, []);
 
   // 在客户端挂载后从 localStorage 恢复主题状态
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      console.log('[AppThemeProvider] 开始恢复主题状态...');
-
       const savedThemeId = localStorage.getItem('fishbowl_theme_id');
       const savedSkyHue = localStorage.getItem('fishbowl_sky_hue');
       const savedWaterHue = localStorage.getItem('fishbowl_water_hue');
 
-      console.log('[AppThemeProvider] LocalStorage 数据:', {
-        savedThemeId,
-        savedSkyHue,
-        savedWaterHue
-      });
-
       if (savedThemeId) {
         setActiveFishbowlThemeId(savedThemeId);
-        console.log('[AppThemeProvider] 恢复主题ID:', savedThemeId);
       }
 
       if (savedSkyHue) {
         setSkyHue(parseInt(savedSkyHue, 10));
-        console.log('[AppThemeProvider] 恢复天空色相:', savedSkyHue);
       }
 
       if (savedWaterHue) {
         setWaterHue(parseInt(savedWaterHue, 10));
-        console.log('[AppThemeProvider] 恢复水色相:', savedWaterHue);
       }
     }
   }, []);
@@ -105,22 +93,9 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
 
   // 计算当前鱼缸主题
   const currentFishbowlTheme: Theme = useMemo(() => {
-    console.log('[AppThemeProvider] 计算 currentFishbowlTheme:', {
-      activeFishbowlThemeId,
-      skyHue,
-      waterHue,
-      mounted,
-      availableThemes: themes.map(t => t.id)
-    });
-
     let theme: Theme;
     if (activeFishbowlThemeId !== 'custom') {
       theme = themes.find(t => t.id === activeFishbowlThemeId) || themes[0];
-      console.log('[AppThemeProvider] 使用预设主题:', {
-        found: !!themes.find(t => t.id === activeFishbowlThemeId),
-        themeId: theme.id,
-        themeName: theme.name
-      });
     } else {
       theme = {
         id: 'custom',
@@ -146,20 +121,7 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
           containerPaddingTop: '0px',
         }
       };
-      console.log('[AppThemeProvider] 生成自定义主题:', {
-        skyHue,
-        waterHue,
-        skyGradient: theme.skyGradient,
-        waterGradient: theme.waterGradient
-      });
     }
-
-    console.log('[AppThemeProvider] currentFishbowlTheme 最终值:', {
-      id: theme.id,
-      name: theme.name,
-      hasSkyGradient: !!theme.skyGradient,
-      hasWaterGradient: !!theme.waterGradient
-    });
 
     return theme;
   }, [activeFishbowlThemeId, skyHue, waterHue]);

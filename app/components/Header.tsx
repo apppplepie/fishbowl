@@ -28,10 +28,8 @@ interface HeaderProps {
 
 function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps) {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState<number | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const { isLoggedIn, username, logout } = useAuth();
-  const { isMobile } = useResponsive();
+  const { isMobile, mounted } = useResponsive();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -41,26 +39,6 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     if (initedRef.current) return;
     initedRef.current = true;
     // initHeavyIfAny();
-  }, []);
-
-  // 标记组件已挂载，避免 hydration 不匹配
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // resize listener - 只在客户端挂载后更新，避免 hydration 不匹配
-  useEffect(() => {
-    // 确保只在客户端执行
-    if (typeof window === 'undefined') return;
-    
-    const updateWindowWidth = () => setWindowWidth(window.innerWidth);
-    // 立即更新窗口宽度（此时组件已挂载）
-    updateWindowWidth();
-    
-    window.addEventListener('resize', updateWindowWidth);
-    return () => {
-      window.removeEventListener('resize', updateWindowWidth);
-    };
   }, []);
 
   // login prompt listener
@@ -109,11 +87,9 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
 
   // 3) 生成 menuItems：只创建 label（因 pathname 会影响字体粗细，此处允许依赖 pathname）
   const menuItems = useMemo((): MenuProps['items'] => {
-    // 使用稳定的判断逻辑，避免 hydration 不匹配
-    // 在服务端和客户端首次渲染时，windowWidth 是 null，所以默认为 true（显示文本）
-    // 只有在客户端挂载并获取到实际窗口宽度后才使用真实判断
-    const effectiveWidth = windowWidth ?? 1024;
-    const showText = !isMobile && effectiveWidth > 568;
+    // 移动端只显示图标，桌面端显示图标+文字
+    // 使用 ResponsiveContext 的 isMobile 判断，确保服务端和客户端首次渲染一致
+    const showText = !isMobile;
 
     const build = (itemsSource: Array<{ path: string; label: string; icon?: string }>) =>
       itemsSource.map(item => ({
@@ -144,7 +120,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     const protectedItems = build(protectedNavigationItems);
     if (protectedItems.length === 0) return publicItems;
     return [...publicItems, ...protectedItems];
-  }, [isMobile, windowWidth, isMounted, pathname, isLoggedIn, getIcon]);
+  }, [isMobile, pathname, isLoggedIn, getIcon]);
 
   // memo style objects to avoid new object refs each render
   const containerStyle = useMemo(() => ({
@@ -180,7 +156,9 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     top: '50%',
     transform: 'translate(-50%, -50%)',
     pointerEvents: 'auto' as const,
-  }), []);
+    opacity: mounted ? 1 : 0.8,
+    transition: 'opacity 0.2s ease-in-out',
+  }), [mounted]);
 
   // right area style memo
   const rightStyle = useMemo(() => ({
@@ -189,7 +167,9 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     alignItems: 'center',
     gap: 8,
     marginLeft: 'auto',
-  }), []);
+    opacity: mounted ? 1 : 0.8,
+    transition: 'opacity 0.2s ease-in-out',
+  }), [mounted]);
 
   // handler for login modal
   const openLoginModal = useCallback(() => setLoginModalOpen(true), []);
