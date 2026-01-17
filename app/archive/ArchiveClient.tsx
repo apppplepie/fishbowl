@@ -175,7 +175,7 @@ export default function ArchiveClient({
             const response = await apiGet(
                 `/api/articles/list?${params.toString()}`,
                 {
-                    requiresAuth: true,
+                    requiresAuth: false,
                     signal: controller.signal // 添加 signal
                 }
             );
@@ -263,6 +263,21 @@ export default function ArchiveClient({
             }
         }
     }, [initialArticles]);
+
+    // ✅ 发布后强制刷新一次（通过 ?refresh=1）
+    useEffect(() => {
+        const refreshFlag = searchParams.get('refresh');
+        if (refreshFlag === '1') {
+            setOffset(0);
+            setHasMore(true);
+            loadArticles(0, false, selectedCategoryId).finally(() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete('refresh');
+                const query = params.toString();
+                router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+            });
+        }
+    }, [searchParams, pathname, router, loadArticles, selectedCategoryId]);
 
     // ✅ 强制滚动到顶部，阻止浏览器恢复滚动位置
     useEffect(() => {

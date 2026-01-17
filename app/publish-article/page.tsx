@@ -211,9 +211,9 @@ export default function PublishArticlePage() {
         }]);
         // 清除草稿
         localStorage.removeItem('article-draft');
-        // 跳转到归档页
+        // 跳转到归档页（带 refresh 参数强制客户端刷新列表）
         setTimeout(() => {
-          router.push('/archive');
+          router.push('/archive?refresh=1');
         }, 1000);
       } else {
         message.error(result.error || '发布失败，请重试');
