@@ -11,13 +11,14 @@ export interface ArticleCardProps {
   card: ArticleCardType | any;
   onClick?: () => void;
   priority?: boolean;
+  className?: string;
 }
 
 /**
  * B. 文章主导卡片
  * 标题+摘要+封面图，适合博客文章、长篇内容
  */
-export default function ArticleCard({ card, onClick, priority = false }: ArticleCardProps) {
+export default function ArticleCard({ card, onClick, priority = false, className = '' }: ArticleCardProps) {
   // 使用卡片背景颜色 Hook，基于文章 ID 生成独特的渐变色
   const colors = useCardBackground(card.id || card._id?.toString() || '');
 
@@ -27,6 +28,7 @@ export default function ArticleCard({ card, onClick, priority = false }: Article
       id={card.id || card._id?.toString() || ''}
       onClick={onClick}
       bodyStyle={{ padding: '20px' }}
+      className={className}
     >
 
 

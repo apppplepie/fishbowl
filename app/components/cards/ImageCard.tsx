@@ -12,13 +12,14 @@ export interface ImageCardProps {
   card: ImageCardType | any;
   onClick?: () => void;
   priority?: boolean;
+  className?: string;
 }
 
 /**
  * A. 图片主导卡片
  * 大图展示，适合摄影作品、视觉内容
  */
-export default function ImageCard({ card, onClick, priority = false }: ImageCardProps) {
+export default function ImageCard({ card, onClick, priority = false, className = '' }: ImageCardProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
 
@@ -28,6 +29,7 @@ export default function ImageCard({ card, onClick, priority = false }: ImageCard
     <Card
       hoverable
       id={card.id?.toString() || card._id?.toString() || ''}
+      className={className}
       onClick={onClick}
       bodyStyle={{ padding: 0 }}
     >

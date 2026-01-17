@@ -8,16 +8,18 @@ import type { LinkCard as LinkCardType } from '@/app/types/card';
 interface LinkCardProps {
   card: LinkCardType;
   onClick?: () => void;
+  className?: string;
 }
 
 /**
  * F. 链接卡片
  * 外部链接预览，适合分享网页、资源
  */
-export default function LinkCard({ card, onClick }: LinkCardProps) {
+export default function LinkCard({ card, onClick, className = '' }: LinkCardProps) {
   return (
     <Card
       hoverable
+      className={className}
       style={{ 
         borderRadius: '12px',
         overflow: 'hidden',

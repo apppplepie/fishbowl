@@ -13,6 +13,7 @@ interface BookCardProps {
   onClick?: () => void;
   onDeleteSuccess?: () => void;
   showDeleteIcon?: boolean;
+  className?: string;
 }
 
 /**
@@ -21,7 +22,7 @@ interface BookCardProps {
  * 封面图来自该目录下 order_index 最小的文章的第一张图片
  * 点击跳转到书籍详情页 /book/[id]
  */
-export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIcon = false }: BookCardProps) {
+export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIcon = false, className = '' }: BookCardProps) {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
@@ -55,6 +56,7 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
         cursor: showDeleteIcon ? 'default' : 'pointer',
       }}
       bodyStyle={{ padding: '16px' }}
+      className={className}
       cover={
         <div style={{
           position: 'relative',

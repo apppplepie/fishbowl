@@ -11,10 +11,10 @@ import { apiGet } from '@/lib/apiClient';
 import { Empty, LoadEnd, Input } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 
-// 轻量级瀑布流组件
-import MasonryGrid from '@/app/components/layout/MasonryGrid';
+// ✨ 使用 CSS Grid Masonry 版本
+import MasonryGridCSS from '@/app/components/layout/MasonryGridCSS';
 
-// 卡片组件 - 首屏直接加载（启用 SSR）
+// 卡片组件
 import ArticleCard from '@/app/components/cards/ArticleCard';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
@@ -31,22 +31,21 @@ const UnifiedNavigatorButton = dynamic(
     { ssr: false }
 ) as React.ComponentType<{ onClick?: () => void; expanded?: boolean; onToggle?: () => void }>;
 
-interface ArchiveClientProps {
+interface ArchiveCSSClientProps {
     initialArticles?: any[];
     initialHasMore?: boolean;
-    initialOffset?: number; // 新增：服务端已渲染的数量
+    initialOffset?: number;
 }
 
 /**
- * 文章归档页面客户端组件
- * 只负责 7+ 条、搜索/筛选/分页的交互部分
- * 首屏 6 条由 Server Component 渲染，无需 hydration
+ * 文章归档页面客户端组件 - CSS Grid Masonry 版本
+ * 使用浏览器原生 masonry 布局，零 JavaScript 测量
  */
-export default function ArchiveClient({
+export default function ArchiveCSSClient({
     initialArticles = [],
     initialHasMore = true,
     initialOffset = 0
-}: ArchiveClientProps) {
+}: ArchiveCSSClientProps) {
     const { isMobile } = useResponsive();
     const { currentFishbowlTheme } = useAppTheme();
     const { setConfig } = usePageShell();
@@ -54,42 +53,37 @@ export default function ArchiveClient({
     const searchParams = useSearchParams();
     const pathname = usePathname();
 
-    // 使用服务端预取的数据初始化
     const [cards, setCards] = useState<any[]>(initialArticles);
-    const [loading, setLoading] = useState(false); // 首屏已由 server 渲染，不需要 loading
-    const [showLoading, setShowLoading] = useState(false); // 延迟显示加载中文字
+    const [loading, setLoading] = useState(false);
+    const [showLoading, setShowLoading] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [offset, setOffset] = useState(initialOffset || initialArticles.length);
-    const offsetRef = useRef(offset); // 用于 IntersectionObserver
-    const loadingDelayTimerRef = useRef<number | null>(null); // 用于延迟显示加载中
+    const offsetRef = useRef(offset);
+    const loadingDelayTimerRef = useRef<number | null>(null);
     const { setLeftContent } = useHeader();
 
-    // 过滤条件状态
     const [allTags, setAllTags] = useState<string[]>([]);
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [searchKeyword, setSearchKeyword] = useState('');
 
-    // 目录抽屉状态（移动端）
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  // 侧边栏展开状态（桌面端）
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+    const [sidebarExpanded, setSidebarExpanded] = useState(false);
+    const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  // 进入页面时重置侧边栏状态
-  useEffect(() => {
-    setSidebarExpanded(false);
-  }, []);
+    useEffect(() => {
+        setSidebarExpanded(false);
+    }, []);
+    
     const loadingRef = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const prevConfigRef = useRef<any | null>(null);
-    const prevInitialArticlesRef = useRef(initialArticles); // 用于追踪 initialArticles 变化
+    const prevInitialArticlesRef = useRef(initialArticles);
 
     const ITEMS_PER_PAGE = 15;
 
-    // 切换目录抽屉的函数
     const openCategoryDrawer = useCallback(() => {
         setDrawerVisible(true);
     }, []);
@@ -116,7 +110,6 @@ export default function ArchiveClient({
         };
     }, [setLeftContent, leftContentElement]);
 
-    // 从 URL 参数初始化分类筛选
     useEffect(() => {
         const categoryParam = searchParams.get('category');
         if (categoryParam) {
@@ -124,7 +117,6 @@ export default function ArchiveClient({
         }
     }, [searchParams]);
 
-    // 同步 offset 到 ref
     useEffect(() => {
         offsetRef.current = offset;
     }, [offset]);
@@ -133,9 +125,8 @@ export default function ArchiveClient({
         currentOffset: number,
         append: boolean = false,
         categoryId?: string | null,
-        query?: { search?: string } // 新增：支持搜索参数
+        query?: { search?: string }
     ) => {
-        // 取消之前的请求
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
@@ -148,7 +139,6 @@ export default function ArchiveClient({
                 setLoadingMore(true);
             } else {
                 setLoading(true);
-                // 延迟 500ms 显示"加载中"文字，避免闪烁
                 if (loadingDelayTimerRef.current) {
                     clearTimeout(loadingDelayTimerRef.current);
                 }
@@ -167,7 +157,6 @@ export default function ArchiveClient({
                 params.append('categoryId', categoryId);
             }
 
-            // 添加搜索参数
             if (query?.search) {
                 params.append('search', query.search);
             }
@@ -176,7 +165,7 @@ export default function ArchiveClient({
                 `/api/articles/list?${params.toString()}`,
                 {
                     requiresAuth: true,
-                    signal: controller.signal // 添加 signal
+                    signal: controller.signal
                 }
             );
 
@@ -211,7 +200,6 @@ export default function ArchiveClient({
             setShowLoading(false);
             setLoadingMore(false);
             loadingRef.current = false;
-            // 清除延迟定时器
             if (loadingDelayTimerRef.current) {
                 clearTimeout(loadingDelayTimerRef.current);
                 loadingDelayTimerRef.current = null;
@@ -219,7 +207,6 @@ export default function ArchiveClient({
         }
     }, []);
 
-    // ✅ 使用 IntersectionObserver 代替 scroll 事件（使用 offsetRef 避免闭包问题）
     useEffect(() => {
         if (!hasMore) return;
 
@@ -237,7 +224,7 @@ export default function ArchiveClient({
             },
             {
                 root: null,
-                rootMargin: '400px', // 提前400px加载
+                rootMargin: '400px',
                 threshold: 0,
             }
         );
@@ -249,12 +236,7 @@ export default function ArchiveClient({
         };
     }, [hasMore, selectedCategoryId, loadArticles]);
 
-    // 注释掉：服务端已经提供初始数据，不需要客户端再次加载
-    // 移除此 useEffect 避免重复加载和 React Strict Mode 的双重调用问题
-
-    // ✅ 同步 initialArticles 到 cards 状态（修复页面切换时的闪烁问题）
     useEffect(() => {
-        // 只在 initialArticles 引用改变时才更新
         if (initialArticles !== prevInitialArticlesRef.current) {
             prevInitialArticlesRef.current = initialArticles;
             if (initialArticles.length > 0) {
@@ -264,19 +246,15 @@ export default function ArchiveClient({
         }
     }, [initialArticles]);
 
-    // ✅ 强制滚动到顶部，阻止浏览器恢复滚动位置
     useEffect(() => {
-        // 禁用自动滚动恢复
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
         }
         
-        // 强制滚动到顶部
         window.scrollTo(0, 0);
         document.documentElement.scrollTop = 0;
         document.body.scrollTop = 0;
         
-        // 组件卸载时恢复默认行为
         return () => {
             if ('scrollRestoration' in history) {
                 history.scrollRestoration = 'auto';
@@ -284,30 +262,24 @@ export default function ArchiveClient({
         };
     }, []);
 
-    // ✅ 组件卸载时清理资源，防止内存泄漏
     useEffect(() => {
         return () => {
-            // 取消所有请求
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
             }
-            // 清除延迟定时器
             if (loadingDelayTimerRef.current) {
                 clearTimeout(loadingDelayTimerRef.current);
             }
         };
     }, []);
 
-    // ✅ 防抖搜索 - 350ms 延迟
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             if (searchKeyword.trim()) {
-                // 有搜索关键词时，重新加载
                 setOffset(0);
                 setHasMore(true);
                 loadArticles(0, false, selectedCategoryId, { search: searchKeyword });
             } else if (searchKeyword === '') {
-                // 清空搜索时，重新加载（仅当关键词从非空变为空时）
                 setOffset(0);
                 setHasMore(true);
                 loadArticles(0, false, selectedCategoryId);
@@ -315,10 +287,8 @@ export default function ArchiveClient({
         }, 350);
 
         return () => clearTimeout(timeoutId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchKeyword, selectedCategoryId]); // 移除 loadArticles 依赖，避免不必要的重新创建
+    }, [searchKeyword, selectedCategoryId]);
 
-    // 过滤文章（仅用于客户端标签筛选，搜索由服务端处理）
     const filteredCards = useMemo(() => {
         return cards.filter(article => {
             const matchTags = selectedTags.length === 0 ||
@@ -328,7 +298,6 @@ export default function ArchiveClient({
         });
     }, [cards, selectedTags]);
 
-    // 点击卡片处理
     const handleCardClick = useCallback((card: any) => {
         if (card.type === 'text' || card.type === 'image' || card.type === 'code' ||
             card.type === 'diary' || card.type === 'drawing' || card.type === 'article') {
@@ -336,7 +305,6 @@ export default function ArchiveClient({
         }
     }, [router]);
 
-    // ✅ 修复 handleCategorySelect - 立即加载数据
     const handleCategorySelect = useCallback((categoryId: string | null) => {
         setSelectedCategoryId(categoryId);
         setOffset(0);
@@ -344,15 +312,13 @@ export default function ArchiveClient({
         setSelectedTags([]);
         setSearchKeyword('');
 
-        // 立即加载新分类的第一页
         loadArticles(0, false, categoryId);
     }, [loadArticles]);
 
-    // ✅ 渲染卡片（添加 priority 属性 + masonry-item className）
     const renderCard = useCallback((article: any, index: number) => {
         const handleClick = () => handleCardClick(article);
-        const isPriority = index < 6; // 首屏前6个优先加载
-        const masonryClassName = 'masonry-item'; // 瀑布流布局需要的 className
+        const isPriority = index < 6;
+        const masonryClassName = 'masonry-item';
 
         switch (article.type) {
             case 'text':
@@ -379,8 +345,6 @@ export default function ArchiveClient({
         }
     }, [handleCardClick]);
 
-    // Box1 内容
-    // 第 318-360 行，修改 box1Content
     const box1Content = useMemo(() => (
         <div style={{ padding: '16px 24px' }}>
             <div style={{
@@ -405,7 +369,29 @@ export default function ArchiveClient({
                 </div>
             </div>
 
-            {/* 只在有筛选条件时才显示统计信息，避免数据加载时的闪烁 */}
+            {/* 版本标识 */}
+            <div style={{
+                marginTop: '12px',
+                fontSize: '13px',
+                color: 'rgba(0, 0, 0, 0.6)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+            }}>
+                <span style={{
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                }}>
+                    CSS MASONRY
+                </span>
+                <span>浏览器原生布局 · 零 JavaScript</span>
+            </div>
+
             {(selectedTags.length > 0 || searchKeyword || selectedCategoryId) && (
                 <div style={{
                     marginTop: '12px',
@@ -420,32 +406,25 @@ export default function ArchiveClient({
                     {searchKeyword && (
                         <span>搜索 "<strong>{searchKeyword}</strong>"</span>
                     )}
-                    {/* 移除这行，避免初始加载时的闪烁 */}
-                    {/* <span> · 找到 <strong>{filteredCards.length}</strong> 篇文章</span> */}
                 </div>
             )}
         </div>
-    ), [isMobile, searchKeyword, selectedTags, selectedCategoryId]); // ✅ 移除 filteredCards.length
+    ), [isMobile, searchKeyword, selectedTags, selectedCategoryId]);
     
     useEffect(() => {
-        // 安全地保存前一个配置，并合并新值（不覆盖其它字段）
         setConfig((prev: any) => {
             prevConfigRef.current = prev;
             return {
                 ...prev,
                 box1Content,
-                // 移除 box2Style，让内容区域自然显示，无内容时保持空白
             };
         });
 
         return () => {
-            // 清理：优先尝试恢复之前的完整配置（如果有）
             setConfig((prev: any) => {
                 if (prevConfigRef.current) {
-                    // 恢复之前的配置，但把 box1Content 设为 null（或按需要恢复原值）
                     return { ...prevConfigRef.current, box1Content: null };
                 }
-                // 否则做最小改动：只清掉 box1Content（合并而非覆盖）
                 return { ...prev, box1Content: null };
             });
             prevConfigRef.current = null;
@@ -477,12 +456,12 @@ export default function ArchiveClient({
                     ) : (
                         <>
                             <div style={{ minHeight: '400px' }}>
-                                <MasonryGrid minColumns={2}>
+                                {/* ✨ 使用 CSS Grid Masonry */}
+                                <MasonryGridCSS minColumns={2}>
                                     {filteredCards.map((card, index) => renderCard(card, index))}
-                                </MasonryGrid>
+                                </MasonryGridCSS>
                             </div>
 
-                            {/* ✅ IntersectionObserver 哨兵元素 */}
                             <div ref={loadMoreRef} style={{ height: 1 }} />
 
                             {loadingMore && (
@@ -519,7 +498,7 @@ export default function ArchiveClient({
                     apiEndpoint: '/api/categories/tree-with-articles',
                     emptyText: '暂无目录',
                     forceOpenRootKeys: true,
-                    categoryNavigationPattern: '/archive?category={categoryId}',
+                    categoryNavigationPattern: '/archive-css?category={categoryId}',
                     articleNavigationPattern: '/article/{articleId}',
                     stylePrefix: 'archive-category',
                     showArticleCount: true,

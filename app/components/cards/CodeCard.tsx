@@ -24,13 +24,14 @@ export interface CodeCardProps {
   };
   onClick?: () => void;
   priority?: boolean;
+  className?: string;
 }
 
 /**
  * 代码主导卡片 - 方案A：代码预览式
  * 适合技术文章、代码示例分享
  */
-export default function CodeCard({ card, onClick, priority = false }: CodeCardProps) {
+export default function CodeCard({ card, onClick, priority = false, className = '' }: CodeCardProps) {
   // 使用卡片背景颜色 Hook，基于代码卡片 ID 生成独特的渐变色
   const colors = useCardBackground(card.id || '');
   
@@ -45,6 +46,7 @@ export default function CodeCard({ card, onClick, priority = false }: CodeCardPr
       id={card.id || ''}
       onClick={onClick}
       bodyStyle={{ padding: 0 }}
+      className={className}
     >
       {/* 标题区域 */}
       <div style={{

@@ -11,13 +11,14 @@ export interface DiaryCardProps {
   card: DiaryCardType | any;
   onClick?: () => void;
   priority?: boolean;
+  className?: string;
 }
 
 /**
  * C. 日志卡片
  * 简短文字记录，适合每日感想、随笔
  */
-export default function DiaryCard({ card, onClick, priority = false }: DiaryCardProps) {
+export default function DiaryCard({ card, onClick, priority = false, className = '' }: DiaryCardProps) {
   // 从 excerpt 或 content 中提取日志内容和元信息
   const extractDiaryData = () => {
     const rawContent = card.content || card.excerpt || '';
@@ -111,6 +112,7 @@ export default function DiaryCard({ card, onClick, priority = false }: DiaryCard
       id={card.id?.toString() || card._id?.toString() || ''}
       onClick={onClick}
       bodyStyle={{ padding: '20px' }}
+      className={className}
     >
       {/* 标题（日期） */}
       <div style={{

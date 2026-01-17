@@ -8,16 +8,18 @@ import type { VideoCard as VideoCardType } from '@/app/types/card';
 interface VideoCardProps {
   card: VideoCardType;
   onClick?: () => void;
+  className?: string;
 }
 
 /**
  * E. 视频卡片
  * 视频缩略图+播放按钮，适合视频内容
  */
-export default function VideoCard({ card, onClick }: VideoCardProps) {
+export default function VideoCard({ card, onClick, className = '' }: VideoCardProps) {
   return (
     <Card
       hoverable
+      className={className}
       style={{ 
         borderRadius: '12px',
         overflow: 'hidden',

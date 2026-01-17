@@ -1,0 +1,138 @@
+/**
+ * CSS Grid Masonry 布局样式
+ * 使用浏览器原生 masonry 特性（Chrome 117+, Firefox 87+）
+ */
+
+.masonry-grid-css {
+  /* 基础容器样式 */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  
+  /* Grid 基础配置 */
+  display: grid;
+  grid-template-columns: repeat(var(--masonry-columns, 3), 1fr);
+  gap: 20px;
+  
+  /* ✨ 核心：Masonry 布局 */
+  grid-template-rows: masonry;
+  
+  /* Masonry 对齐方式 */
+  align-tracks: start; /* 卡片对齐到顶部 */
+  
+  /* 性能优化 */
+  contain: layout style paint;
+  will-change: auto;
+}
+
+/**
+ * 降级方案：不支持 masonry 的浏览器
+ * 使用 auto-flow dense 近似 masonry 效果
+ */
+@supports not (grid-template-rows: masonry) {
+  .masonry-grid-css {
+    grid-template-rows: auto;
+    grid-auto-flow: dense; /* 尽量填充空隙 */
+  }
+  
+  /* 为不同高度的卡片设置合理的 grid-row */
+  .masonry-grid-css > * {
+    grid-row: span 1;
+  }
+}
+
+/**
+ * Firefox 需要特殊处理
+ * Firefox 使用 grid-template-rows: masonry 但需要开启实验性功能
+ */
+@supports (grid-template-rows: masonry) {
+  @-moz-document url-prefix() {
+    .masonry-grid-css {
+      /* Firefox 特定样式 */
+      -moz-column-gap: 20px;
+    }
+  }
+}
+
+/**
+ * 响应式断点
+ */
+@media (max-width: 768px) {
+  .masonry-grid-css {
+    grid-template-columns: repeat(var(--masonry-columns, 2), 1fr);
+    gap: 16px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .masonry-grid-css {
+    grid-template-columns: repeat(var(--masonry-columns, 1), 1fr);
+    gap: 12px;
+    padding: 8px;
+  }
+}
+
+/**
+ * 卡片进入动画（可选）
+ */
+.masonry-grid-css > * {
+  animation: fadeInUp 0.4s ease-out;
+  animation-fill-mode: backwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/**
+ * 性能优化：减少重绘
+ */
+.masonry-grid-css > * {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/**
+ * 浏览器兼容性提示
+ */
+.masonry-grid-css::before {
+  content: '';
+  display: none;
+}
+
+/* 不支持 masonry 时显示提示 */
+@supports not (grid-template-rows: masonry) {
+  .masonry-grid-css::before {
+    content: '⚠️ 您的浏览器不支持 CSS Grid Masonry，布局可能不完美';
+    display: block;
+    padding: 12px;
+    margin-bottom: 16px;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    color: #856404;
+    font-size: 14px;
+    text-align: center;
+  }
+}
+
+/**
+ * 调试模式（开发时可启用）
+ */
+.masonry-grid-css.debug {
+  outline: 2px dashed #f00;
+}
+
+.masonry-grid-css.debug > * {
+  outline: 1px solid #0f0;
+}
+

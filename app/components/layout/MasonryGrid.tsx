@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import './MasonryGrid.css';
 
 // --- 配置常量 ---
@@ -8,23 +8,22 @@ const SPAN_TOLERANCE_PIXELS = 2; // 容忍 2px 以内的微小高度变化，防
 const DEFAULT_MIN_COLUMNS = 1; // 默认最少列数
 const MAX_COLUMNS = 4; // 最多列数
 const MIN_COLUMN_WIDTH = 280; // 每列最小宽度（px）
+const VIEWPORT_MARGIN = '400px'; // IntersectionObserver 的提前加载距离
 
 interface MasonryGridProps {
   children: React.ReactNode;
   className?: string;
-  minColumns?: number; // 新增：允许外部控制最小列数
-}
-
-interface ChildElementProps {
-  className?: string;
+  minColumns?: number; // 允许外部控制最小列数
 }
 
 export default function MasonryGrid({ children, className = '', minColumns = DEFAULT_MIN_COLUMNS }: MasonryGridProps) {
   const gridRef = useRef<HTMLDivElement | null>(null);
-  const roRef = useRef<ResizeObserver | null>(null);
+  const containerRoRef = useRef<ResizeObserver | null>(null); // 容器级别的 ResizeObserver
+  const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
   const rafRef = useRef<number | null>(null);
   const resizeTimerRef = useRef<number | null>(null);
   const columnsRef = useRef(3); // 使用 ref 避免依赖循环
+  const measuredItemsRef = useRef<Set<HTMLElement>>(new Set()); // 已测量的元素集合
 
   // --- 动态计算列数 ---
   const calculateColumns = (containerWidth: number): number => {
@@ -49,8 +48,8 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
   };
 
   // --- Helper: 智能写入 Span ---
-  // 将你写的逻辑封装在这里，逻辑非常清晰
-  const applySpanIfNeeded = (el: HTMLElement, newSpan: number, measuredHeight: number) => {
+  // 优化方案3：首次测量后缓存，标记已测量的元素
+  const applySpanIfNeeded = (el: HTMLElement, newSpan: number, measuredHeight: number, isFirstMeasure = false) => {
     // 1. 读取缓存
     const prevSpan = parseInt(el.dataset.span || '0', 10);
     const prevH = parseFloat(el.dataset.h || '0');
@@ -59,6 +58,12 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
     if (!Number.isNaN(prevSpan) && prevSpan === newSpan) {
       // 即使 span 没变，也更新一下高度缓存，保持数据新鲜
       el.dataset.h = String(measuredHeight);
+      
+      // ✅ 首次测量成功，标记为已测量
+      if (isFirstMeasure && !measuredItemsRef.current.has(el)) {
+        measuredItemsRef.current.add(el);
+        el.dataset.measured = 'true';
+      }
       return;
     }
 
@@ -78,9 +83,14 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
     el.dataset.h = String(measuredHeight);
     
     // 标记为 ready，配合 CSS 做淡入动画
-    // CSS 写法: .masonry-item[data-ready="true"] { opacity: 1; transform: none; }
     if (el.dataset.ready !== 'true') {
         el.dataset.ready = 'true';
+    }
+    
+    // ✅ 首次测量成功，标记为已测量
+    if (isFirstMeasure && !measuredItemsRef.current.has(el)) {
+      measuredItemsRef.current.add(el);
+      el.dataset.measured = 'true';
     }
   };
 
@@ -94,10 +104,18 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
     return { rowHeight, rowGap };
   };
 
-  const calculateAll = (grid: HTMLElement) => {
+  // ✅ 方案3：只测量未测量过的元素（首次测量后缓存）
+  const calculateAll = (grid: HTMLElement, forceRecalculate = false) => {
     if (!grid) return;
-    const items = Array.from(grid.querySelectorAll<HTMLElement>('.masonry-item'));
-    if (!items.length) return;
+    const allItems = Array.from(grid.querySelectorAll<HTMLElement>('.masonry-item'));
+    if (!allItems.length) return;
+
+    // ✅ 只测量未测量过的元素（除非强制重新计算）
+    const items = forceRecalculate 
+      ? allItems 
+      : allItems.filter(item => !measuredItemsRef.current.has(item));
+    
+    if (!items.length) return; // 所有元素都已测量
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
@@ -114,10 +132,10 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
         return { item, span, h };
       });
 
-      // 批量写入 (Write) - 调用你的 Helper
+      // 批量写入 (Write)
       updates.forEach(({ item, span, h }) => {
         if (span > 0) {
-          applySpanIfNeeded(item, span, h);
+          applySpanIfNeeded(item, span, h, !forceRecalculate); // 标记为首次测量
         }
       });
     });
@@ -130,47 +148,62 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
     // 初始化列数
     updateColumns(grid);
 
+    // ✅ 初始测量所有元素
     const initRaf = requestAnimationFrame(() => calculateAll(grid));
 
+    // ✅ 方案6：粗粒度 ResizeObserver - 只观察容器本身
     if (typeof ResizeObserver !== 'undefined') {
-      let roRafId: number | null = null;
-      const ro = new ResizeObserver((entries) => {
-        if (!grid) return;
-        
-        // 防抖：取消之前的 RAF，避免频繁触发
-        if (roRafId !== null) {
-          cancelAnimationFrame(roRafId);
-        }
-        
-        roRafId = requestAnimationFrame(() => {
-            const { rowHeight, rowGap } = getGridMetrics(grid);
-            const unit = rowHeight + rowGap || 1;
-
-            entries.forEach((e) => {
-                const el = e.target as HTMLElement;
-                // 确保只处理 item 且有内容
-                if (!el.classList.contains('masonry-item')) return;
-                
-                const children = Array.from(el.children) as HTMLElement[];
-                const h = children.length > 0
-                    ? Math.max(...children.map(c => c.getBoundingClientRect().height))
-                    : el.getBoundingClientRect().height; // 降级方案
-
-                if (h > 0) {
-                    const span = Math.ceil((h + rowGap) / unit);
-                    // 调用 Helper
-                    applySpanIfNeeded(el, span, h);
-                }
-            });
-            roRafId = null;
+      const containerRo = new ResizeObserver(() => {
+        // 容器尺寸变化时，强制重新计算所有元素
+        requestAnimationFrame(() => {
+          calculateAll(grid, true); // forceRecalculate = true
         });
       });
-      roRef.current = ro;
-      const items = Array.from(grid.querySelectorAll<HTMLElement>('.masonry-item'));
-      items.forEach((it) => ro.observe(it));
+      containerRoRef.current = containerRo;
+      containerRo.observe(grid);
     }
 
-    // ... MutationObserver 和 Resize 监听保持不变 ...
+    // ✅ 方案2：Intersection-based 懒测量
+    // 只测量进入视口附近的元素，离开视口的元素不再监听
+    if (typeof IntersectionObserver !== 'undefined') {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const item = entry.target as HTMLElement;
+            
+            if (entry.isIntersecting) {
+              // ✅ 元素进入视口，测量一次
+              if (!measuredItemsRef.current.has(item)) {
+                const { rowHeight, rowGap } = getGridMetrics(grid);
+                const unit = rowHeight + rowGap || 1;
+                const children = Array.from(item.children) as HTMLElement[];
+                
+                if (children.length > 0) {
+                  const h = Math.max(...children.map(c => c.getBoundingClientRect().height));
+                  if (h > 0) {
+                    const span = Math.ceil((h + rowGap) / unit);
+                    applySpanIfNeeded(item, span, h, true); // 首次测量
+                  }
+                }
+              }
+            }
+          });
+        },
+        {
+          root: null,
+          rootMargin: VIEWPORT_MARGIN, // 提前 400px 加载
+          threshold: 0,
+        }
+      );
+      
+      intersectionObserverRef.current = io;
+      
+      // 观察所有卡片
+      const items = Array.from(grid.querySelectorAll<HTMLElement>('.masonry-item'));
+      items.forEach((item) => io.observe(item));
+    }
+
+    // ✅ MutationObserver - 监听新增/删除的卡片
     const mo = new MutationObserver((mutations) => {
       let shouldRecalc = false;
       const added: HTMLElement[] = [];
@@ -178,59 +211,60 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
       mutations.forEach((m) => {
         m.addedNodes.forEach((n) => {
           if (n instanceof HTMLElement && n.classList.contains('masonry-item')) {
-             added.push(n);
-             shouldRecalc = true;
+            added.push(n);
+            shouldRecalc = true;
+            
+            // 新增元素立即加入 IntersectionObserver
+            intersectionObserverRef.current?.observe(n);
           }
         });
         m.removedNodes.forEach((n) => {
-             if (n instanceof HTMLElement && n.classList.contains('masonry-item')) {
-                 roRef.current?.unobserve(n);
-             }
+          if (n instanceof HTMLElement && n.classList.contains('masonry-item')) {
+            // 从已测量集合中移除
+            measuredItemsRef.current.delete(n);
+            intersectionObserverRef.current?.unobserve(n);
+          }
         });
       });
-
-      if (added.length && roRef.current) {
-        added.forEach((a) => roRef.current?.observe(a));
-      }
       
       if (shouldRecalc) calculateAll(grid);
     });
     
-    mo.observe(grid, { childList: true, subtree: true });
+    mo.observe(grid, { childList: true, subtree: false }); // 只观察直接子节点
 
+    // ✅ 窗口 resize - 更新列数并强制重新计算
     const handleGridResize = () => {
-        if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
-        resizeTimerRef.current = window.setTimeout(() => {
-          updateColumns(grid); // 先更新列数
-          calculateAll(grid); // 再重新计算布局
-        }, 150);
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+      resizeTimerRef.current = window.setTimeout(() => {
+        updateColumns(grid); // 先更新列数
+        
+        // 列数变化时需要强制重新计算所有元素
+        measuredItemsRef.current.clear(); // 清空已测量标记
+        const allItems = Array.from(grid.querySelectorAll<HTMLElement>('.masonry-item'));
+        allItems.forEach(item => item.dataset.measured = 'false');
+        
+        calculateAll(grid, true); // 强制重新计算
+      }, 150);
     };
     window.addEventListener('resize', handleGridResize);
 
     return () => {
       window.removeEventListener('resize', handleGridResize);
       mo.disconnect();
-      roRef.current?.disconnect();
+      containerRoRef.current?.disconnect();
+      intersectionObserverRef.current?.disconnect();
       cancelAnimationFrame(initRaf);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+      measuredItemsRef.current.clear();
     };
-  }, [minColumns]); // 添加 minColumns 依赖，以便在 props 变化时更新
+  }, [minColumns]);
 
-  // ... Render 部分不变 ...
+  // ✅ 方案1：不克隆 children，直接渲染
+  // 调用方负责给每个 child 添加 'masonry-item' className
   return (
     <div ref={gridRef} className={`masonry-grid ${className}`}>
-      {React.Children.map(children, (child) => {
-        if (React.isValidElement<ChildElementProps>(child)) {
-          const childClassName = child.props.className || '';
-          return React.cloneElement(child, {
-            className: `masonry-item ${childClassName}`.trim(),
-            // 可以预先设置 ready=false，虽然 CSS 默认状态应该就是隐藏
-            'data-ready': 'false' 
-          } as any);
-        }
-        return child;
-      })}
+      {children}
     </div>
   );
 }

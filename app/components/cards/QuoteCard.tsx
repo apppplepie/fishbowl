@@ -7,16 +7,18 @@ import type { QuoteCard as QuoteCardType } from '@/app/types/card';
 interface QuoteCardProps {
   card: QuoteCardType;
   onClick?: () => void;
+  className?: string;
 }
 
 /**
  * D. 引言/名言卡片
  * 展示格言、名句，适合灵感分享
  */
-export default function QuoteCard({ card, onClick }: QuoteCardProps) {
+export default function QuoteCard({ card, onClick, className = '' }: QuoteCardProps) {
   return (
     <Card
       hoverable
+      className={className}
       style={{ 
         borderRadius: '12px',
         background: card.backgroundColor || 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
