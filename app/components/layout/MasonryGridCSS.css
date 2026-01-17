@@ -21,8 +21,9 @@
   /* Masonry 对齐方式 */
   align-tracks: start; /* 卡片对齐到顶部 */
   
-  /* 性能优化 */
-  contain: layout style paint;
+  /* 性能优化：保留 layout/style containment，允许 hover 放大溢出 */
+  contain: layout style;
+  overflow: visible;
   will-change: auto;
 }
 

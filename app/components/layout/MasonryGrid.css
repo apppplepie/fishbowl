@@ -15,8 +15,9 @@
   /* 🔑 移除 grid-template-columns 的 transition，避免触发 layout */
   /* transition: grid-template-columns 200ms ease-out; */
   
-  /* 🔑 性能优化：启用 GPU 加速和 containment */
-  contain: layout style paint;
+  /* 🔑 性能优化：保留 layout/style containment，允许 hover 放大溢出 */
+  contain: layout style;
+  overflow: visible;
   will-change: auto;
   opacity: 0;
   transition: opacity 200ms ease;

@@ -201,7 +201,7 @@ export default function ArticlePage() {
     async function loadArticle() {
       try {
         // 先尝试从 API 加载
-        const response = await apiGet(`/api/articles/${articleId}`);
+        const response = await apiGet(`/api/articles/${articleId}`, { requiresAuth: false });
         const result = await response.json();
 
         if (response.ok && result.success && result.article) {
