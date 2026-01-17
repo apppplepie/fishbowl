@@ -9,8 +9,15 @@ import { getCurrentUser } from '@/lib/auth';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    // 支持 page 参数（用于横向瀑布流）和 offset 参数（用于纵向瀑布流）
+    const page = searchParams.get('page');
+    const offsetParam = searchParams.get('offset');
     const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    
+    // 如果提供了 page 参数，计算 offset；否则使用 offset 参数
+    const offset = page 
+      ? (parseInt(page, 10) - 1) * limit 
+      : parseInt(offsetParam || '0', 10);
 
     // 获取当前用户权限
     const currentUser = getCurrentUser(request);
