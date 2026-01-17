@@ -665,21 +665,22 @@ function BookcasePageContent() {
   // 根据文章类型渲染对应的卡片
   const renderCard = useCallback((article: any, index: number) => {
     const handleClick = () => handleCardClick(article);
+    const masonryClassName = 'masonry-item';
 
     switch (article.type) {
       case 'text':
-        return <ArticleCard key={article.id} card={article} onClick={handleClick} />;
+        return <ArticleCard key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
       case 'image':
-        return <ImageCard key={article.id} card={article} onClick={handleClick} />;
+        return <ImageCard key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
       case 'drawing':
         return <ImageCard key={article.id} card={{
           ...article,
           description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
-        }} onClick={handleClick} />;
+        }} onClick={handleClick} className={masonryClassName} />;
       case 'code':
-        return <CodeCard key={article.id} card={article} onClick={handleClick} />;
+        return <CodeCard key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
       case 'diary':
-        return <DiaryCard key={article.id} card={article} onClick={handleClick} />;
+        return <DiaryCard key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
       case 'book':
         return (
           <BookCard 
@@ -687,6 +688,7 @@ function BookcasePageContent() {
             card={article} 
             onClick={handleClick}
             showDeleteIcon={deleteMode}
+            className={masonryClassName}
             onDeleteSuccess={() => {
               console.log('书籍删除成功，刷新页面和侧边栏');
               const bookCategoryId = (article as any).categoryId;
@@ -702,7 +704,7 @@ function BookcasePageContent() {
           />
         );
       default:
-        return <CardRenderer key={article.id} card={article} onClick={handleClick} />;
+        return <CardRenderer key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
     }
   }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles]);
 
@@ -732,12 +734,8 @@ function BookcasePageContent() {
           ) : (
             <>
               <div style={{ minHeight: '400px' }}>
-                <MasonryGrid minColumns={2}>
-                  {filteredCards.map((card, index) => (
-                    <div key={card.id}>
-                      {renderCard(card, index)}
-                    </div>
-                  ))}
+                <MasonryGrid minColumns={isMobile ? 1 : 2}>
+                  {filteredCards.map((card, index) => renderCard(card, index))}
                 </MasonryGrid>
               </div>
 

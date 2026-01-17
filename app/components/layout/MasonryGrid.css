@@ -4,36 +4,48 @@
   /* 使用 CSS 变量动态控制列数和列宽 */
   grid-template-columns: repeat(var(--masonry-columns, 3), 1fr);
   grid-auto-rows: 8px;
-  gap: 8px; /* 增加间距，与 archive/bookcase 统一 */
+  gap: 8px;
   width: 100%;
-  max-width: 100%; /* 充满容器 */
-  padding: 0; /* 移除内部 padding，使用外层容器的 padding */
-  margin: 0 auto; /* 居中对齐 */
+  max-width: 100%;
+  padding: 0;
+  margin: 0 auto;
   box-sizing: border-box;
   /* 防止滚动条出现/消失导致的宽度变化 */
   scrollbar-gutter: stable;
-  /* 平滑过渡列数变化，但要快速以减少抖动感 */
-  transition: grid-template-columns 200ms ease-out;
+  /* 🔑 移除 grid-template-columns 的 transition，避免触发 layout */
+  /* transition: grid-template-columns 200ms ease-out; */
+  
+  /* 🔑 性能优化：启用 GPU 加速和 containment */
+  contain: layout style paint;
+  will-change: auto;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
 
 /* 响应式列数：最少 2 列，最多 4 列，根据容器宽度自动调整 */
 
 .masonry-item {
-  /* 确保每个项占满列宽 */
   display: block;
   width: 100%;
-  max-width: 100%; /* 强制限制最大宽度 */
+  max-width: 100%;
   box-sizing: border-box;
-  /* 确保能正确跟随内容高度 - Grid会自动处理高度，但需要确保内容不被限制 */
-  min-height: 0;
-  min-width: 0; /* 防止内容撑开 */
-  /* 防止内容溢出影响布局 */
-  padding: 0; /* 移除内部 padding，间距由 gap 控制 */
-  overflow: visible; /* 允许卡片悬停时超出 */
-  /* grid-row-end 由 JS 动态计算并写入 inline style */
+  min-height: 120px;
+  min-width: 0;
+  padding: 0;
+  overflow: visible;
+  
+  /* 🔑 CSS 占位：降低 CLS */
+  /* contain-intrinsic-size: auto 300px; */
+  /* content-visibility: auto; */
+  
+  /* 🔑 只对 opacity 和 transform 做动画，不触发 layout */
   transition: opacity 240ms ease, transform 240ms ease;
   opacity: 0;
   transform: translateY(8px);
+  
+  /* 🔑 性能优化 */
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* 确保卡片内的所有内容都受宽度约束 */
@@ -58,10 +70,15 @@
   overflow-wrap: break-word;
 }
 
-/* 当 JS 设置了 gridRowEnd 后，使项淡入（等待 JS 先设置好） */
-.masonry-item[style] {
+/* 当 JS 设置了 data-ready 后，使项淡入（等待 JS 先设置好） */
+.masonry-item[data-ready="true"] {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Grid ready 后再整体显示，避免初始抖动/闪烁 */
+.masonry-grid[data-ready="true"] {
+  opacity: 1;
 }
 
 /* 平滑的渐显动画（备份） */

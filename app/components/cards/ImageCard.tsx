@@ -23,7 +23,12 @@ export default function ImageCard({ card, onClick, priority = false, className =
   const [imgLoaded, setImgLoaded] = useState(false);
   const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
 
-
+  // 🔑 计算图片的 aspect ratio（优先使用实际尺寸，否则默认 3:2）
+  const imageWidth = card.coverImage?.width || card.imageWidth;
+  const imageHeight = card.coverImage?.height || card.imageHeight;
+  const aspectRatio = imageWidth && imageHeight 
+    ? `${imageWidth} / ${imageHeight}` 
+    : '3 / 2'; // 默认 3:2 比例
 
   return (
     <Card
@@ -37,7 +42,7 @@ export default function ImageCard({ card, onClick, priority = false, className =
         position: 'relative', 
         width: '100%',
         maxWidth: '100%',
-        aspectRatio: '3 / 2',
+        aspectRatio: aspectRatio, // 🔑 使用实际比例或默认比例
         background: colors.background,
         overflow: 'hidden',
         boxSizing: 'border-box',
