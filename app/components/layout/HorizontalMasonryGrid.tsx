@@ -30,7 +30,6 @@ export default function HorizontalMasonryGrid({
   const [loadingPages, setLoadingPages] = useState<Record<number, boolean>>({});
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(1);
   const [maxLoadedPage, setMaxLoadedPage] = useState<number>(0);
-  const [columns, setColumns] = useState<number>(3);
 
   // 从 sessionStorage 或 history.state 读取保存的页索引
   useEffect(() => {
@@ -39,26 +38,25 @@ export default function HorizontalMasonryGrid({
     setCurrentPageIndex(saved);
   }, []);
 
-  // 响应式列数计算（2-5列）
-  useEffect(() => {
-    function calculateColumns() {
-      const w = window.innerWidth;
-      if (w < 520) setColumns(2);
-      else if (w < 900) setColumns(3);
-      else if (w < 1300) setColumns(4);
-      else setColumns(5);
-    }
-    calculateColumns();
-    window.addEventListener('resize', calculateColumns);
-    return () => window.removeEventListener('resize', calculateColumns);
-  }, []);
-
-  // 获取一页数据
+  // 获取一页数据 - 移除 pages 和 loadingPages 依赖，避免无限循环
   const fetchPageData = useCallback(async (pageNum: number) => {
-    if (pages[pageNum] || loadingPages[pageNum]) return;
-    setLoadingPages(prev => ({ ...prev, [pageNum]: true }));
+    setLoadingPages(prev => {
+      // 如果正在加载，直接返回
+      if (prev[pageNum]) return prev;
+      return { ...prev, [pageNum]: true };
+    });
+    
+    setPages(prev => {
+      // 如果已有数据，直接返回
+      if (prev[pageNum]) {
+        setLoadingPages(p => ({ ...p, [pageNum]: false }));
+        return prev;
+      }
+      return prev;
+    });
+
     try {
-      const data = await fetchPage(pageNum);
+      const data = await fetchPageRef.current(pageNum);
       setPages(prev => {
         const next = { ...prev, [pageNum]: data.items };
         // 持久化缓存到 sessionStorage
@@ -75,7 +73,13 @@ export default function HorizontalMasonryGrid({
     } finally {
       setLoadingPages(prev => ({ ...prev, [pageNum]: false }));
     }
-  }, [pages, loadingPages, fetchPage]);
+  }, []); // 移除所有依赖
+
+  // 使用 ref 来追踪 fetchPage 函数，避免在依赖中直接使用
+  const fetchPageRef = useRef(fetchPage);
+  useEffect(() => {
+    fetchPageRef.current = fetchPage;
+  }, [fetchPage]);
 
   // 初始化：恢复缓存并加载当前页及相邻页
   useEffect(() => {
@@ -120,13 +124,31 @@ export default function HorizontalMasonryGrid({
     pageEls.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [pages, columns, maxLoadedPage, fetchPageData]);
+  }, [pages, maxLoadedPage, fetchPageData]);
 
-  // 将一页的数据分配到列中
-  function distributeToColumns(items: CardItem[], cols: number): CardItem[][] {
-    const out: CardItem[][] = Array.from({ length: cols }).map(() => []);
-    items.forEach((it, i) => out[i % cols].push(it));
-    return out;
+  // 将一页的数据分配到列中 - 真正的瀑布流：按顺序排列，排满一列换下一列
+  // 每列预估可容纳的卡片数（根据平均卡片高度估算）
+  function distributeToColumns(items: CardItem[]): CardItem[][] {
+    const columns: CardItem[][] = [];
+    const CARDS_PER_COLUMN = 5; // 每列大约5-6张卡片（根据实际卡片高度调整）
+    
+    let currentColumn: CardItem[] = [];
+    items.forEach((item, index) => {
+      currentColumn.push(item);
+      
+      // 每列最多 CARDS_PER_COLUMN 张卡片，然后换列
+      if (currentColumn.length >= CARDS_PER_COLUMN || index === items.length - 1) {
+        columns.push([...currentColumn]);
+        currentColumn = [];
+      }
+    });
+    
+    // 如果最后还有剩余卡片
+    if (currentColumn.length > 0) {
+      columns.push(currentColumn);
+    }
+    
+    return columns;
   }
 
   // 处理卡片点击，保存当前页索引
@@ -161,7 +183,7 @@ export default function HorizontalMasonryGrid({
         container.scrollLeft = el.offsetLeft;
       }
     });
-  }, [pages, columns, currentPageIndex]);
+  }, [pages, currentPageIndex]);
 
   return (
     <div className={`hm-viewport ${className}`} ref={containerRef}>
@@ -169,11 +191,9 @@ export default function HorizontalMasonryGrid({
         {renderPages.map((p) => (
           <div className="hm-page-block" data-page={p} key={p}>
             {pages[p] ? (
-              <div
-                className="hm-columns"
-                style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
-              >
-                {distributeToColumns(pages[p], columns).map((colItems, ci) => (
+              <div className="hm-columns">
+                {/* 按顺序排列，排满一列换下一列 */}
+                {distributeToColumns(pages[p]).map((colItems, ci) => (
                   <div key={ci} className="hm-column">
                     {colItems.map((item) => (
                       <div key={item.id} className="hm-card-wrap">

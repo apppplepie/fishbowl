@@ -1,6 +1,6 @@
 /* 横向瀑布流样式 */
 .hm-viewport {
-  height: 100vh;
+  height: calc(100vh - 45px); /* 视口高度 - Header 高度 */
   overflow-x: auto;
   overflow-y: hidden;
   white-space: nowrap;
@@ -9,6 +9,7 @@
   /* 隐藏滚动条（可选，根据设计需求） */
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  box-sizing: border-box; /* 确保 padding 不会导致溢出 */
 }
 
 .hm-viewport::-webkit-scrollbar {
@@ -34,24 +35,26 @@
   padding: 24px;
   align-items: start;
   height: 100%;
+  box-sizing: border-box; /* 确保 padding 包含在高度内 */
 }
 
 .hm-page-block {
-  min-width: 780px; /* 基准宽度：列数 * 列宽 */
   flex: 0 0 auto;
-  height: calc(100vh - 48px);
+  height: 100%; /* 直接使用父容器高度 */
+  max-height: 100%; /* 防止溢出 */
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.02);
   padding: 12px;
   border-radius: 8px;
-  overflow-y: auto;
+  overflow-y: hidden; /* 禁止纵向滚动 */
   overflow-x: hidden;
+  width: auto; /* 宽度由内容决定 */
 }
 
 .hm-columns {
-  display: grid;
+  display: flex; /* 改为 flex 横向排列 */
   gap: 12px;
-  height: 100%;
+  min-height: 100%;
   align-items: start;
 }
 
@@ -60,6 +63,8 @@
   flex-direction: column;
   align-items: center; /* 水平居中对齐卡片 */
   gap: 12px;
+  flex: 0 0 auto; /* 不伸缩，保持固定宽度 */
+  width: 260px; /* 固定列宽（卡片240px + 左右间距） */
 }
 
 .hm-card-wrap {
@@ -79,8 +84,8 @@
 
 /* 响应式调整 */
 @media (max-width: 900px) {
-  .hm-page-block {
-    min-width: 520px;
+  .hm-column {
+    width: 200px; /* 移动端缩小列宽 */
   }
   .hm-card-wrap {
     max-width: 180px;
@@ -88,8 +93,8 @@
 }
 
 @media (max-width: 520px) {
-  .hm-page-block {
-    min-width: 360px;
+  .hm-column {
+    width: 180px; /* 小屏幕进一步缩小 */
   }
   .hm-card-wrap {
     max-width: 160px;

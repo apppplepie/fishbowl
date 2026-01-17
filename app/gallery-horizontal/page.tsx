@@ -142,6 +142,7 @@ export default function GalleryHorizontalPage() {
     setConfig({
       box1Content: null,
       hideBox1: false,
+      // box2 保持默认样式
     });
 
     return () => {
@@ -160,21 +161,12 @@ export default function GalleryHorizontalPage() {
 
   return (
     <>
-      {/* 横向瀑布流容器 - 全屏显示，考虑 Header 高度 */}
-      <div style={{ 
-        position: 'fixed', 
-        top: '45px', // Header 高度
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 1,
-      }}>
-        <HorizontalMasonryGrid
-          fetchPage={fetchPage}
-          renderCard={renderCard}
-          onCardClick={handleCardClick}
-        />
-      </div>
+      {/* 横向瀑布流 - 高度直接在 CSS 中设置为 calc(100vh - 45px) */}
+      <HorizontalMasonryGrid
+        fetchPage={fetchPage}
+        renderCard={renderCard}
+        onCardClick={handleCardClick}
+      />
 
       {/* 模态框 - 显示作品详情 */}
       {selectedArticle && (

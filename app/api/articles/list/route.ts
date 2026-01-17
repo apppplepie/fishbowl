@@ -147,7 +147,13 @@ export async function GET(request: NextRequest) {
     // 参数验证和清理
     const status = searchParams.get('status') || 'published';
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '15', 10), 1), 100); // 限制在1-100之间
-    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
+    // 支持 page 参数（用于横向瀑布流）和 offset 参数（用于纵向瀑布流）
+    const page = searchParams.get('page');
+    const offsetParam = searchParams.get('offset');
+    // 如果提供了 page 参数，计算 offset；否则使用 offset 参数
+    const offset = page 
+      ? (parseInt(page, 10) - 1) * limit 
+      : Math.max(parseInt(offsetParam || '0', 10), 0);
     const categoryId = searchParams.get('categoryId');
     const orderByPath = searchParams.get('orderByPath') === 'true';
 

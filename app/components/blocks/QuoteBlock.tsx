@@ -477,7 +477,7 @@ const QuoteBlock: React.FC<QuoteBlockProps> = ({
         onCancel={handleModalClose}
         footer={null}
         width="80%"
-        style={{ maxWidth: '1000px' }}
+        style={{ maxWidth: '100hv' }}
         styles={{ body: { maxHeight: '70vh', overflow: 'auto' } }}
       >
         {loading ? (
