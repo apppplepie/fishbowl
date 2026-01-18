@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { message } from 'antd';
+import { Masonry, message } from 'antd';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
 import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
-import MasonryGrid from '@/app/components/layout/MasonryGrid';
 import { apiGet } from '@/lib/apiClient';
 
 // 注入动画样式和图片 hover 效果
@@ -48,18 +47,53 @@ if (typeof document !== 'undefined') {
   }
 }
 
+// 根据屏幕宽度计算列数
+const calculateColumns = (width: number) => {
+  if (width >= 1400) return 5;
+  if (width >= 1200) return 4;
+  if (width >= 768) return 3;
+  if (width >= 480) return 2;
+  return 2;
+};
+
 // 图片项组件 - 使用 React.memo 优化渲染
 const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => void }> = React.memo(({ article, onImageClick }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const coverImage = article?.cover_image || article?.coverImage || null;
+  const imageUrl = article?.cover_image_url
+    || coverImage?.url
+    || article?.imageUrl
+    || article?.firstImageUrl
+    || null;
+  const initialAspectRatio = (coverImage?.width && coverImage?.height)
+    ? `${coverImage.width} / ${coverImage.height}`
+    : (article?.imageWidth && article?.imageHeight)
+      ? `${article.imageWidth} / ${article.imageHeight}`
+      : '3 / 2';
+  const [aspectRatio, setAspectRatio] = useState(initialAspectRatio);
 
   // 使用 useCallback 避免每次渲染创建新函数
-  const handleLoad = useCallback(() => setImgLoaded(true), []);
+  const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (img.naturalWidth && img.naturalHeight) {
+      setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+    }
+    setImgLoaded(true);
+  }, []);
   const handleError = useCallback(() => setImgError(true), []);
   const handleClick = useCallback(() => onImageClick(article), [onImageClick, article]);
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleClick();
   }, [handleClick]);
+
+  useEffect(() => {
+    setAspectRatio(initialAspectRatio);
+  }, [initialAspectRatio]);
+
+  useEffect(() => {
+    if (!imageUrl) setImgError(true);
+  }, [imageUrl]);
 
   return (
     <div
@@ -77,7 +111,7 @@ const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => voi
       onClick={handleClick}
     >
       {!imgLoaded && !imgError && (
-        <div style={{ width: '100%', paddingTop: '75%', position: 'relative' }}>
+        <div style={{ width: '100%', aspectRatio, position: 'relative' }}>
           <svg
             viewBox="0 0 400 300"
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
@@ -90,9 +124,9 @@ const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => voi
         </div>
       )}
 
-      {!imgError && (
+      {!imgError && imageUrl && (
         <img
-          src={article.cover_image_url}
+          src={imageUrl}
           alt={article.title ?? '作品封面'}
           onLoad={handleLoad}
           onError={handleError}
@@ -100,16 +134,18 @@ const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => voi
           decoding="async"
           style={{
             width: '100%',
-            maxHeight: 500,
+            height: '100%',
             objectFit: 'cover',
-            display: imgLoaded ? 'block' : 'none',
+            display: 'block',
+            opacity: imgLoaded ? 1 : 0,
+            transition: 'opacity 0.2s ease',
           }}
           className="gallery-image"
         />
       )}
       
       {imgError && (
-        <div style={{ width: '100%', paddingTop: '75%', position: 'relative', background: '#f0f0f0' }}>
+        <div style={{ width: '100%', aspectRatio, position: 'relative', background: '#f0f0f0' }}>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
             加载失败
           </div>
@@ -131,6 +167,7 @@ export default function GalleryPage() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
+  const [columns, setColumns] = useState<number>(() => typeof window !== 'undefined' ? calculateColumns(window.innerWidth) : 3);
 
   const ITEMS_PER_PAGE = 20;
 
@@ -162,7 +199,7 @@ export default function GalleryPage() {
       if (append) setLoadingMore(true);
       else setLoading(true);
 
-      const res = await apiGet(`/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`, { requiresAuth: true });
+      const res = await apiGet(`/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`, { requiresAuth: false });
       const data = await res.json();
 
       if (!isMountedRef.current) return; // 检查组件是否已卸载
@@ -202,6 +239,14 @@ export default function GalleryPage() {
   // 初次加载
   useEffect(() => { fetchDrawingArticles(0); }, [fetchDrawingArticles]);
 
+  // 响应列数
+  useEffect(() => {
+    const handleResize = () => setColumns(calculateColumns(window.innerWidth));
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // 无限滚动
   useEffect(() => {
     let ticking = false;
@@ -239,7 +284,7 @@ export default function GalleryPage() {
   const handleImageClick = useCallback(async (article: any) => {
     if (article.blocks?.length) { setSelectedArticle(article); return; }
     try {
-      const res = await apiGet(`/api/articles/${article.id}`, { requiresAuth: true });
+      const res = await apiGet(`/api/articles/${article.id}`, { requiresAuth: false });
       const data = await res.json();
       
       if (!isMountedRef.current) return; // 检查组件是否已卸载
@@ -296,15 +341,17 @@ export default function GalleryPage() {
           />
         ) : (
           <>
-            <MasonryGrid minColumns={2}>
-              {articles.map(article => (
+            <Masonry
+              columns={columns}
+              gutter={8}
+              items={articles.map(article => ({ key: article.id, data: article }))}
+              itemRender={({ data }) => (
                 <GalleryImage
-                  key={article.id}
-                  article={article}
+                  article={data}
                   onImageClick={handleImageClick}
                 />
-              ))}
-            </MasonryGrid>
+              )}
+            />
             {loadingMore && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
                 <Spin size="large" />

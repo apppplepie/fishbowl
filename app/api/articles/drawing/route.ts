@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, refreshAccessToken, TOKEN_EXPIRATION, verifyRefreshToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,9 +19,20 @@ export async function GET(request: NextRequest) {
       ? (parseInt(page, 10) - 1) * limit 
       : parseInt(offsetParam || '0', 10);
 
-    // 获取当前用户权限
+    // 获取当前用户权限（如果 access token 过期但 refresh token 仍有效，尝试补齐权限）
     const currentUser = getCurrentUser(request);
-    const userAccessLevel = currentUser ? (currentUser.max_access_level || 3) : 2; // 登录用户默认3级，游客2级
+    let userAccessLevel = currentUser ? (currentUser.max_access_level || 3) : 2; // 登录用户默认3级，游客2级
+    let refreshedTokens: { accessToken: string; refreshToken: string } | null = null;
+    if (!currentUser) {
+      const refreshToken = request.cookies.get('refresh-token')?.value;
+      if (refreshToken) {
+        const refreshPayload = verifyRefreshToken(refreshToken);
+        if (refreshPayload) {
+          userAccessLevel = refreshPayload.max_access_level || 3;
+          refreshedTokens = refreshAccessToken(refreshToken);
+        }
+      }
+    }
 
     // 查询绘画作品：使用预设封面而非动态查询blocks
     const articles = await query<any[]>(
@@ -67,13 +78,28 @@ export async function GET(request: NextRequest) {
       [userAccessLevel, userAccessLevel]
     );
 
+    const normalizeCoverImage = (value: any) => {
+      if (!value) return null;
+      if (typeof value === 'string') {
+        try {
+          return JSON.parse(value);
+        } catch (e) {
+          return null;
+        }
+      }
+      return value;
+    };
+
     // 处理封面数据
-    const processedArticles = articles.map(article => ({
-      ...article,
-      cover_image: article.cover_image,
-      cover_image_url: article.cover_image?.url || null, // 提取封面图片URL供前端使用
-      cover_is_placeholder: article.cover_is_placeholder || false,
-    }));
+    const processedArticles = articles.map(article => {
+      const coverImage = normalizeCoverImage(article.cover_image);
+      return {
+        ...article,
+        cover_image: coverImage,
+        cover_image_url: coverImage?.url || null, // 提取封面图片URL供前端使用
+        cover_is_placeholder: article.cover_is_placeholder || false,
+      };
+    });
 
     // 获取每篇文章的标签
     for (const article of processedArticles) {
@@ -88,11 +114,31 @@ export async function GET(request: NextRequest) {
       article.tags = tags.map((t: any) => t.name);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       articles: processedArticles,
       count: processedArticles.length,
     });
+    
+    // 如果通过 refresh token 补齐了权限，同时刷新 cookie
+    if (refreshedTokens) {
+      response.cookies.set('access-token', refreshedTokens.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: TOKEN_EXPIRATION.ACCESS_TOKEN_COOKIE,
+        path: '/',
+      });
+      response.cookies.set('refresh-token', refreshedTokens.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: TOKEN_EXPIRATION.REFRESH_TOKEN_COOKIE,
+        path: '/',
+      });
+    }
+
+    return response;
 
   } catch (error: any) {
     console.error('获取绘画作品失败:', error);

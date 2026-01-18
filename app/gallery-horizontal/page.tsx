@@ -15,6 +15,26 @@ const PAGE_SIZE = 15; // 每页15条
 const GalleryImageCard: React.FC<{ article: any }> = React.memo(({ article }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const coverImage = article?.cover_image || article?.coverImage || null;
+  const imageUrl = article?.cover_image_url
+    || coverImage?.url
+    || article?.imageUrl
+    || article?.firstImageUrl
+    || null;
+  const initialAspectRatio = (coverImage?.width && coverImage?.height)
+    ? `${coverImage.width} / ${coverImage.height}`
+    : (article?.imageWidth && article?.imageHeight)
+      ? `${article.imageWidth} / ${article.imageHeight}`
+      : '3 / 2';
+  const [aspectRatio, setAspectRatio] = useState(initialAspectRatio);
+
+  useEffect(() => {
+    setAspectRatio(initialAspectRatio);
+  }, [initialAspectRatio]);
+
+  useEffect(() => {
+    if (!imageUrl) setImgError(true);
+  }, [imageUrl]);
 
   return (
     <div
@@ -28,7 +48,7 @@ const GalleryImageCard: React.FC<{ article: any }> = React.memo(({ article }) =>
       }}
     >
       {!imgLoaded && !imgError && (
-        <div style={{ width: '100%', paddingTop: '75%', position: 'relative' }}>
+        <div style={{ width: '100%', aspectRatio, position: 'relative' }}>
           <svg
             viewBox="0 0 400 300"
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
@@ -41,26 +61,34 @@ const GalleryImageCard: React.FC<{ article: any }> = React.memo(({ article }) =>
         </div>
       )}
 
-      {!imgError && (
+      {!imgError && imageUrl && (
         <img
-          src={article.cover_image_url}
+          src={imageUrl}
           alt={article.title ?? '作品封面'}
-          onLoad={() => setImgLoaded(true)}
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            if (img.naturalWidth && img.naturalHeight) {
+              setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+            }
+            setImgLoaded(true);
+          }}
           onError={() => setImgError(true)}
           loading="lazy"
           decoding="async"
           style={{
             width: '100%',
-            height: 'auto',
+            height: '100%',
             objectFit: 'cover',
-            display: imgLoaded ? 'block' : 'none',
+            display: 'block',
+            opacity: imgLoaded ? 1 : 0,
+            transition: 'opacity 0.2s ease',
           }}
           className="gallery-image"
         />
       )}
       
       {imgError && (
-        <div style={{ width: '100%', paddingTop: '75%', position: 'relative', background: '#f0f0f0' }}>
+        <div style={{ width: '100%', aspectRatio, position: 'relative', background: '#f0f0f0' }}>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
             加载失败
           </div>
@@ -82,7 +110,7 @@ export default function GalleryHorizontalPage() {
     try {
       const res = await apiGet(
         `/api/articles/drawing?page=${page}&limit=${PAGE_SIZE}`,
-        { requiresAuth: true }
+        { requiresAuth: false }
       );
       const data = await res.json();
 
@@ -109,7 +137,7 @@ export default function GalleryHorizontalPage() {
       return;
     }
     try {
-      const res = await apiGet(`/api/articles/${article.id}`, { requiresAuth: true });
+      const res = await apiGet(`/api/articles/${article.id}`, { requiresAuth: false });
       const data = await res.json();
       
       if (data.success) {
