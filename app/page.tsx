@@ -292,17 +292,7 @@ export default function Home() {
     const dpr = window.devicePixelRatio || 1;
 
     const draw = () => {
-      // 固定画布高度为2000px
-      const height = 2000;
       const width = container.clientWidth;
-
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, width, height);
 
       // ⭐ 世界坐标：计算 box2 相对于滚动容器的位置
       let y = 0;
@@ -311,6 +301,18 @@ export default function Home() {
         y += el.offsetTop;
         el = el.offsetParent as HTMLElement;
       }
+
+      // 画布高度跟随 box2 底部，避免根系超出 part2
+      const box2Height = box2.offsetHeight;
+      const height = Math.ceil(y + box2Height);
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
 
       ctx.strokeStyle = 'transparent';
       ctx.lineWidth = 1;
@@ -582,7 +584,7 @@ export default function Home() {
               top: 0,
               left: 0,
               width: '100%',
-              height: `${canvasHeight}px`, // 使用实际高度 2000px
+              height: `${canvasHeight}px`, // 使用实际高度（到 box2 底部）
               pointerEvents: 'none',
               zIndex: 1, // 在内容之上，根系可见
             }}
@@ -608,7 +610,7 @@ export default function Home() {
             top: 0,
             left: 0,
             width: '100%',
-            // height 由 JavaScript 代码控制（2000px），不在这里设置
+            // height 由 JavaScript 代码控制（到 box2 底部），不在这里设置
             pointerEvents: 'none',
             zIndex: 2, // 在根系之上
           }}
@@ -622,7 +624,7 @@ export default function Home() {
             top: 0,
             left: 0,
             width: '100%',
-            // height 由 JavaScript 代码控制（2000px），不在这里设置
+            // height 由 JavaScript 代码控制（到 box2 底部），不在这里设置
             pointerEvents: 'none',
             zIndex: 3, // 在基线之上
           }}
@@ -757,7 +759,7 @@ export default function Home() {
 
             {/* 内容区 */}
             <div className="text-center text-white" style={{ padding: '0 24px 40px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 5 }}>
-              <Title level={2} className="!text-white mb-6" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+              {/* <Title level={2} className="!text-white mb-6" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                 权限系统
               </Title>
               <Paragraph className="!text-white text-lg mb-6" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
@@ -766,9 +768,9 @@ export default function Home() {
 
               <div className="max-w-5xl mx-auto" style={{ flex: 1 }}>
                 <PermissionSystemDemo />
-              </div>
+              </div> */}
 
-              <div style={{ textAlign: 'center', marginTop: '40px', paddingBottom: '20px' }}>
+              {/* <div style={{ textAlign: 'center', marginTop: '40px', paddingBottom: '20px' }}>
                 <Button
                   type="primary"
                   size="large"
@@ -786,7 +788,7 @@ export default function Home() {
                 >
                   进入文章归档
                 </Button>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
