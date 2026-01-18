@@ -20,18 +20,19 @@ interface GardenCanvasProps {
   clearTrigger: number;
   onSettingsCopied: (settings: PlantSettings) => void;
   viewMode?: 'interactive' | 'view'; // 浏览模式：'interactive' 可交互，'view' 仅浏览
+  disableAutoResize?: boolean; // 外部控制尺寸时禁用内部 resize 逻辑
 }
 
 const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
-  ({ settings, clearTrigger, onSettingsCopied, viewMode = 'interactive' }, ref) => {
+  ({ settings, clearTrigger, onSettingsCopied, viewMode = 'interactive', disableAutoResize = false }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Canvas 层引用
     const canvasOutsideRef = useRef<HTMLCanvasElement>(null);
     const canvasBaselineRef = useRef<HTMLCanvasElement>(null);
 
-    // 状态管理
-    const [dimensions, setDimensions] = useState({ width: 0, height: 1000 }); // 固定高度 1000px
+    // 状态管理 - 现在使用视窗高度而不是固定高度
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
     // 核心引擎和管理器
     const engineRef = useRef<PlantGrowthEngine>(new PlantGrowthEngine());
@@ -178,7 +179,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
 
       // 清空画布
       if (layerManagerRef.current) {
-        layerManagerRef.current.clearOutsideLayer('#fdfbf7');
+        layerManagerRef.current.clearOutsideLayer();
         layerManagerRef.current.clearBaselineLayer();
       }
     }, []);
@@ -235,6 +236,9 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
       getAllBaselinePlants,
       clearAllPlants,
       loadPlants,
+      updateDimensions: (width: number, height: number) => {
+        setDimensions({ width, height });
+      },
     }));
 
     /**
@@ -261,6 +265,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
      * 实现防抖、区分真实 resize 和地址栏变化、延迟处理
      */
     useEffect(() => {
+      if (disableAutoResize) return;
       let resizeTimer: NodeJS.Timeout | null = null;
       let scrollEndTimer: NodeJS.Timeout | null = null;
       let lastWidth = 0;
@@ -362,7 +367,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
           clearTimeout(scrollEndTimer);
         }
       };
-    }, []);
+    }, [disableAutoResize]);
 
     /**
      * Canvas 初始化
@@ -388,7 +393,6 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
         {
           width: dimensions.width,
           height: dimensions.height,
-          backgroundColor: '#fdfbf7',
         }
       );
 
@@ -425,7 +429,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
      */
     useEffect(() => {
       if (layerManagerRef.current) {
-        layerManagerRef.current.clearOutsideLayer('#fdfbf7');
+        layerManagerRef.current.clearOutsideLayer();
       }
 
       // 移除外部层的生长器
@@ -468,7 +472,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
 
         // 5. 清理层管理器
         if (layerManagerRef.current) {
-          layerManagerRef.current.clearOutsideLayer('#fdfbf7');
+          layerManagerRef.current.clearOutsideLayer();
           layerManagerRef.current.clearBaselineLayer();
           layerManagerRef.current = null;
         }
@@ -515,7 +519,7 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
       <div
         ref={containerRef}
         className="absolute top-0 left-0 right-0 w-full"
-        style={{ height: `${FIXED_HEIGHT}px` }}
+        style={{ height: `${dimensions.height || FIXED_HEIGHT}px` }}
       >
         {/* Layer 1: Outside World (Background) */}
         <canvas

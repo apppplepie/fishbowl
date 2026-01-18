@@ -144,6 +144,7 @@ export interface GardenCanvasRef {
   getAllBaselinePlants: () => PlantRenderData[];
   clearAllPlants: () => void;
   loadPlants: (plantsData: PlantRenderData[]) => void;
+  updateDimensions: (width: number, height: number) => void;
 }
 
 // ============================================================================

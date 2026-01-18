@@ -32,6 +32,7 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
     '/bookcase',
     '/article',
     '/book',
+    '/fishbowl',
   ].some((path) => pathname === path || pathname.startsWith(path + '/'));
 
   return (

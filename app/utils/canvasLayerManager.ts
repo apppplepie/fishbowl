@@ -57,24 +57,23 @@ export class CanvasLayerManager {
       }
     });
 
-    // 清空并填充背景
-    this.clearOutsideLayer(backgroundColor);
+    // 清空画布（透明）
+    this.clearOutsideLayer();
     this.clearBaselineLayer();
   }
 
   /**
-   * 清空外部层并填充背景色
+   * 清空外部层（透明）
    */
-  clearOutsideLayer(backgroundColor: string = '#fdfbf7'): void {
+  clearOutsideLayer(): void {
     const canvas = this.layers.outside;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // 完全透明，不填充任何背景色
     ctx.clearRect(0, 0, this.config.width, this.config.height);
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, this.config.width, this.config.height);
   }
 
   /**
@@ -107,6 +106,18 @@ export class CanvasLayerManager {
 
     // 绘制每个植物
     plants.forEach((plant) => {
+      // 跳过无效的 canvas（宽度或高度为0的canvas会导致 drawImage 失败）
+      if (!plant.canvas || plant.canvas.width === 0 || plant.canvas.height === 0) {
+        console.warn('Skipping baseline plant with invalid canvas dimensions:', {
+          plantId: plant.id,
+          width: plant.canvas?.width,
+          height: plant.canvas?.height,
+          originX: plant.originX,
+          currentX: plant.currentX
+        });
+        return;
+      }
+
       // 计算拖拽偏移
       const dx = plant.currentX - plant.originX;
       ctx.drawImage(plant.canvas, dx, 0);
