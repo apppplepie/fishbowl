@@ -156,7 +156,7 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
       const agility = cfg.behavior.agility;
       const springBody = 0.005 + (agility * 0.075);
       const springRotation = 0.01 + (agility * 0.08);
-      const springTail = 0.1 + (agility * 0.4);
+      const springTail = 0.2 + (agility * 0.6);
 
       const energy = cfg.behavior.energy;
       const swaySpeedMove = 0.005 + (energy * 0.03); 
@@ -222,8 +222,8 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
       // Dorsal Socket: Top edge (-20) -> Gap (bottom at -24) -> Half-height(5) = Pivot Y at -29
       // X shifted to 15 to balance larger fin length
       const dorsalPos = getAttachedPos(15, -29);
-      state.dorsal.x = lerp(state.dorsal.x, dorsalPos.x, springTail * 0.8);
-      state.dorsal.y = lerp(state.dorsal.y, dorsalPos.y, springTail * 0.8);
+      state.dorsal.x = lerp(state.dorsal.x, dorsalPos.x, springTail * 0.9);
+      state.dorsal.y = lerp(state.dorsal.y, dorsalPos.y, springTail * 0.9);
 
       // --- Rotation Physics & Constraints ---
       const sign = state.body.flipScale >= 0 ? 1 : -1;
@@ -245,7 +245,7 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
 
 
       // Dorsal
-      state.dorsal.angle = lerpAngle(state.dorsal.angle, state.body.pitch, springTail * 0.8);
+      state.dorsal.angle = lerpAngle(state.dorsal.angle, state.body.pitch, springTail * 0.9);
       const dorsalSway = Math.sin(state.swayPhase + 1) * (swayAmp * 0.5);
       let finalDorsalRot = (state.dorsal.angle + dorsalSway) * sign; 
       
@@ -321,20 +321,29 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={config.colors.body} stopOpacity="1" />
           <stop offset="50%" stopColor={config.colors.body} stopOpacity="0.8" />
           <stop offset="100%" stopColor={config.colors.body} stopOpacity="0.6" />
         </linearGradient>
+
+        <linearGradient id="tailGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={config.colors.tail} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={config.colors.tail} stopOpacity="1" />
+        </linearGradient>
+        <linearGradient id="dorsalGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={config.colors.dorsal} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={config.colors.dorsal} stopOpacity="1" />
+        </linearGradient>
       </defs>
       {/* 鱼尾巴 - 会根据游动状态进行旋转和摆动 */}
       <g ref={tailRef} style={{ willChange: 'transform' }}>
-        <path d={PATH_TAIL} fill={config.colors.tail} />
+        <path d={PATH_TAIL} fill="url(#tailGradient)" />
       </g>
 
       {/* 鱼背鳍 - 会根据游动状态进行轻微摆动 */}
       <g ref={dorsalRef} style={{ willChange: 'transform' }}>
-         <path d={PATH_DORSAL} fill={config.colors.dorsal} />
+         <path d={PATH_DORSAL} fill="url(#dorsalGradient)" />
       </g>
 
       {/* 鱼身体及其眼睛 */}
