@@ -12,9 +12,11 @@ import RootSystem from './components/garden/RootSystem';
 import Header from './components/Header';
 import { theme } from './config/theme';
 import { BaselinePlant, PlantSettings } from './types/garden';
-import { convertGradient } from './utils/colorConverter';
+import { convertGradient, isTailwindGradient } from './utils/colorConverter';
 import { PRESET_VINE } from './config/plantPresets';
 import { PlantGrowthEngine } from './engine/PlantGrowthEngine';
+import Goldfish from './components/fish/Goldfish';
+import { FishConfig } from './components/fish/Sidebar';
 
 const { Title, Paragraph } = Typography;
 
@@ -32,6 +34,21 @@ export default function Home() {
   const [baselinePlants, setBaselinePlants] = useState<BaselinePlant[]>([]);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [rootSystems, setRootSystems] = useState<RootData[]>([]); // 根系数据
+
+  // 基本的鱼配置
+  const [fishConfig] = useState<FishConfig>({
+    colors: {
+      body: '#991b1b',
+      tail: '#991b1b',
+      dorsal: '#991b1b',
+      eye: '#ffffff',
+    },
+    behavior: {
+      agility: 0.25, // 适中的敏捷度
+      energy: 0.4,   // 适中的能量
+      scale: 1,
+    },
+  });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const baselineCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -277,9 +294,8 @@ export default function Home() {
     return convertGradient(currentFishbowlTheme.skyGradient);
   };
 
-  const getWaterGradient = () => {
-    return convertGradient(currentFishbowlTheme.waterGradient);
-  };
+  const waterGradient = currentFishbowlTheme.waterGradient;
+  const isTailwindWater = isTailwindGradient(waterGradient);
 
   // 固定基线位置在 box2 顶部（使用世界坐标）
   useEffect(() => {
@@ -729,14 +745,17 @@ export default function Home() {
           {/* 盒模型2：主要内容区域（包含波浪） */}
           <div
             ref={box2Ref}
+            className={isTailwindWater ? waterGradient : ''}
             style={{
               flex: 1,
               width: '100%',
-              background: getWaterGradient(),
+              background: isTailwindWater ? undefined : waterGradient,
               boxSizing: 'border-box',
               position: 'relative',
+              overflow: 'hidden',
               paddingTop: '40px', // 给波浪留空间
               minHeight: 'calc(100vh - 45px - 7vh)', // 至少填满屏幕减去导航栏和透明区域
+              height: 'calc(100vh - 45px - 7vh)', // 固定高度，确保渐变覆盖到底部
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -757,8 +776,20 @@ export default function Home() {
               <WaveSeparator colors={currentFishbowlTheme.waveColors} />
             </div>
 
+            {/* 鱼缸区域 - 作为水体背景层，不影响渐变 */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 1,
+                pointerEvents: 'none',
+              }}
+            >
+              <Goldfish config={fishConfig} />
+            </div>
+
             {/* 内容区 */}
-            <div className="text-center text-white" style={{ padding: '0 24px 40px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 5 }}>
+            <div className="text-center text-white" style={{ padding: '0 24px 40px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 5, minHeight: '100%' }}>
               {/* <Title level={2} className="!text-white mb-6" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                 权限系统
               </Title>
