@@ -654,11 +654,11 @@ export default function Home() {
             background: 'transparent',
           }}
         >
-          <div className="text-center text-white px-8" style={{ position: 'relative', zIndex: 5 }}>
-            <Title level={1} className="!text-white mb-6" style={{ fontSize: '3.5rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+          <div className="text-center text-black px-8" style={{ position: 'relative', zIndex: 5 }}>
+            <Title level={1} className="!text-black mb-6" style={{ fontSize: '3.5rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
               Fishbowl
             </Title>
-            <Paragraph className="!text-white text-xl mb-8 max-w-2xl" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+            <Paragraph className="!text-black text-xl mb-8 max-w-2xl" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
               没开发完，先这样吧
             </Paragraph>
             <Button
@@ -674,7 +674,7 @@ export default function Home() {
                 background: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: 'white',
+                color: 'black',
                 marginTop: '40px',
               }}
               onClick={() => {
@@ -801,7 +801,7 @@ export default function Home() {
                 <PermissionSystemDemo />
               </div> */}
 
-              {/* <div style={{ textAlign: 'center', marginTop: '40px', paddingBottom: '20px' }}>
+              <div style={{ textAlign: 'center', marginTop: '400px', paddingBottom: '20px' }}>
                 <Button
                   type="primary"
                   size="large"
@@ -819,7 +819,7 @@ export default function Home() {
                 >
                   进入文章归档
                 </Button>
-              </div> */}
+              </div>
             </div>
           </div>
         </div>

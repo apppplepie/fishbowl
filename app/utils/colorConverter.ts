@@ -28,6 +28,8 @@ const TAILWIND_COLOR_MAP: Record<string, string> = {
   'indigo-100': '#e0e7ff',
   'indigo-200': '#c7d2fe',
   'indigo-300': '#a5b4fc',
+  'indigo-900': '#312e81',
+  'indigo-950': '#1e1b4b',
   
   // Teal
   'teal-50': '#f0fdfa',
@@ -42,6 +44,7 @@ const TAILWIND_COLOR_MAP: Record<string, string> = {
   'emerald-100': '#d1fae5',
   'emerald-200': '#a7f3d0',
   'emerald-300': '#6ee7b7',
+  'emerald-600': '#059669',
   
   // Pink
   'pink-50': '#fdf2f8',
@@ -53,12 +56,14 @@ const TAILWIND_COLOR_MAP: Record<string, string> = {
   'purple-100': '#f3e8ff',
   'purple-200': '#e9d5ff',
   'purple-300': '#d8b4fe',
+  'purple-800': '#6b21a8',
   
   // Violet
   'violet-50': '#f5f3ff',
   'violet-100': '#ede9fe',
   'violet-200': '#ddd6fe',
   'violet-300': '#c4b5fd',
+  'violet-900': '#4c1d95',
   
   // Red
   'red-50': '#fef2f2',
@@ -84,6 +89,7 @@ const TAILWIND_COLOR_MAP: Record<string, string> = {
   'green-50': '#f0fdf4',
   'green-100': '#dcfce7',
   'green-200': '#bbf7d0',
+  'green-900': '#14532d',
   
   // Cyan
   'cyan-50': '#ecfeff',
@@ -91,12 +97,15 @@ const TAILWIND_COLOR_MAP: Record<string, string> = {
   'cyan-200': '#a5f3fc',
   'cyan-400': '#22d3ee',
   'cyan-500': '#06b6d4',
+  'cyan-900': '#164e63',
   
   // Blue
   'blue-50': '#eff6ff',
   'blue-100': '#dbeafe',
   'blue-200': '#bfdbfe',
+  'blue-300': '#93c5fd',
   'blue-600': '#2563eb',
+  'blue-950': '#172554',
   
   // Sky
   'sky-50': '#f0f9ff',
@@ -110,6 +119,7 @@ const TAILWIND_COLOR_MAP: Record<string, string> = {
   'slate-950': '#020617',
   
   // Fuchsia
+  'fuchsia-200': '#f5d0fe',
   'fuchsia-900': '#701a75',
   'fuchsia-950': '#4a044e',
   

@@ -41,23 +41,16 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     // initHeavyIfAny();
   }, []);
 
-  // login prompt listener
+  // login prompt listener - 只显示提示，不自动弹出登录框
   useEffect(() => {
-    let timeoutId: number | null = null;
     const handleLoginPrompt = (e: Event) => {
       const customEvent = e as CustomEvent<{ message?: string }>;
       message.warning(customEvent?.detail?.message || '登录已过期，请重新登录', 4);
-      timeoutId = window.setTimeout(() => {
-        setLoginModalOpen(true);
-        timeoutId = null;
-      }, 500);
+      // 移除自动弹出登录框的逻辑，右上角会自动变为登出状态
     };
     window.addEventListener('showLoginPrompt', handleLoginPrompt);
     return () => {
       window.removeEventListener('showLoginPrompt', handleLoginPrompt);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
     };
   }, []);
 
