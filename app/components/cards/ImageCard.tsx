@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import type { ImageCard as ImageCardType } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
@@ -26,9 +26,14 @@ export default function ImageCard({ card, onClick, priority = false, className =
   // 🔑 计算图片的 aspect ratio（优先使用实际尺寸，否则默认 3:2）
   const imageWidth = card.coverImage?.width || card.imageWidth;
   const imageHeight = card.coverImage?.height || card.imageHeight;
-  const aspectRatio = imageWidth && imageHeight 
-    ? `${imageWidth} / ${imageHeight}` 
+  const initialAspectRatio = imageWidth && imageHeight
+    ? `${imageWidth} / ${imageHeight}`
     : '3 / 2'; // 默认 3:2 比例
+  const [aspectRatio, setAspectRatio] = useState(initialAspectRatio);
+
+  useEffect(() => {
+    setAspectRatio(initialAspectRatio);
+  }, [initialAspectRatio]);
 
   return (
     <Card
@@ -59,7 +64,12 @@ export default function ImageCard({ card, onClick, priority = false, className =
             maxWidth: '100%', /* 防止撑开父容器 */
           }}
           className="hover-scale-image"
-          onLoad={() => setImgLoaded(true)}
+          onLoadingComplete={(img) => {
+            if (img?.naturalWidth && img?.naturalHeight) {
+              setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+            }
+            setImgLoaded(true);
+          }}
           onError={() => {
             console.error('ImageCard 图片加载失败:', card.coverImage?.url || card.imageUrl || card.firstImageUrl);
             setImgLoaded(true);
