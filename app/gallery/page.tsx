@@ -1,17 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Masonry, message } from 'antd';
+import { message } from 'antd';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
 import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
+import MasonryGrid from '@/app/components/layout/MasonryGrid';
 import { apiGet } from '@/lib/apiClient';
 
-// 注入动画样式
+// 注入动画样式和图片 hover 效果
 if (typeof document !== 'undefined') {
-  const styleId = 'gallery-modal-animations';
+  const styleId = 'gallery-styles';
   if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
     style.id = styleId;
@@ -30,29 +31,41 @@ if (typeof document !== 'undefined') {
           transform: scale(1);
         }
       }
+      .gallery-image {
+        transition: transform 0.32s ease, filter 0.32s ease;
+        transform-origin: center center;
+      }
+      .gallery-image:hover {
+        transform: scale(1.04);
+        filter: brightness(0.98);
+        will-change: transform;
+      }
+      .gallery-image:active {
+        will-change: auto;
+      }
     `;
     document.head.appendChild(style);
   }
 }
 
-// 根据屏幕宽度计算列数
-const calculateColumns = (width: number) => {
-  if (width >= 1400) return 5;
-  if (width >= 1200) return 4;
-  if (width >= 768) return 3;
-  if (width >= 480) return 2;
-  return 2;
-};
-
-// 图片项组件
-const GalleryImage: React.FC<{ article: any; onClick: () => void }> = ({ article, onClick }) => {
+// 图片项组件 - 使用 React.memo 优化渲染
+const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => void }> = React.memo(({ article, onImageClick }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // 使用 useCallback 避免每次渲染创建新函数
+  const handleLoad = useCallback(() => setImgLoaded(true), []);
+  const handleError = useCallback(() => setImgError(true), []);
+  const handleClick = useCallback(() => onImageClick(article), [onImageClick, article]);
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleClick();
+  }, [handleClick]);
 
   return (
     <div
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') onClick(); }}
+      onKeyDown={handleKeyDown}
       style={{
         position: 'relative',
         width: '100%',
@@ -61,9 +74,9 @@ const GalleryImage: React.FC<{ article: any; onClick: () => void }> = ({ article
         overflow: 'hidden',
         background: '#f6f6f6',
       }}
-      onClick={onClick}
+      onClick={handleClick}
     >
-      {!imgLoaded && (
+      {!imgLoaded && !imgError && (
         <div style={{ width: '100%', paddingTop: '75%', position: 'relative' }}>
           <svg
             viewBox="0 0 400 300"
@@ -77,28 +90,38 @@ const GalleryImage: React.FC<{ article: any; onClick: () => void }> = ({ article
         </div>
       )}
 
-      <img
-        src={article.cover_image_url}
-        alt={article.title ?? '作品封面'}
-        onLoad={() => setImgLoaded(true)}
-        style={{
-          width: '100%',
-          maxHeight: 500,
-          objectFit: 'cover',
-          display: imgLoaded ? 'block' : 'none',
-          transition: 'transform 0.32s ease, filter 0.32s ease',
-          transformOrigin: 'center center',
-        }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.04)'; (e.currentTarget as HTMLImageElement).style.filter = 'brightness(0.98)'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLImageElement).style.filter = 'none'; }}
-      />
+      {!imgError && (
+        <img
+          src={article.cover_image_url}
+          alt={article.title ?? '作品封面'}
+          onLoad={handleLoad}
+          onError={handleError}
+          loading="lazy"
+          decoding="async"
+          style={{
+            width: '100%',
+            maxHeight: 500,
+            objectFit: 'cover',
+            display: imgLoaded ? 'block' : 'none',
+          }}
+          className="gallery-image"
+        />
+      )}
+      
+      {imgError && (
+        <div style={{ width: '100%', paddingTop: '75%', position: 'relative', background: '#f0f0f0' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+            加载失败
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+});
+
+GalleryImage.displayName = 'GalleryImage';
 
 export default function GalleryPage() {
-  console.log('[GalleryPage] 组件渲染开始 - 时间戳:', Date.now());
-
   const router = useRouter();
   const { setConfig } = usePageShell();
 
@@ -108,35 +131,41 @@ export default function GalleryPage() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
-  const [columns, setColumns] = useState<number>(() => typeof window !== 'undefined' ? calculateColumns(window.innerWidth) : 3);
-
-  console.log('[GalleryPage] 组件状态:', {
-    articlesCount: articles.length,
-    loading,
-    loadingMore,
-    hasMore
-  });
 
   const ITEMS_PER_PAGE = 20;
 
-  // refs 防闭包 stale
+  // refs 防闭包 stale 和内存泄漏
   const offsetRef = useRef(offset);
   const loadingRef = useRef(loading);
   const loadingMoreRef = useRef(loadingMore);
   const hasMoreRef = useRef(hasMore);
+  const isMountedRef = useRef(true); // 用于防止组件卸载后更新状态
+  
   useEffect(() => { offsetRef.current = offset; }, [offset]);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
   useEffect(() => { loadingMoreRef.current = loadingMore; }, [loadingMore]);
   useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  
+  // 组件挂载状态追踪
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // 获取数据
   const fetchDrawingArticles = useCallback(async (currentOffset: number, append = false) => {
     try {
+      if (!isMountedRef.current) return;
+      
       if (append) setLoadingMore(true);
       else setLoading(true);
 
       const res = await apiGet(`/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`, { requiresAuth: true });
       const data = await res.json();
+
+      if (!isMountedRef.current) return; // 检查组件是否已卸载
 
       if (data.success) {
         if (append) {
@@ -158,59 +187,79 @@ export default function GalleryPage() {
       }
     } catch (err) {
       console.error(err);
-      message.error('获取作品失败');
-      setHasMore(false);
+      if (isMountedRef.current) {
+        message.error('获取作品失败');
+        setHasMore(false);
+      }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, []);
 
   // 初次加载
   useEffect(() => { fetchDrawingArticles(0); }, [fetchDrawingArticles]);
 
-  // 响应列数
-  useEffect(() => {
-    const handleResize = () => setColumns(calculateColumns(window.innerWidth));
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   // 无限滚动
   useEffect(() => {
     let ticking = false;
+    let rafId: number | null = null;
+    
     const onScroll = () => {
       if (ticking) return;
       ticking = true;
-      requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
         try {
+          if (!isMountedRef.current) return; // 组件已卸载，不执行
           if (loadingRef.current || loadingMoreRef.current || !hasMoreRef.current) return;
           const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
           const scrollHeight = document.documentElement.scrollHeight;
           const clientHeight = window.innerHeight;
           if (scrollHeight - scrollTop - clientHeight < 300) fetchDrawingArticles(offsetRef.current, true);
-        } finally { ticking = false; }
+        } finally { 
+          ticking = false;
+          rafId = null;
+        }
       });
     };
+    
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      // 清理未完成的 RAF
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, [fetchDrawingArticles]);
 
-  const handleImageClick = async (article: any) => {
+  const handleImageClick = useCallback(async (article: any) => {
     if (article.blocks?.length) { setSelectedArticle(article); return; }
     try {
       const res = await apiGet(`/api/articles/${article.id}`, { requiresAuth: true });
       const data = await res.json();
+      
+      if (!isMountedRef.current) return; // 检查组件是否已卸载
+      
       if (data.success) {
         const fullArticle = { ...article, blocks: data.article.blocks };
         setArticles(prev => prev.map(a => a.id === article.id ? fullArticle : a));
         setSelectedArticle(fullArticle);
-      } else message.error('获取作品详情失败');
-    } catch (err) { console.error(err); message.error('获取作品详情失败'); }
-  };
+      } else {
+        message.error('获取作品详情失败');
+      }
+    } catch (err) { 
+      console.error(err);
+      if (isMountedRef.current) {
+        message.error('获取作品详情失败');
+      }
+    }
+  }, []);
 
-  const handleTitleClick = (article: any) => router.push(`/article/${article.id}`);
+  const handleTitleClick = useCallback((article: any) => router.push(`/article/${article.id}`), [router]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedArticle(null); };
@@ -220,21 +269,16 @@ export default function GalleryPage() {
 
   // 设置页面配置（主题由 PageShell 自动从全局读取）
   useEffect(() => {
-    console.log('[GalleryPage] 设置 PageShell 配置');
-
     setConfig({
       box1Content: null,
       hideBox1: false,
-      box2Style: { padding: '40px 6px' },
+      // 移除 box2Style，使用默认 padding: '40px 20px 20px'，与 archive 和 bookcase 统一
     });
 
     return () => {
-      console.log('[GalleryPage] 清理配置');
       setConfig({ box1Content: null });
     };
   }, [setConfig]);
-
-  console.log('[GalleryPage] 即将渲染 JSX');
 
   return (
     <>
@@ -252,17 +296,15 @@ export default function GalleryPage() {
           />
         ) : (
           <>
-            <Masonry
-              columns={columns}
-              gutter={8}
-              items={articles.map(a => ({ key: a.id, data: a }))}
-              itemRender={({ data }) => (
-                <GalleryImage 
-                  article={data} 
-                  onClick={() => handleImageClick(data)} 
+            <MasonryGrid minColumns={2}>
+              {articles.map(article => (
+                <GalleryImage
+                  key={article.id}
+                  article={article}
+                  onImageClick={handleImageClick}
                 />
-              )}
-            />
+              ))}
+            </MasonryGrid>
             {loadingMore && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
                 <Spin size="large" />

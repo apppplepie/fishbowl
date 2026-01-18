@@ -37,7 +37,7 @@ export default function ProtectedLayout({
         <div style={{ textAlign: 'center' }}>
           <Spin size="large" />
           <div style={{ marginTop: '16px', color: '#666' }}>
-            加载中...
+            {/* 加载中... */}
           </div>
         </div>
       </div>
