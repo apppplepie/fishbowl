@@ -556,6 +556,14 @@ function BookcasePageContent() {
     return filtered;
   }, [cards, selectedTags, searchKeyword]);
 
+  const triggerLoadMore = useCallback(() => {
+    if (!hasMore || loadingRef.current) return;
+    loadingRef.current = true;
+    loadBookcaseArticles(offsetRef.current, true, categoryFromUrl).finally(() => {
+      loadingRef.current = false;
+    });
+  }, [hasMore, categoryFromUrl, loadBookcaseArticles]);
+
   // ✅ 使用 IntersectionObserver 代替 scroll 事件（使用 offsetRef 避免闭包问题）
   useEffect(() => {
       if (!hasMore) return;
@@ -565,11 +573,8 @@ function BookcasePageContent() {
 
       const observer = new IntersectionObserver(
           (entries) => {
-              if (entries[0].isIntersecting && !loadingRef.current) {
-                  loadingRef.current = true;
-                  loadBookcaseArticles(offsetRef.current, true, categoryFromUrl).finally(() => {
-                      loadingRef.current = false;
-                  });
+              if (entries[0].isIntersecting) {
+                  triggerLoadMore();
               }
           },
           {
@@ -584,7 +589,34 @@ function BookcasePageContent() {
       return () => {
           observer.disconnect();
       };
-  }, [hasMore, categoryFromUrl, loadBookcaseArticles]);
+  }, [hasMore, triggerLoadMore]);
+
+  // ✅ 滚动兜底：偶发 IO 失效时也能继续加载
+  useEffect(() => {
+      if (!hasMore) return;
+
+      let rafId: number | null = null;
+      const thresholdPx = 600;
+
+      const onScroll = () => {
+        if (rafId !== null) return;
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const viewportH = window.innerHeight;
+          const docH = document.documentElement.scrollHeight;
+          if (docH - (scrollTop + viewportH) < thresholdPx) {
+            triggerLoadMore();
+          }
+        });
+      };
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => {
+          window.removeEventListener('scroll', onScroll);
+          if (rafId !== null) cancelAnimationFrame(rafId);
+      };
+  }, [hasMore, triggerLoadMore]);
 
   // 点击卡片处理
   const handleCardClick = (card: any) => {

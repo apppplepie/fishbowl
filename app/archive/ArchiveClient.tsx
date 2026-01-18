@@ -219,6 +219,14 @@ export default function ArchiveClient({
         }
     }, []);
 
+    const triggerLoadMore = useCallback(() => {
+        if (!hasMore || loadingRef.current) return;
+        loadingRef.current = true;
+        loadArticles(offsetRef.current, true, selectedCategoryId).finally(() => {
+            loadingRef.current = false;
+        });
+    }, [hasMore, loadArticles, selectedCategoryId]);
+
     // ✅ 使用 IntersectionObserver 代替 scroll 事件（使用 offsetRef 避免闭包问题）
     useEffect(() => {
         if (!hasMore) return;
@@ -228,11 +236,8 @@ export default function ArchiveClient({
 
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting && !loadingRef.current) {
-                    loadingRef.current = true;
-                    loadArticles(offsetRef.current, true, selectedCategoryId).finally(() => {
-                        loadingRef.current = false;
-                    });
+                if (entries[0].isIntersecting) {
+                    triggerLoadMore();
                 }
             },
             {
@@ -247,7 +252,34 @@ export default function ArchiveClient({
         return () => {
             observer.disconnect();
         };
-    }, [hasMore, selectedCategoryId, loadArticles]);
+    }, [hasMore, triggerLoadMore]);
+
+    // ✅ 滚动兜底：偶发 IO 失效时也能继续加载
+    useEffect(() => {
+        if (!hasMore) return;
+
+        let rafId: number | null = null;
+        const thresholdPx = 600;
+
+        const onScroll = () => {
+            if (rafId !== null) return;
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
+                const scrollTop = window.scrollY || document.documentElement.scrollTop;
+                const viewportH = window.innerHeight;
+                const docH = document.documentElement.scrollHeight;
+                if (docH - (scrollTop + viewportH) < thresholdPx) {
+                    triggerLoadMore();
+                }
+            });
+        };
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', onScroll);
+            if (rafId !== null) cancelAnimationFrame(rafId);
+        };
+    }, [hasMore, triggerLoadMore]);
 
     // 注释掉：服务端已经提供初始数据，不需要客户端再次加载
     // 移除此 useEffect 避免重复加载和 React Strict Mode 的双重调用问题

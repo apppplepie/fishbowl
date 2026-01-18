@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import './MasonryGrid.css';
 
 // --- 配置常量 ---
@@ -31,6 +31,7 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
   
   // 🔑 缓存 grid metrics，只在列数变化时刷新
   const metricsCacheRef = useRef<{ rowHeight: number; rowGap: number } | null>(null);
+  const childrenCount = useMemo(() => React.Children.count(children), [children]);
 
   // --- 动态计算列数 ---
   const calculateColumns = (containerWidth: number): number => {
@@ -346,6 +347,19 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
       pendingUpdatesRef.current.clear();
     };
   }, [minColumns]);
+
+  // 子项数量变化时，强制重新测量，避免新增卡片未触发布局更新
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    updateColumns(grid);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        calculateInitial(grid);
+      });
+    });
+  }, [childrenCount, minColumns]);
 
   // ✅ 方案1：不克隆 children，直接渲染
   // 调用方负责给每个 child 添加 'masonry-item' className

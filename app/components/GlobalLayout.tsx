@@ -20,6 +20,20 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
   // 固定 main 的 style 对象，避免每次渲染都创建新对象
   const mainStyle = useMemo(() => ({ paddingTop: isHomePage ? '0' : '45px' }), [isHomePage]);
 
+  // PageShell 功能开关：仅在需要的路由启用，避免全站渲染开销
+  const ENABLE_PAGE_SHELL = [
+    '/gallery',
+    '/register',
+    '/publish-article',
+    '/publish-book',
+    '/publish-chapter',
+    '/profile',
+    '/archive',
+    '/bookcase',
+    '/article',
+    '/book',
+  ].some((path) => pathname === path || pathname.startsWith(path + '/'));
+
   return (
     <>
       {/* Header 永驻，不随路由卸载（首页除外） */}
@@ -80,8 +94,8 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* PageShell 永驻，不随路由卸载（首页除外） */}
-      {!isHomePage ? (
+      {/* PageShell 仅在允许路由启用，避免全站开销 */}
+      {!isHomePage && ENABLE_PAGE_SHELL ? (
         <PageShell>
           {children}
         </PageShell>
