@@ -15,7 +15,7 @@ import { BaselinePlant, PlantSettings } from './types/garden';
 import { convertGradient, isTailwindGradient } from './utils/colorConverter';
 import { PRESET_VINE } from './config/plantPresets';
 import { PlantGrowthEngine } from './engine/PlantGrowthEngine';
-import Goldfish from './components/fish/Goldfish';
+import Goldfish, { FishBounds } from './components/fish/Goldfish';
 import { FishConfig } from './components/fish/Sidebar';
 
 const { Title, Paragraph } = Typography;
@@ -49,6 +49,8 @@ export default function Home() {
       scale: 1,
     },
   });
+  const [fishBounds, setFishBounds] = useState<FishBounds | null>(null);
+  const fishTopPadding = 20;
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const baselineCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -288,6 +290,29 @@ export default function Home() {
       }
     };
   }, []);
+
+  // 计算鱼缸区域边界（用于限制鱼的活动范围）
+  useEffect(() => {
+    const updateFishBounds = () => {
+      if (!box2Ref.current) return;
+      const rect = box2Ref.current.getBoundingClientRect();
+      setFishBounds({
+        left: rect.left,
+        top: rect.top + fishTopPadding,
+        width: rect.width,
+        height: Math.max(0, rect.height - fishTopPadding),
+      });
+    };
+
+    updateFishBounds();
+    const container = scrollContainerRef.current;
+    container?.addEventListener('scroll', updateFishBounds, { passive: true });
+    window.addEventListener('resize', updateFishBounds);
+    return () => {
+      container?.removeEventListener('scroll', updateFishBounds);
+      window.removeEventListener('resize', updateFishBounds);
+    };
+  }, [fishTopPadding]);
 
   // 获取渐变背景 CSS
   const getSkyGradient = () => {
@@ -752,7 +777,7 @@ export default function Home() {
               background: isTailwindWater ? undefined : waterGradient,
               boxSizing: 'border-box',
               position: 'relative',
-              overflow: 'hidden',
+              overflow: 'visible',
               paddingTop: '40px', // 给波浪留空间
               minHeight: 'calc(100vh - 45px - 7vh)', // 至少填满屏幕减去导航栏和透明区域
               height: 'calc(100vh - 45px - 7vh)', // 固定高度，确保渐变覆盖到底部
@@ -780,12 +805,15 @@ export default function Home() {
             <div
               style={{
                 position: 'absolute',
-                inset: 0,
+                top: fishTopPadding,
+                left: 0,
+                right: 0,
+                bottom: 0,
                 zIndex: 1,
                 pointerEvents: 'none',
               }}
             >
-              <Goldfish config={fishConfig} />
+              <Goldfish config={fishConfig} bounds={fishBounds || undefined} />
             </div>
 
             {/* 内容区 */}

@@ -31,18 +31,7 @@ const constrainAngle = (base: number, target: number, maxDelta: number) => {
 
 /**
  * 鱼的身体形状定义 (SVG 路径)
- * 坐标系：中心点为(0,0)，向右为正X，向下为正Y
- * M = moveto, L = lineto, Z = closepath
  */
-
-// 鱼身体：几何形状，头部较宽，尾部收窄
-// M -50 -20: 从左上角(-50,-20)开始
-// L 50 -20: 画线到右上角(50,-20)
-// L 50 0: 画线到右侧中间(50,0)
-// L 35 20: 画线到右下角收窄处(25,20)
-// L -50 20: 画线到左下角(-50,20)
-// Z: 闭合路径
-// 微调说明：调整这些坐标点可以改变鱼的身体形状和比例
 const PATH_BODY =
   "M -45 -20 \
    L 45 -20 \
@@ -57,79 +46,109 @@ const PATH_BODY =
    Q -50 -20 -45 -20 \
    Z";
 
-
-// 鱼尾巴：圆角矩形形状，旋转中心在右端中间(0,0)
-// 使用二次曲线(Q)创建圆角效果
-// M -80 -16: 从尾巴左上角开始(-80,-16)
-// Q -78 -16 -78 -14: 圆角到左下角
-// L -78 -6: 画线到左下角(-78,-6)
-// Q -78 -4 -80 -4: 圆角到右下角
-// L 8 -4: 画线到右下角(8,-4)
-// Q 10 -4 10 -6: 圆角到右上角
-// L 10 -14: 画线到右上角(10,-14)
-// Q 10 -16 8 -16: 圆角到左上角
-// L -78 -16: 回到起点
-// Z: 闭合路径
-// 微调说明：改变宽度(-80)和高度(±16)可以调整尾巴大小，圆角半径为2
 const PATH_TAIL = "M -80 -16 L -78 -16 -78 -14 L -78 -6 L -78 -4 -80 -4 L 8 -4 Q 10 -4 10 -6 L 10 -14 Q 10 -16 8 -16 L -78 -16 Z";
-
-// 鱼背鳍：圆角矩形，旋转中心在右侧中间(0,0)
-// 使用二次曲线(Q)创建圆角效果
-// M -80 -5: 从背鳍左上角开始(-80,-5)
-// Q -78 -5 -78 -3: 圆角到左下角
-// L -78 3: 画线到左下角(-78,3)
-// Q -78 5 -80 5: 圆角到右下角
-// L -2 5: 画线到右下角(-2,5)
-// Q 0 5 0 3: 圆角到右上角
-// L 0 -3: 画线到右上角(0,-3)
-// Q 0 -5 -2 -5: 圆角到左上角
-// L -78 -5: 回到起点
-// Z: 闭合路径
-// 微调说明：调整长度(-80)和高度(±5)可以改变背鳍外观，圆角半径为2
 const PATH_DORSAL = "M -80 -5 L -78 -5 -78 -3 L -78 3 L -78 5 -80 5 L -2 5 Q 0 5 0 3 L 0 -3 Q 0 -5 -2 -5 L -78 -5 Z";
 
-// 眼睛与瞳孔基准位置（相对于鱼身体中心）
-// 只需修改这里即可同步到 SVG 和跟随逻辑
 const EYE_BASE = { x: 30, y: -3 };
 const EYE_RADIUS = 7;
 const PUPIL_RADIUS = 5;
+const BODY_HALF_WIDTH = 60;
+const BODY_HALF_HEIGHT = 35;
 
+/**
+ * Feeding / Food constants (tweak if needed)
+ */
+const MAX_FOOD = 10;
+const FOOD_SENSING_RADIUS = 300;
+const EAT_RADIUS = 20;
+const MAX_EATEN = 8; // threshold to "die"
+
+/** Types **/
+type FoodItem = {
+  active: boolean;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  rot: number;
+};
+
+export interface FishBounds {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
 
 interface GoldfishProps {
   config: FishConfig;
+  bounds?: FishBounds;
 }
 
-const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
-  const bodyRef = useRef<SVGGElement>(null);
-  const dorsalRef = useRef<SVGGElement>(null);
-  const tailRef = useRef<SVGGElement>(null);
-  const pupilRef = useRef<SVGCircleElement>(null);
+const Goldfish: React.FC<GoldfishProps> = ({ config, bounds }) => {
+  const bodyRef = useRef<SVGGElement | null>(null);
+  const dorsalRef = useRef<SVGGElement | null>(null);
+  const tailRef = useRef<SVGGElement | null>(null);
+  const pupilRef = useRef<SVGCircleElement | null>(null);
+
+  // food DOM refs pool
+  const foodRefs = useRef<(SVGGElement | null)[]>([]);
 
   const configRef = useRef(config);
-
+  const boundsRef = useRef<FishBounds | null>(bounds || null);
   useEffect(() => {
     configRef.current = config;
   }, [config]);
+  useEffect(() => {
+    boundsRef.current = bounds || null;
+  }, [bounds]);
 
-  const physics = useRef({
+  // Physics + gameplay state (mutable ref used by rAF loop)
+  const physics = useRef<any>({
     time: 0,
     swayPhase: 0,
-    mouse: { x: 0, y: 0 }, // Will be initialized in useEffect
+    mouse: { x: 0, y: 0 },
     body: {
-      x: 0, // Will be initialized in useEffect
-      y: 0, // Will be initialized in useEffect
+      x: 0,
+      y: 0,
       pitch: 0,
       facing: 1,
       flipScale: 1,
     },
-    tail: { x: 0, y: 0, angle: 0, droop: 0 }, // Will be initialized in useEffect
-    dorsal: { x: 0, y: 0, angle: 0 }, // Will be initialized in useEffect
+    tail: { x: 0, y: 0, angle: 0, droop: 0 },
+    dorsal: { x: 0, y: 0, angle: 0 },
+    // Feeding/gameplay fields
+    eatenCount: 0,
+    growthModifier: 0,
+    isDead: false,
+    food: Array.from({ length: MAX_FOOD }).map(() => ({
+      active: false,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      rot: 0,
+    })) as FoodItem[],
   });
 
   useEffect(() => {
+    const getBounds = () => {
+      if (boundsRef.current) return boundsRef.current;
+      return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    };
+    const clampToBounds = (bounds: FishBounds, x: number, y: number, scale: number) => {
+      const paddingX = BODY_HALF_WIDTH * scale;
+      const paddingY = BODY_HALF_HEIGHT * scale;
+      return {
+        x: clamp(x, paddingX, Math.max(paddingX, bounds.width - paddingX)),
+        y: clamp(y, paddingY, Math.max(paddingY, bounds.height - paddingY)),
+      };
+    };
+
     // Initialize positions after component mounts (client-side only)
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
+    const initialBounds = getBounds();
+    const centerX = initialBounds.width / 2;
+    const centerY = initialBounds.height / 2;
     physics.current.mouse = { x: centerX, y: centerY };
     physics.current.body.x = centerX;
     physics.current.body.y = centerY;
@@ -138,170 +157,316 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
     physics.current.dorsal.x = centerX;
     physics.current.dorsal.y = centerY;
 
+    // --- Interaction handlers ---
     const handleMouseMove = (e: MouseEvent) => {
-      physics.current.mouse.x = e.clientX;
-      physics.current.mouse.y = e.clientY;
+      const currentBounds = getBounds();
+      const localX = e.clientX - currentBounds.left;
+      const localY = e.clientY - currentBounds.top;
+      const safe = clampToBounds(currentBounds, localX, localY, configRef.current.behavior.scale);
+      physics.current.mouse.x = safe.x;
+      physics.current.mouse.y = safe.y;
+    };
+
+    // Use global click for feeding so we don't change svg pointer-events/style
+    const handleGlobalClick = (e: MouseEvent) => {
+      // If dead, cannot feed
+      if (physics.current.isDead) return;
+      const currentBounds = getBounds();
+      const localX = e.clientX - currentBounds.left;
+      const localY = e.clientY - currentBounds.top;
+      if (localX < 0 || localX > currentBounds.width || localY < 0 || localY > currentBounds.height) {
+        return;
+      }
+      // find inactive food
+      const flake = physics.current.food.find((f: FoodItem) => !f.active);
+      if (!flake) return;
+      flake.active = true;
+      const safe = clampToBounds(currentBounds, localX, localY, configRef.current.behavior.scale);
+      flake.x = safe.x;
+      flake.y = safe.y;
+      flake.vx = (Math.random() - 0.5) * 1;
+      flake.vy = 2 + Math.random() * 2;
+      flake.rot = Math.random() * 360;
+      // show corresponding DOM if exists
+      const idx = physics.current.food.indexOf(flake);
+      const el = foodRefs.current[idx];
+      if (el) {
+        el.style.display = 'block';
+        el.style.transform = `translate(${flake.x}px, ${flake.y}px) rotate(${flake.rot}deg)`;
+      }
     };
 
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('click', handleGlobalClick);
 
     let rAF = 0;
 
     const animate = () => {
       const state = physics.current;
       const cfg = configRef.current;
-      
-      state.time += 16; 
+      const currentBounds = getBounds();
 
+      state.time += 16;
+
+      // scale multiplier used for movement transforms (kept as original so fish style not altered)
+      const scaleMult = cfg.behavior.scale;
+
+      // --- Feeding / Food updates ---
+      let targetX = state.mouse.x;
+      let targetY = state.mouse.y;
+      const targetSafe = clampToBounds(currentBounds, targetX, targetY, scaleMult);
+      targetX = targetSafe.x;
+      targetY = targetSafe.y;
+      let minDist = FOOD_SENSING_RADIUS;
+      let foundFood = false;
+
+      for (let i = 0; i < state.food.length; i++) {
+        const f = state.food[i] as FoodItem;
+        const el = foodRefs.current[i];
+        if (!f.active) continue;
+
+        // simple physics
+        f.y += f.vy;
+        f.x += Math.sin(state.time * 0.01 + f.rot) * 0.5;
+        f.rot += 2;
+
+        if (el) {
+          el.style.transform = `translate(${f.x}px, ${f.y}px) rotate(${f.rot}deg)`;
+          el.style.display = 'block';
+        }
+
+        // out of bounds cleanup
+        if (f.y > currentBounds.height + 50 || f.x < -50 || f.x > currentBounds.width + 50) {
+          f.active = false;
+          if (el) el.style.display = 'none';
+          continue;
+        }
+
+        if (state.isDead) continue; // dead fish don't eat
+
+        // head approximate position (same estimate you used elsewhere)
+        const headX = state.body.x + (Math.cos(state.body.pitch) * 40 * state.body.facing);
+        const headY = state.body.y + (Math.sin(state.body.pitch) * 40);
+
+        const dx = f.x - headX;
+        const dy = f.y - headY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Eating check (use EAT_RADIUS scaled by growthModifier slightly)
+        const effectiveEatRadius = EAT_RADIUS * (1 + (state.growthModifier || 0));
+        if (dist < effectiveEatRadius) {
+          f.active = false;
+          if (el) el.style.display = 'none';
+
+          state.eatenCount += 1;
+          state.growthModifier = (state.growthModifier || 0) + 0.1; // grow a bit
+
+          if (state.eatenCount >= MAX_EATEN) {
+            state.isDead = true;
+          }
+        } else if (dist < minDist) {
+          minDist = dist;
+          targetX = f.x;
+          targetY = f.y;
+          foundFood = true;
+        }
+      }
+
+      // --- Fish movement & physics (mostly your original logic) ---
       const agility = cfg.behavior.agility;
-      const springBody = 0.005 + (agility * 0.075);
+      const baseSpringBody = 0.005 + (agility * 0.075);
+      const springBody = foundFood ? baseSpringBody * 3 : baseSpringBody; // Faster movement towards food
       const springRotation = 0.01 + (agility * 0.08);
       const springTail = 0.2 + (agility * 0.6);
 
       const energy = cfg.behavior.energy;
-      const swaySpeedMove = 0.005 + (energy * 0.03); 
+      const swaySpeedMove = 0.005 + (energy * 0.03);
       const swaySpeedIdle = 0.001 + (energy * 0.005);
       const swayAmp = 0.05 + (energy * 0.05);
 
-      const targetX = state.mouse.x;
-      const targetY = state.mouse.y;
+      // If dead: simple float-to-surface + belly-up behavior
+      if (state.isDead) {
+        // float up slowly to y ~ 150
+        const floatTargetX = state.body.x + Math.sin(state.time * 0.002) * 0.5;
+        const floatTargetY = Math.min(150, currentBounds.height * 0.3);
+        state.body.x = lerp(state.body.x, floatTargetX, 0.01);
+        state.body.y = lerp(state.body.y, floatTargetY, 0.005);
+        // belly up
+        state.body.pitch = lerpAngle(state.body.pitch, Math.PI, 0.02);
+        // pupil hide if exists
+        if (pupilRef.current) pupilRef.current.style.opacity = '0';
+      } else {
+        // ALIVE behavior (targeting food if found)
+        // 1. Body Movement
+        state.body.x = lerp(state.body.x, targetX, springBody);
+        state.body.y = lerp(state.body.y, targetY, springBody);
+        const bodySafe = clampToBounds(currentBounds, state.body.x, state.body.y, scaleMult);
+        state.body.x = bodySafe.x;
+        state.body.y = bodySafe.y;
 
-      // 1. Body Movement
-      state.body.x = lerp(state.body.x, targetX, springBody);
-      state.body.y = lerp(state.body.y, targetY, springBody);
+        const dx = targetX - state.body.x;
+        const dy = targetY - state.body.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-      const dx = targetX - state.body.x;
-      const dy = targetY - state.body.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      
-      const isMoving = dist > 15;
+        const isMoving = dist > 15;
 
-      // 2. Facing Direction
-      if (Math.abs(dx) > 10) {
-        state.body.facing = dx > 0 ? 1 : -1;
+        // 2. Facing Direction
+        if (Math.abs(dx) > 10) {
+          state.body.facing = dx > 0 ? 1 : -1;
+        }
+        state.body.flipScale = lerp(state.body.flipScale, state.body.facing, 0.12);
+
+        // 3. Pitch
+        let targetPitch = 0;
+        if (dist > 5) {
+          targetPitch = Math.atan2(dy, Math.abs(dx));
+        } else if (!foundFood) {
+          targetPitch = 0;
+        }
+        state.body.pitch = lerpAngle(state.body.pitch, targetPitch, springRotation);
+
+        // 4. Bobbing
+        const bobY = Math.sin(state.time * 0.003) * 6;
+
+        // sway
+        const targetSwaySpeed = isMoving ? swaySpeedMove : swaySpeedIdle;
+        state.swayPhase += targetSwaySpeed * 16;
+        const sway = Math.sin(state.swayPhase) * swayAmp;
+
+        // attachments & transforms (same as original)
+        const flip = state.body.flipScale;
+        const cos = Math.cos(state.body.pitch);
+        const sin = Math.sin(state.body.pitch);
+
+        const getAttachedPos = (lx: number, ly: number) => {
+          const slx = lx * scaleMult;
+          const sly = ly * scaleMult;
+          const rx = slx * cos - sly * sin;
+          const ry = slx * sin + sly * cos;
+          const sx = rx * flip;
+          const sy = ry;
+          return { x: state.body.x + sx, y: state.body.y + sy };
+        };
+
+        // Tail & dorsal positions
+        const tailPos = getAttachedPos(-54, 0);
+        state.tail.x = lerp(state.tail.x, tailPos.x, springTail);
+        state.tail.y = lerp(state.tail.y, tailPos.y, springTail);
+
+        const dorsalPos = getAttachedPos(15, -29);
+        state.dorsal.x = lerp(state.dorsal.x, dorsalPos.x, springTail * 0.9);
+        state.dorsal.y = lerp(state.dorsal.y, dorsalPos.y, springTail * 0.9);
+
+        // Tail rotation
+        state.tail.angle = lerpAngle(state.tail.angle, state.body.pitch, springTail);
+        const targetDroop = isMoving ? 0 : 0.5;
+        state.tail.droop = lerp(state.tail.droop, targetDroop, 0.03);
+        const drag = clamp((state.body.pitch - state.tail.angle) * 2.0, -0.35, 0.35);
+        let tailBaseRot = (state.tail.angle + drag + sway) * (state.body.flipScale >= 0 ? 1 : -1);
+        let finalTailRot = tailBaseRot - state.tail.droop;
+        finalTailRot = constrainAngle(state.body.pitch, finalTailRot, 0.45);
+
+        // Dorsal rotation
+        state.dorsal.angle = lerpAngle(state.dorsal.angle, state.body.pitch, springTail * 0.9);
+        const dorsalSway = Math.sin(state.swayPhase + 1) * (swayAmp * 0.5);
+        let finalDorsalRot = (state.dorsal.angle + dorsalSway) * (state.body.flipScale >= 0 ? 1 : -1);
+        finalDorsalRot = constrainAngle(state.body.pitch, finalDorsalRot, 0.3);
+
+        // Eye tracking -> pupil updates
+        const eyePos = getAttachedPos(EYE_BASE.x, EYE_BASE.y);
+        const eyeWorldX = eyePos.x;
+        const eyeWorldY = eyePos.y + bobY;
+        const lookDx = (foundFood ? targetX : state.mouse.x) - eyeWorldX;
+        const lookDy = (foundFood ? targetY : state.mouse.y) - eyeWorldY;
+
+        const safeFlip = Math.abs(flip) < 0.1 ? (flip >= 0 ? 0.1 : -0.1) : flip;
+        const unscaledX = lookDx / safeFlip;
+        const unscaledY = lookDy;
+
+        const invCos = Math.cos(-state.body.pitch);
+        const invSin = Math.sin(-state.body.pitch);
+        const localLookX = unscaledX * invCos - unscaledY * invSin;
+        const localLookY = unscaledX * invSin + unscaledY * invCos;
+
+        const pupilDist = Math.min(3 * scaleMult, Math.sqrt(localLookX * localLookX + localLookY * localLookY));
+        const pupilAngle = Math.atan2(localLookY, localLookX);
+        let finalPupilX = Math.cos(pupilAngle) * pupilDist;
+        let finalPupilY = Math.sin(pupilAngle) * pupilDist;
+
+        if (!isMoving) {
+          finalPupilX = 2;
+          finalPupilY = 0;
+        }
+
+        // Apply DOM updates (body/tail/dorsal/pupil)
+        if (bodyRef.current) {
+          bodyRef.current.style.transform =
+            `translate(${state.body.x}px, ${state.body.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${state.body.pitch}rad)`;
+        }
+
+        if (tailRef.current) {
+          tailRef.current.style.transform =
+            `translate(${state.tail.x}px, ${state.tail.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${finalTailRot}rad)`;
+        }
+
+        if (dorsalRef.current) {
+          dorsalRef.current.style.transform =
+            `translate(${state.dorsal.x}px, ${state.dorsal.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${finalDorsalRot}rad)`;
+        }
+
+        if (pupilRef.current) {
+          pupilRef.current.setAttribute('cx', (EYE_BASE.x + finalPupilX).toString());
+          pupilRef.current.setAttribute('cy', (EYE_BASE.y + finalPupilY).toString());
+          pupilRef.current.style.opacity = '1';
+        }
       }
-      state.body.flipScale = lerp(state.body.flipScale, state.body.facing, 0.12);
 
-      // 3. Pitch
-      let targetPitch = 0;
-      if (dist > 5) {
-        targetPitch = Math.atan2(dy, Math.abs(dx));
-      }
-      state.body.pitch = lerpAngle(state.body.pitch, targetPitch, springRotation);
+      // If dead, apply body/tail/dorsal transforms to reflect updated positions (so float looks correct)
+      if (physics.current.isDead) {
+        // compute bobY for dead still visually small
+        const bobY = Math.sin(state.time * 0.003) * 2;
 
-      // 4. Bobbing
-      const bobY = Math.sin(state.time * 0.003) * 6;
+        // scale multiplier used for movement transforms
+        const scaleMult = cfg.behavior.scale;
 
-      // --- Sway Logic ---
-      const targetSwaySpeed = isMoving ? swaySpeedMove : swaySpeedIdle;
-      state.swayPhase += targetSwaySpeed * 16;
-      const sway = Math.sin(state.swayPhase) * swayAmp;
+        // attachments & transforms for dead state
+        const flip = state.body.flipScale;
+        const cos = Math.cos(state.body.pitch);
+        const sin = Math.sin(state.body.pitch);
 
-      // --- Attachments ---
-      const flip = state.body.flipScale;
-      const cos = Math.cos(state.body.pitch);
-      const sin = Math.sin(state.body.pitch);
-      
-      const scaleMult = cfg.behavior.scale;
+        const getAttachedPos = (lx: number, ly: number) => {
+          const slx = lx * scaleMult;
+          const sly = ly * scaleMult;
+          const rx = slx * cos - sly * sin;
+          const ry = slx * sin + sly * cos;
+          const sx = rx * flip;
+          const sy = ry;
+          return { x: state.body.x + sx, y: state.body.y + sy };
+        };
 
-      const getAttachedPos = (lx: number, ly: number) => {
-        const slx = lx * scaleMult;
-        const sly = ly * scaleMult;
-        const rx = slx * cos - sly * sin;
-        const ry = slx * sin + sly * cos;
-        const sx = rx * flip;
-        const sy = ry;
-        return { x: state.body.x + sx, y: state.body.y + sy };
-      };
+        // Update tail and dorsal positions to follow floating body
+        const tailPos = getAttachedPos(-54, 0);
+        state.tail.x = tailPos.x;
+        state.tail.y = tailPos.y;
 
-      // Tail Socket: Back edge (-50) -> Gap (attach at -54)
-      const tailPos = getAttachedPos(-54, 0);
-      state.tail.x = lerp(state.tail.x, tailPos.x, springTail);
-      state.tail.y = lerp(state.tail.y, tailPos.y, springTail);
+        const dorsalPos = getAttachedPos(15, -29);
+        state.dorsal.x = dorsalPos.x;
+        state.dorsal.y = dorsalPos.y;
 
-      // Dorsal Socket: Top edge (-20) -> Gap (bottom at -24) -> Half-height(5) = Pivot Y at -29
-      // X shifted to 15 to balance larger fin length
-      const dorsalPos = getAttachedPos(15, -29);
-      state.dorsal.x = lerp(state.dorsal.x, dorsalPos.x, springTail * 0.9);
-      state.dorsal.y = lerp(state.dorsal.y, dorsalPos.y, springTail * 0.9);
-
-      // --- Rotation Physics & Constraints ---
-      const sign = state.body.flipScale >= 0 ? 1 : -1;
-
-      // Tail
-      state.tail.angle = lerpAngle(state.tail.angle, state.body.pitch, springTail);
-      const targetDroop = isMoving ? 0 : 0.5;
-      state.tail.droop = lerp(state.tail.droop, targetDroop, 0.03);
-      
-      // Drag & Sway
-      const drag = clamp((state.body.pitch - state.tail.angle) * 2.0, -0.35, 0.35); 
-      
-      let tailBaseRot = (state.tail.angle + drag + sway) * sign;
-      let finalTailRot = tailBaseRot - state.tail.droop;
-      
-      // CRITICAL: Constrain tail rotation to body pitch to prevent "fracture"
-      // Max deviation: ~0.45 radians
-      finalTailRot = constrainAngle(state.body.pitch, finalTailRot, 0.45);
-
-
-      // Dorsal
-      state.dorsal.angle = lerpAngle(state.dorsal.angle, state.body.pitch, springTail * 0.9);
-      const dorsalSway = Math.sin(state.swayPhase + 1) * (swayAmp * 0.5);
-      let finalDorsalRot = (state.dorsal.angle + dorsalSway) * sign; 
-      
-      // Constrain dorsal rotation
-      finalDorsalRot = constrainAngle(state.body.pitch, finalDorsalRot, 0.3);
-
-      // --- Eye Tracking ---
-      // 眼睛基准位置：相对于鱼身体中心的坐标
-      // 修改 EYE_BASE 即可同步
-      const eyePos = getAttachedPos(EYE_BASE.x, EYE_BASE.y);
-      const eyeWorldX = eyePos.x;
-      const eyeWorldY = eyePos.y + bobY;
-      const lookDx = state.mouse.x - eyeWorldX;
-      const lookDy = state.mouse.y - eyeWorldY;
-      
-      const safeFlip = Math.abs(flip) < 0.1 ? (flip >= 0 ? 0.1 : -0.1) : flip;
-      const unscaledX = lookDx / safeFlip;
-      const unscaledY = lookDy; 
-      
-      const invCos = Math.cos(-state.body.pitch);
-      const invSin = Math.sin(-state.body.pitch);
-      const localLookX = unscaledX * invCos - unscaledY * invSin;
-      const localLookY = unscaledX * invSin + unscaledY * invCos;
-      
-      const pupilDist = Math.min(3 * scaleMult, Math.sqrt(localLookX * localLookX + localLookY * localLookY));
-      const pupilAngle = Math.atan2(localLookY, localLookX);
-      let finalPupilX = Math.cos(pupilAngle) * pupilDist;
-      let finalPupilY = Math.sin(pupilAngle) * pupilDist;
-
-      // 处于悬浮不动时，瞳孔回到中心位置
-      if (!isMoving) {
-        finalPupilX = 2;
-        finalPupilY = 0;
-      }
-
-
-      // --- Apply DOM Updates ---
-      if (bodyRef.current) {
-        bodyRef.current.style.transform = 
-          `translate(${state.body.x}px, ${state.body.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${state.body.pitch}rad)`;
-      }
-
-      if (tailRef.current) {
-        tailRef.current.style.transform = 
-          `translate(${state.tail.x}px, ${state.tail.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${finalTailRot}rad)`;
-      }
-
-      if (dorsalRef.current) {
-        dorsalRef.current.style.transform = 
-          `translate(${state.dorsal.x}px, ${state.dorsal.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${finalDorsalRot}rad)`;
-      }
-
-      if (pupilRef.current) {
-        // 瞳孔基准位置需要与 SVG 中的眼睛位置保持一致
-        pupilRef.current.setAttribute('cx', (EYE_BASE.x + finalPupilX).toString());
-        pupilRef.current.setAttribute('cy', (EYE_BASE.y + finalPupilY).toString());
+        if (bodyRef.current) {
+          bodyRef.current.style.transform =
+            `translate(${state.body.x}px, ${state.body.y + bobY}px) scale(${state.body.flipScale * cfg.behavior.scale}, ${cfg.behavior.scale}) rotate(${state.body.pitch}rad)`;
+        }
+        if (tailRef.current) {
+          // tail droops more on death
+          const tailDroop = (state.tail.droop || 0) + 0.2;
+          tailRef.current.style.transform =
+            `translate(${state.tail.x}px, ${state.tail.y + bobY}px) scale(${state.body.flipScale * cfg.behavior.scale}, ${cfg.behavior.scale}) rotate(${(state.tail.angle - tailDroop) }rad)`;
+        }
+        if (dorsalRef.current) {
+          dorsalRef.current.style.transform =
+            `translate(${state.dorsal.x}px, ${state.dorsal.y + bobY}px) scale(${state.body.flipScale * cfg.behavior.scale}, ${cfg.behavior.scale}) rotate(${state.dorsal.angle}rad)`;
+        }
       }
 
       rAF = requestAnimationFrame(animate);
@@ -311,6 +476,7 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('click', handleGlobalClick);
       cancelAnimationFrame(rAF);
     };
   }, []);
@@ -321,7 +487,7 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-      <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={config.colors.body} stopOpacity="1" />
           <stop offset="50%" stopColor={config.colors.body} stopOpacity="0.8" />
           <stop offset="100%" stopColor={config.colors.body} stopOpacity="0.6" />
@@ -336,6 +502,19 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
           <stop offset="100%" stopColor={config.colors.dorsal} stopOpacity="1" />
         </linearGradient>
       </defs>
+
+      {/* FOOD POOL (invisible by default; shown when active) */}
+      {physics.current.food.map((_: FoodItem, i: number) => (
+        <g
+          key={`food-${i}`}
+          ref={el => { foodRefs.current[i] = el; }}
+          style={{ display: 'none', willChange: 'transform', pointerEvents: 'none' }}
+        >
+          {/* simple pellet */}
+          <rect x={-4} y={-4} width={8} height={8} fill="#d97706" rx={2} />
+        </g>
+      ))}
+
       {/* 鱼尾巴 - 会根据游动状态进行旋转和摆动 */}
       <g ref={tailRef} style={{ willChange: 'transform' }}>
         <path d={PATH_TAIL} fill="url(#tailGradient)" />
@@ -354,9 +533,8 @@ const Goldfish: React.FC<GoldfishProps> = ({ config }) => {
         {/* 眼睛 - 位置与大小基于 EYE_BASE / EYE_RADIUS */}
         <circle cx={EYE_BASE.x} cy={EYE_BASE.y} r={EYE_RADIUS} fill={config.colors.eye} />
 
-        {/* 瞳孔 - 基准位置与大小基于 EYE_BASE / PUPIL_RADIUS
-            运行时会通过 JavaScript 动态计算偏移来跟踪鼠标 */}
-        <circle ref={pupilRef} cx={EYE_BASE.x} cy={EYE_BASE.y} r={PUPIL_RADIUS} fill="#171717" />
+        {/* 瞳孔 - 基准位置与大小基于 EYE_BASE / PUPIL_RADIUS */}
+        <circle ref={pupilRef} cx={EYE_BASE.x} cy={EYE_BASE.y} r={PUPIL_RADIUS} fill="#171717" style={{ transition: 'opacity 0.2s' }} />
       </g>
     </svg>
   );
