@@ -432,8 +432,9 @@ export default function FishbowlPage() {
         // 保存 box2 高度用于根系渲染
         setBox2Height(box2Height);
 
-        // 更新GardenCanvas的尺寸
-        canvasRef.current.updateDimensions(width, height);
+        // 更新GardenCanvas的尺寸 - 只覆盖到box2底部，不超过页面高度
+        const canvasHeight = Math.min(height, box1ToBox2Offset + box2Height);
+        canvasRef.current.updateDimensions(width, canvasHeight);
         // 重新设置基线位置为box1底部/box2顶部
         canvasRef.current.setBaselineY(box1ToBox2Offset);
       }
@@ -492,7 +493,7 @@ export default function FishbowlPage() {
           top: -containerOffsetTop,
           left: 0,
           width: '100vw',
-          height: containerHeight || '100vh',
+          height: Math.min(containerHeight, (box2Height || 600)) || '100vh',
           pointerEvents: 'none', // 让画布本身不拦截事件
           zIndex: 10, // 在内容之上但在交互之下
           background: 'transparent',
@@ -504,12 +505,13 @@ export default function FishbowlPage() {
           clearTrigger={clearTrigger}
           onSettingsCopied={handleSettingsCopied}
           viewMode="interactive"
+          disableAutoResize={true}
         />
 
         {/* 根系系统 - 为每个基线植物渲染根系 */}
         <div
           className="absolute top-0 left-0 right-0 w-full"
-          style={{ height: `${box2Height}px`, zIndex: 2, pointerEvents: 'none' }}
+          style={{ height: `${containerOffsetTop + (box2Height || 600)}px`, zIndex: 2, pointerEvents: 'none' }}
         >
           {baselinePlants.map((plant, index) => {
             const plantX = containerWidth * plant.position_x_ratio;
@@ -519,7 +521,7 @@ export default function FishbowlPage() {
                 x={plantX}
                 baselineY={baselineY}
                 dna={plant.dna}
-                containerHeight={box2Height}
+                containerHeight={containerOffsetTop + (box2Height || 600)}
                 animationProgress={1}
               />
             );
