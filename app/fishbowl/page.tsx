@@ -33,6 +33,7 @@ export default function FishbowlPage() {
   const [containerWidth, setContainerWidth] = useState<number>(1000);
   const [containerHeight, setContainerHeight] = useState<number>(0);
   const [containerOffsetTop, setContainerOffsetTop] = useState<number>(0);
+  const [box2Height, setBox2Height] = useState<number>(0);
 
   // 防止baselinePlants数组无限增长
   const maxBaselinePlants = 20;
@@ -156,7 +157,7 @@ export default function FishbowlPage() {
       if (!isMounted || !canvasRef.current) return;
 
       try {
-        const response = await fetch('/api/garden/config?page_id=fishbowl');
+        const response = await fetch('/api/garden/config?page_id=');
         
         // 检查响应状态
         if (!response.ok) {
@@ -173,14 +174,13 @@ export default function FishbowlPage() {
           canvasRef.current.setBaselineY(baselineY);
           canvasRef.current.setBaselineColor(data.config.baseline_color);
 
-          // Load plants
+          // Load plants if any (limit to protect memory)
           if (data.plants && data.plants.length > 0) {
             const plantsToLoad = data.plants.slice(0, MAX_LOADED_PLANTS);
-            plantsToLoad.forEach((plantData: any) => {
-              const x = containerWidth * plantData.position_x_ratio;
-              const y = baselineY + plantData.position_y_offset;
-              canvasRef.current?.spawn(x, y, plantData.dna, true);
-            });
+            canvasRef.current.loadPlants(plantsToLoad);
+            if (data.plants.length > MAX_LOADED_PLANTS) {
+              setToastMessage(`已加载前 ${MAX_LOADED_PLANTS} 株植物，其余未加载以避免占用过多内存`);
+            }
           }
         } else if (data.success) {
           // 有响应但没有配置，使用默认值（已在 useEffect 中设置）
@@ -268,8 +268,8 @@ export default function FishbowlPage() {
 
         // Trigger spawn at baseline center
         if (canvasRef.current) {
-          // Spawn at center of baseline (baseline Y is 600 by default, center X)
-          const baselineY = 600; // Default baseline position
+          // Spawn at center of baseline (use dynamic baseline position)
+          const baselineY = getBox1ToBox2Offset();
           const x = window.innerWidth / 2; // Center horizontally
 
           canvasRef.current.spawn(x, baselineY, parsed, true); // true = on baseline
@@ -305,7 +305,7 @@ export default function FishbowlPage() {
           baseline_y_ratio,
           baseline_color: baselineColor,
           plants: plantData,
-          page_id: 'fishbowl',
+          page_id: null, // 默认值，与首页/花园共享
         }),
       });
 
@@ -356,7 +356,7 @@ export default function FishbowlPage() {
 
     try {
       // 调用 API 加载配置
-      const response = await fetch('/api/garden/config?page_id=fishbowl');
+      const response = await fetch('/api/garden/config?page_id=');
       const data = await response.json();
 
       if (!data.success) {
@@ -421,9 +421,17 @@ export default function FishbowlPage() {
         const box1ToBox2Offset = getBox1ToBox2Offset();
         const pageHeight = getPageHeight();
         const height = pageHeight + box1ToBox2Offset;
+
+        // 计算 box2 的实际高度（从基线到页面底部）
+        const box2Height = pageHeight - box1ToBox2Offset;
+
         setContainerWidth(width);
         setContainerHeight(height);
         setContainerOffsetTop(box1ToBox2Offset);
+
+        // 保存 box2 高度用于根系渲染
+        setBox2Height(box2Height);
+
         // 更新GardenCanvas的尺寸
         canvasRef.current.updateDimensions(width, height);
         // 重新设置基线位置为box1底部/box2顶部
@@ -501,7 +509,7 @@ export default function FishbowlPage() {
         {/* 根系系统 - 为每个基线植物渲染根系 */}
         <div
           className="absolute top-0 left-0 right-0 w-full"
-          style={{ height: '1000px', zIndex: 2, pointerEvents: 'none' }}
+          style={{ height: `${box2Height}px`, zIndex: 2, pointerEvents: 'none' }}
         >
           {baselinePlants.map((plant, index) => {
             const plantX = containerWidth * plant.position_x_ratio;
@@ -511,7 +519,7 @@ export default function FishbowlPage() {
                 x={plantX}
                 baselineY={baselineY}
                 dna={plant.dna}
-                containerHeight={1000}
+                containerHeight={box2Height}
                 animationProgress={1}
               />
             );
