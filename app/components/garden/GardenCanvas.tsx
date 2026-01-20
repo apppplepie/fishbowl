@@ -114,11 +114,11 @@ const GardenCanvas = forwardRef<GardenCanvasRef, GardenCanvasProps>(
             engineRef.current.spawnGrower(x, baselineYRef.current, s, offCtx);
           }
         } else {
-          // 在外部层生成
-          const ctx = canvasOutsideRef.current?.getContext('2d');
-          if (ctx) {
-            engineRef.current.spawnGrower(x, y, s, ctx);
-          }
+          // 注释掉：只允许基线植物生长，禁止在非基线位置种植
+          // const ctx = canvasOutsideRef.current?.getContext('2d');
+          // if (ctx) {
+          //   engineRef.current.spawnGrower(x, y, s, ctx);
+          // }
         }
       },
       [settings, dimensions]
