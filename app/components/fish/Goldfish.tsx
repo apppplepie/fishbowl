@@ -284,61 +284,41 @@ const Goldfish: React.FC<GoldfishProps> = ({ config, bounds }) => {
       const swaySpeedIdle = 0.001 + (energy * 0.005);
       const swayAmp = 0.05 + (energy * 0.05);
 
-      // If dead: simple float-to-surface + belly-up behavior
+      // --- DEAD vs ALIVE Logic ---
+      let isMoving = false;
+      let targetPitch = 0;
+
       if (state.isDead) {
-        // float up slowly to y ~ 150
-        const floatTargetX = state.body.x + Math.sin(state.time * 0.002) * 0.5;
-        const floatTargetY = Math.min(150, currentBounds.height * 0.3);
-        state.body.x = lerp(state.body.x, floatTargetX, 0.01);
-        state.body.y = lerp(state.body.y, floatTargetY, 0.005);
-        // belly up
-        state.body.pitch = lerpAngle(state.body.pitch, Math.PI, 0.02);
-        // pupil hide if exists
+        // DEATH PHYSICS - float belly-up to surface
+        targetX = state.body.x + Math.sin(state.time * 0.002) * 0.5; // subtle drift
+        targetY = 150;
+
+        // Belly up = 180 degrees (PI)
+        targetPitch = Math.PI;
+
+        // Dead eyes: Pupil disappears, white part stays (blank stare)
         if (pupilRef.current) pupilRef.current.style.opacity = '0';
-      } else {
-        // ALIVE behavior (targeting food if found)
-        // 1. Body Movement
-        state.body.x = lerp(state.body.x, targetX, springBody);
-        state.body.y = lerp(state.body.y, targetY, springBody);
-        const bodySafe = clampToBounds(currentBounds, state.body.x, state.body.y, scaleMult);
-        state.body.x = bodySafe.x;
-        state.body.y = bodySafe.y;
 
-        const dx = targetX - state.body.x;
-        const dy = targetY - state.body.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        // Slow movement to surface (very slow vertical lerp)
+        state.body.x = lerp(state.body.x, targetX, 0.01);
+        state.body.y = lerp(state.body.y, targetY, 0.005);
 
-        const isMoving = dist > 15;
+        // Flip upside down slowly
+        state.body.pitch = lerpAngle(state.body.pitch, targetPitch, 0.02);
 
-        // 2. Facing Direction
-        if (Math.abs(dx) > 10) {
-          state.body.facing = dx > 0 ? 1 : -1;
-        }
-        state.body.flipScale = lerp(state.body.flipScale, state.body.facing, 0.12);
+        // Force flipScale toward the inverse facing so the "mirror" looks correct when belly-up
+        // If fish was facing right (1), when belly-up we want mirror to behave consistently:
+        const desiredFlipOnDead = -state.body.facing;
+        state.body.flipScale = lerp(state.body.flipScale, desiredFlipOnDead, 0.06);
 
-        // 3. Pitch
-        let targetPitch = 0;
-        if (dist > 5) {
-          targetPitch = Math.atan2(dy, Math.abs(dx));
-        } else if (!foundFood) {
-          targetPitch = 0;
-        }
-        state.body.pitch = lerpAngle(state.body.pitch, targetPitch, springRotation);
-
-        // 4. Bobbing
-        const bobY = Math.sin(state.time * 0.003) * 6;
-
-        // sway
-        const targetSwaySpeed = isMoving ? swaySpeedMove : swaySpeedIdle;
-        state.swayPhase += targetSwaySpeed * 16;
-        const sway = Math.sin(state.swayPhase) * swayAmp;
-
-        // attachments & transforms (same as original)
-        const flip = state.body.flipScale;
+        // Make tail/dorsal catch up faster while dead so they don't lag visually
+        // Compute attachment positions (use same getAttachedPos that uses current body.pitch)
+        const scaleMult = cfg.behavior.scale * (1 + state.growthModifier);
         const cos = Math.cos(state.body.pitch);
         const sin = Math.sin(state.body.pitch);
+        const flip = state.body.flipScale;
 
-        const getAttachedPos = (lx: number, ly: number) => {
+        const getAttachedPosDead = (lx: number, ly: number) => {
           const slx = lx * scaleMult;
           const sly = ly * scaleMult;
           const rx = slx * cos - sly * sin;
@@ -348,31 +328,128 @@ const Goldfish: React.FC<GoldfishProps> = ({ config, bounds }) => {
           return { x: state.body.x + sx, y: state.body.y + sy };
         };
 
-        // Tail & dorsal positions
-        const tailPos = getAttachedPos(-54, 0);
-        state.tail.x = lerp(state.tail.x, tailPos.x, springTail);
-        state.tail.y = lerp(state.tail.y, tailPos.y, springTail);
+        const tailPosDead = getAttachedPosDead(-54, 0);
+        const dorsalPosDead = getAttachedPosDead(15, -29);
 
-        const dorsalPos = getAttachedPos(15, -29);
-        state.dorsal.x = lerp(state.dorsal.x, dorsalPos.x, springTail * 0.9);
-        state.dorsal.y = lerp(state.dorsal.y, dorsalPos.y, springTail * 0.9);
+        // Make tail/dorsal snap up more quickly when dead
+        state.tail.x = lerp(state.tail.x, tailPosDead.x, 0.18);
+        state.tail.y = lerp(state.tail.y, tailPosDead.y, 0.18);
+        state.dorsal.x = lerp(state.dorsal.x, dorsalPosDead.x, 0.14);
+        state.dorsal.y = lerp(state.dorsal.y, dorsalPosDead.y, 0.14);
 
-        // Tail rotation
-        state.tail.angle = lerpAngle(state.tail.angle, state.body.pitch, springTail);
-        const targetDroop = isMoving ? 0 : 0.5;
-        state.tail.droop = lerp(state.tail.droop, targetDroop, 0.03);
-        const drag = clamp((state.body.pitch - state.tail.angle) * 2.0, -0.35, 0.35);
-        let tailBaseRot = (state.tail.angle + drag + sway) * (state.body.flipScale >= 0 ? 1 : -1);
-        let finalTailRot = tailBaseRot - state.tail.droop;
+        // Force a strong droop so tail "hangs" while floating belly-up
+        state.tail.droop = lerp(state.tail.droop, 1.0, 0.2);
+
+        // Align tail/dorsal angles more strongly to body pitch (fast lerp)
+        // small offsets added so the fins appear to lag naturally
+        state.tail.angle = lerpAngle(state.tail.angle, state.body.pitch + 0.05, 0.18);
+        state.dorsal.angle = lerpAngle(state.dorsal.angle, state.body.pitch - 0.02, 0.14);
+
+        // mark not moving for sway logic
+        isMoving = false;
+
+      } else {
+        // ALIVE PHYSICS
+        if (pupilRef.current) pupilRef.current.style.opacity = '1';
+
+        // 1. Body Movement
+        state.body.x = lerp(state.body.x, targetX, springBody);
+        state.body.y = lerp(state.body.y, targetY, springBody);
+
+        const dx = targetX - state.body.x;
+        const dy = targetY - state.body.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        isMoving = dist > 15;
+
+        // 2. Facing Direction
+        if (Math.abs(dx) > 10) {
+          state.body.facing = dx > 0 ? 1 : -1;
+        }
+
+        // 3. Pitch
+        if (dist > 5) {
+          targetPitch = Math.atan2(dy, Math.abs(dx));
+        } else if (!foundFood) {
+          targetPitch = 0;
+        }
+        state.body.pitch = lerpAngle(state.body.pitch, targetPitch, springRotation);
+      }
+
+      // body flipScale continues to lerp toward facing in general (but note death overrides above)
+      if (!state.isDead) {
+        state.body.flipScale = lerp(state.body.flipScale, state.body.facing, 0.12);
+      }
+
+      // 4. Bobbing (only if alive, or small drift if dead)
+      const bobY = Math.sin(state.time * 0.003) * (state.isDead ? 2 : 6);
+
+      // --- Sway Logic ---
+      const targetSwaySpeed = isMoving ? swaySpeedMove : swaySpeedIdle;
+      state.swayPhase += targetSwaySpeed * 16;
+      const sway = Math.sin(state.swayPhase) * swayAmp;
+
+      // --- Attachments (recompute for later transforms) ---
+      const flip = state.body.flipScale;
+      const cos = Math.cos(state.body.pitch);
+      const sin = Math.sin(state.body.pitch);
+
+      const getAttachedPos = (lx: number, ly: number) => {
+        const slx = lx * scaleMult;
+        const sly = ly * scaleMult;
+        const rx = slx * cos - sly * sin;
+        const ry = slx * sin + sly * cos;
+        const sx = rx * flip;
+        const sy = ry;
+        return { x: state.body.x + sx, y: state.body.y + sy };
+      };
+
+      // Tail Socket
+      const tailPos = getAttachedPos(-54, 0);
+      state.tail.x = lerp(state.tail.x, tailPos.x, state.isDead ? 0.18 : springTail);
+      state.tail.y = lerp(state.tail.y, tailPos.y, state.isDead ? 0.18 : springTail);
+
+      // Dorsal Socket
+      const dorsalPos = getAttachedPos(15, -29);
+      state.dorsal.x = lerp(state.dorsal.x, dorsalPos.x, state.isDead ? 0.14 : springTail * 0.8);
+      state.dorsal.y = lerp(state.dorsal.y, dorsalPos.y, state.isDead ? 0.14 : springTail * 0.8);
+
+      // --- Rotation Physics & Constraints ---
+      const sign = state.body.flipScale >= 0 ? 1 : -1;
+
+      // Tail rotation base (still uses pitch), but allow larger max deviation when dead so it can hang
+      state.tail.angle = lerpAngle(state.tail.angle, state.body.pitch, state.isDead ? 0.18 : springTail);
+      const targetDroop = isMoving ? 0 : (state.isDead ? 1.0 : 0.5);
+      state.tail.droop = lerp(state.tail.droop, targetDroop, state.isDead ? 0.2 : 0.03);
+
+      // Drag & Sway
+      const drag = clamp((state.body.pitch - state.tail.angle) * 2.0, -0.35, 0.35);
+
+      let tailBaseRot = (state.tail.angle + drag + sway) * sign;
+      let finalTailRot = tailBaseRot - state.tail.droop;
+
+      // When dead, bias the tail so it clearly "hangs" away from body and follows the body pitch
+      if (state.isDead) {
+        // make tail follow body pitch closely, but subtract droop so it tilts downwards relative to body
+        finalTailRot = constrainAngle(state.body.pitch, state.body.pitch - state.tail.droop, 0.8);
+      } else {
         finalTailRot = constrainAngle(state.body.pitch, finalTailRot, 0.45);
+      }
 
-        // Dorsal rotation
-        state.dorsal.angle = lerpAngle(state.dorsal.angle, state.body.pitch, springTail * 0.9);
-        const dorsalSway = Math.sin(state.swayPhase + 1) * (swayAmp * 0.5);
-        let finalDorsalRot = (state.dorsal.angle + dorsalSway) * (state.body.flipScale >= 0 ? 1 : -1);
+      // Dorsal
+      state.dorsal.angle = lerpAngle(state.dorsal.angle, state.body.pitch, state.isDead ? 0.14 : springTail * 0.8);
+      const dorsalSway = Math.sin(state.swayPhase + 1) * (swayAmp * 0.5);
+      let finalDorsalRot = (state.dorsal.angle + dorsalSway) * sign;
+
+      // When dead, make dorsal align and slightly tuck toward the body (so it doesn't float apart)
+      if (state.isDead) {
+        finalDorsalRot = constrainAngle(state.body.pitch, state.body.pitch - 0.4, 0.6);
+      } else {
         finalDorsalRot = constrainAngle(state.body.pitch, finalDorsalRot, 0.3);
+      }
 
-        // Eye tracking -> pupil updates
+      // --- Pupil tracking (only when alive) ---
+      if (!state.isDead) {
         const eyePos = getAttachedPos(EYE_BASE.x, EYE_BASE.y);
         const eyeWorldX = eyePos.x;
         const eyeWorldY = eyePos.y + bobY;
@@ -398,75 +475,26 @@ const Goldfish: React.FC<GoldfishProps> = ({ config, bounds }) => {
           finalPupilY = 0;
         }
 
-        // Apply DOM updates (body/tail/dorsal/pupil)
-        if (bodyRef.current) {
-          bodyRef.current.style.transform =
-            `translate(${state.body.x}px, ${state.body.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${state.body.pitch}rad)`;
-        }
-
-        if (tailRef.current) {
-          tailRef.current.style.transform =
-            `translate(${state.tail.x}px, ${state.tail.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${finalTailRot}rad)`;
-        }
-
-        if (dorsalRef.current) {
-          dorsalRef.current.style.transform =
-            `translate(${state.dorsal.x}px, ${state.dorsal.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${finalDorsalRot}rad)`;
-        }
-
         if (pupilRef.current) {
           pupilRef.current.setAttribute('cx', (EYE_BASE.x + finalPupilX).toString());
           pupilRef.current.setAttribute('cy', (EYE_BASE.y + finalPupilY).toString());
-          pupilRef.current.style.opacity = '1';
         }
       }
 
-      // If dead, apply body/tail/dorsal transforms to reflect updated positions (so float looks correct)
-      if (physics.current.isDead) {
-        // compute bobY for dead still visually small
-        const bobY = Math.sin(state.time * 0.003) * 2;
+      // --- Apply DOM transforms ---
+      if (bodyRef.current) {
+        bodyRef.current.style.transform =
+          `translate(${state.body.x}px, ${state.body.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${state.body.pitch}rad)`;
+      }
 
-        // scale multiplier used for movement transforms
-        const scaleMult = cfg.behavior.scale;
+      if (tailRef.current) {
+        tailRef.current.style.transform =
+          `translate(${state.tail.x}px, ${state.tail.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${finalTailRot}rad)`;
+      }
 
-        // attachments & transforms for dead state
-        const flip = state.body.flipScale;
-        const cos = Math.cos(state.body.pitch);
-        const sin = Math.sin(state.body.pitch);
-
-        const getAttachedPos = (lx: number, ly: number) => {
-          const slx = lx * scaleMult;
-          const sly = ly * scaleMult;
-          const rx = slx * cos - sly * sin;
-          const ry = slx * sin + sly * cos;
-          const sx = rx * flip;
-          const sy = ry;
-          return { x: state.body.x + sx, y: state.body.y + sy };
-        };
-
-        // Update tail and dorsal positions to follow floating body
-        const tailPos = getAttachedPos(-54, 0);
-        state.tail.x = tailPos.x;
-        state.tail.y = tailPos.y;
-
-        const dorsalPos = getAttachedPos(15, -29);
-        state.dorsal.x = dorsalPos.x;
-        state.dorsal.y = dorsalPos.y;
-
-        if (bodyRef.current) {
-          bodyRef.current.style.transform =
-            `translate(${state.body.x}px, ${state.body.y + bobY}px) scale(${state.body.flipScale * cfg.behavior.scale}, ${cfg.behavior.scale}) rotate(${state.body.pitch}rad)`;
-        }
-        if (tailRef.current) {
-          // tail droops more on death
-          const tailDroop = (state.tail.droop || 0) + 0.2;
-          tailRef.current.style.transform =
-            `translate(${state.tail.x}px, ${state.tail.y + bobY}px) scale(${state.body.flipScale * cfg.behavior.scale}, ${cfg.behavior.scale}) rotate(${(state.tail.angle - tailDroop) }rad)`;
-        }
-        if (dorsalRef.current) {
-          dorsalRef.current.style.transform =
-            `translate(${state.dorsal.x}px, ${state.dorsal.y + bobY}px) scale(${state.body.flipScale * cfg.behavior.scale}, ${cfg.behavior.scale}) rotate(${state.dorsal.angle}rad)`;
-        }
+      if (dorsalRef.current) {
+        dorsalRef.current.style.transform =
+          `translate(${state.dorsal.x}px, ${state.dorsal.y + bobY}px) scale(${state.body.flipScale * scaleMult}, ${scaleMult}) rotate(${finalDorsalRot}rad)`;
       }
 
       rAF = requestAnimationFrame(animate);
