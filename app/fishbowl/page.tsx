@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useResponsive } from '@/app/hooks/useResponsive';
 import { usePageShell } from '../contexts/PageShellContext';
 import { useHeader } from '../contexts/HeaderContext';
 import { useAppTheme } from '../contexts/AppThemeContext';
 import GardenCanvas from '../components/garden/GardenCanvas';
 import GardenSidebar from '../components/garden/GardenSidebar';
 import { GardenDrawerButton } from '../components/garden/GardenDrawerButton';
+import RootSystem from '../components/garden/RootSystem';
 import BaselinePlantViewer from '../components/garden/BaselinePlantViewer';
 import { PlantSettings, PlantType, GardenCanvasRef, PlantRenderData } from '../types/garden';
 import { PRESET_VINE, getPlantPreset } from '../config/plantPresets';
@@ -16,6 +18,7 @@ import { FishConfig } from '../components/fish/Sidebar';
 const MAX_LOADED_PLANTS = 10; // 避免一次性加载过多离屏 canvas 占满内存
 
 export default function FishbowlPage() {
+  const { isMobile } = useResponsive();
   const { setConfig } = usePageShell();
   const { setLeftContent } = useHeader();
   const { currentFishbowlTheme } = useAppTheme();
@@ -24,6 +27,7 @@ export default function FishbowlPage() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [importString, setImportString] = useState('');
   const [baselinePlants, setBaselinePlants] = useState<PlantRenderData[]>([]);
   const [baselineY, setBaselineY] = useState<number>(600); // 默认基线位置
   const [containerWidth, setContainerWidth] = useState<number>(1000);
@@ -215,6 +219,16 @@ export default function FishbowlPage() {
     });
   }, []);
 
+  // 打开抽屉函数 - 使用 useCallback 固定引用
+  const openDrawer = useCallback(() => {
+    setDrawerVisible(true);
+  }, []);
+
+  // 切换侧边栏函数 - 使用 useCallback 固定引用
+  const toggleSidebar = useCallback(() => {
+    setSidebarExpanded((prev) => !prev);
+  }, []);
+
   // Event handlers
   const handleClear = useCallback(() => {
     if (!canvasRef.current) return;
@@ -223,6 +237,49 @@ export default function FishbowlPage() {
     setClearTrigger(prev => prev + 1);
     setToastMessage('已清空所有植物');
   }, []);
+
+  const handleUndo = () => {
+      if (canvasRef.current) {
+          canvasRef.current.undo();
+          setToastMessage("拔掉了上一株植物...");
+      }
+  };
+
+  const handleSettingsCopied = (copiedSettings: PlantSettings) => {
+      try {
+          const id = btoa(JSON.stringify(copiedSettings));
+          navigator.clipboard.writeText(id);
+          setToastMessage("获得了种子!");
+      } catch (e) {
+          console.error("失败了", e);
+      }
+  };
+
+  const handleImport = (value: string) => {
+    setImportString(value);
+    if (!value) return;
+
+    try {
+      const decoded = atob(value);
+      const parsed = JSON.parse(decoded) as PlantSettings;
+      if (parsed.stemColorStart && parsed.type) {
+        setSettings(parsed);
+        setToastMessage("种下了植物!");
+
+        // Trigger spawn at baseline center
+        if (canvasRef.current) {
+          // Spawn at center of baseline (baseline Y is 600 by default, center X)
+          const baselineY = 600; // Default baseline position
+          const x = window.innerWidth / 2; // Center horizontally
+
+          canvasRef.current.spawn(x, baselineY, parsed, true); // true = on baseline
+          setImportString(''); // Clear input on success
+        }
+      }
+    } catch (e) {
+      // invalid format
+    }
+  };
 
   const handleSave = useCallback(async () => {
     if (!canvasRef.current) return;
@@ -291,19 +348,68 @@ export default function FishbowlPage() {
     }
   }, [containerWidth]);
 
-  // Header left content for sidebar toggle
-  useEffect(() => {
-    setLeftContent(
+  const handleReset = async () => {
+    if (!canvasRef.current) {
+      setToastMessage("画布未初始化");
+      return;
+    }
+
+    try {
+      // 调用 API 加载配置
+      const response = await fetch('/api/garden/config?page_id=fishbowl');
+      const data = await response.json();
+
+      if (!data.success) {
+        setToastMessage(`加载失败: ${data.error}`);
+        return;
+      }
+
+      // 设置基准线
+      const FIXED_HEIGHT = 1000;
+      const baselineY = getBox1ToBox2Offset();
+      canvasRef.current.setBaselineY(baselineY);
+      canvasRef.current.setBaselineColor(data.config.baseline_color);
+
+      // 加载植物
+      if (data.plants && data.plants.length > 0) {
+        const plantsToLoad = data.plants.slice(0, MAX_LOADED_PLANTS);
+        canvasRef.current.loadPlants(plantsToLoad);
+
+        if (data.plants.length > MAX_LOADED_PLANTS) {
+          setToastMessage(`已加载前 ${MAX_LOADED_PLANTS} 株，其余未加载以避免内存占用`);
+        } else {
+          setToastMessage(`已加载 ${data.plants.length} 株植物`);
+        }
+      } else {
+        canvasRef.current.clearAllPlants();
+        setToastMessage("已重置（无保存的植物）");
+      }
+    } catch (error: any) {
+      console.error('加载失败:', error);
+      setToastMessage(`加载失败: ${error.message}`);
+    }
+  };
+
+  // 使用 useMemo 缓存 leftContent，避免每次渲染都创建新元素
+  const leftContentElement = useMemo(
+    () => (
       <GardenDrawerButton
+        onClick={openDrawer}
         expanded={sidebarExpanded}
-        onClick={() => setSidebarExpanded(!sidebarExpanded)}
+        onToggle={toggleSidebar}
       />
-    );
+    ),
+    [openDrawer, sidebarExpanded, toggleSidebar]
+  );
+
+  // 设置 Header 的 leftContent
+  useEffect(() => {
+    setLeftContent(leftContentElement);
 
     return () => {
       setLeftContent(null);
     };
-  }, [setLeftContent, sidebarExpanded]);
+  }, [setLeftContent, leftContentElement]);
 
   // Container dimensions tracking - 让画布从 box1 顶部开始覆盖到 box2 底部
   useEffect(() => {
@@ -388,15 +494,48 @@ export default function FishbowlPage() {
           ref={canvasRef}
           settings={settings}
           clearTrigger={clearTrigger}
-          onSettingsCopied={(newSettings) => {
-            setSettings(newSettings);
-            setToastMessage('植物设置已复制');
-          }}
+          onSettingsCopied={handleSettingsCopied}
           viewMode="interactive"
         />
+
+        {/* 根系系统 - 为每个基线植物渲染根系 */}
+        <div
+          className="absolute top-0 left-0 right-0 w-full"
+          style={{ height: '1000px', zIndex: 2, pointerEvents: 'none' }}
+        >
+          {baselinePlants.map((plant, index) => {
+            const plantX = containerWidth * plant.position_x_ratio;
+            return (
+              <RootSystem
+                key={`root-${index}-${plant.position_x_ratio}`}
+                x={plantX}
+                baselineY={baselineY}
+                dna={plant.dna}
+                containerHeight={1000}
+                animationProgress={1}
+              />
+            );
+          })}
+        </div>
+
+        {/* UI Overlay: Title */}
+        <div className="absolute top-8 w-full text-center pointer-events-none z-30">
+          <h1 className="text-3xl md:text-5xl font-serif text-slate-800 tracking-tight drop-shadow-sm opacity-90">
+            鱼缸
+          </h1>
+          <p className="text-slate-500 mt-2 font-medium text-sm">
+            双击试试，左侧挑选植物
+          </p>
+          <p className="text-slate-500 mt-2 font-medium text-sm">
+            长按获得种子，在基准线上种植可拖动
+          </p>
+        </div>
+
+        {/* Spacer */}
+        <div style={{ flex: 1, minHeight: '30vh' }}></div>
       </div>
 
-      {/* Sidebar */}
+      {/* 侧边栏 - 在导航下面，整个页面级别 */}
       <GardenSidebar
         settings={settings}
         updateSettings={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))}
@@ -407,21 +546,48 @@ export default function FishbowlPage() {
         expanded={sidebarExpanded}
       />
 
-      {/* Toast Message */}
+      {/* DNA Input Area & Control Buttons - 在 box2 中 */}
+      <div className="relative z-30 w-80 space-y-2 mb-20 mx-auto">
+        <div className="flex gap-2">
+          {/* <input
+            type="text"
+            value={importString}
+            onChange={(e) => {
+              setImportString(e.target.value);
+              handleImport(e.target.value);
+            }}
+            placeholder="复制种子..."
+            className="flex-1 px-4 py-3 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg shadow-sm text-center font-mono text-xs focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-slate-400"
+          /> */}
+          <button
+            onClick={handleUndo}
+            className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg px-3 text-slate-500 hover:text-slate-800 hover:bg-white transition-colors"
+            title="撤销上一株植物"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium"
+          >
+            保存配置
+          </button>
+          <button
+            onClick={handleReset}
+            className="flex-1 px-4 py-2 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg hover:bg-white transition-colors text-sm font-medium text-slate-700"
+          >
+            重置配置
+          </button>
+        </div>
+      </div>
+
+      {/* Toast Notification */}
       {toastMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '100px',
-            right: '20px',
-            background: 'rgba(0, 0, 0, 0.8)',
-            color: 'white',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            zIndex: 1000,
-            fontSize: '14px',
-          }}
-        >
+        <div className="fixed top-20 right-8 z-50 bg-slate-800 text-white px-6 py-3 rounded-full shadow-xl text-sm font-medium animate-bounce">
           {toastMessage}
         </div>
       )}
