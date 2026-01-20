@@ -10,10 +10,12 @@ import GardenSidebar from '../components/garden/GardenSidebar';
 import { GardenDrawerButton } from '../components/garden/GardenDrawerButton';
 import RootSystem from '../components/garden/RootSystem';
 import BaselinePlantViewer from '../components/garden/BaselinePlantViewer';
-import { PlantSettings, PlantType, GardenCanvasRef, PlantRenderData } from '../types/garden';
+// @ts-expect-error: Goldfish is not a module, but default export is used
+import Goldfish from '../components/fish/Goldfish';
+import type { PlantSettings, PlantType, GardenCanvasRef, PlantRenderData } from '../types/garden';
 import { PRESET_VINE, getPlantPreset } from '../config/plantPresets';
 import { convertGradient } from '../utils/colorConverter';
-import { FishConfig } from '../components/fish/Sidebar';
+import type { FishConfig } from '../components/fish/Sidebar';
 
 const MAX_LOADED_PLANTS = 10; // 避免一次性加载过多离屏 canvas 占满内存
 
@@ -34,6 +36,12 @@ export default function FishbowlPage() {
   const [containerHeight, setContainerHeight] = useState<number>(0);
   const [containerOffsetTop, setContainerOffsetTop] = useState<number>(0);
   const [box2Height, setBox2Height] = useState<number>(0);
+  const [fishBounds, setFishBounds] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   // 防止baselinePlants数组无限增长
   const maxBaselinePlants = 20;
@@ -420,10 +428,12 @@ export default function FishbowlPage() {
         const width = window.innerWidth;
         const box1ToBox2Offset = getBox1ToBox2Offset();
         const pageHeight = getPageHeight();
-        const height = pageHeight + box1ToBox2Offset;
+        const box2Element = document.querySelector('.page-shell-box2') as HTMLElement | null;
+        const box2Rect = box2Element?.getBoundingClientRect() || null;
 
         // 计算 box2 的实际高度（从基线到页面底部）
-        const box2Height = pageHeight - box1ToBox2Offset;
+        const box2Height = box2Rect?.height ?? pageHeight - box1ToBox2Offset;
+        const height = box1ToBox2Offset + box2Height;
 
         setContainerWidth(width);
         setContainerHeight(height);
@@ -432,8 +442,25 @@ export default function FishbowlPage() {
         // 保存 box2 高度用于根系渲染
         setBox2Height(box2Height);
 
+        // 记录鱼的活动区域（使用 box2 的真实可视坐标）
+        setFishBounds(
+          box2Rect
+            ? {
+                left: box2Rect.left,
+                top: box2Rect.top,
+                width: box2Rect.width,
+                height: box2Rect.height,
+              }
+            : {
+                left: 0,
+                top: box1ToBox2Offset,
+                width,
+                height: box2Height,
+              }
+        );
+
         // 更新GardenCanvas的尺寸 - 只覆盖到box2底部，不超过页面高度
-        const canvasHeight = Math.min(height, box1ToBox2Offset + box2Height);
+        const canvasHeight = height;
         canvasRef.current.updateDimensions(width, canvasHeight);
         // 重新设置基线位置为box1底部/box2顶部
         canvasRef.current.setBaselineY(box1ToBox2Offset);
@@ -449,6 +476,7 @@ export default function FishbowlPage() {
 
     scheduleUpdate();
     window.addEventListener('resize', scheduleUpdate);
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
 
     const resizeObserver = new ResizeObserver(scheduleUpdate);
     resizeObserver.observe(document.body);
@@ -459,6 +487,7 @@ export default function FishbowlPage() {
 
     return () => {
       window.removeEventListener('resize', scheduleUpdate);
+      window.removeEventListener('scroll', scheduleUpdate);
       resizeObserver.disconnect();
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
@@ -493,7 +522,7 @@ export default function FishbowlPage() {
           top: -containerOffsetTop,
           left: 0,
           width: '100vw',
-          height: Math.min(containerHeight, (box2Height || 600)) || '100vh',
+          height: containerHeight || '100vh',
           pointerEvents: 'none', // 让画布本身不拦截事件
           zIndex: 10, // 在内容之上但在交互之下
           background: 'transparent',
@@ -593,6 +622,26 @@ export default function FishbowlPage() {
             重置配置
           </button>
         </div>
+      </div>
+
+      {/* Goldfish in box2 */}
+      <div
+        className="absolute inset-0 pointer-events-none z-20"
+        style={{
+          height: '100%',
+        }}
+      >
+        <Goldfish
+          config={fishConfig}
+          bounds={
+            fishBounds || {
+              left: 0,
+              top: 0,
+              width: containerWidth,
+              height: box2Height,
+            }
+          }
+        />
       </div>
 
       {/* Toast Notification */}
