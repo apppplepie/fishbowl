@@ -49,11 +49,10 @@ export class CanvasLayerManager {
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // 缩放上下文以适配 DPR（只缩放一次）
-        if (!(canvas as any).__scaled) {
-          ctx.scale(this.dpr, this.dpr);
-          (canvas as any).__scaled = true;
-        }
+        // 重置并缩放上下文以适配 DPR（每次 resize 都需要）
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(this.dpr, this.dpr);
+        (canvas as any).__scaled = true;
       }
     });
 

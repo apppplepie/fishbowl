@@ -73,8 +73,18 @@ export default function FishbowlPage() {
     const box1Element = document.querySelector('.page-shell-box1') as HTMLElement | null;
     const box2Element = document.querySelector('.page-shell-box2') as HTMLElement | null;
     if (box1Element && box2Element) {
-      const box1Top = box1Element.getBoundingClientRect().top;
-      const box2Top = box2Element.getBoundingClientRect().top;
+      const getOffsetTop = (el: HTMLElement) => {
+        let offset = 0;
+        let node: HTMLElement | null = el;
+        while (node) {
+          offset += node.offsetTop;
+          node = node.offsetParent as HTMLElement | null;
+        }
+        return offset;
+      };
+
+      const box1Top = getOffsetTop(box1Element);
+      const box2Top = getOffsetTop(box2Element);
       const offset = box2Top - box1Top;
       return Math.max(0, offset);
     }
@@ -154,9 +164,8 @@ export default function FishbowlPage() {
         const data = await response.json();
 
         if (data.success && data.config) {
-          // Set baseline
-          const FIXED_HEIGHT = 1000;
-          const baselineY = FIXED_HEIGHT * data.config.baseline_y_ratio;
+          // Set baseline based on layout (box1 -> box2 boundary)
+          const baselineY = getBox1ToBox2Offset();
           canvasRef.current.setBaselineY(baselineY);
           canvasRef.current.setBaselineColor(data.config.baseline_color);
 
@@ -193,7 +202,7 @@ export default function FishbowlPage() {
         clearTimeout(timer);
       }
     };
-  }, [containerWidth]);
+  }, [containerWidth, getBox1ToBox2Offset]);
 
   // 页面加载时确保从顶部开始
   useEffect(() => {
@@ -298,6 +307,8 @@ export default function FishbowlPage() {
 
   // Container dimensions tracking - 让画布从 box1 顶部开始覆盖到 box2 底部
   useEffect(() => {
+    let rafId: number | null = null;
+
     const updateDimensions = () => {
       if (containerRef.current && canvasRef.current) {
         const width = window.innerWidth;
@@ -314,14 +325,29 @@ export default function FishbowlPage() {
       }
     };
 
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    const resizeObserver = new ResizeObserver(updateDimensions);
+    const scheduleUpdate = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(updateDimensions);
+    };
+
+    scheduleUpdate();
+    window.addEventListener('resize', scheduleUpdate);
+
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
     resizeObserver.observe(document.body);
+    const box1Element = document.querySelector('.page-shell-box1') as HTMLElement | null;
+    const box2Element = document.querySelector('.page-shell-box2') as HTMLElement | null;
+    if (box1Element) resizeObserver.observe(box1Element);
+    if (box2Element) resizeObserver.observe(box2Element);
 
     return () => {
-      window.removeEventListener('resize', updateDimensions);
+      window.removeEventListener('resize', scheduleUpdate);
       resizeObserver.disconnect();
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, [getBox1ToBox2Offset, getPageHeight]); // 依赖获取尺寸函数
 
