@@ -8,9 +8,9 @@ import { useAppTheme } from '../contexts/AppThemeContext';
 import GardenCanvas from '../components/garden/GardenCanvas';
 import GardenSidebar from '../components/garden/GardenSidebar';
 import { GardenDrawerButton } from '../components/garden/GardenDrawerButton';
+import FloatButton from '../components/ui/FloatButton';
 import RootSystem from '../components/garden/RootSystem';
 import BaselinePlantViewer from '../components/garden/BaselinePlantViewer';
-// @ts-expect-error: Goldfish is not a module, but default export is used
 import Goldfish from '../components/fish/Goldfish';
 import type { PlantSettings, PlantType, GardenCanvasRef, PlantRenderData } from '../types/garden';
 import { PRESET_VINE, getPlantPreset } from '../config/plantPresets';
@@ -585,44 +585,44 @@ export default function FishbowlPage() {
         expanded={sidebarExpanded}
       />
 
-      {/* DNA Input Area & Control Buttons - 在 box2 中 */}
-      <div className="relative z-30 w-80 space-y-2 mb-20 mx-auto">
-        <div className="flex gap-2">
-          {/* <input
-            type="text"
-            value={importString}
-            onChange={(e) => {
-              setImportString(e.target.value);
-              handleImport(e.target.value);
-            }}
-            placeholder="复制种子..."
-            className="flex-1 px-4 py-3 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg shadow-sm text-center font-mono text-xs focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all placeholder:text-slate-400"
-          /> */}
-          <button
-            onClick={handleUndo}
-            className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg px-3 text-slate-500 hover:text-slate-800 hover:bg-white transition-colors"
-            title="撤销上一株植物"
-          >
+      {/* Control Buttons - Floating Action Button Group */}
+      <FloatButton.Group
+        icon={
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        }
+        trigger="click"
+        style={{ right: 32, bottom: 32 }}
+        backTop={false}
+      >
+        <FloatButton
+          icon={
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
             </svg>
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm font-medium"
-          >
-            保存配置
-          </button>
-          <button
-            onClick={handleReset}
-            className="flex-1 px-4 py-2 bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg hover:bg-white transition-colors text-sm font-medium text-slate-700"
-          >
-            重置配置
-          </button>
-        </div>
-      </div>
+          }
+          onClick={handleUndo}
+        />
+        <FloatButton
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V7a1 1 0 10-2 0v4.586l-1.293-1.293z"/>
+              <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/>
+            </svg>
+          }
+          type="primary"
+          onClick={handleSave}
+        />
+        <FloatButton
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+            </svg>
+          }
+          onClick={handleReset}
+        />
+      </FloatButton.Group>
 
       {/* Goldfish in box2 */}
       <div
