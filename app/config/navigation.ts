@@ -47,10 +47,10 @@ export const publicNavigationItems: NavigationItem[] = [
     path: '/bookcase',
   },
   {
-    key: 'garden',
-    label: '花园',
+    key: 'fishbowl',
+    label: '鱼缸',
     icon: 'SunOutlined',
-    path: '/garden',
+    path: '/fishbowl',
   },
 ];
 

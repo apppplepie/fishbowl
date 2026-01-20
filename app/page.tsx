@@ -39,8 +39,11 @@ export default function Home() {
   const [fishConfig] = useState<FishConfig>({
     colors: {
       body: '#991b1b',
+      bodyAccent: '#f87171', // Initial gradient accent
       tail: '#991b1b',
+      tailAccent: '#fbbf24', // Yellow-ish tip for tail
       dorsal: '#991b1b',
+      dorsalAccent: '#fbbf24', // Yellow-ish tip for dorsal
       eye: '#ffffff',
     },
     behavior: {

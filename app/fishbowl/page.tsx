@@ -499,8 +499,11 @@ export default function FishbowlPage() {
   const [fishConfig] = useState<FishConfig>({
     colors: {
       body: '#991b1b',
+      bodyAccent: '#f87171', // Initial gradient accent
       tail: '#991b1b',
+      tailAccent: '#fbbf24', // Yellow-ish tip for tail
       dorsal: '#991b1b',
+      dorsalAccent: '#fbbf24', // Yellow-ish tip for dorsal
       eye: '#ffffff',
     },
     behavior: {
@@ -560,13 +563,13 @@ export default function FishbowlPage() {
         {/* UI Overlay: Title */}
         <div className="absolute top-8 w-full text-center pointer-events-none z-30">
           <h1 className="text-3xl md:text-5xl font-serif text-slate-800 tracking-tight drop-shadow-sm opacity-90">
-            鱼缸
+            定义你的鱼缸
           </h1>
           <p className="text-slate-500 mt-2 font-medium text-sm">
-            双击试试，左侧挑选植物
+            点击水面种植植物
           </p>
           <p className="text-slate-500 mt-2 font-medium text-sm">
-            长按获得种子，在基准线上种植可拖动
+            左侧边栏展开切换种类，右下悬浮按钮设置配置
           </p>
         </div>
 
