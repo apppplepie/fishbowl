@@ -129,14 +129,14 @@ const Controls: React.FC<ControlsProps> = ({ settings, updateSettings, applyPres
         <Slider label="数量" value={settings.petalCount} min={3} max={16} step={1} onChange={(v) => updateSettings({ petalCount: v })} />
       </ControlGroup>
 
-      <div className="pt-4 mt-6 border-t border-slate-100">
+      {/* <div className="pt-4 mt-6 border-t border-slate-100">
         <button
             onClick={onClear}
             className="w-full bg-rose-50 hover:bg-rose-100 text-rose-500 py-3 rounded-xl text-sm font-medium transition-colors border border-rose-100 shadow-sm"
         >
             清除花园
         </button>
-      </div>
+      </div> */}
     </div>
   );
 };
