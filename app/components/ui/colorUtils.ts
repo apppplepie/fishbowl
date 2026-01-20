@@ -11,17 +11,27 @@ export interface GradientConfig {
    * Returns a deterministic integer for any given string.
    */
   function hashString(str: string): number {
-    // 组合多个哈希值以获得更好的分布
     let hash1 = 5381;
     let hash2 = 52711;
     
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash1 = ((hash1 << 5) + hash1) ^ char; // hash1 * 33 ^ char
-      hash2 = ((hash2 << 7) + hash2) ^ char; // hash2 * 128 + hash2 ^ char
+    // 交替使用前后字符，最大化差异
+    const len = str.length;
+    for (let i = 0; i < len; i++) {
+      // 从后面开始，间隔取字符
+      const frontIndex = i;
+      const backIndex = len - 1 - i;
+      
+      if (frontIndex < len) {
+        const frontChar = str.charCodeAt(frontIndex);
+        hash1 = ((hash1 << 5) + hash1) ^ frontChar;
+      }
+      
+      if (backIndex >= 0 && backIndex !== frontIndex) {
+        const backChar = str.charCodeAt(backIndex);
+        hash2 = ((hash2 << 7) + hash2) ^ backChar;
+      }
     }
     
-    // 组合两个哈希值
     return Math.abs((hash1 ^ (hash2 >>> 16)));
   }
   
