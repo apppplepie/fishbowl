@@ -1,0 +1,28 @@
+/* Profile 页面磨玻璃样式 - 从 fish-sidebar.css 提取 */
+
+.profile-glass-effect {
+  background: rgba(255, 255, 255, 0.1); /* 更透明的磨玻璃效果 */
+  backdrop-filter: blur(8px) saturate(100%); /* 增强模糊和饱和度 */
+  border-radius: 16px; /* 对应 rounded-2xl */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); /* 更柔和的阴影 */
+  border: 1px solid rgba(255, 255, 255, 0.4); /* 更透明的边框 */
+  transition: all 0.3s ease;
+}
+
+/* Profile 页面统一黑色文字样式 */
+.profile-page-text {
+  color: #000000 !important;
+}
+
+/* 确保 Profile 卡片中所有文字在任何状态下都是黑色 */
+.profile-glass-effect button span,
+.profile-glass-effect button div span {
+  color: #000000 !important;
+}
+
+/* 确保选中状态下的文字也是黑色 */
+.profile-glass-effect button:active span,
+.profile-glass-effect button:hover span {
+  color: #000000 !important;
+}
+

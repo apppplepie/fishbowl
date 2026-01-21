@@ -2,6 +2,7 @@ import React from 'react';
 import { theme } from '@/app/config/theme';
 import { Key, Clock, ArrowRight, LogOut } from 'lucide-react';
 import { useAuth } from '@/app/hooks/useAuth';
+import '@/app/styles/profile.css';
 
 export const SecurityContent: React.FC = () => {
   const { logout } = useAuth();
@@ -22,13 +23,13 @@ export const SecurityContent: React.FC = () => {
         }}
       >
         <div className="flex items-center gap-3">
-          <Key size={18} style={{ color: theme.text.tertiary }} className="group-hover:opacity-80" />
+          <Key size={18} style={{ color: '#000000' }} className="group-hover:opacity-80" />
           <div className="text-left">
-            <span className="block text-sm font-medium" style={{ color: theme.text.primary }}>密码</span>
-            <span className="block text-[10px] uppercase tracking-wide" style={{ color: theme.text.tertiary }}>最后修改于90天前</span>
+            <span className="block text-sm font-medium" style={{ color: '#000000' }}>密码</span>
+            <span className="block text-[10px] uppercase tracking-wide" style={{ color: '#000000' }}>最后修改于90天前</span>
           </div>
         </div>
-        <ArrowRight size={16} style={{ color: theme.text.disabled }} />
+        <ArrowRight size={16} style={{ color: '#000000' }} />
       </button>
 
       <button
@@ -39,13 +40,13 @@ export const SecurityContent: React.FC = () => {
         }}
       >
         <div className="flex items-center gap-3">
-          <Clock size={18} style={{ color: theme.text.tertiary }} className="group-hover:opacity-80" />
+          <Clock size={18} style={{ color: '#000000' }} className="group-hover:opacity-80" />
           <div className="text-left">
-            <span className="block text-sm font-medium" style={{ color: theme.text.primary }}>活跃会话</span>
-            <span className="block text-[10px] uppercase tracking-wide" style={{ color: theme.text.tertiary }}>2 台设备</span>
+            <span className="block text-sm font-medium" style={{ color: '#000000' }}>活跃会话</span>
+            <span className="block text-[10px] uppercase tracking-wide" style={{ color: '#000000' }}>2 台设备</span>
           </div>
         </div>
-        <ArrowRight size={16} style={{ color: theme.text.disabled }} />
+        <ArrowRight size={16} style={{ color: '#000000' }} />
       </button>
 
       {/* 退出登录按钮 */}
@@ -58,8 +59,8 @@ export const SecurityContent: React.FC = () => {
             border: `1px solid ${theme.colors.error}40`,
           }}
         >
-          <LogOut size={18} style={{ color: theme.colors.error }} className="group-hover:opacity-80" />
-          <span className="text-sm font-medium" style={{ color: theme.colors.error }}>退出登录</span>
+          <LogOut size={18} style={{ color: theme.colors.error }} className="group-hover:opacity-80 profile-error-button" />
+          <span className="text-sm font-medium profile-error-button" style={{ color: theme.colors.error }}>退出登录</span>
         </button>
       </div>
     </div>

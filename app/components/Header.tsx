@@ -18,6 +18,7 @@ import {
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { theme } from '@/app/config/theme';
 import LoginModal from './LoginModal';
+import { apiGetJson } from '@/lib/apiClient';
 import '../styles/navigation.css';
 
 interface HeaderProps {
@@ -28,6 +29,7 @@ interface HeaderProps {
 
 function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps) {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const { isLoggedIn, username, logout } = useAuth();
   const { isMobile, mounted } = useResponsive();
   const pathname = usePathname();
@@ -53,6 +55,64 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
       window.removeEventListener('showLoginPrompt', handleLoginPrompt);
     };
   }, []);
+
+  // 加载未读通知数量（优化版：使用轻量级端点，页面不可见时停止轮询）
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setNotificationCount(0);
+      return;
+    }
+
+    let interval: NodeJS.Timeout | null = null;
+
+    const loadNotificationCount = async () => {
+      try {
+        // 使用轻量级的 count 端点，只返回数量，不返回完整数据
+        const result = await apiGetJson<{ success: boolean; count?: number; error?: string }>('/api/notifications/count');
+        if (result.success && result.count !== undefined) {
+          setNotificationCount(result.count);
+        }
+      } catch (error) {
+        console.error('获取通知数量失败:', error);
+        setNotificationCount(0);
+      }
+    };
+
+    // 初始加载
+    loadNotificationCount();
+
+    // 页面可见性 API：只在页面可见时轮询
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // 页面不可见，停止轮询
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
+      } else {
+        // 页面可见，立即刷新并开始轮询
+        loadNotificationCount();
+        if (!interval) {
+          interval = setInterval(loadNotificationCount, 60000); // 每60秒刷新一次
+        }
+      }
+    };
+
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 开始轮询（页面可见时）
+    if (!document.hidden) {
+      interval = setInterval(loadNotificationCount, 60000); // 每60秒刷新一次
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isLoggedIn]);
 
   // stable icon getter (no change)
   const getIcon = useCallback((iconName?: string) => {
@@ -218,6 +278,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
                   padding: '4px 8px',
                   borderRadius: 4,
                   transition: 'background-color 0.2s',
+                  position: 'relative',
                 }}
                 onMouseEnter={(e) => {
                   if (!isMobile) (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
@@ -227,7 +288,24 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
                 }}
                 onClick={goProfile}
               >
-                <UserOutlined style={{ fontSize: 16 }} />
+                <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                  <UserOutlined style={{ fontSize: 16 }} />
+                  {notificationCount > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -4,
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: '#ff4444',
+                        border: '2px solid #000000',
+                        boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.3)',
+                      }}
+                    />
+                  )}
+                </span>
                 {!isMobile && <span>{username}</span>}
               </span>
             ) : (

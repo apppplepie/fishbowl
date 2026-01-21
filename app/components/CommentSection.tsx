@@ -17,6 +17,8 @@ interface Comment {
   avatar_base64?: string;
   content: string;
   created_at: string;
+  notify_user_id?: string;
+  notification_read?: number;
   replies?: Comment[];
 }
 

@@ -7,12 +7,14 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { useAuth } from '@/app/hooks/useAuth';
 import { theme } from '@/app/config/theme';
 import { ContentArea } from './ContentArea';
+import { apiGetJson } from '@/lib/apiClient';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
   const { setConfig } = usePageShell();
   const { isMobile } = useResponsive();
   const { user: authUser, isLoggedIn } = useAuth();
+  const [notificationCount, setNotificationCount] = useState(0);
 
   // 设置页面配置
   useEffect(() => {
@@ -26,13 +28,42 @@ export default function ProfilePage() {
     };
   }, [setConfig, isMobile]);
 
+  // 加载通知数量
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadNotificationCount();
+    }
+  }, [isLoggedIn]);
+
+  // 有消息时自动展开通知
+  useEffect(() => {
+    if (notificationCount > 0) {
+      setActiveTab(prev => prev !== Tab.NOTIFICATIONS ? Tab.NOTIFICATIONS : prev);
+    } else {
+      setActiveTab(prev => prev === Tab.NOTIFICATIONS ? null : prev);
+    }
+  }, [notificationCount]);
+
+  const loadNotificationCount = async () => {
+    try {
+      // 使用轻量级的 count 端点，只返回数量
+      const result = await apiGetJson<{ success: boolean; count?: number; error?: string }>('/api/notifications/count');
+      if (result.success && result.count !== undefined) {
+        setNotificationCount(result.count);
+      }
+    } catch (error) {
+      console.error('获取通知数量失败:', error);
+      setNotificationCount(0);
+    }
+  };
+
   // 如果未登录，显示错误提示
   if (!isLoggedIn || !authUser) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <h2 style={{ color: theme.text.primary }}>请先登录</h2>
-          <p style={{ color: theme.text.secondary }}>您需要登录才能查看个人资料</p>
+          <h2 style={{ color: '#000000' }}>请先登录</h2>
+          <p style={{ color: '#000000' }}>您需要登录才能查看个人资料</p>
         </div>
       </div>
     );
@@ -47,20 +78,13 @@ export default function ProfilePage() {
     email: authUser.email,
   };
 
-  // 模拟通知数据（后续可以从API获取）
-  const notification = {
-    user: 'Sarah Kim',
-    action: 'This is a beautiful piece of work!',
-    context: 'Article: Digital Gardens',
-    time: '2h ago',
-  };
-
   return (
     <ContentArea
       activeTab={activeTab}
       onTabChange={setActiveTab}
       user={user}
-      notification={notification}
+      notificationCount={notificationCount}
+      onNotificationRead={loadNotificationCount}
     />
   );
 }

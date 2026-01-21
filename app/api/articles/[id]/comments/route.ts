@@ -15,6 +15,8 @@ interface Comment {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  notify_user_id: string;
+  notification_read: number;
   replies?: Comment[];
 }
 
@@ -111,9 +113,9 @@ export async function POST(
       );
     }
 
-    // 3. 检查文章是否存在
+    // 3. 检查文章是否存在并获取作者ID
     const articles = await query(
-      'SELECT id FROM articles WHERE id = ?',
+      'SELECT id, author_id FROM articles WHERE id = ?',
       [articleId]
     ) as any[];
 
@@ -124,10 +126,15 @@ export async function POST(
       );
     }
 
-    // 4. 如果是回复评论，检查父评论是否存在
+    const articleAuthorId = articles[0].author_id;
+
+    // 4. 确定通知用户ID
+    let notifyUserId: string | null = null;
+
     if (body.parent_id) {
+      // 如果是回复评论，检查父评论是否存在并获取被回复的用户ID
       const parentComments = await query(
-        'SELECT id FROM comments WHERE id = ? AND article_id = ?',
+        'SELECT id, user_id FROM comments WHERE id = ? AND article_id = ?',
         [body.parent_id, articleId]
       ) as any[];
 
@@ -137,14 +144,24 @@ export async function POST(
           { status: 404 }
         );
       }
+
+      // 通知被回复的用户（父评论的作者）
+      notifyUserId = parentComments[0].user_id;
+    } else {
+      // 如果是顶级评论，通知文章作者
+      notifyUserId = articleAuthorId;
     }
 
-    // 5. 创建评论
+    // 5. 判断是否是自己回复自己，如果是则默认已读
+    const isSelfNotification = notifyUserId === currentUser.id;
+    const notificationRead = isSelfNotification ? 1 : 0;
+
+    // 6. 创建评论
     const commentId = uuidv4();
     await query(
       `INSERT INTO comments 
-       (id, article_id, user_id, parent_id, content, status) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       (id, article_id, user_id, parent_id, content, status, notify_user_id, notification_read) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         commentId,
         articleId,
@@ -152,16 +169,18 @@ export async function POST(
         body.parent_id || null,
         body.content.trim(),
         'visible',
+        notifyUserId,
+        notificationRead,
       ]
     );
 
-    // 6. 更新文章评论数
+    // 7. 更新文章评论数
     await query(
       'UPDATE articles SET comments = comments + 1 WHERE id = ?',
       [articleId]
     );
 
-    // 7. 获取刚创建的评论（包含用户信息）
+    // 8. 获取刚创建的评论（包含用户信息）
     const newComment = await query(
       `SELECT c.*, u.username, u.display_name, u.avatar_base64
        FROM comments c

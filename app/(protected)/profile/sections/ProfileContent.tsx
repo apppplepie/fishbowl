@@ -2,6 +2,7 @@ import React from 'react';
 import { User } from '../../types';
 import { theme } from '@/app/config/theme';
 import { User as UserIcon } from 'lucide-react';
+import '@/app/styles/profile.css';
 
 interface ProfileContentProps {
   user: User;
@@ -32,7 +33,7 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({ user }) => {
                 className="w-full h-full flex items-center justify-center"
                 style={{ backgroundColor: theme.background.selected }}
               >
-                <UserIcon size={48} style={{ color: theme.text.tertiary }} />
+                <UserIcon size={48} style={{ color: '#000000' }} />
               </div>
             )}
           </div>
@@ -45,22 +46,8 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({ user }) => {
 
         {/* User Info */}
         <div className="text-center">
-          <h2 className="text-2xl font-serif" style={{ color: theme.text.primary }}>{user.name}</h2>
-          <p className="text-sm uppercase tracking-wider mt-1" style={{ color: theme.text.tertiary }}>{user.role}</p>
-        </div>
-      </div>
-
-      {/* 简介和邮箱 */}
-      <div className="space-y-6 px-2">
-        <div className="space-y-1">
-          <label className="text-xs uppercase tracking-wider block" style={{ color: theme.text.tertiary }}>简介</label>
-          <p className="font-light leading-relaxed" style={{ color: theme.text.secondary }}>
-            ？？？？？
-          </p>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs uppercase tracking-wider block" style={{ color: theme.text.tertiary }}>邮箱</label>
-          <p style={{ color: theme.text.primary }}>{user.email}</p>
+          <h2 className="text-2xl font-serif" style={{ color: '#000000' }}>{user.name}</h2>
+          <p className="text-sm uppercase tracking-wider mt-1" style={{ color: '#000000' }}>{user.role}</p>
         </div>
       </div>
     </div>

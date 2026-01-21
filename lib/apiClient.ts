@@ -232,6 +232,28 @@ export async function apiPutJson<T = any>(url: string, data?: any, options: Requ
 }
 
 /**
+ * PATCH请求
+ */
+export async function apiPatch(url: string, data?: any, options: RequestOptions = {}): Promise<Response> {
+  return apiRequest(url, {
+    ...options,
+    method: 'PATCH',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+/**
+ * PATCH请求并解析JSON
+ */
+export async function apiPatchJson<T = any>(url: string, data?: any, options: RequestOptions = {}): Promise<T> {
+  return apiRequestJson<T>(url, {
+    ...options,
+    method: 'PATCH',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+/**
  * DELETE请求并解析JSON
  */
 export async function apiDeleteJson<T = any>(url: string, options: RequestOptions = {}): Promise<T> {

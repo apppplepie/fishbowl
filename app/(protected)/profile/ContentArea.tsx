@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tab, User, Notification } from '../types';
+import { Tab, User } from '../types';
 import { FakeGlassCard } from '@/app/components/ui';
 import { theme } from '@/app/config/theme';
 import {
@@ -13,12 +13,17 @@ import { ProfileContent } from './sections/ProfileContent';
 import { NotificationsContent } from './sections/NotificationsContent';
 import { PermissionsContent } from './sections/PermissionsContent';
 import { SecurityContent } from './sections/SecurityContent';
+import '@/app/styles/profile.css';
+
+// Profile 页面统一黑色文字样式
+const profileTextStyle = { color: '#000000' } as const;
 
 interface ContentAreaProps {
   activeTab: Tab | null;
   onTabChange: (tab: Tab | null) => void;
   user: User;
-  notification: Notification;
+  notificationCount: number;
+  onNotificationRead?: () => void;
 }
 
 interface SectionConfig {
@@ -29,13 +34,20 @@ interface SectionConfig {
   content: React.ReactNode;
 }
 
-export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange, user, notification }) => {
+export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange, user, notificationCount, onNotificationRead }) => {
   const toggleTab = (tab: Tab) => {
     if (activeTab === tab) {
       onTabChange(null);
     } else {
       onTabChange(tab);
     }
+  };
+
+  const getNotificationSummary = () => {
+    if (notificationCount === 0) {
+      return '暂无新消息';
+    }
+    return `${notificationCount} 条新消息`;
   };
 
   const sections: SectionConfig[] = [
@@ -50,8 +62,8 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
       id: Tab.NOTIFICATIONS,
       label: '通知',
       icon: Bell,
-      summary: '1 条新消息',
-      content: <NotificationsContent notification={notification} />
+      summary: getNotificationSummary(),
+      content: <NotificationsContent onNotificationRead={onNotificationRead} />
     },
     {
       id: Tab.PERMISSIONS,
@@ -73,24 +85,30 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
       {sections.map((section) => {
         const isProfile = section.id === Tab.PROFILE;
+        const isNotifications = section.id === Tab.NOTIFICATIONS;
         const isOpen = activeTab === section.id;
+        // 通知部分：没有消息时不可展开，隐藏展开按钮
+        const isNotificationsEmpty = isNotifications && notificationCount === 0;
+        const shouldHideExpandButton = isProfile || isNotificationsEmpty;
+        const shouldDisableClick = isProfile || isNotificationsEmpty;
         
         return (
           <FakeGlassCard 
             key={section.id} 
             className={`
+              profile-glass-effect
               overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
               ${isProfile ? 'md:col-span-2' : 'col-span-1'}
               ${!isProfile && isOpen ? 'ring-1 ring-white/60 shadow-lg' : ''}
-              ${!isProfile ? 'hover:bg-white/60' : ''}
+              ${!isProfile && !isNotificationsEmpty ? 'hover:bg-white/60' : ''}
             `}
           >
             {/* Header */}
             <button
-              onClick={() => toggleTab(section.id)}
+              onClick={() => !shouldDisableClick && toggleTab(section.id)}
               className={`
                 w-full flex items-center justify-between p-6 focus:outline-none
-                ${isProfile ? 'cursor-default pointer-events-none' : 'cursor-pointer'}
+                ${shouldDisableClick ? 'cursor-default pointer-events-none' : 'cursor-pointer'}
               `}
             >
               <div className="flex items-center gap-4">
@@ -98,7 +116,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                   className="p-3 rounded-xl transition-colors duration-300"
                   style={{
                     backgroundColor: isOpen && !isProfile ? theme.colors.black : theme.background.whiteOverlayLight,
-                    color: isOpen && !isProfile ? theme.colors.white : theme.text.tertiary
+                    color: isOpen && !isProfile ? theme.colors.white : '#000000'
                   }}
                 >
                   <section.icon size={20} />
@@ -106,16 +124,14 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                 <div className="text-left">
                   <span
                     className="block text-lg font-medium transition-colors"
-                    style={{
-                      color: isOpen && !isProfile ? theme.text.primary : theme.text.secondary
-                    }}
+                    style={{ ...profileTextStyle, color: '#000000' }}
                   >
                     {section.label}
                   </span>
                   {!isOpen && !isProfile && (
                     <span
                       className="block text-xs font-light animate-fade-in md:hidden"
-                      style={{ color: theme.text.tertiary }}
+                      style={{ ...profileTextStyle, color: '#000000' }}
                     >
                       {section.summary}
                     </span>
@@ -123,12 +139,12 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                 </div>
               </div>
 
-              {/* Chevron: Only show on Mobile non-profile items */}
-              {!isProfile && (
+              {/* Chevron: Only show on Mobile non-profile items, and hide when notifications are empty */}
+              {!shouldHideExpandButton && (
                 <ChevronDown
                   className="transition-transform duration-500 md:hidden"
                   style={{
-                    color: isOpen ? theme.text.primary : theme.text.disabled,
+                    color: isOpen ? '#000000' : '#000000',
                   }}
                   size={20}
                 />
@@ -139,8 +155,8 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
             <div 
               className={`
                 px-6 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] overflow-hidden
-                ${isProfile ? 'max-h-[1200px] opacity-100 pb-8' : (isOpen ? 'max-h-[800px] opacity-100 pb-8' : 'max-h-0 opacity-0')}
-                md:max-h-none md:opacity-100 md:pb-8 md:block
+                ${isProfile ? 'max-h-[1200px] opacity-100 pb-8' : (isOpen && !isNotificationsEmpty ? 'max-h-[800px] opacity-100 pb-8' : 'max-h-0 opacity-0')}
+                ${isNotificationsEmpty ? 'md:max-h-0 md:opacity-0' : 'md:max-h-none md:opacity-100 md:pb-8 md:block'}
               `}
             >
               {section.content}
