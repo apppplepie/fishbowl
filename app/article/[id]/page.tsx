@@ -1393,7 +1393,7 @@ export default function ArticlePage() {
               {shouldLoadInteractions && (
                 <CommentSection
                   articleId={articleId}
-                  currentUser={user ? { username: user.username, avatar: user.avatar_url, role: user.role } : null}
+                  currentUser={user ? { username: user.username, avatar: user.avatar_base64 as string, role: user.role } : null}
                   isLoggedIn={isLoggedIn}
                   onCommentCountChange={setCommentsCount}
                 />

@@ -8,7 +8,7 @@ interface User {
   username: string;
   email: string;
   display_name: string;
-  avatar_url?: string;
+  avatar_base64?: string;
   role: 'admin' | 'moderator' | 'user';
   max_access_level?: number;
 }

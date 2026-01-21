@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     // 2. 从数据库获取最新用户信息
     const users = await query(
-      `SELECT id, username, email, display_name, avatar_url, bio, role, status,
+      `SELECT id, username, email, display_name, avatar_base64, bio, role, status,
               email_verified, last_login_at, created_at, max_access_level
        FROM users
        WHERE id = ?`,
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
         username: user.username,
         email: user.email,
         display_name: user.display_name,
-        avatar_url: user.avatar_url,
+        avatar_base64: user.avatar_base64,
         bio: user.bio,
         role: user.role,
         email_verified: user.email_verified,

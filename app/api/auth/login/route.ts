@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // 2. 查询用户（支持用户名或邮箱登录）
     const users = await query(
-      `SELECT id, username, email, password_hash, display_name, avatar_url, role, status, max_access_level
+      `SELECT id, username, email, password_hash, display_name, avatar_base64, role, status, max_access_level
        FROM users
        WHERE username = ? OR email = ?`,
       [username, username]
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         username: user.username,
         email: user.email,
         display_name: user.display_name,
-        avatar_url: user.avatar_url,
+        avatar_base64: user.avatar_base64,
         role: user.role,
         max_access_level: user.max_access_level || 3,
       },

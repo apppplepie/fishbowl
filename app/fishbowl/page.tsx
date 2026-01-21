@@ -16,6 +16,7 @@ import FishSidebar, { type FishConfig } from '../components/fish/Sidebar';
 import type { PlantSettings, PlantType, GardenCanvasRef, PlantRenderData } from '../types/garden';
 import { PRESET_VINE, getPlantPreset } from '../config/plantPresets';
 import { convertGradient } from '../utils/colorConverter';
+import { DEFAULT_FISH_CONFIG } from '../config/fishConfig';
 
 const MAX_LOADED_PLANTS = 10; // 避免一次性加载过多离屏 canvas 占满内存
 
@@ -42,6 +43,9 @@ export default function FishbowlPage() {
     width: number;
     height: number;
   } | null>(null);
+
+  // 控制鱼组件重新挂载的key
+  const [fishKey, setFishKey] = useState<number>(0);
 
   // 防止baselinePlants数组无限增长
   const maxBaselinePlants = 20;
@@ -215,6 +219,11 @@ export default function FishbowlPage() {
       }
     };
   }, [containerWidth, getBox1ToBox2Offset]);
+
+  // 页面加载时加载鱼配置
+  useEffect(() => {
+    loadSavedFishConfig();
+  }, []);
 
   // 页面加载时确保从顶部开始
   useEffect(() => {
@@ -496,22 +505,38 @@ export default function FishbowlPage() {
   }, [getBox1ToBox2Offset, getPageHeight]); // 依赖获取尺寸函数
 
   // 基本的鱼配置
-  const [fishConfig, setFishConfig] = useState<FishConfig>({
-    colors: {
-      body: '#991b1b',
-      bodyAccent: '#991b1b', // Initial gradient accent
-      tail: '#991b1b',
-      tailAccent: '#991b1b', // Yellow-ish tip for tail
-      dorsal: '#991b1b',
-      dorsalAccent: '#991b1b', // Yellow-ish tip for dorsal
-      eye: '#ffffff',
-    },
-    behavior: {
-      agility: 0.25, // 适中的敏捷度
-      energy: 0.4,   // 适中的能量
-      scale: 1,
-    },
-  });
+  const [fishConfig, setFishConfig] = useState<FishConfig>(DEFAULT_FISH_CONFIG);
+
+  // 加载用户保存的鱼配置
+  const loadSavedFishConfig = async () => {
+    try {
+      const response = await fetch('/api/fish/config');
+      const data = await response.json();
+
+      if (data.success && data.config) {
+        setFishConfig(data.config);
+      } else if (data.success) {
+        // 使用默认配置（未登录或无配置）
+        setFishConfig(DEFAULT_FISH_CONFIG);
+      }
+    } catch (error) {
+      console.error('加载鱼配置失败:', error);
+      // 使用默认配置
+      setFishConfig(DEFAULT_FISH_CONFIG);
+    }
+  };
+
+  // 保存配置后的回调
+  const handleFishConfigSaved = () => {
+    setToastMessage('鱼配置已保存');
+  };
+
+  // 重置配置后的回调
+  const handleFishConfigReset = () => {
+    // 更新fishKey，强制React卸载并重新挂载Goldfish组件
+    setFishKey(prev => prev + 1);
+    setToastMessage('鱼配置已重置');
+  };
 
 
 
@@ -627,45 +652,35 @@ export default function FishbowlPage() {
         />
       </FloatButton.Group>
 
-      {/* Goldfish in box2 - positioned from top, horizontally centered */}
-      {(() => {
-        const bounds = fishBounds || {
-          left: 0,
-          top: 0,
-          width: containerWidth || (typeof window !== 'undefined' ? window.innerWidth : 1000),
-          height: box2Height || 600,
-        };
-        const offsetFromTop = Math.round(
-          Math.min(360, Math.max(240, bounds.height * 0.25))
-        ); // 距离 box2 顶部的距离（自适应）
-        const availableHeight = Math.max(600, bounds.height - offsetFromTop);
-        
-        return (
-          <div
-            className="fixed pointer-events-none z-20"
-            style={{
-              top: `${bounds.top + offsetFromTop}px`,
-              left: `${bounds.left + bounds.width / 2}px`,
-              transform: 'translateX(-50%)',
-              width: `${bounds.width}px`,
-              height: `${availableHeight}px`,
-            }}
-          >
-            <Goldfish
-              config={fishConfig}
-              bounds={{
-                left: bounds.left,
-                top: bounds.top + offsetFromTop,
-                width: bounds.width,
-                height: availableHeight,
-              }}
-            />
-          </div>
-        );
-      })()}
+      {/* Goldfish in box2 */}
+      <div
+        className="absolute inset-0 pointer-events-none z-20"
+        style={{
+          height: '100%',
+        }}
+      >
+        <Goldfish
+          key={fishKey}
+          config={fishConfig}
+          bounds={
+            fishBounds || {
+              left: 0,
+              top: 0,
+              width: containerWidth,
+              height: box2Height,
+            }
+          }
+        />
+      </div>
 
       {/* Fish Config Panel (always visible, no minimize button) */}
-      <FishSidebar config={fishConfig} onChange={setFishConfig} minimizable={false} />
+      <FishSidebar
+        config={fishConfig}
+        onChange={setFishConfig}
+        minimizable={false}
+        onConfigSaved={handleFishConfigSaved}
+        onConfigReset={handleFishConfigReset}
+      />
 
       {/* Toast Notification */}
       {toastMessage && (

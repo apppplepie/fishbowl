@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FishConfig } from './Sidebar';
 
 /**
@@ -94,6 +94,9 @@ const Goldfish: React.FC<GoldfishProps> = ({ config, bounds }) => {
   // food DOM refs pool
   const foodRefs = useRef<(SVGGElement | null)[]>([]);
 
+  // 渐显动画状态
+  const [opacity, setOpacity] = useState(0);
+
   const configRef = useRef(config);
   const boundsRef = useRef<FishBounds | null>(bounds || null);
   useEffect(() => {
@@ -102,6 +105,27 @@ const Goldfish: React.FC<GoldfishProps> = ({ config, bounds }) => {
   useEffect(() => {
     boundsRef.current = bounds || null;
   }, [bounds]);
+
+  // 渐显出场动画
+  useEffect(() => {
+    const duration = 1500; // 动画持续时间 1.5 秒
+    const startTime = Date.now();
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // 使用缓动函数 (ease-out)
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      setOpacity(easeOut);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }, []);
 
   // Physics + gameplay state (mutable ref used by rAF loop)
   const physics = useRef<any>({
@@ -513,6 +537,7 @@ const Goldfish: React.FC<GoldfishProps> = ({ config, bounds }) => {
     <svg
       className="absolute top-0 left-0 w-full h-full pointer-events-none drop-shadow-xl z-0"
       xmlns="http://www.w3.org/2000/svg"
+      style={{ opacity, transition: 'opacity 0.1s linear' }}
     >
       <defs>
         <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="0%">

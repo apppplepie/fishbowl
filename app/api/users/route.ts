@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 
     // 5. 查询用户列表
     // 使用字符串拼接而不是参数绑定（LIMIT 和 OFFSET 不支持 ? 占位符）
-    const userQuery = `SELECT id, username, email, display_name, avatar_url, bio, role, status,
+    const userQuery = `SELECT id, username, email, display_name, avatar_base64, bio, role, status,
               email_verified, last_login_at, created_at, max_access_level
        FROM users
        ${whereClause}

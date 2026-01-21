@@ -30,7 +30,7 @@ export async function GET(
 
     // 获取顶级评论（parent_id 为 NULL）
     const topComments = await query(
-      `SELECT c.*, u.username, u.display_name, u.avatar_url
+      `SELECT c.*, u.username, u.display_name, u.avatar_base64
        FROM comments c
        JOIN users u ON c.user_id = u.id
        WHERE c.article_id = ? 
@@ -42,7 +42,7 @@ export async function GET(
 
     // 获取所有回复
     const allReplies = await query(
-      `SELECT c.*, u.username, u.display_name, u.avatar_url
+      `SELECT c.*, u.username, u.display_name, u.avatar_base64
        FROM comments c
        JOIN users u ON c.user_id = u.id
        WHERE c.article_id = ?
@@ -163,7 +163,7 @@ export async function POST(
 
     // 7. 获取刚创建的评论（包含用户信息）
     const newComment = await query(
-      `SELECT c.*, u.username, u.display_name, u.avatar_url
+      `SELECT c.*, u.username, u.display_name, u.avatar_base64
        FROM comments c
        JOIN users u ON c.user_id = u.id
        WHERE c.id = ?`,

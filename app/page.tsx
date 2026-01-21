@@ -14,6 +14,7 @@ import { theme } from './config/theme';
 import { BaselinePlant, PlantSettings } from './types/garden';
 import { convertGradient, isTailwindGradient } from './utils/colorConverter';
 import { PRESET_VINE } from './config/plantPresets';
+import { DEFAULT_FISH_CONFIG } from './config/fishConfig';
 import { PlantGrowthEngine } from './engine/PlantGrowthEngine';
 import Goldfish, { FishBounds } from './components/fish/Goldfish';
 import { FishConfig } from './components/fish/Sidebar';
@@ -36,22 +37,7 @@ export default function Home() {
   const [rootSystems, setRootSystems] = useState<RootData[]>([]); // 根系数据
 
   // 基本的鱼配置
-  const [fishConfig] = useState<FishConfig>({
-    colors: {
-      body: '#991b1b',
-      bodyAccent: '#991b1b', // Initial gradient accent
-      tail: '#991b1b',
-      tailAccent: '#fbbf24', // Yellow-ish tip for tail
-      dorsal: '#991b1b',
-      dorsalAccent: '#fbbf24', // Yellow-ish tip for dorsal
-      eye: '#ffffff',
-    },
-    behavior: {
-      agility: 0.25, // 适中的敏捷度
-      energy: 0.4,   // 适中的能量
-      scale: 1,
-    },
-  });
+  const [fishConfig] = useState<FishConfig>(DEFAULT_FISH_CONFIG);
   const [fishBounds, setFishBounds] = useState<FishBounds | null>(null);
   const fishTopPadding = 20;
 

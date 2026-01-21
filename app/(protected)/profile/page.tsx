@@ -6,9 +6,7 @@ import { FakeGlassCard } from '@/app/components/ui';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useAuth } from '@/app/hooks/useAuth';
-import { apiGetJson } from '@/lib/apiClient';
 import { theme } from '@/app/config/theme';
-import { message } from 'antd';
 import {
   Sparkles,
   ShieldCheck,
@@ -28,30 +26,6 @@ interface ContentAreaProps {
 }
 
 export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange, user, notification }) => {
-  const { isLoggedIn } = useAuth();
-  const [userStats, setUserStats] = useState({ projects: 0, followers: 0 });
-  const [loading, setLoading] = useState(true);
-
-  // 获取用户统计数据
-  useEffect(() => {
-    const fetchUserStats = async () => {
-      if (!isLoggedIn) return;
-
-      try {
-        const response = await apiGetJson('/api/user/stats');
-        if (response.success) {
-          setUserStats(response.data);
-        }
-      } catch (error) {
-        console.error('获取用户统计失败:', error);
-        // 失败时使用默认值
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserStats();
-  }, [isLoggedIn]);
   
   const toggleTab = (tab: Tab) => {
     if (activeTab === tab) {
@@ -64,47 +38,61 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
   const sections = [
     {
       id: Tab.PROFILE,
-      label: 'Profile',
+      label: '个人资料',
       icon: UserIcon,
       summary: `@${user.handle}`,
       content: (
         <div className="space-y-8 pt-4">
            {/* Profile Content */}
-           <div className="flex flex-col items-center">
-              <h2 className="text-2xl font-serif" style={{ color: theme.text.primary }}>{user.name}</h2>
-              <p className="text-sm uppercase tracking-wider mt-1" style={{ color: theme.text.tertiary }}>{user.role}</p>
+           <div className="flex flex-col items-center space-y-6">
+              {/* Avatar */}
+              <div className="relative">
+                <div
+                  className="w-32 h-32 rounded-full overflow-hidden border-4 shadow-lg"
+                  style={{
+                    borderColor: theme.border.light,
+                    backgroundColor: theme.background.whiteOverlayLight
+                  }}
+                >
+                  {user.avatar_base64 ? (
+                    <img
+                      src={user.avatar_base64}
+                      alt={`${user.name}的头像`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ backgroundColor: theme.background.selected }}
+                    >
+                      <UserIcon size={48} style={{ color: theme.text.tertiary }} />
+                    </div>
+                  )}
+                </div>
+                {/* Avatar glow effect */}
+                <div
+                  className="absolute inset-0 rounded-full opacity-20 blur-xl -z-10"
+                  style={{ backgroundColor: theme.colors.primary }}
+                />
+              </div>
+
+              {/* User Info */}
+              <div className="text-center">
+                <h2 className="text-2xl font-serif" style={{ color: theme.text.primary }}>{user.name}</h2>
+                <p className="text-sm uppercase tracking-wider mt-1" style={{ color: theme.text.tertiary }}>{user.role}</p>
+              </div>
            </div>
 
-           {/* Stats */}
-           <div className="grid grid-cols-2 gap-4">
-               <div className="p-5 rounded-2xl" style={{ backgroundColor: theme.background.whiteOverlayLight, border: `1px solid ${theme.border.light}` }}>
-                  <div className="text-center">
-                    <span className="block text-2xl font-serif" style={{ color: theme.text.primary }}>
-                      {loading ? '...' : userStats.projects}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-widest mt-1 block" style={{ color: theme.text.secondary }}>Projects</span>
-                  </div>
-               </div>
-               <div className="p-5 rounded-2xl" style={{ backgroundColor: theme.background.whiteOverlayLight, border: `1px solid ${theme.border.light}` }}>
-                  <div className="text-center">
-                    <span className="block text-2xl font-serif" style={{ color: theme.text.primary }}>
-                      {loading ? '...' : userStats.followers}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-widest mt-1 block" style={{ color: theme.text.secondary }}>Followers</span>
-                  </div>
-               </div>
-           </div>
-
-           {/* Bio and Email */}
+           {/* 简介和邮箱 */}
            <div className="space-y-6 px-2">
               <div className="space-y-1">
-                 <label className="text-xs uppercase tracking-wider block" style={{ color: theme.text.tertiary }}>Bio</label>
+                 <label className="text-xs uppercase tracking-wider block" style={{ color: theme.text.tertiary }}>简介</label>
                  <p className="font-light leading-relaxed" style={{ color: theme.text.secondary }}>
-                   Digital explorer and interface enthusiast. Cultivating digital gardens and crafting ethereal experiences.
+                   ？？？？？
                  </p>
               </div>
               <div className="space-y-1">
-                 <label className="text-xs uppercase tracking-wider block" style={{ color: theme.text.tertiary }}>Email</label>
+                 <label className="text-xs uppercase tracking-wider block" style={{ color: theme.text.tertiary }}>邮箱</label>
                  <p style={{ color: theme.text.primary }}>hello@{user.handle}.io</p>
               </div>
            </div>
@@ -113,9 +101,9 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
     },
     {
       id: Tab.NOTIFICATIONS,
-      label: 'Notifications',
+      label: '通知',
       icon: Bell,
-      summary: '1 New',
+      summary: '1 条新消息',
       content: (
         <div className="pt-4 h-full flex flex-col">
              <div
@@ -135,7 +123,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                    <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium" style={{ color: theme.text.primary }}>{notification.user}</span>
-                        <span className="text-xs" style={{ color: theme.text.tertiary }}>replied</span>
+                        <span className="text-xs" style={{ color: theme.text.tertiary }}>回复了</span>
                       </div>
                       <p className="font-serif italic mb-3 text-sm leading-relaxed" style={{ color: theme.text.secondary }}>
                         "{notification.action}"
@@ -151,14 +139,14 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                className="w-full mt-4 text-xs text-center py-2 transition-colors hover:opacity-80"
                style={{ color: theme.text.tertiary }}
              >
-               View History
+               查看历史
              </button>
         </div>
       )
     },
     {
       id: Tab.PERMISSIONS,
-      label: 'Access',
+      label: '权限',
       icon: ShieldCheck,
       summary: user.role,
       content: (
@@ -171,9 +159,9 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
               }}
             >
               <div>
-                 <h3 className="font-medium mb-1" style={{ color: theme.text.primary }}>Current Plan</h3>
+                 <h3 className="font-medium mb-1" style={{ color: theme.text.primary }}>当前计划</h3>
                  <p className="text-sm" style={{ color: theme.text.secondary }}>
-                   You are a <span className="font-serif italic" style={{ color: theme.colors.warning }}>{user.role}</span>.
+                   您是<span className="font-serif italic" style={{ color: theme.colors.warning }}>{user.role}</span>用户。
                  </p>
               </div>
               <ShieldCheck size={24} style={{ color: theme.colors.warning + '80' }} />
@@ -189,8 +177,8 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
             >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-serif text-lg mb-1">Cultivator</h3>
-                    <p className="text-xs font-light" style={{ color: theme.text.secondary }}>Unlock private sanctuaries.</p>
+                    <h3 className="font-serif text-lg mb-1">培养者</h3>
+                    <p className="text-xs font-light" style={{ color: theme.text.secondary }}>解锁私人圣地。</p>
                   </div>
                   <button
                     className="px-5 py-2 rounded-full text-xs font-medium transition-colors border hover:opacity-80"
@@ -200,7 +188,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                       color: theme.text.primary,
                     }}
                   >
-                    Upgrade
+                    升级
                   </button>
                 </div>
             </div>
@@ -209,9 +197,9 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
     },
     {
       id: Tab.SECURITY,
-      label: 'Security',
+      label: '安全',
       icon: Key,
-      summary: 'High',
+      summary: '高',
       content: (
          <div className="space-y-3 pt-4 h-full flex flex-col">
             <button
@@ -224,8 +212,8 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                <div className="flex items-center gap-3">
                   <Key size={18} style={{ color: theme.text.tertiary }} className="group-hover:opacity-80" />
                   <div className="text-left">
-                     <span className="block text-sm font-medium" style={{ color: theme.text.primary }}>Password</span>
-                     <span className="block text-[10px] uppercase tracking-wide" style={{ color: theme.text.tertiary }}>Last changed 90d ago</span>
+                     <span className="block text-sm font-medium" style={{ color: theme.text.primary }}>密码</span>
+                     <span className="block text-[10px] uppercase tracking-wide" style={{ color: theme.text.tertiary }}>最后修改于90天前</span>
                   </div>
                </div>
                <ArrowRight size={16} style={{ color: theme.text.disabled }} />
@@ -241,8 +229,8 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                <div className="flex items-center gap-3">
                   <Clock size={18} style={{ color: theme.text.tertiary }} className="group-hover:opacity-80" />
                   <div className="text-left">
-                     <span className="block text-sm font-medium" style={{ color: theme.text.primary }}>Active Sessions</span>
-                     <span className="block text-[10px] uppercase tracking-wide" style={{ color: theme.text.tertiary }}>2 Devices</span>
+                     <span className="block text-sm font-medium" style={{ color: theme.text.primary }}>活跃会话</span>
+                     <span className="block text-[10px] uppercase tracking-wide" style={{ color: theme.text.tertiary }}>2 台设备</span>
                   </div>
                </div>
                <ArrowRight size={16} style={{ color: theme.text.disabled }} />
@@ -371,6 +359,7 @@ export default function ProfilePage() {
     name: authUser.display_name || authUser.username,
     handle: authUser.username,
     role: authUser.role,
+    avatar_base64: authUser.avatar_base64,
   };
 
   // 模拟通知数据（后续可以从API获取）

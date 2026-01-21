@@ -14,7 +14,7 @@ interface Comment {
   user_id: string;
   username: string;
   display_name?: string;
-  avatar_url?: string;
+  avatar_base64?: string;
   content: string;
   created_at: string;
   replies?: Comment[];
@@ -378,7 +378,7 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                 <Avatar 
                   size={40} 
                   icon={<UserOutlined />}
-                  src={comment.avatar_url}
+                  src={comment.avatar_base64}
                   style={{ flexShrink: 0 }}
                 />
 

@@ -1,4 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import '../../styles/fish-sidebar.css';
+import { DEFAULT_FISH_CONFIG } from '../../config/fishConfig';
+
+interface SidebarProps {
+  config: FishConfig;
+  onChange: (newConfig: FishConfig) => void;
+  minimizable?: boolean;
+  onConfigSaved?: () => void;
+  onConfigReset?: () => void;
+}
 
 export interface FishConfig {
   colors: {
@@ -17,14 +27,22 @@ export interface FishConfig {
   };
 }
 
-interface SidebarProps {
-  config: FishConfig;
-  onChange: (newConfig: FishConfig) => void;
-  minimizable?: boolean;
-}
 
-const Sidebar: React.FC<SidebarProps> = ({ config, onChange, minimizable = true }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  config,
+  onChange,
+  minimizable = true,
+  onConfigSaved,
+  onConfigReset
+}) => {
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // 跟踪当前打开的颜色选择器，防止重渲染时失去焦点
+  const activeColorInputRef = useRef<HTMLInputElement | null>(null);
+  // sidebar 容器的引用，用于检测点击外部
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const updateColor = (part: keyof FishConfig['colors'], value: string) => {
     onChange({
@@ -40,12 +58,73 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange, minimizable = true 
     });
   };
 
+  // 保存配置到服务器
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/fish/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          colors: config.colors,
+          behavior: config.behavior,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // 调用父组件的回调
+        onConfigSaved?.();
+      } else {
+        console.error('保存失败:', data.error);
+        alert('保存失败: ' + data.error);
+      }
+    } catch (error) {
+      console.error('保存失败:', error);
+      alert('保存失败，请重试');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 重置配置从服务器加载（取消按钮）
+  const handleReset = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/fish/config');
+      const data = await response.json();
+
+      if (data.success && data.config) {
+        // 从数据库读取到配置，更新配置
+        onChange(data.config);
+        // 调用父组件的回调
+        onConfigReset?.();
+      } else {
+        // 读不到数据，使用默认配置（所有颜色都是 '#991b1b'）
+        onChange(DEFAULT_FISH_CONFIG);
+        // 调用父组件的回调
+        onConfigReset?.();
+      }
+    } catch (error) {
+      console.error('加载失败:', error);
+      // 出错时也使用默认配置
+      onChange(DEFAULT_FISH_CONFIG);
+      // 调用父组件的回调
+      onConfigReset?.();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Minimized State
   if (minimizable && isMinimized) {
     return (
-      <button 
+      <button
         onClick={() => setIsMinimized(false)}
-        className="absolute top-6 right-6 w-10 h-10 bg-white/90 backdrop-blur shadow-xl rounded-full flex items-center justify-center text-stone-600 hover:scale-110 hover:text-orange-600 transition-all z-50 border border-stone-100"
+        className="fish-sidebar-minimized"
         title="Open Controls"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
@@ -55,65 +134,95 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange, minimizable = true 
     );
   }
 
+  const handleColorChange = (key: keyof FishConfig['colors']) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateColor(key, e.target.value);
+    // 不自动关闭调色板，让用户手动关闭
+  };
+
+  const handleColorFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    // 记录当前打开的颜色选择器
+    activeColorInputRef.current = e.currentTarget;
+  };
+
+  const handleColorBlur = () => {
+    // 清除引用
+    activeColorInputRef.current = null;
+  };
+
+  // 防止点击调色板触发喂食游戏
+  const handleColorPickerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+
   const GradientRow = ({ label, startKey, endKey }: { label: string, startKey: keyof FishConfig['colors'], endKey: keyof FishConfig['colors'] }) => (
-    <div className="flex items-center justify-between group">
-      <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider w-12">{label}</span>
-      <div className="flex items-center flex-1 justify-end gap-2">
-        <div className="relative group/picker">
-          <input 
-            type="color" 
+    <div className="fish-sidebar-gradient-row">
+      <span className="fish-sidebar-gradient-label">{label}</span>
+      <div className="fish-sidebar-color-picker-container" onClick={handleColorPickerClick}>
+        <div className="fish-sidebar-color-picker" title={`${label} 主色`} onClick={handleColorPickerClick}>
+          <input
+            type="color"
             value={config.colors[startKey]}
-            onChange={(e) => updateColor(startKey, e.target.value)}
-            className="w-5 h-5 rounded-full overflow-hidden cursor-pointer border-0 p-0 opacity-0 absolute inset-0 z-10"
+            onChange={handleColorChange(startKey)}
+            onFocus={handleColorFocus}
+            onBlur={handleColorBlur}
+            className="fish-sidebar-color-input"
+            aria-label={`${label} 主色`}
           />
-           <div className="w-5 h-5 rounded-full border border-stone-200 shadow-sm transition-transform group-hover/picker:scale-110" style={{ backgroundColor: config.colors[startKey] }} />
-        </div>
-        
-        <div className="flex-1 h-1 rounded-full bg-stone-100 overflow-hidden relative mx-1">
-           <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${config.colors[startKey]}, ${config.colors[endKey]})` }} />
+          <div style={{ backgroundColor: config.colors[startKey], width: '100%', height: '100%' }} />
         </div>
 
-        <div className="relative group/picker">
-          <input 
-            type="color" 
+        <div className="fish-sidebar-gradient-bar" style={{ '--start-color': config.colors[startKey], '--end-color': config.colors[endKey] } as React.CSSProperties} />
+
+        <div className="fish-sidebar-color-picker" title={`${label} 渐变色`} onClick={handleColorPickerClick}>
+          <input
+            type="color"
             value={config.colors[endKey]}
-            onChange={(e) => updateColor(endKey, e.target.value)}
-             className="w-5 h-5 rounded-full overflow-hidden cursor-pointer border-0 p-0 opacity-0 absolute inset-0 z-10"
+            onChange={handleColorChange(endKey)}
+            onFocus={handleColorFocus}
+            onBlur={handleColorBlur}
+            className="fish-sidebar-color-input"
+            aria-label={`${label} 渐变色`}
           />
-          <div className="w-5 h-5 rounded-full border border-stone-200 shadow-sm transition-transform group-hover/picker:scale-110" style={{ backgroundColor: config.colors[endKey] }} />
+          <div style={{ backgroundColor: config.colors[endKey], width: '100%', height: '100%' }} />
         </div>
       </div>
     </div>
   );
 
   const SliderRow = ({ label, value, onChange, min, max, step, displayValue }: any) => (
-      <div className="space-y-1">
-        <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-stone-400">
+      <div className="fish-sidebar-slider-row">
+        <div className="fish-sidebar-slider-label-container">
           <span>{label}</span>
-          <span className="font-mono text-stone-600">{displayValue}</span>
+          <span className="fish-sidebar-slider-label">{displayValue}</span>
         </div>
-        <input 
+        <input
           type="range" min={min} max={max} step={step}
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
-          className="w-full h-1 bg-stone-100 rounded-full appearance-none cursor-pointer hover:bg-stone-200 transition-colors [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-stone-800 [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-125"
+          className="fish-sidebar-slider"
         />
      </div>
   );
 
   return (
-    <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-64 bg-white/60 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/70 flex flex-col z-50 transition-all duration-300 overflow-hidden">
-      
+    <div className="fish-sidebar" ref={sidebarRef} onMouseLeave={() => {
+      // 当鼠标离开sidebar时，如果有打开的调色板，关闭它
+      if (activeColorInputRef.current) {
+        activeColorInputRef.current.blur();
+        activeColorInputRef.current = null;
+      }
+    }}>
+
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
-        <div className="flex items-center gap-2">
-           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-           <span className="text-xs font-bold text-stone-800 tracking-widest">CONFIGURATION</span>
+      <div className="fish-sidebar-header">
+        <div className="fish-sidebar-header-content">
+           <span className="fish-sidebar-title">鱼的配置</span>
         </div>
         {minimizable && (
-          <button 
+          <button
             onClick={() => setIsMinimized(true)}
-            className="text-stone-300 hover:text-stone-600 transition-colors"
+            className="fish-sidebar-minimize-btn"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
               <path fillRule="evenodd" d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" clipRule="evenodd" />
@@ -123,10 +232,10 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange, minimizable = true 
       </div>
 
       {/* Content */}
-      <div className="p-5 space-y-7">
-        
+      <div className="fish-sidebar-content">
+
         {/* Section: Pigmentation */}
-        <div className="space-y-4">
+        <div className="fish-sidebar-section">
           <div className="space-y-3">
              <GradientRow label="Body" startKey="body" endKey="bodyAccent" />
              <GradientRow label="Tail" startKey="tail" endKey="tailAccent" />
@@ -135,10 +244,10 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange, minimizable = true 
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-stone-100 w-full" />
+        <div className="fish-sidebar-divider" />
 
         {/* Section: Dynamics */}
-        <div className="space-y-4">
+        <div className="fish-sidebar-section">
            <SliderRow 
               label="Agility" 
               value={config.behavior.agility} 
@@ -147,14 +256,14 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange, minimizable = true 
               displayValue={`${Math.round(config.behavior.agility * 100)}%`}
            />
            <SliderRow 
-              label="Energy" 
+              label="能量" 
               value={config.behavior.energy} 
               onChange={(v: number) => updateBehavior('energy', v)}
               min="0" max="1" step="0.01"
               displayValue={`${Math.round(config.behavior.energy * 100)}%`}
            />
            <SliderRow 
-              label="Scale" 
+              label="大小" 
               value={config.behavior.scale} 
               onChange={(v: number) => updateBehavior('scale', v)}
               min="0.5" max="2" step="0.1"
@@ -163,9 +272,42 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange, minimizable = true 
         </div>
 
       </div>
-      
+
+      {/* Action Buttons */}
+      <div className="fish-sidebar-actions">
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="fish-sidebar-action-btn fish-sidebar-save-btn"
+        >
+          {isSaving ? '保存中...' : '确定'}
+        </button>
+        <button
+          onClick={handleReset}
+          disabled={isLoading}
+          className="fish-sidebar-action-btn fish-sidebar-reset-btn"
+        >
+          {isLoading ? '加载中...' : '取消'}
+        </button>
+      </div>
+
     </div>
   );
 };
 
-export default Sidebar;
+// 使用 React.memo 防止不必要的重渲染
+export default React.memo(Sidebar, (prevProps, nextProps) => {
+  // 只有当 config 真正改变时才重新渲染
+  // 比较 colors 和 behavior 对象
+  const colorsEqual = Object.keys(prevProps.config.colors).every(
+    key => prevProps.config.colors[key as keyof typeof prevProps.config.colors] === 
+           nextProps.config.colors[key as keyof typeof nextProps.config.colors]
+  );
+  const behaviorEqual = 
+    prevProps.config.behavior.agility === nextProps.config.behavior.agility &&
+    prevProps.config.behavior.energy === nextProps.config.behavior.energy &&
+    prevProps.config.behavior.scale === nextProps.config.behavior.scale;
+  
+  return colorsEqual && behaviorEqual && 
+         prevProps.minimizable === nextProps.minimizable;
+});

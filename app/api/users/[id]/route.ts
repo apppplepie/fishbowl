@@ -37,7 +37,7 @@ export async function GET(
 
     // 3. 获取用户信息
     const users = await query(
-      `SELECT id, username, email, display_name, avatar_url, bio, role, status,
+      `SELECT id, username, email, display_name, avatar_base64, bio, role, status,
               email_verified, last_login_at, created_at, updated_at, max_access_level
        FROM users
        WHERE id = ?`,
@@ -115,7 +115,7 @@ export async function PUT(
 
     // 4. 构建更新字段
     const allowedFields = [
-      'display_name', 'avatar_url', 'bio', 'role', 'status',
+      'display_name', 'avatar_base64', 'bio', 'role', 'status',
       'email_verified', 'max_access_level'
     ];
 
@@ -160,7 +160,7 @@ export async function PUT(
 
     // 6. 获取更新后的用户信息
     const updatedUsers = await query(
-      `SELECT id, username, email, display_name, avatar_url, bio, role, status,
+      `SELECT id, username, email, display_name, avatar_base64, bio, role, status,
               email_verified, last_login_at, created_at, updated_at, max_access_level
        FROM users
        WHERE id = ?`,

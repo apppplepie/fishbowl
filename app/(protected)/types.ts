@@ -9,6 +9,7 @@ export interface User {
   name: string;
   handle: string;
   role: string;
+  avatar_base64?: string;
 }
 
 export interface Notification {
