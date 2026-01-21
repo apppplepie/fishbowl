@@ -216,128 +216,61 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
       <div style={{
         marginBottom: '32px',
         padding: '20px',
-        background: '#fafafa',
         borderRadius: '8px',
         width: '100%',
         boxSizing: 'border-box',
       }}>
-        {/* 回复提示 */}
-        {replyingTo && (
-          <div style={{
-            marginBottom: '12px',
-            padding: '8px 12px',
-            background: '#e6f7ff',
-            border: '1px solid #91d5ff',
-            borderRadius: '4px',
-            fontSize: '13px',
+        {/* 输入框和按钮行 */}
+        <div style={{ width: '100%' }}>
+          <div style={{ position: 'relative' }}>
+            <TextArea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder={isLoggedIn ? "写下你的评论..." : "登录后即可评论"}
+              autoSize={{ minRows: 3, maxRows: 8 }}
+              maxLength={500}
+              disabled={!isLoggedIn}
+              style={{
+                width: '100%',
+                fontSize: '14px',
+                resize: 'none',
+                paddingBottom: '30px', // 为底部字数统计留出空间
+                boxSizing: 'border-box',
+              }}
+            />
+            {/* 字数统计显示在输入框内部右下角 */}
+            <div style={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '12px',
+              fontSize: '12px',
+              color: commentText.length > 450 ? '#ff4d4f' : '#999',
+              pointerEvents: 'none',
+            }}>
+              {commentText.length}/500
+            </div>
+          </div>
+          <div style={{ 
+            marginTop: '12px',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: '12px',
+            alignItems: 'center',
           }}>
-            <div style={{
-              flex: 1,
-              minWidth: 0,
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                fontSize: '13px',
-                lineHeight: '1.4',
-                wordBreak: 'break-word',
-                overflowWrap: 'break-word',
-              }}>
-                💬 回复 <strong>{replyingTo.username}</strong>: "
-                <span style={{
-                  maxWidth: '100%',
-                  display: 'inline-block',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {replyingTo.content.length > 50
-                    ? `${replyingTo.content.substring(0, 50)}...`
-                    : replyingTo.content
-                  }
-                </span>
-                "
-              </div>
-            </div>
-            <Button
-              type="text"
-              size="small"
-              onClick={handleCancelReply}
-              style={{ flexShrink: 0 }}
-            >
-              取消
-            </Button>
-          </div>
-        )}
-
-        <div style={{ 
-          display: 'flex', 
-          gap: '12px',
-          marginBottom: '12px',
-        }}>
-          <Avatar 
-            size={40} 
-            icon={<UserOutlined />}
-            src={currentUser?.avatar}
-            style={{ flexShrink: 0 }}
-          />
-          <div style={{ flex: 1 }}>
-            <div style={{ position: 'relative' }}>
-              <TextArea
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder={isLoggedIn ? "写下你的评论..." : "登录后即可评论"}
-                autoSize={{ minRows: 3, maxRows: 8 }}
-                maxLength={500}
-                disabled={!isLoggedIn}
-                style={{
-                  width: '100%',
-                  fontSize: '14px',
-                  resize: 'none',
-                  paddingBottom: '30px', // 为底部字数统计留出空间
-                  boxSizing: 'border-box',
-                }}
-              />
-              {/* 字数统计显示在输入框内部右下角 */}
-              <div style={{
-                position: 'absolute',
-                bottom: '8px',
-                right: '12px',
-                fontSize: '12px',
-                color: commentText.length > 450 ? '#ff4d4f' : '#999',
-                pointerEvents: 'none',
-              }}>
-                {commentText.length}/500
-              </div>
-            </div>
-            <div style={{ 
-              marginTop: '12px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}>
-              <span style={{ fontSize: '12px', color: '#999' }}>
-                {isLoggedIn ? `当前用户：${currentUser?.username || '匿名用户'}` : '请先登录'}
-              </span>
-              <Space>
-                {replyingTo && (
-                  <Button onClick={handleCancelReply}>
-                    {isMobile ? '取消' : '取消回复'}
-                  </Button>
-                )}
-                <Button
-                  type="primary"
-                  onClick={handleSubmitComment}
-                  loading={isSubmitting}
-                  disabled={!isLoggedIn || !commentText.trim()}
-                >
-                  {isMobile ? (replyingTo ? '发表' : '发表') : (replyingTo ? '发表回复' : '发表评论')}
+            <Space>
+              {replyingTo && (
+                <Button onClick={handleCancelReply}>
+                  {isMobile ? '取消' : '取消回复'}
                 </Button>
-              </Space>
-            </div>
+              )}
+              <Button
+                type="primary"
+                onClick={handleSubmitComment}
+                loading={isSubmitting}
+                disabled={!isLoggedIn || !commentText.trim()}
+              >
+                {isMobile ? (replyingTo ? '发表' : '发表') : (replyingTo ? '发表回复' : '发表评论')}
+              </Button>
+            </Space>
           </div>
         </div>
       </div>
@@ -367,13 +300,14 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                 boxSizing: 'border-box',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <div style={{ display: 'flex', gap: '12px' }}>
+              {/* 用户名和时间行（包含头像） */}
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '12px' }}>
                 {/* 头像 */}
                 <Avatar 
                   size={40} 
@@ -382,64 +316,67 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                   style={{ flexShrink: 0 }}
                 />
 
-                {/* 评论内容 */}
+                {/* 用户名和时间 */}
                 <div style={{
                   flex: 1,
                   minWidth: 0,
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: '8px',
                 }}>
-                  {/* 用户名和时间 */}
                   <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: '8px',
-                    gap: '8px',
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: 'hidden',
                   }}>
                     <div style={{
-                      flex: 1,
-                      minWidth: 0,
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      color: '#333',
                       overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}>
-                      <div style={{
-                        fontWeight: 600,
-                        fontSize: '14px',
-                        color: '#333',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {comment.display_name || comment.username}
-                      </div>
-                      <span style={{
-                        fontSize: '12px',
-                        color: '#999',
-                        display: 'block',
-                        marginTop: '2px',
-                      }}>
-                        {formatTimeToMinute(comment.created_at)}
-                      </span>
+                      {comment.display_name || comment.username}
                     </div>
-
-                    {/* 删除按钮（评论作者、管理员或版主可删除） */}
-                    {isLoggedIn && (
-                      currentUser?.username === comment.username ||
-                      currentUser?.role === 'admin' ||
-                      currentUser?.role === 'moderator'
-                    ) && (
-                      <div style={{ flexShrink: 0 }}>
-                        <Tooltip title="删除评论">
-                          <Button
-                            type="text"
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleDeleteComment(comment.id)}
-                          />
-                        </Tooltip>
-                      </div>
-                    )}
+                    <span style={{
+                      fontSize: '12px',
+                      color: '#999',
+                      display: 'block',
+                      marginTop: '2px',
+                    }}>
+                      {formatTimeToMinute(comment.created_at)}
+                    </span>
                   </div>
+
+                  {/* 删除按钮（评论作者、管理员或版主可删除） */}
+                  {isLoggedIn && (
+                    currentUser?.username === comment.username ||
+                    currentUser?.role === 'admin' ||
+                    currentUser?.role === 'moderator'
+                  ) && (
+                    <div style={{ flexShrink: 0 }}>
+                      <Tooltip title="删除评论">
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteComment(comment.id)}
+                        />
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 评论内容 */}
+              <div style={{
+                width: '100%',
+                overflow: 'hidden'
+              }}>
 
                   {/* 评论正文 */}
                   <div style={{
@@ -478,7 +415,6 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                       </Button>
                     )}
                   </div>
-                </div>
               </div>
             </div>
           ))}
