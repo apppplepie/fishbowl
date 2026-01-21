@@ -32,15 +32,15 @@ interface RootData {
 
 export default function Home() {
   const { currentFishbowlTheme } = useAppTheme();
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, isLoading: authLoading } = useAuth();
   const [showNavBar, setShowNavBar] = useState(false);
   const [baselineY, setBaselineY] = useState<number | null>(null);
   const [baselinePlants, setBaselinePlants] = useState<BaselinePlant[]>([]);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [rootSystems, setRootSystems] = useState<RootData[]>([]); // 根系数据
 
-  // 鱼配置 - 从API获取或使用默认
-  const [fishConfig, setFishConfig] = useState<FishConfig>(DEFAULT_FISH_CONFIG);
+  // 鱼配置 - 从API获取或使用默认（类似植物系统的加载方式）
+  const [fishConfig, setFishConfig] = useState<FishConfig | null>(null); // 初始为 null，等待加载
   const [fishBounds, setFishBounds] = useState<FishBounds | null>(null);
   const fishTopPadding = 20;
 
@@ -306,8 +306,13 @@ export default function Home() {
     };
   }, [fishTopPadding]);
 
-  // 获取用户的鱼配置（如果未登录或没有配置，使用默认配置）
+  // 获取用户的鱼配置（等待用户登录状态确认后再加载，类似植物系统）
   useEffect(() => {
+    // 等待认证状态加载完成
+    if (authLoading) return;
+    
+    const abortController = new AbortController();
+    
     const loadFishConfig = async () => {
       try {
         const data = await apiGetJson<{ success: boolean; config: FishConfig }>(
@@ -315,21 +320,33 @@ export default function Home() {
           { requiresAuth: false } // 允许未登录用户访问
         );
         
+        // 检查是否已取消
+        if (abortController.signal.aborted) return;
+        
         if (data.success && data.config) {
           setFishConfig(data.config);
         } else {
           // 如果API返回失败，使用默认配置
           setFishConfig(DEFAULT_FISH_CONFIG);
         }
-      } catch (error) {
+      } catch (error: any) {
+        // 忽略取消错误
+        if (error.name === 'AbortError') return;
+        
         console.error('加载鱼配置失败:', error);
         // 出错时使用默认配置
-        setFishConfig(DEFAULT_FISH_CONFIG);
+        if (!abortController.signal.aborted) {
+          setFishConfig(DEFAULT_FISH_CONFIG);
+        }
       }
     };
 
     loadFishConfig();
-  }, []); // 只在组件挂载时加载一次
+    
+    return () => {
+      abortController.abort();
+    };
+  }, [authLoading]); // 等待认证状态加载完成
 
   // 获取渐变背景 CSS
   const getSkyGradient = () => {
@@ -819,19 +836,22 @@ export default function Home() {
             </div>
 
             {/* 鱼缸区域 - 作为水体背景层，不影响渐变 */}
-            <div
-              style={{
-                position: 'absolute',
-                top: fishTopPadding,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 1,
-                pointerEvents: 'none',
-              }}
-            >
-              <Goldfish config={fishConfig} bounds={fishBounds || undefined} />
-            </div>
+            {/* 等待鱼配置加载完成后再挂载（类似植物系统） */}
+            {fishConfig && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: fishTopPadding,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 1,
+                  pointerEvents: 'none',
+                }}
+              >
+                <Goldfish config={fishConfig} bounds={fishBounds || undefined} />
+              </div>
+            )}
 
             {/* 内容区 */}
             <div className="text-center text-white" style={{ padding: '0 24px 40px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 5, minHeight: '100%' }}>
