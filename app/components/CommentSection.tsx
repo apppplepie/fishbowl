@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Button, Input, Avatar, message, Space, Tooltip, Modal } from 'antd';
-import { MessageOutlined, UserOutlined, DeleteOutlined, LikeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Button, Input, Space, Modal } from '@/app/components/ui';
+import { message } from 'antd';
+import { Avatar } from 'antd';
+import { Tooltip } from 'antd'; 
+import { MessageCircle, User, Trash2, Heart, AlertCircle } from 'lucide-react';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import { apiPostJson, apiDeleteJson, apiGetJson } from '@/lib/apiClient';
 import { useResponsive } from '@/app/hooks/useResponsive';
@@ -40,6 +43,8 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [replyingTo, setReplyingTo] = useState<{ id: string; username: string; content: string } | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   // 加载评论列表（只在 articleId 真正变化时加载）
   const lastArticleIdRef = useRef<string | undefined>(undefined);
@@ -185,30 +190,29 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
 
   // 删除评论
   const handleDeleteComment = async (commentId: string) => {
-    Modal.confirm({
-      title: '确认删除评论？',
-      icon: <ExclamationCircleOutlined />,
-      content: '删除后将无法恢复',
-      okText: '确认删除',
-      cancelText: '取消',
-      okType: 'danger',
-      async onOk() {
-        try {
-          const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/comments/${commentId}`);
+    setDeletingCommentId(commentId);
+    setDeleteModalOpen(true);
+  };
 
-          if (result.success) {
-            message.success('评论已删除');
-            // 重新加载评论列表
-            await loadComments();
-          } else {
-            message.error(result.error || '删除失败');
-          }
-        } catch (error: any) {
-          console.error('删除评论失败:', error);
-          message.error('删除失败，请重试');
-        }
-      },
-    });
+  const confirmDelete = async () => {
+    if (!deletingCommentId) return;
+    
+    try {
+      const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/comments/${deletingCommentId}`);
+
+      if (result.success) {
+        message.success('评论已删除');
+        setDeleteModalOpen(false);
+        setDeletingCommentId(null);
+        // 重新加载评论列表
+        await loadComments();
+      } else {
+        message.error(result.error || '删除失败');
+      }
+    } catch (error: any) {
+      console.error('删除评论失败:', error);
+      message.error('删除失败，请重试');
+    }
   };
 
   return (
@@ -313,7 +317,7 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                 {/* 头像 */}
                 <Avatar 
                   size={40} 
-                  icon={<UserOutlined />}
+                  icon={<User size={20} />}
                   src={comment.avatar_base64}
                   style={{ flexShrink: 0 }}
                 />
@@ -365,7 +369,7 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                           type="text"
                           size="small"
                           danger
-                          icon={<DeleteOutlined />}
+                          icon={<Trash2 size={16} />}
                           onClick={() => handleDeleteComment(comment.id)}
                         />
                       </Tooltip>
@@ -422,6 +426,27 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
           ))}
         </div>
       )}
+
+      {/* 删除确认弹窗 */}
+      <Modal
+        open={deleteModalOpen}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={20} style={{ color: '#ff4d4f' }} />
+            <span>确认删除评论？</span>
+          </div>
+        }
+        onOk={confirmDelete}
+        onCancel={() => {
+          setDeleteModalOpen(false);
+          setDeletingCommentId(null);
+        }}
+        okText="确认删除"
+        cancelText="取消"
+        okButtonProps={{ style: { backgroundColor: '#ff4d4f', borderColor: '#ff4d4f' } }}
+      >
+        <p>删除后将无法恢复</p>
+      </Modal>
     </div>
   );
 }

@@ -6,9 +6,8 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { usePageShell } from '@/app/contexts/PageShellContext';
-import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import { apiGet } from '@/lib/apiClient';
-import { Empty, LoadEnd, Input } from '@/app/components/ui';
+import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 
 // 轻量级瀑布流组件
@@ -30,6 +29,11 @@ const UnifiedNavigatorButton = dynamic(
     () => import('@/app/components/sidebar/UnifiedNavigator').then(mod => ({ default: mod.UnifiedNavigatorButton })),
     { ssr: false }
 ) as React.ComponentType<{ onClick?: () => void; expanded?: boolean; onToggle?: () => void }>;
+
+// 操作悬浮按钮 - 非首屏关键交互，延迟加载
+const ArchiveActionFloat = dynamic(() => import('@/app/components/float/ArchiveActionFloat'), {
+    ssr: false
+});
 
 interface ArchiveClientProps {
     initialArticles?: any[];
@@ -78,6 +82,12 @@ export default function ArchiveClient({
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+  // 延迟加载导航组件，只有在用户打开时才加载
+  const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
+
+  // 延迟挂载 ArchiveActionFloat，非首屏关键交互
+  const [shouldLoadActionFloat, setShouldLoadActionFloat] = useState(false);
+
   // 进入页面时重置侧边栏状态
   useEffect(() => {
     setSidebarExpanded(false);
@@ -91,10 +101,12 @@ export default function ArchiveClient({
 
     // 切换目录抽屉的函数
     const openCategoryDrawer = useCallback(() => {
+        setShouldLoadNavigator(true); // 首次打开时加载组件
         setDrawerVisible(true);
     }, []);
 
     const toggleSidebar = useCallback(() => {
+        setShouldLoadNavigator(true); // 首次打开时加载组件
         setSidebarExpanded((prev) => !prev);
     }, []);
 
@@ -345,6 +357,15 @@ export default function ArchiveClient({
         };
     }, []);
 
+    // ✅ 延迟挂载 ArchiveActionFloat：非首屏关键交互，延迟 2 秒后加载
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShouldLoadActionFloat(true);
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, []);
+
     // ✅ 防抖搜索 - 350ms 延迟
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -538,15 +559,7 @@ export default function ArchiveClient({
                                     padding: '40px 0',
                                     color: '#999',
                                 }}>
-                                    <div style={{
-                                        display: 'inline-block',
-                                        width: '24px',
-                                        height: '24px',
-                                        border: '3px solid #f0f0f0',
-                                        borderTopColor: '#1890ff',
-                                        borderRadius: '50%',
-                                        animation: 'spin 0.8s linear infinite',
-                                    }} />
+                                    <Spin size="small" />
                                     <div style={{ marginTop: '12px', fontSize: '14px' }}>
                                         加载更多...
                                     </div>
@@ -561,40 +574,40 @@ export default function ArchiveClient({
                 </div>
             </div>
 
-            <UnifiedNavigator
-                treeConfig={{
-                    apiEndpoint: '/api/categories/tree-with-articles',
-                    emptyText: '暂无目录',
-                    forceOpenRootKeys: true,
-                    categoryNavigationPattern: '/archive?category={categoryId}',
-                    articleNavigationPattern: '/article/{articleId}',
-                    stylePrefix: 'archive-category',
-                    showArticleCount: true,
-                    dataFormat: 'tree-with-articles',
-                    defaultOpenMode: 'all',
-                }}
-                visible={drawerVisible}
-                onClose={() => setDrawerVisible(false)}
-                onCategorySelect={handleCategorySelect}
-                selectedCategoryId={selectedCategoryId}
-                expanded={sidebarExpanded}
-                onExpandedChange={setSidebarExpanded}
-            />
+            {/* 延迟加载导航组件，只有在用户打开时才加载 */}
+            {shouldLoadNavigator && (
+                <UnifiedNavigator
+                    treeConfig={{
+                        apiEndpoint: '/api/categories/tree-with-articles',
+                        emptyText: '暂无目录',
+                        forceOpenRootKeys: true,
+                        categoryNavigationPattern: '/archive?category={categoryId}',
+                        articleNavigationPattern: '/article/{articleId}',
+                        stylePrefix: 'archive-category',
+                        showArticleCount: true,
+                        dataFormat: 'tree-with-articles',
+                        defaultOpenMode: 'all',
+                    }}
+                    visible={drawerVisible}
+                    onClose={() => setDrawerVisible(false)}
+                    onCategorySelect={handleCategorySelect}
+                    selectedCategoryId={selectedCategoryId}
+                    expanded={sidebarExpanded}
+                    onExpandedChange={setSidebarExpanded}
+                />
+            )}
 
-            <ArchiveActionFloat
-                onDiarySuccess={() => {
-                    setOffset(0);
-                    setHasMore(true);
-                    loadArticles(0, false, selectedCategoryId);
-                }}
-            />
+            {/* 延迟挂载 ArchiveActionFloat：非首屏关键交互 */}
+            {shouldLoadActionFloat && (
+                <ArchiveActionFloat
+                    onDiarySuccess={() => {
+                        setOffset(0);
+                        setHasMore(true);
+                        loadArticles(0, false, selectedCategoryId);
+                    }}
+                />
+            )}
 
-            <style jsx global>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
         </>
     );
 }

@@ -8,7 +8,7 @@ import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import { apiGet } from '@/lib/apiClient';
-import { Empty, LoadEnd, Input } from '@/app/components/ui';
+import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 
 // ✨ 使用 CSS Grid Masonry 版本
@@ -470,15 +470,7 @@ export default function ArchiveCSSClient({
                                     padding: '40px 0',
                                     color: '#999',
                                 }}>
-                                    <div style={{
-                                        display: 'inline-block',
-                                        width: '24px',
-                                        height: '24px',
-                                        border: '3px solid #f0f0f0',
-                                        borderTopColor: '#1890ff',
-                                        borderRadius: '50%',
-                                        animation: 'spin 0.8s linear infinite',
-                                    }} />
+                                    <Spin size="small" />
                                     <div style={{ marginTop: '12px', fontSize: '14px' }}>
                                         加载更多...
                                     </div>
@@ -521,12 +513,6 @@ export default function ArchiveCSSClient({
                 }}
             />
 
-            <style jsx global>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
         </>
     );
 }

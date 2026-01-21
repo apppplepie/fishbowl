@@ -7,7 +7,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
-import { Empty, LoadEnd, Input } from '@/app/components/ui';
+import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
 
 // 卡片组件 - 首屏直接加载（启用 SSR）
@@ -781,15 +781,7 @@ function BookcasePageContent() {
                   padding: '40px 0',
                   color: '#999',
                 }}>
-                  <div style={{
-                    display: 'inline-block',
-                    width: '24px',
-                    height: '24px',
-                    border: '3px solid #f0f0f0',
-                    borderTopColor: '#1890ff',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite',
-                  }} />
+                  <Spin size="small" />
                   <div style={{ marginTop: '12px', fontSize: '14px' }}>
                     加载更多...
                   </div>
@@ -846,12 +838,6 @@ function BookcasePageContent() {
         }}
       />
 
-      <style jsx global>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
 
     </>
   );

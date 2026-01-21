@@ -57,12 +57,13 @@ async function getInitialArticles(categoryId?: string | null) {
   }
 }
 
-export default async function ArchiveCSSPage({ 
-  searchParams 
-}: { 
-  searchParams: { category?: string } 
+export default async function ArchiveCSSPage({
+  searchParams
+}: {
+  searchParams: Promise<{ category?: string }>
 }) {
-  const { articles, hasMore } = await getInitialArticles(searchParams.category);
+  const { category } = (await searchParams) ?? {};
+  const { articles, hasMore } = await getInitialArticles(category);
 
   return (
     <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>

@@ -147,7 +147,11 @@ const Spin: React.FC<SpinProps> = ({
     <div className="ui-spin-wrapper" style={style}>
       {delayedSpinning && (
         <div className={spinClasses}>
-          <div className="ui-spin-icon" />
+          <div className="loadingio-spinner-ellipsis-2by998twmg8">
+            <div className="ldio-yzaezf3dcmj">
+              <div></div><div></div><div></div><div></div><div></div>
+            </div>
+          </div>
           {tip && <div className="ui-spin-tip">{tip}</div>}
         </div>
       )}

@@ -66,13 +66,14 @@ async function getInitialArticles(categoryId?: string | null) {
 // 移除骨架屏 - 加载时显示空白，保持背景透明
 
 // 主页面组件
-export default async function ArchivePage({ 
-  searchParams 
-}: { 
-  searchParams: { category?: string } 
+export default async function ArchivePage({
+  searchParams
+}: {
+  searchParams: Promise<{ category?: string }>
 }) {
-  // 服务端预取首屏数据
-  const { articles, hasMore } = await getInitialArticles(searchParams.category);
+  // 服务端预取首屏数据 - 等待 searchParams Promise 解析
+  const { category } = (await searchParams) ?? {};
+  const { articles, hasMore } = await getInitialArticles(category);
 
   return (
     <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
