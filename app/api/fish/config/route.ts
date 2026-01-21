@@ -4,7 +4,56 @@ import { query } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import { DEFAULT_FISH_CONFIG } from '../../../config/fishConfig';
-import { PATH_BODY, PATH_TAIL, PATH_DORSAL, EYE_POSITION, EYE_RADIUS } from '@/lib/fish-paths';
+import { PATH_BODY, PATH_TAIL, PATH_DORSAL, EYE_BASE, EYE_RADIUS, PUPIL_RADIUS } from '@/lib/fish-paths';
+import { generateVisualsFromId } from '../../../components/ui/colorUtils';
+
+/**
+ * 从CSS渐变中提取颜色值
+ */
+function extractColorsFromGradient(gradient: string): { color1: string; color2: string } {
+  // 解析类似 "linear-gradient(45deg, hsl(120, 80%, 70%), hsl(200, 90%, 80%))" 的字符串
+  const hslMatch = gradient.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/g);
+  if (hslMatch && hslMatch.length >= 2) {
+    // 转换为RGB格式供SVG使用
+    const hsl1 = hslMatch[0].match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+    const hsl2 = hslMatch[1].match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+
+    if (hsl1 && hsl2) {
+      const h1 = parseInt(hsl1[1]), s1 = parseInt(hsl1[2]), l1 = parseInt(hsl1[3]);
+      const h2 = parseInt(hsl2[1]), s2 = parseInt(hsl2[2]), l2 = parseInt(hsl2[3]);
+
+      // HSL to RGB conversion
+      const hslToRgb = (h: number, s: number, l: number) => {
+        h /= 360; s /= 100; l /= 100;
+        const hue2rgb = (p: number, q: number, t: number) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        const r = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+        const g = Math.round(hue2rgb(p, q, h) * 255);
+        const b = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+        return `rgb(${r}, ${g}, ${b})`;
+      };
+
+      return {
+        color1: hslToRgb(h1, s1, l1),
+        color2: hslToRgb(h2, s2, l2)
+      };
+    }
+  }
+
+  // 默认颜色
+  return {
+    color1: 'rgb(59, 130, 246)', // blue-500
+    color2: 'rgb(147, 51, 234)'  // violet-600
+  };
+}
 
 export interface FishConfig {
   colors: {
@@ -24,32 +73,43 @@ export interface FishConfig {
 }
 
 /**
- * 生成鱼的SVG字符串
+ * 生成鱼的SVG字符串（匹配前端停滞状态）
  */
-function generateFishSVG(config: FishConfig): string {
+function generateFishSVG(config: FishConfig, userId: string): string {
+  // 根据用户ID生成背景渐变
+  const gradientConfig = generateVisualsFromId(userId);
+  const backgroundColors = extractColorsFromGradient(gradientConfig.background);
   return `
 <svg width="256" height="256" viewBox="-128 -128 256 256"
      xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${backgroundColors.color1}" />
+      <stop offset="100%" stop-color="${backgroundColors.color2}" />
+    </linearGradient>
+    <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="${config.colors.body}" />
       <stop offset="100%" stop-color="${config.colors.bodyAccent}" />
     </linearGradient>
-    <linearGradient id="tailGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="tailGradient" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="${config.colors.tail}" />
       <stop offset="100%" stop-color="${config.colors.tailAccent}" />
     </linearGradient>
-    <linearGradient id="dorsalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="dorsalGradient" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="${config.colors.dorsal}" />
       <stop offset="100%" stop-color="${config.colors.dorsalAccent}" />
     </linearGradient>
   </defs>
 
+  <!-- 背景渐变 -->
+  <rect width="256" height="256" x="-128" y="-128" fill="url(#backgroundGradient)" />
+
   <g transform="scale(${config.behavior.scale})">
-    <path d="${PATH_BODY}" fill="url(#bodyGrad)" />
-    <path d="${PATH_TAIL}" fill="url(#tailGrad)" />
-    <path d="${PATH_DORSAL}" fill="url(#dorsalGrad)" />
-    <circle cx="${EYE_POSITION.x}" cy="${EYE_POSITION.y}" r="${EYE_RADIUS}" fill="${config.colors.eye}" />
+    <path d="${PATH_TAIL}" fill="url(#tailGradient)" />
+    <path d="${PATH_DORSAL}" fill="url(#dorsalGradient)" />
+    <path d="${PATH_BODY}" fill="url(#bodyGradient)" />
+    <circle cx="${EYE_BASE.x}" cy="${EYE_BASE.y}" r="${EYE_RADIUS}" fill="${config.colors.eye}" />
+    <circle cx="${EYE_BASE.x}" cy="${EYE_BASE.y}" r="${PUPIL_RADIUS}" fill="#171717" />
   </g>
 </svg>
 `;
@@ -197,16 +257,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5. 先将其他配置设为非活跃状态
-    await query(
-      `UPDATE user_fish_configs
-       SET is_active = 0
-       WHERE user_id = ?`,
+    // 5. 检查用户是否已有活跃配置
+    const existingConfigs = await query<any[]>(
+      `SELECT id FROM user_fish_configs
+       WHERE user_id = ? AND is_active = 1
+       LIMIT 1`,
       [currentUser.id]
     );
-
-    // 6. 插入新配置
-    const configId = uuidv4();
 
     // 确保数据是有效的 JSON
     const colorsJson = JSON.stringify(colors);
@@ -223,15 +280,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await query(
-      `INSERT INTO user_fish_configs (id, user_id, colors, behavior, is_active)
-       VALUES (?, ?, ?, ?, 1)`,
-      [configId, currentUser.id, colorsJson, behaviorJson]
-    );
+    let configId: string;
+    let isUpdate = false;
+
+    if (existingConfigs.length > 0) {
+      // 更新现有配置
+      configId = existingConfigs[0].id;
+      isUpdate = true;
+
+      await query(
+        `UPDATE user_fish_configs
+         SET colors = ?, behavior = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [colorsJson, behaviorJson, configId]
+      );
+    } else {
+      // 插入新配置
+      configId = uuidv4();
+
+      await query(
+        `INSERT INTO user_fish_configs (id, user_id, colors, behavior, is_active)
+         VALUES (?, ?, ?, ?, 1)`,
+        [configId, currentUser.id, colorsJson, behaviorJson]
+      );
+    }
 
     // 7. 生成静态头像
     try {
-      const svg = generateFishSVG({ colors, behavior });
+      const svg = generateFishSVG({ colors, behavior }, currentUser.id);
       const pngBuffer = await sharp(Buffer.from(svg))
         .resize(256, 256)
         .png()
@@ -252,7 +328,8 @@ export async function POST(req: NextRequest) {
     // 8. 返回成功响应
     return NextResponse.json({
       success: true,
-      message: '鱼配置已保存',
+      message: isUpdate ? '鱼配置已更新' : '鱼配置已保存',
+      operation: isUpdate ? 'update' : 'create',
       saved: {
         id: configId,
         colors,

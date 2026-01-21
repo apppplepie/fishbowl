@@ -93,7 +93,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
               </div>
               <div className="space-y-1">
                  <label className="text-xs uppercase tracking-wider block" style={{ color: theme.text.tertiary }}>邮箱</label>
-                 <p style={{ color: theme.text.primary }}>hello@{user.handle}.io</p>
+                 <p style={{ color: theme.text.primary }}>{user.email}</p>
               </div>
            </div>
         </div>
@@ -360,6 +360,7 @@ export default function ProfilePage() {
     handle: authUser.username,
     role: authUser.role,
     avatar_base64: authUser.avatar_base64,
+    email: authUser.email,
   };
 
   // 模拟通知数据（后续可以从API获取）

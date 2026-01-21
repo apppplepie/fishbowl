@@ -25,6 +25,7 @@ interface AuthContextType {
   isAdmin: () => boolean;
   canModerate: () => boolean;
   checkLoginStatus: () => Promise<boolean>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -103,6 +104,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, [clearAuthData]);
+
+  // 刷新用户信息（用于头像更新等场景）
+  const refreshUser = useCallback(async () => {
+    if (typeof window === 'undefined' || !isLoggedIn) return;
+
+    try {
+      const response = await apiGet('/api/auth/me');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user) {
+          const userData = data.user as User;
+          // 更新用户信息到本地存储
+          sessionStorage.setItem('user', JSON.stringify(userData));
+          localStorage.setItem('user', JSON.stringify(userData));
+          setUser(userData);
+        }
+      }
+    } catch (error) {
+      console.error('刷新用户信息失败:', error);
+    }
+  }, [isLoggedIn]);
 
   // 登录（token 已存储在 HttpOnly cookie 中，这里只存储用户信息）
   const login = useCallback(async (userData: User) => {
@@ -226,6 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin,
     canModerate,
     checkLoginStatus,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -31,7 +31,8 @@ export const PATH_TAIL = "M -80 -16 L -78 -16 -78 -14 L -78 -6 L -78 -4 -80 -4 L
 export const PATH_DORSAL = "M -80 -5 L -78 -5 -78 -3 L -78 3 L -78 5 -80 5 L -2 5 Q 0 5 0 3 L 0 -3 Q 0 -5 -2 -5 L -78 -5 Z";
 
 /**
- * 鱼眼睛位置常量
+ * 鱼眼睛位置常量（与前端 EYE_BASE 保持一致）
  */
-export const EYE_POSITION = { x: 35, y: -8 };
-export const EYE_RADIUS = 6;
+export const EYE_BASE = { x: 30, y: -3 };
+export const EYE_RADIUS = 7;
+export const PUPIL_RADIUS = 5;

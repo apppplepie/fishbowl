@@ -10,6 +10,7 @@ export interface User {
   handle: string;
   role: string;
   avatar_base64?: string;
+  email: string;
 }
 
 export interface Notification {

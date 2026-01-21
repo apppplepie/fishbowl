@@ -5,6 +5,7 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { usePageShell } from '../contexts/PageShellContext';
 import { useHeader } from '../contexts/HeaderContext';
 import { useAppTheme } from '../contexts/AppThemeContext';
+import { useAuth } from '../hooks/useAuth';
 import GardenCanvas from '../components/garden/GardenCanvas';
 import GardenSidebar from '../components/garden/GardenSidebar';
 import { GardenDrawerButton } from '../components/garden/GardenDrawerButton';
@@ -25,6 +26,7 @@ export default function FishbowlPage() {
   const { setConfig } = usePageShell();
   const { setLeftContent } = useHeader();
   const { currentFishbowlTheme } = useAppTheme();
+  const { refreshUser } = useAuth();
   const [settings, setSettings] = useState<PlantSettings>(PRESET_VINE);
   const [clearTrigger, setClearTrigger] = useState(0);
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -527,8 +529,10 @@ export default function FishbowlPage() {
   };
 
   // 保存配置后的回调
-  const handleFishConfigSaved = () => {
+  const handleFishConfigSaved = async () => {
     setToastMessage('鱼配置已保存');
+    // 刷新用户信息以更新头像
+    await refreshUser();
   };
 
   // 重置配置后的回调
