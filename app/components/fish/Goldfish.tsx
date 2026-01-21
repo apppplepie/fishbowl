@@ -515,19 +515,19 @@ const Goldfish: React.FC<GoldfishProps> = ({ config, bounds }) => {
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={config.colors.body} stopOpacity="1" />
-          <stop offset="50%" stopColor={config.colors.body} stopOpacity="0.8" />
-          <stop offset="100%" stopColor={config.colors.body} stopOpacity="0.6" />
+        <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={config.colors.body} />
+          <stop offset="100%" stopColor={config.colors.bodyAccent} />
         </linearGradient>
 
         <linearGradient id="tailGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={config.colors.tail} stopOpacity="0.4" />
-          <stop offset="100%" stopColor={config.colors.tail} stopOpacity="1" />
+          <stop offset="0%" stopColor={config.colors.tail} />
+          <stop offset="100%" stopColor={config.colors.tailAccent} />
         </linearGradient>
+
         <linearGradient id="dorsalGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={config.colors.dorsal} stopOpacity="0.4" />
-          <stop offset="100%" stopColor={config.colors.dorsal} stopOpacity="1" />
+          <stop offset="0%" stopColor={config.colors.dorsal} />
+          <stop offset="100%" stopColor={config.colors.dorsalAccent} />
         </linearGradient>
       </defs>
 

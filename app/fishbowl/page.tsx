@@ -499,7 +499,7 @@ export default function FishbowlPage() {
   const [fishConfig] = useState<FishConfig>({
     colors: {
       body: '#991b1b',
-      bodyAccent: '#f87171', // Initial gradient accent
+      bodyAccent: '#991b1b', // Initial gradient accent
       tail: '#991b1b',
       tailAccent: '#fbbf24', // Yellow-ish tip for tail
       dorsal: '#991b1b',
