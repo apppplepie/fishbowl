@@ -237,9 +237,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Section: Pigmentation */}
         <div className="fish-sidebar-section">
           <div className="space-y-3">
-             <GradientRow label="Body" startKey="body" endKey="bodyAccent" />
-             <GradientRow label="Tail" startKey="tail" endKey="tailAccent" />
-             <GradientRow label="Fin" startKey="dorsal" endKey="dorsalAccent" />
+             <GradientRow label="身体" startKey="body" endKey="bodyAccent" />
+             <GradientRow label="尾巴" startKey="tail" endKey="tailAccent" />
+             <GradientRow label="背鳍" startKey="dorsal" endKey="dorsalAccent" />
           </div>
         </div>
 
@@ -249,7 +249,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Section: Dynamics */}
         <div className="fish-sidebar-section">
            <SliderRow 
-              label="Agility" 
+              label="灵性" 
               value={config.behavior.agility} 
               onChange={(v: number) => updateBehavior('agility', v)}
               min="0" max="1" step="0.01"

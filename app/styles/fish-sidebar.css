@@ -46,7 +46,17 @@
 
   .fish-sidebar-gradient-label {
     width: 52px; /* 移动端更大的标签宽度 */
-    font-size: 11px; /* 稍微大一点的字体 */
+    font-size: 14px; /* 与桌面端保持一致，比title的12px稍大 */
+    font-weight: bold; /* 与title一致 */
+    color: #292524; /* 与title一致 */
+    letter-spacing: 0.25em; /* 与title一致 */
+  }
+  
+  .fish-sidebar-slider-label-container > span:first-child {
+    font-size: 14px; /* 与桌面端保持一致，比title的12px稍大 */
+    font-weight: bold; /* 与title一致 */
+    color: #292524; /* 与title一致 */
+    letter-spacing: 0.25em; /* 与title一致 */
   }
 
   /* 移动端优化触摸体验 */
@@ -102,7 +112,7 @@
 }
 
 .fish-sidebar-title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: bold;
   color: #292524; /* stone-800 */
   letter-spacing: 0.25em;
@@ -152,11 +162,11 @@
 }
 
 .fish-sidebar-gradient-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: #a8a29e; /* stone-400 */
+  font-size: 14px; /* 从10px增加到14px，比title的12px稍大 */
+  font-weight: bold; /* 从600改为bold，与title一致 */
+  color: #292524; /* 从stone-400改为stone-800，与title一致 */
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.25em; /* 从0.1em改为0.25em，与title一致 */
   width: 48px; /* 对应 w-12 */
   flex-shrink: 0;
 }
@@ -228,11 +238,14 @@
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
-  font-size: 10px;
+}
+
+.fish-sidebar-slider-label-container > span:first-child {
+  font-size: 14px; /* 从10px增加到14px，比title的12px稍大 */
+  font-weight: bold; /* 从600改为bold，与title一致 */
+  color: #292524; /* 从stone-400改为stone-800，与title一致 */
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
-  color: #a8a29e; /* stone-400 */
+  letter-spacing: 0.25em; /* 从0.1em改为0.25em，与title一致 */
 }
 
 .fish-sidebar-slider-label {
@@ -315,7 +328,7 @@
 .fish-sidebar-action-btn {
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   border: none;
   cursor: pointer;

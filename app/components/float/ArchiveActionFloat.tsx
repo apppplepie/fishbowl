@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, message } from '@/app/components/ui';
 import { Form, Input, Select, Button } from 'antd'; // 暂时保留，后续实现
-import { Plus, Edit, Book, FileText } from 'lucide-react';
+import { Plus, Book } from 'lucide-react';
+import { EditOutlined, InsertRowAboveOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiPostJson } from '@/lib/apiClient';
@@ -136,14 +137,14 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
       >
         {/* 写文章按钮 */}
         <FloatButton
-          icon={<FileText size={20} />}
+          icon={<EditOutlined />}
           tooltip={tooltipProp("写文章")}
           onClick={handlePublishArticle}
         />
 
         {/* 写日志按钮 */}
         <FloatButton
-          icon={<Edit size={20} />}
+          icon={<InsertRowAboveOutlined />}
           tooltip={tooltipProp("写日志")}
           onClick={() => setDiaryModalOpen(true)}
         />
@@ -151,7 +152,7 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
 
       {/* 日志发布弹窗 */}
       <Modal
-        title={`📝 写日志 - ${generateDateTitle()}`}
+        title={`${generateDateTitle()}`}
         open={diaryModalOpen}
         onCancel={() => {
           setDiaryModalOpen(false);
@@ -175,7 +176,7 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
               rows={8}
               placeholder="记录今天的心情..."
               showCount
-              maxLength={500}
+              maxLength={1000}
               style={{ fontSize: '16px', lineHeight: '1.8' }}
             />
           </Form.Item>
