@@ -12,10 +12,10 @@ import FloatButton from '../components/ui/FloatButton';
 import RootSystem from '../components/garden/RootSystem';
 import BaselinePlantViewer from '../components/garden/BaselinePlantViewer';
 import Goldfish from '../components/fish/Goldfish';
+import FishSidebar, { type FishConfig } from '../components/fish/Sidebar';
 import type { PlantSettings, PlantType, GardenCanvasRef, PlantRenderData } from '../types/garden';
 import { PRESET_VINE, getPlantPreset } from '../config/plantPresets';
 import { convertGradient } from '../utils/colorConverter';
-import type { FishConfig } from '../components/fish/Sidebar';
 
 const MAX_LOADED_PLANTS = 10; // 避免一次性加载过多离屏 canvas 占满内存
 
@@ -496,14 +496,14 @@ export default function FishbowlPage() {
   }, [getBox1ToBox2Offset, getPageHeight]); // 依赖获取尺寸函数
 
   // 基本的鱼配置
-  const [fishConfig] = useState<FishConfig>({
+  const [fishConfig, setFishConfig] = useState<FishConfig>({
     colors: {
       body: '#991b1b',
       bodyAccent: '#991b1b', // Initial gradient accent
       tail: '#991b1b',
-      tailAccent: '#fbbf24', // Yellow-ish tip for tail
+      tailAccent: '#991b1b', // Yellow-ish tip for tail
       dorsal: '#991b1b',
-      dorsalAccent: '#fbbf24', // Yellow-ish tip for dorsal
+      dorsalAccent: '#991b1b', // Yellow-ish tip for dorsal
       eye: '#ffffff',
     },
     behavior: {
@@ -627,25 +627,45 @@ export default function FishbowlPage() {
         />
       </FloatButton.Group>
 
-      {/* Goldfish in box2 */}
-      <div
-        className="absolute inset-0 pointer-events-none z-20"
-        style={{
-          height: '100%',
-        }}
-      >
-        <Goldfish
-          config={fishConfig}
-          bounds={
-            fishBounds || {
-              left: 0,
-              top: 0,
-              width: containerWidth,
-              height: box2Height,
-            }
-          }
-        />
-      </div>
+      {/* Goldfish in box2 - positioned from top, horizontally centered */}
+      {(() => {
+        const bounds = fishBounds || {
+          left: 0,
+          top: 0,
+          width: containerWidth || (typeof window !== 'undefined' ? window.innerWidth : 1000),
+          height: box2Height || 600,
+        };
+        const offsetFromTop = Math.round(
+          Math.min(360, Math.max(240, bounds.height * 0.25))
+        ); // 距离 box2 顶部的距离（自适应）
+        const availableHeight = Math.max(600, bounds.height - offsetFromTop);
+        
+        return (
+          <div
+            className="fixed pointer-events-none z-20"
+            style={{
+              top: `${bounds.top + offsetFromTop}px`,
+              left: `${bounds.left + bounds.width / 2}px`,
+              transform: 'translateX(-50%)',
+              width: `${bounds.width}px`,
+              height: `${availableHeight}px`,
+            }}
+          >
+            <Goldfish
+              config={fishConfig}
+              bounds={{
+                left: bounds.left,
+                top: bounds.top + offsetFromTop,
+                width: bounds.width,
+                height: availableHeight,
+              }}
+            />
+          </div>
+        );
+      })()}
+
+      {/* Fish Config Panel (always visible, no minimize button) */}
+      <FishSidebar config={fishConfig} onChange={setFishConfig} minimizable={false} />
 
       {/* Toast Notification */}
       {toastMessage && (

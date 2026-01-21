@@ -20,9 +20,10 @@ export interface FishConfig {
 interface SidebarProps {
   config: FishConfig;
   onChange: (newConfig: FishConfig) => void;
+  minimizable?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ config, onChange, minimizable = true }) => {
   const [isMinimized, setIsMinimized] = useState(false);
 
   const updateColor = (part: keyof FishConfig['colors'], value: string) => {
@@ -40,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
   };
 
   // Minimized State
-  if (isMinimized) {
+  if (minimizable && isMinimized) {
     return (
       <button 
         onClick={() => setIsMinimized(false)}
@@ -101,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
   );
 
   return (
-    <div className="absolute top-6 right-6 w-64 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 flex flex-col z-50 transition-all duration-300 overflow-hidden">
+    <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-64 bg-white/60 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/70 flex flex-col z-50 transition-all duration-300 overflow-hidden">
       
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
@@ -109,14 +110,16 @@ const Sidebar: React.FC<SidebarProps> = ({ config, onChange }) => {
            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
            <span className="text-xs font-bold text-stone-800 tracking-widest">CONFIGURATION</span>
         </div>
-        <button 
-          onClick={() => setIsMinimized(true)}
-          className="text-stone-300 hover:text-stone-600 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-            <path fillRule="evenodd" d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" clipRule="evenodd" />
-          </svg>
-        </button>
+        {minimizable && (
+          <button 
+            onClick={() => setIsMinimized(true)}
+            className="text-stone-300 hover:text-stone-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" clipRule="evenodd" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Content */}
