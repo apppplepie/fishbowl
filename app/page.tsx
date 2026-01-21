@@ -5,6 +5,8 @@ import { DownOutlined } from '@ant-design/icons';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppTheme } from './contexts/AppThemeContext';
+import { useAuth } from './hooks/useAuth';
+import { apiGetJson } from '@/lib/apiClient';
 import PermissionSystemDemo from './components/PermissionSystemDemo';
 import WaveSeparator from './components/background/WaveSeparator';
 import BaselinePlantViewer from './components/garden/BaselinePlantViewer';
@@ -30,14 +32,15 @@ interface RootData {
 
 export default function Home() {
   const { currentFishbowlTheme } = useAppTheme();
+  const { user, isLoggedIn } = useAuth();
   const [showNavBar, setShowNavBar] = useState(false);
   const [baselineY, setBaselineY] = useState<number | null>(null);
   const [baselinePlants, setBaselinePlants] = useState<BaselinePlant[]>([]);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [rootSystems, setRootSystems] = useState<RootData[]>([]); // 根系数据
 
-  // 基本的鱼配置
-  const [fishConfig] = useState<FishConfig>(DEFAULT_FISH_CONFIG);
+  // 鱼配置 - 从API获取或使用默认
+  const [fishConfig, setFishConfig] = useState<FishConfig>(DEFAULT_FISH_CONFIG);
   const [fishBounds, setFishBounds] = useState<FishBounds | null>(null);
   const fishTopPadding = 20;
 
@@ -302,6 +305,31 @@ export default function Home() {
       window.removeEventListener('resize', updateFishBounds);
     };
   }, [fishTopPadding]);
+
+  // 获取用户的鱼配置（如果未登录或没有配置，使用默认配置）
+  useEffect(() => {
+    const loadFishConfig = async () => {
+      try {
+        const data = await apiGetJson<{ success: boolean; config: FishConfig }>(
+          '/api/fish/config',
+          { requiresAuth: false } // 允许未登录用户访问
+        );
+        
+        if (data.success && data.config) {
+          setFishConfig(data.config);
+        } else {
+          // 如果API返回失败，使用默认配置
+          setFishConfig(DEFAULT_FISH_CONFIG);
+        }
+      } catch (error) {
+        console.error('加载鱼配置失败:', error);
+        // 出错时使用默认配置
+        setFishConfig(DEFAULT_FISH_CONFIG);
+      }
+    };
+
+    loadFishConfig();
+  }, []); // 只在组件挂载时加载一次
 
   // 获取渐变背景 CSS
   const getSkyGradient = () => {
