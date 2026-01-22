@@ -4,10 +4,10 @@ import dynamic from 'next/dynamic';
 import ClientArticleActions from './ClientArticleActions';
 import ClientHeaderSetter from './ClientHeaderSetter';
 import ArticleEditFloat from '@/app/components/float/ArticleEditFloat';
-import ArticleStaticView from './ArticleStaticView';
-import ClientArticleEditor from './ClientArticleEditor';
-import type { ArticleEditorHandle } from './ClientArticleEditor';
+import ArticleContentClient from './ArticleContent.client';
+import ClientArticleEditor, { ArticleEditorHandle } from './ClientArticleEditor';
 import { useAuth } from '@/app/hooks/useAuth';
+import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { BreadcrumbBox1, TitleBox1, TagBox1 } from '@/app/components/box1';
@@ -35,11 +35,20 @@ export default function ClientArticleShell({
   onArticleUpdate,
 }: ClientArticleShellProps) {
   const { isLoggedIn, user } = useAuth();
+  const { canEdit } = useCanEditArticle ? useCanEditArticle(articleId) : { canEdit: true }; // fallback true
+  const canEditBool = canEdit ?? true;
   const { setConfig } = usePageShell();
   const { isMobile } = useResponsive();
+
   const [article, setArticle] = useState<any>(initialArticle);
   const [editMode, setEditMode] = useState<'view' | 'edit' | 'preview'>('view');
-  const editorRef = useRef<ArticleEditorHandle>(null);
+  const editorRef = useRef<ArticleEditorHandle | null>(null);
+
+  // expose for debug
+  useEffect(() => {
+    (window as any).__debug_article = article;
+    console.log('[ClientArticleShell] article', article, 'editMode', editMode);
+  }, [article, editMode]);
 
   // 同步外部 article 更新
   useEffect(() => {
@@ -91,20 +100,22 @@ export default function ClientArticleShell({
     <>
       <ClientHeaderSetter articleId={articleId} editMode={editMode} />
 
-      {/* 文章正文区域：根据 editMode 状态条件渲染 */}
-      <div style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 20px' }}>
+      {/* 内容区：单一入口 */}
+      <div style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 20px', boxSizing: 'border-box' }}>
         {editMode === 'view' ? (
-          // 查看模式：显示静态内容
-          <ArticleStaticView article={article} />
+          <ArticleContentClient article={article} />
         ) : (
-          // 编辑模式：显示编辑器
           <ClientArticleEditor
             ref={editorRef}
             articleId={articleId}
             initialArticle={article}
             isEditing={editMode === 'edit'}
             onArticleUpdate={handleArticleUpdate}
-            onEditModeChange={setEditMode}
+            onEditModeChange={(m) => setEditMode(m)}
+            // 传权限与用户信息
+            canEdit={canEditBool}
+            currentUser={user}
+            isLoggedIn={isLoggedIn}
           />
         )}
       </div>

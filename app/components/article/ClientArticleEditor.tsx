@@ -15,8 +15,7 @@ import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
 import { Select, Tag, Divider, Space } from 'antd';
-import { useAuth } from '@/app/hooks/useAuth';
-import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
+// 权限信息现在从props传入，不再需要内部hooks
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { apiPutJson, apiDeleteJson } from '@/lib/apiClient';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
@@ -35,16 +34,17 @@ interface Props {
   isEditing?: boolean;
   onArticleUpdate?: (updatedArticle: any) => void;
   onEditModeChange?: (editMode: 'view' | 'edit' | 'preview') => void;
+  canEdit?: boolean;
+  currentUser?: any;
+  isLoggedIn?: boolean;
 }
 
 const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function ClientArticleEditor(
-  { articleId, initialArticle, isEditing = false, onArticleUpdate, onEditModeChange },
+  { articleId, initialArticle, isEditing = false, onArticleUpdate, onEditModeChange, canEdit = true, currentUser, isLoggedIn = false },
   ref
 ) {
   const router = useRouter();
   const { isMobile } = useResponsive();
-  const { isLoggedIn, user } = useAuth();
-  const { canEdit: canEditArticle } = useCanEditArticle(articleId);
 
   // Keep state hooks always present (hook order stable)
   const [article, setArticle] = useState<any>(initialArticle);
@@ -183,7 +183,7 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
   }), [doSave, doDelete]);
 
   // Permission guard / early return for UI only (hooks above always run)
-  if (!isLoggedIn || !canEditArticle || !user) {
+  if (!isLoggedIn || !canEdit || !currentUser) {
     return null;
   }
 

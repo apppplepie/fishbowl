@@ -15,33 +15,22 @@ interface ArticlePageProps {
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { id: articleId } = await params;
-
-  // Fetch article data on the server
   const article = await fetchArticleData(articleId);
-
-  if (!article) {
-    notFound();
-  }
+  if (!article) notFound();
 
   // Fetch category path for breadcrumb
-  let categoryPath: Array<{ id: string; name: string }> = [];
+  let categoryPath: { id: string; name: string; }[] = [];
   if (article.category_id) {
     categoryPath = await fetchCategoryPath(article.category_id);
   }
 
   return (
-    <>
-      {/* Static Article Content (Server-rendered) */}
-      {/* <ArticleStaticView article={article} /> */}
-
-      {/* Client Shell (Handles interactions, editing, comments, and sets box1Content) */}
-      <ClientArticleShell
-        articleId={articleId} 
-        initialArticle={article}
-        initialLikes={article.likes || 0}
-        initialComments={article.comments || 0}
-        categoryPath={categoryPath}
-      />
-    </>
+    <ClientArticleShell
+      articleId={articleId}
+      initialArticle={article}
+      initialLikes={article.likes || 0}
+      initialComments={article.comments || 0}
+      categoryPath={categoryPath}
+    />
   );
 }

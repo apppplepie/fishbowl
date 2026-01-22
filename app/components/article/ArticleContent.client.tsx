@@ -9,13 +9,13 @@ import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
 
 interface ArticleContentClientProps {
   article: any;
-  isEditing: boolean;
-  onSave: (updatedArticle: any) => void;
+  isEditing?: boolean;
+  onSave?: (updatedArticle: any) => void;
 }
 
 export default function ArticleContentClient({
   article,
-  isEditing,
+  isEditing = false,
   onSave
 }: ArticleContentClientProps) {
   const [editedBlocks, setEditedBlocks] = useState<any[]>([]);
@@ -74,7 +74,7 @@ export default function ArticleContentClient({
       ...article,
       blocks: editedBlocks
     };
-    onSave(updatedArticle);
+    onSave?.(updatedArticle);
   };
 
   if (!article) return null;

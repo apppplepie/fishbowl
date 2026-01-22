@@ -9,12 +9,9 @@ export interface ArticleEditFloatProps {
   onSave?: () => void;
   onCancel?: () => void;
   onDelete?: () => void;
-  onAdjustCategory?: () => void;
-  // optional metadata for UI/permission display
-  categoryId?: string | number | null;
-  articleAuthor?: any;
-  currentUser?: string;
-  userRole?: string;
+  canEdit?: boolean;
+  isLoggedIn?: boolean;
+  currentUser?: any;
 }
 
 export default function ArticleEditFloat({
@@ -24,10 +21,10 @@ export default function ArticleEditFloat({
   onSave,
   onCancel,
   onDelete,
-  onAdjustCategory,
-  currentUser,
-  userRole,
+  canEdit = true
 }: ArticleEditFloatProps) {
+  if (!canEdit) return null; // 或者 render disabled UI
+
   return (
     <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 1200 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -39,7 +36,6 @@ export default function ArticleEditFloat({
           预览
         </button>
 
-        {/* 通常我们把保存放到编辑器内部；如果你想让浮窗触发保存，传入 onSave */}
         <button onClick={() => onSave && onSave()} disabled={!isEditing}>
           保存
         </button>
@@ -50,10 +46,6 @@ export default function ArticleEditFloat({
 
         <button onClick={() => onDelete && onDelete()} style={{ color: 'crimson' }}>
           删除
-        </button>
-
-        <button onClick={() => onAdjustCategory && onAdjustCategory()}>
-          调整分类
         </button>
       </div>
     </div>
