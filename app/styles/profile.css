@@ -26,3 +26,315 @@
   color: #000000 !important;
 }
 
+/* ==================== Security Modal 弹窗样式 ==================== */
+/* 深色遮罩层 */
+.security-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: security-modal-fade-in 0.3s ease-out;
+}
+
+@keyframes security-modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 毛玻璃弹窗内容 */
+.security-modal-content {
+  position: relative;
+  width: 90%;
+  max-width: 480px;
+  max-height: 90vh;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  animation: security-modal-zoom-in 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes security-modal-zoom-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 弹窗头部 */
+.security-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.security-modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #000000;
+  line-height: 1.4;
+}
+
+.security-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #666666;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.security-modal-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #000000;
+}
+
+.security-modal-close:active {
+  transform: scale(0.95);
+}
+
+/* 表单区域 */
+.security-modal-form {
+  padding: 28px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.security-modal-form .ant-form-item-label > label {
+  color: #333333;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.security-modal-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000000;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.security-modal-input:hover {
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+.security-modal-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+  outline: none;
+}
+
+.security-modal-input::placeholder {
+  color: #999999;
+}
+
+/* 弹窗底部按钮区域 */
+.security-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 28px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.security-modal-button {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  min-width: 80px;
+}
+
+.security-modal-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.security-modal-button-cancel {
+  background: rgba(0, 0, 0, 0.06);
+  color: #333333;
+}
+
+.security-modal-button-cancel:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.security-modal-button-cancel:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.security-modal-button-submit {
+  background: #1890ff;
+  color: #ffffff;
+}
+
+.security-modal-button-submit:hover:not(:disabled) {
+  background: #40a9ff;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+.security-modal-button-submit:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .security-modal-content {
+    width: 95%;
+    max-width: none;
+    border-radius: 20px;
+  }
+
+  .security-modal-header {
+    padding: 20px 24px;
+  }
+
+  .security-modal-form {
+    padding: 24px;
+  }
+
+  .security-modal-footer {
+    padding: 16px 24px;
+    flex-direction: column-reverse;
+  }
+
+  .security-modal-button {
+    width: 100%;
+  }
+}
+
+/* ==================== Security Inline Edit 内联编辑样式 ==================== */
+.security-inline-input {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000000;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.security-inline-input:hover {
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+.security-inline-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+  outline: none;
+}
+
+.security-inline-input::placeholder {
+  color: #999999;
+}
+
+.security-inline-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  min-width: 40px;
+  height: 40px;
+}
+
+.security-inline-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.security-inline-button-submit {
+  background: #1890ff;
+  color: #ffffff;
+}
+
+.security-inline-button-submit:hover:not(:disabled) {
+  background: #40a9ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.security-inline-button-submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.security-inline-button-cancel {
+  background: rgba(0, 0, 0, 0.06);
+  color: #333333;
+}
+
+.security-inline-button-cancel:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.security-inline-button-cancel:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.security-inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.security-inline-form-item {
+  margin-bottom: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.security-inline-error {
+  font-size: 12px;
+  color: #ff4d4f;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+

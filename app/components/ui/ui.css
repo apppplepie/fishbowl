@@ -130,24 +130,6 @@
   margin-right: var(--ui-spacing-xs);
 }
 
-@keyframes ldio-yzaezf3dcmj {
-  0% { transform: translate(12px,80px) scale(0); }
- 25% { transform: translate(12px,80px) scale(0); }
- 50% { transform: translate(12px,80px) scale(1); }
- 75% { transform: translate(80px,80px) scale(1); }
-100% { transform: translate(148px,80px) scale(1); }
-}
-@keyframes ldio-yzaezf3dcmj-r {
-  0% { transform: translate(148px,80px) scale(1); }
-  100% { transform: translate(148px,80px) scale(0); }
-}
-@keyframes ldio-yzaezf3dcmj-c {
-  0% { background: #e15b64 }
- 25% { background: #abbd81 }
- 50% { background: #f8b26a }
- 75% { background: #f47e60 }
-100% { background: #e15b64 }
-}
 
 .ui-button-icon {
   display: inline-flex;
@@ -1012,7 +994,7 @@
   gap: 8px;
 }
 
-.loadingio-spinner-ellipsis-2by998twmg8 {
+.ui-spinner {
   width: 200px;
   height: 200px;
   display: inline-block;
@@ -1020,7 +1002,7 @@
   background: #ffffff;
 }
 
-.ldio-yzaezf3dcmj {
+.ui-spinner-dots {
   width: 100%;
   height: 100%;
   position: relative;
@@ -1029,54 +1011,75 @@
   transform-origin: 0 0;
 }
 
-.ldio-yzaezf3dcmj div {
+.ui-spinner-dots div {
   position: absolute;
   width: 40px;
   height: 40px;
   border-radius: 50%;
   transform: translate(80px,80px) scale(1);
   background: #e15b64;
-  animation: ldio-yzaezf3dcmj 1s infinite cubic-bezier(0,0.5,0.5,1);
+  animation: ui-spinner-dots 1s infinite cubic-bezier(0,0.5,0.5,1);
   box-sizing: content-box;
 }
 
-.ldio-yzaezf3dcmj div:nth-child(1) {
+.ui-spinner-dots div:nth-child(1) {
   background: #f47e60;
   transform: translate(148px,80px) scale(1);
-  animation: ldio-yzaezf3dcmj-r 0.25s infinite cubic-bezier(0,0.5,0.5,1), ldio-yzaezf3dcmj-c 1s infinite step-start;
+  animation: ui-spinner-dots-r 0.25s infinite cubic-bezier(0,0.5,0.5,1), ui-spinner-dots-c 1s infinite step-start;
 }
 
-.ldio-yzaezf3dcmj div:nth-child(2) {
+.ui-spinner-dots div:nth-child(2) {
   animation-delay: -0.25s;
   background: #e15b64;
 }
 
-.ldio-yzaezf3dcmj div:nth-child(3) {
+.ui-spinner-dots div:nth-child(3) {
   animation-delay: -0.5s;
   background: #f47e60;
 }
 
-.ldio-yzaezf3dcmj div:nth-child(4) {
+.ui-spinner-dots div:nth-child(4) {
   animation-delay: -0.75s;
   background: #f8b26a;
 }
 
-.ldio-yzaezf3dcmj div:nth-child(5) {
+.ui-spinner-dots div:nth-child(5) {
   animation-delay: -1s;
   background: #abbd81;
 }
 
-.ui-spin-small .loadingio-spinner-ellipsis-2by998twmg8 {
+@keyframes ui-spinner-dots {
+  0% { transform: translate(12px,80px) scale(0); }
+  25% { transform: translate(12px,80px) scale(0); }
+  50% { transform: translate(12px,80px) scale(1); }
+  75% { transform: translate(80px,80px) scale(1); }
+ 100% { transform: translate(148px,80px) scale(1); }
+}
+
+@keyframes ui-spinner-dots-r {
+  0% { transform: translate(148px,80px) scale(1); }
+ 100% { transform: translate(148px,80px) scale(0); }
+}
+
+@keyframes ui-spinner-dots-c {
+  0% { background: #e15b64; }
+  25% { background: #abbd81; }
+  50% { background: #f8b26a; }
+  75% { background: #f47e60; }
+ 100% { background: #e15b64; }
+}
+
+.ui-spin-small .ui-spinner {
   width: 100px;
   height: 100px;
 }
 
-.ui-spin-middle .loadingio-spinner-ellipsis-2by998twmg8 {
+.ui-spin-middle .ui-spinner {
   width: 150px;
   height: 150px;
 }
 
-.ui-spin-large .loadingio-spinner-ellipsis-2by998twmg8 {
+.ui-spin-large .ui-spinner {
   width: 200px;
   height: 200px;
 }

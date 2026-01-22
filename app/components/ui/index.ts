@@ -15,8 +15,9 @@ export type { TagProps } from './Tag';
 export { default as Divider } from './Divider';
 export type { DividerProps } from './Divider';
 
-export { default as Skeleton } from './Skeleton';
-export type { SkeletonProps, SkeletonButtonProps } from './Skeleton';
+// Skeleton 已移除，不再使用骨架屏
+// export { default as Skeleton } from './Skeleton';
+// export type { SkeletonProps, SkeletonButtonProps } from './Skeleton';
 
 export { default as Breadcrumb } from './Breadcrumb';
 export type { BreadcrumbProps, BreadcrumbItemProps } from './Breadcrumb';

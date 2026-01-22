@@ -147,8 +147,8 @@ const Spin: React.FC<SpinProps> = ({
     <div className="ui-spin-wrapper" style={style}>
       {delayedSpinning && (
         <div className={spinClasses}>
-          <div className="loadingio-spinner-ellipsis-2by998twmg8">
-            <div className="ldio-yzaezf3dcmj">
+          <div className="ui-spinner">
+            <div className="ui-spinner-dots">
               <div></div><div></div><div></div><div></div><div></div>
             </div>
           </div>

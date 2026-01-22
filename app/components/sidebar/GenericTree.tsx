@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Empty, Skeleton } from 'antd';
+import { Menu, Empty } from 'antd';
+import { Spin } from '@/app/components/ui';
 import {
   FileTextOutlined,
   FolderOutlined,
@@ -15,32 +16,17 @@ import { apiGetJson } from '@/lib/apiClient';
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 
 /**
- * 侧边栏骨架屏组件
+ * 侧边栏加载组件
  */
-const SidebarSkeleton: React.FC = () => (
-  <div style={{ padding: '16px' }}>
-    {/* 第一级目录 */}
-    <div style={{ marginBottom: '16px' }}>
-      <Skeleton active title={false} paragraph={{ rows: 1, width: '80%' }} />
-    </div>
-
-    {/* 第二级项目们 */}
-    <div style={{ marginLeft: '16px' }}>
-      {Array.from({ length: 5 }).map((_, index) => (
-        <div key={index} style={{ marginBottom: '8px' }}>
-          <Skeleton active title={false} paragraph={{ rows: 1, width: index % 2 === 0 ? '70%' : '60%' }} />
-        </div>
-      ))}
-    </div>
-
-    {/* 第三级项目们 */}
-    <div style={{ marginLeft: '32px', marginTop: '12px' }}>
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} style={{ marginBottom: '6px' }}>
-          <Skeleton active title={false} paragraph={{ rows: 1, width: '50%' }} />
-        </div>
-      ))}
-    </div>
+const SidebarLoading: React.FC = () => (
+  <div style={{ 
+    padding: '16px', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    minHeight: '200px'
+  }}>
+    <Spin size="middle" />
   </div>
 );
 
@@ -704,7 +690,7 @@ function GenericIndexTree({
       }}
     >
       {loading ? (
-        <SidebarSkeleton />
+        <SidebarLoading />
       ) : menuItems && menuItems.length > 0 ? (
         <Menu
           mode="inline"

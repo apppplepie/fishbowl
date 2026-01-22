@@ -9,6 +9,7 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   suffix?: React.ReactNode;
   allowClear?: boolean;
   onClear?: () => void;
+  onPressEnter?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -23,10 +24,18 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       style,
       value,
       onChange,
+      onPressEnter,
+      onKeyDown,
       ...restProps
     },
     ref
   ) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && onPressEnter) {
+        onPressEnter(e);
+      }
+      onKeyDown?.(e);
+    };
     const hasPrefix = !!prefix;
     const hasSuffix = !!suffix || (allowClear && value);
     const showClear = allowClear && value && !restProps.disabled;
@@ -54,6 +63,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       }
     };
 
+    // 从 restProps 中排除 onPressEnter，因为它不是原生 input 的属性
+    const inputProps = { ...restProps };
+    delete (inputProps as any).onPressEnter;
+
     return (
       <span className={inputClasses} style={style}>
         {prefix && <span className="ui-input-prefix">{prefix}</span>}
@@ -62,7 +75,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           className="ui-input-inner"
           value={value}
           onChange={onChange}
-          {...restProps}
+          onKeyDown={handleKeyDown}
+          {...inputProps}
         />
         {hasSuffix && (
           <span className="ui-input-suffix">

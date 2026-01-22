@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Spin } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
 
 /**
@@ -24,47 +23,13 @@ export default function ProtectedLayout({
     }
   }, [isLoggedIn, isLoading, router]);
 
-  // 正在初始化时显示加载状态
-  if (isLoading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        background: '#f5f5f5',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <Spin size="large" />
-          <div style={{ marginTop: '16px', color: '#666' }}>
-            {/* 加载中... */}
-          </div>
-        </div>
-      </div>
-    );
+  // 未登录时跳转，但不显示加载状态
+  if (!isLoading && !isLoggedIn) {
+    // useEffect 会处理跳转，这里直接返回 null 或 children
+    return null;
   }
 
-  // 未登录时显示加载状态（等待跳转）
-  if (!isLoggedIn) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        background: '#f5f5f5',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <Spin size="large" />
-          <div style={{ marginTop: '16px', color: '#666' }}>
-            请先登录...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 已登录，渲染子组件
+  // 直接渲染子组件，不显示加载状态
   return <>{children}</>;
 }
 
