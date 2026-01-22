@@ -1306,7 +1306,7 @@ export default function BookPage() {
               maxWidth: '800px',
               minWidth: isMobile ? 'auto' : '600px',
               minHeight: '100vh',
-              padding: isMobile ? '20px 16px' : '40px 20px',
+              padding: isMobile ? '20px' : '40px',
               background: 'rgba(255, 255, 255, 0.9)',
               backdropFilter: 'blur(8px)',
               borderRadius: '12px',
@@ -1442,7 +1442,7 @@ export default function BookPage() {
               maxWidth: '800px',
               minWidth: isMobile ? 'auto' : '600px',
               margin: '0 auto',
-              padding: isMobile ? '20px 8px' : '40px 20px',
+              padding: isMobile ? '20px' : '40px',
               boxSizing: 'border-box',
             }}
             data-export-hide
@@ -1451,7 +1451,7 @@ export default function BookPage() {
             <div
               style={{
                 background: 'white',
-                padding: isMobile ? '20px 12px' : '32px 40px',
+                padding: isMobile ? '20px' : '40px',
                 borderRadius: '12px',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
               }}

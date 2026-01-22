@@ -36,7 +36,7 @@ export default function BreadcrumbBox1({
   }, []);
 
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.currentTarget.style.color = 'white';
+    e.currentTarget.style.color = '#000';
   }, []);
 
   // 缓存路由跳转处理器
@@ -56,7 +56,7 @@ export default function BreadcrumbBox1({
         title: item.onClick ? (
           <a
             style={{
-              color: 'white',
+              color: '#000',
               textDecoration: 'none',
               transition: 'color 0.2s ease',
               cursor: 'pointer',
@@ -68,7 +68,7 @@ export default function BreadcrumbBox1({
             {item.title}
           </a>
         ) : (
-          <span style={{ color: 'white' }}>{item.title}</span>
+          <span style={{ color: '#000' }}>{item.title}</span>
         ),
       }));
     }
@@ -80,7 +80,7 @@ export default function BreadcrumbBox1({
           title: (
             <a
               style={{
-                color: 'white',
+                color: '#000',
                 textDecoration: 'none',
                 transition: 'color 0.2s ease',
                 cursor: 'pointer',
@@ -98,7 +98,7 @@ export default function BreadcrumbBox1({
             <a
               key={category.id}
               style={{
-                color: 'white',
+                color: '#000',
                 textDecoration: 'none',
                 transition: 'color 0.2s ease',
                 cursor: 'pointer',
@@ -122,7 +122,7 @@ export default function BreadcrumbBox1({
           title: (
             <a
               style={{
-                color: 'white',
+                color: '#000',
                 textDecoration: 'none',
                 transition: 'color 0.2s ease',
                 cursor: 'pointer',
@@ -140,7 +140,7 @@ export default function BreadcrumbBox1({
             <a
               key={category.id}
               style={{
-                color: 'white',
+                color: '#000',
                 textDecoration: 'none',
                 transition: 'color 0.2s ease',
                 cursor: 'pointer',
@@ -161,8 +161,16 @@ export default function BreadcrumbBox1({
   }, [type, articleId, categoryPath, customItems, router, handleMouseEnter, handleMouseLeave, handleHomeClick, handleBookcaseClick]);
 
   return (
-    <div style={{ padding: '16px 24px', ...style }}>
-      <Breadcrumb items={breadcrumbItems} />
+    <div style={{ padding: '16px 24px 0 24px', ...style }}>
+      <Breadcrumb
+        items={breadcrumbItems}
+        separator={<span style={{ color: '#000' }}>/</span>}
+        style={{
+          color: '#000',
+          fontSize: '14px',
+          marginBottom: '16px',
+        }}
+      />
     </div>
   );
 }
