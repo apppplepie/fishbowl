@@ -2,6 +2,18 @@
   "name": "fishbowl",
   "version": "0.1.0",
   "private": true,
+  "browserslist": [
+    ">0.3%",
+    "not dead",
+    "not op_mini all",
+    "not IE 11"
+  ],
+  "sideEffects": [
+    "*.css",
+    "*.less",
+    "**/*.css",
+    "**/*.less"
+  ],
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -48,6 +60,7 @@
     "@types/node": "^20",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19",
+    "babel-plugin-import": "^1.13.8",
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
     "tailwindcss": "^4",

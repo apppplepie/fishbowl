@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
@@ -34,6 +34,8 @@ const DEFAULT_THEME = {
   }
 };
 
+const TRANSITION_MS = 360; // 动画时长（ms），与 CSS transition 保持一致
+
 function PageShell({ children }: { children: React.ReactNode }) {
   const { config } = usePageShell();
   const { currentFishbowlTheme } = useAppTheme();
@@ -49,7 +51,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
     return config.themeOverride || currentFishbowlTheme || DEFAULT_THEME;
   }, [config.themeOverride, currentFishbowlTheme]);
 
-  // 开发环境的调试日志
+  // Debug 日志（开发环境）
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[PageShell] config 或主题发生变化:', {
@@ -70,7 +72,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
     }
   }, [config, currentFishbowlTheme]);
 
-  // Memo 化所有 style 对象，避免每次渲染都创建新引用
+  // container fallback background（确保首屏至少有背景）
   const containerStyle = useMemo(() => ({
     position: 'relative' as const,
     width: '100%',
@@ -78,37 +80,95 @@ function PageShell({ children }: { children: React.ReactNode }) {
     paddingTop: '45px',
     marginLeft: sidebarOffset,
     transition: 'margin-left 0.3s ease',
-  }), [sidebarOffset]);
+    background: currentTheme?.pageLayout?.containerBg || currentTheme?.skyGradient || DEFAULT_THEME.skyGradient,
+  }), [sidebarOffset, currentTheme]);
 
+  // box1 动画高度的状态（数字 px 或 'auto'）
+  const box1InnerRef = useRef<HTMLDivElement | null>(null);
+  const [box1Height, setBox1Height] = useState<number | 'auto'>(() => {
+    // 初始采用最小值，避免完全塌陷
+    return config.box1Content ? 100 : 0;
+  });
+
+  // 计算 box1 style：高度由 box1Height 控制，overflow:hidden 防止溢出
   const box1Style = useMemo(() => ({
     padding: '20px',
     width: '100%',
     boxSizing: 'border-box' as const,
-    minHeight: config.box1Content ? '100px' : '0px', // 无内容时高度为0
+    height: box1Height === 'auto' ? 'auto' : `${box1Height}px`,
+    overflow: 'hidden' as const,
+    transition: `height ${TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
     ...config.box1Style,
-  }), [config.box1Content, config.box1Style]);
+  }), [box1Height, config.box1Style]);
 
+  // box2 内部样式（确保内容层级在 wave 之上，且有安全 top padding）
   const box2InnerStyle = useMemo(() => ({
     padding: '40px 20px 20px',
-    minHeight: '1000px',
+    minHeight: '100vh',
     width: '100%',
     boxSizing: 'border-box' as const,
     flex: '1 0 auto',
+    position: 'relative' as const,
+    zIndex: 20,
     ...config.box2Style,
-  }), [config.box2Style]);
+  }), [config.box2Style, currentTheme?.pageLayout?.containerPaddingTop]);
+
+  // useLayoutEffect 用于同步测量，避免闪烁
+  useLayoutEffect(() => {
+    const el = box1InnerRef.current;
+    if (!el) {
+      // 如果没有内层元素，直接 collapse或保持初始
+      setBox1Height(config.box1Content ? 100 : 0);
+      return;
+    }
+
+    // 当内容变化时：测量并触发平滑过渡
+    // 如果有内容（展开）
+    if (config.box1Content) {
+      // 当前实际高度（可能为 0 或旧值）
+      const currentHeight = el.getBoundingClientRect().height || 0;
+      // 先把外壳锁为当前高度，确保 transition 从数值开始
+      setBox1Height(currentHeight || 0);
+
+      // 在下一个帧设置目标高度（scrollHeight）
+      requestAnimationFrame(() => {
+        const target = el.scrollHeight || 0;
+        setBox1Height(target);
+
+        // 过渡完成后释放为 auto，以便内部内容自适应（避免未来内容变化触发高度不对）
+        const t = window.setTimeout(() => {
+          setBox1Height('auto');
+        }, TRANSITION_MS + 30);
+
+        // cleanup：如果 content 再次变化，清理定时器
+        return () => clearTimeout(t);
+      });
+    } else {
+      // 关闭/收起情形：从当前高度过渡到 0
+      const currentHeight = el.getBoundingClientRect().height || 0;
+      setBox1Height(currentHeight);
+      requestAnimationFrame(() => {
+        setBox1Height(0);
+      });
+    }
+    // 这里希望在 config.box1Content 变化时触发
+  }, [config.box1Content]);
 
   return (
     <div style={containerStyle}>
-      {/* Box1 - 根据内容自动调整高度 */}
+      {/* Box1 - 根据内容自动调整高度（外壳动画） */}
       <div className="page-shell-box1" style={{ position: 'relative', width: '100%', zIndex: 1 }}>
         <SkySection theme={currentTheme}>
-          <div style={box1Style}>
-            {config.box1Content}
+          <div style={box1Style} aria-hidden={config.hideBox1 ? 'true' : 'false'}>
+            {/* 内层真实内容（用于测量高度） */}
+            <div ref={box1InnerRef}>
+              {config.box1Content}
+            </div>
           </div>
         </SkySection>
       </div>
 
-      {/* 波浪分隔器 */}
+      {/* 波浪分隔器 - 将 zIndex 降低，避免覆盖正文 */}
       <div
         className="wave-section"
         style={{
@@ -135,6 +195,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
           flexDirection: 'column',
           position: 'relative',
           zIndex: 1,
+          paddingTop: currentTheme?.pageLayout?.containerPaddingTop || '100px',
         }}
       >
         <WaterSection theme={currentTheme}>

@@ -6,6 +6,46 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 const nextConfig: NextConfig = withBundleAnalyzer({
   reactStrictMode: true,
+  // 优化构建配置
+  experimental: {
+    optimizePackageImports: ['antd', '@ant-design/icons', 'lucide-react'],
+  },
+  // Turbopack配置
+  turbopack: {},
+  // 代码分割优化（仅在非Turbopack模式下使用）
+  webpack: (config: any, { buildId, dev, isServer, defaultLoaders, webpack }: any) => {
+    // 优化Tree Shaking
+    if (!dev && !isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all',
+              priority: 10,
+            },
+            antd: {
+              test: /[\\/]node_modules[\\/]antd[\\/]/,
+              name: 'antd',
+              chunks: 'all',
+              priority: 20,
+            },
+            ui: {
+              test: /[\\/]app[\\/]components[\\/]ui[\\/]/,
+              name: 'ui-components',
+              chunks: 'all',
+              priority: 15,
+            },
+          },
+        },
+      };
+    }
+
+    return config;
+  },
   images: {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },

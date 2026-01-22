@@ -6,12 +6,12 @@ import { message } from '@/app/components/ui';
 import { apiGet } from '@/lib/apiClient';
 import { useResponsive } from '@/app/hooks/useResponsive';
 
-export default function ClientArticleActions({ 
-  articleId, 
+export default function ClientArticleActions({
+  articleId,
   initialLikes,
-  initialComments 
-}: { 
-  articleId: string; 
+  initialComments
+}: {
+  articleId: string;
   initialLikes: number;
   initialComments?: number;
 }) {
@@ -19,23 +19,6 @@ export default function ClientArticleActions({
   const [likes, setLikes] = useState(initialLikes || 0);
   const [liked, setLiked] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // 延迟加载点赞状态检查（优化首屏速度）
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        const response = await apiGet(`/api/articles/${articleId}/like`, { requiresAuth: false });
-        const result = await response.json();
-        if (result.success) {
-          setLiked(result.liked);
-        }
-      } catch (error) {
-        console.error('检查点赞状态失败:', error);
-      }
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [articleId]);
 
   const handleLike = async () => {
     setLoading(true);
@@ -45,10 +28,10 @@ export default function ClientArticleActions({
         credentials: 'include',
       });
       const result = await response.json();
-      
+
       if (result.success) {
         setLiked(result.liked);
-        setLikes(result.likes || likes + (result.liked ? 1 : -1));
+        setLikes(result.likes || 0);
       } else {
         message.error(result.error || '点赞失败');
       }

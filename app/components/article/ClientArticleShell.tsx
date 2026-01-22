@@ -14,7 +14,7 @@ import { BreadcrumbBox1, TitleBox1, TagBox1 } from '@/app/components/box1';
 
 const CommentSection = dynamic(
   () => import('@/app/components/CommentSection').catch(() => () => null),
-  { ssr: false }
+  { ssr: false, loading: () => <div style={{ textAlign: 'center', padding: '20px' }}>加载评论中...</div> }
 );
 
 interface ClientArticleShellProps {
@@ -42,6 +42,7 @@ export default function ClientArticleShell({
 
   const [article, setArticle] = useState<any>(initialArticle);
   const [editMode, setEditMode] = useState<'view' | 'edit' | 'preview'>('view');
+  const [isBox1ContentSet, setIsBox1ContentSet] = useState(false);
   const editorRef = useRef<ArticleEditorHandle | null>(null);
 
   // expose for debug
@@ -52,29 +53,24 @@ export default function ClientArticleShell({
 
   // 同步外部 article 更新
   useEffect(() => {
-    if (initialArticle) setArticle(initialArticle);
-  }, [initialArticle]);
+    if (initialArticle && initialArticle !== article) {
+      setArticle(initialArticle);
+    }
+  }, [initialArticle, article]);
 
-  // 设置 box1Content：面包屑 + 标题 + 标签
+  // 立即设置 box1 占位符，避免布局跳动
   useEffect(() => {
-    if (!article) return;
+    if (isBox1ContentSet) return; // 已经设置过完整内容了
 
+    // 设置初始占位符内容，保持布局稳定
     setConfig({
       box1Content: (
-        <div>
+        <div style={{ opacity: 0.7 }}>
           <BreadcrumbBox1
             type="article"
             articleId={articleId}
             categoryPath={categoryPath}
           />
-          <TitleBox1
-            title={article.title}
-          />
-          {article.tags && article.tags.length > 0 && (
-            <div style={{ padding: '0 24px 16px' }}>
-              <TagBox1 tags={article.tags} editMode={false} maxTags={10} />
-            </div>
-          )}
         </div>
       ),
       box2Style: {
@@ -85,10 +81,51 @@ export default function ClientArticleShell({
       },
     });
 
+    setIsBox1ContentSet(true);
+  }, [articleId, categoryPath, setConfig, isMobile, isBox1ContentSet]);
+
+  // 异步设置完整内容
+  useEffect(() => {
+    if (!article || !isBox1ContentSet) return;
+
+    // 短暂延迟后更新为完整内容，实现平滑过渡
+    const timer = setTimeout(() => {
+      setConfig({
+        box1Content: (
+          <div>
+            <BreadcrumbBox1
+              type="article"
+              articleId={articleId}
+              categoryPath={categoryPath}
+            />
+            <TitleBox1
+              title={article.title}
+            />
+            {article.tags && article.tags.length > 0 && (
+              <div style={{ padding: '0 24px 16px' }}>
+                <TagBox1 tags={article.tags} editMode={false} maxTags={10} />
+              </div>
+            )}
+          </div>
+        ),
+        box2Style: {
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+        },
+      });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [article, articleId, categoryPath, setConfig, isMobile, isBox1ContentSet]);
+
+  // 组件卸载时清理
+  useEffect(() => {
     return () => {
       setConfig({ box1Content: null });
     };
-  }, [article, articleId, categoryPath, setConfig, isMobile]);
+  }, [setConfig]);
 
   const handleArticleUpdate = (updatedArticle: any) => {
     setArticle(updatedArticle);

@@ -10,7 +10,7 @@ const SkySection: React.FC<SkySectionProps> = ({ theme, children }) => {
 
   return (
     <div
-      className={`sky-section relative w-full transition-all duration-1000 ease-in-out ${!isCustom ? theme.skyGradient : ''}`}
+      className={`sky-section relative w-full transition-colors duration-300 ease-in-out ${!isCustom ? theme.skyGradient : ''}`}
       style={isCustom ? { background: theme.skyGradient } : undefined}
     >
       {children}

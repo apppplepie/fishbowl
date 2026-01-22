@@ -6,7 +6,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { fetchArticleData, fetchCategoryPath } from '@/app/lib/articleServer';
-// import ArticleStaticView from '@/app/components/article/ArticleStaticView';
 import ClientArticleShell from '@/app/components/article/ClientArticleShell';
 
 interface ArticlePageProps {

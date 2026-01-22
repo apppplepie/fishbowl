@@ -10,7 +10,7 @@ const WaterSection: React.FC<WaterSectionProps> = ({ theme, children }) => {
 
   return (
     <div
-      className={`water-section relative w-full transition-all duration-1000 ease-in-out flex flex-col ${!isCustom ? theme.waterGradient : ''}`}
+      className={`water-section relative w-full transition-colors duration-300 ease-in-out flex flex-col ${!isCustom ? theme.waterGradient : ''}`}
       style={isCustom ? { background: theme.waterGradient, minHeight: '200px', flex: 1 } : { minHeight: '200px', flex: 1 }}
     >
       {children}
