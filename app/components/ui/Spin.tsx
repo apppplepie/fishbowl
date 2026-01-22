@@ -107,7 +107,7 @@ const LoadEnd: React.FC<LoadEndProps> = ({
 };
 
 const Spin: React.FC<SpinProps> = ({
-  size = 'middle',
+  size = 'small',
   spinning = true,
   delay = 500, // 默认延迟0.5秒显示，防止闪烁
   tip,

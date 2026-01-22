@@ -9,12 +9,12 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { message, Modal, Input } from '@/app/components/ui';
+import { message, Modal, Input, Tag } from '@/app/components/ui';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
-import { Select, Tag, Divider, Space } from 'antd';
+import { Select, Divider, Space } from 'antd';
 // 权限信息现在从props传入，不再需要内部hooks
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { apiPutJson, apiDeleteJson } from '@/lib/apiClient';
@@ -64,10 +64,10 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
   useEffect(() => {
     if (isEditing && article) {
       const editorBlocks = (article.blocks || []).map((b: any, idx: number) => {
-        if (b.type === 'text') return { id: b.id, type: 'text', order: idx, content: b.parsedContent?.content || b.content || '' };
-        if (b.type === 'image') return { id: b.id, type: 'image', order: idx, imageUrl: b.parsedContent?.url || b.url || '', title: b.title || '' };
-        if (b.type === 'code') return { id: b.id, type: 'code', order: idx, code: b.parsedContent?.code || b.code || '' };
-        return b;
+        if (b.type === 'text') return { id: b.id, type: 'text', order: idx, content: b.parsedContent?.content || b.content || '', access_level: b.access_level || 1 };
+        if (b.type === 'image') return { id: b.id, type: 'image', order: idx, imageUrl: b.parsedContent?.url || b.url || '', title: b.title || '', access_level: b.access_level || 1 };
+        if (b.type === 'code') return { id: b.id, type: 'code', order: idx, code: b.parsedContent?.code || b.code || '', access_level: b.access_level || 1 };
+        return { ...b, access_level: b.access_level || 1 };
       }).filter(Boolean);
 
       setEditedArticle({ ...article, editorBlocks });

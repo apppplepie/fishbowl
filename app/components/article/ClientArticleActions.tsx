@@ -9,11 +9,13 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 export default function ClientArticleActions({
   articleId,
   initialLikes,
-  initialComments
+  initialComments,
+  articleTitle
 }: {
   articleId: string;
   initialLikes: number;
   initialComments?: number;
+  articleTitle?: string;
 }) {
   const { isMobile } = useResponsive();
   const [likes, setLikes] = useState(initialLikes || 0);
@@ -55,8 +57,9 @@ export default function ClientArticleActions({
   const handleExportImage = async () => {
     try {
       message.loading({ content: '正在准备导出...', key: 'export' });
-      const mod = await import('./exportLongImage');
-      await mod.exportArticleAsImage(articleId);
+      const { exportArticleAsImage } = await import('./exportLongImage');
+      await exportArticleAsImage(articleId, articleTitle);
+
       message.success({ content: '图片已保存！', key: 'export' });
     } catch (error) {
       console.error('导出图片失败:', error);

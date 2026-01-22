@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
-const PLACEHOLDER_IMG = '/static/covers/locked.svg';
+const PLACEHOLDER_IMG = PLACEHOLDER_IMAGE_URL;
 
 interface BookPreview {
   categoryId: string;
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
               )
             WHEN a.cover_image IS NOT NULL THEN
               JSON_OBJECT(
-                'url', '/static/covers/locked.svg',
+                'url', '${PLACEHOLDER_IMG}',
                 'title', '内容受限',
                 'description', CONCAT('需要', a.cover_access_level, '级权限')
               )
@@ -193,7 +194,7 @@ export async function GET(request: NextRequest) {
           orderInCategory: article.order_index,
           categoryName: article.category_name,
           coverImage: article.cover_image,
-          coverIsPlaceholder: article.cover_image && article.cover_image.url === '/static/covers/locked.svg',
+          coverIsPlaceholder: article.cover_image && article.cover_image.url === PLACEHOLDER_IMG,
           tags: article.tags || [],
         };
       }

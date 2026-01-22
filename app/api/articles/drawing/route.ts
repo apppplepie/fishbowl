@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser, refreshAccessToken, TOKEN_EXPIRATION, verifyRefreshToken } from '@/lib/auth';
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
             )
           WHEN a.cover_image IS NOT NULL THEN
             JSON_OBJECT(
-              'url', '/static/covers/locked.svg',
+              'url', '${PLACEHOLDER_IMAGE_URL}',
               'title', '内容受限',
               'description', CONCAT('需要', a.cover_access_level, '级权限')
             )

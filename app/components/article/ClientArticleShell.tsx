@@ -182,6 +182,7 @@ export default function ClientArticleShell({
             articleId={articleId}
             initialLikes={initialLikes}
             initialComments={initialComments}
+            articleTitle={article?.title}
           />
 
           {/* 评论区 - 延迟加载 */}
