@@ -6,7 +6,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { fetchArticleData, fetchCategoryPath } from '@/app/lib/articleServer';
-import ArticleStaticView from '@/app/components/article/ArticleStaticView';
+// import ArticleStaticView from '@/app/components/article/ArticleStaticView';
 import ClientArticleShell from '@/app/components/article/ClientArticleShell';
 
 interface ArticlePageProps {
@@ -32,11 +32,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   return (
     <>
       {/* Static Article Content (Server-rendered) */}
-      <ArticleStaticView article={article} />
+      {/* <ArticleStaticView article={article} /> */}
 
       {/* Client Shell (Handles interactions, editing, comments, and sets box1Content) */}
       <ClientArticleShell
-        articleId={articleId}
+        articleId={articleId} 
         initialArticle={article}
         initialLikes={article.likes || 0}
         initialComments={article.comments || 0}

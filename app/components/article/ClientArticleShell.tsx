@@ -1,21 +1,21 @@
 'use client';
-// Client shell hydrates only interactive parts: header sync, actions (like/share/export),
-// editor, and comments. Keep this file light.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import ClientArticleActions from './ClientArticleActions';
 import ClientHeaderSetter from './ClientHeaderSetter';
+import ArticleEditFloat from '@/app/components/float/ArticleEditFloat';
+import ArticleStaticView from './ArticleStaticView';
 import ClientArticleEditor from './ClientArticleEditor';
+import type { ArticleEditorHandle } from './ClientArticleEditor';
 import { useAuth } from '@/app/hooks/useAuth';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { BreadcrumbBox1, TitleBox1, TagBox1 } from '@/app/components/box1';
 
-// Lazy load heavy interactive parts (comments)
-const CommentSection = dynamic(() => import('@/app/components/CommentSection').catch(() => () => null), { 
-  ssr: false,
-  loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>加载评论区...</div>
-});
+const CommentSection = dynamic(
+  () => import('@/app/components/CommentSection').catch(() => () => null),
+  { ssr: false }
+);
 
 interface ClientArticleShellProps {
   articleId: string;
@@ -26,25 +26,24 @@ interface ClientArticleShellProps {
   onArticleUpdate?: (updatedArticle: any) => void;
 }
 
-export default function ClientArticleShell({ 
-  articleId, 
+export default function ClientArticleShell({
+  articleId,
   initialArticle,
-  initialLikes, 
+  initialLikes,
   initialComments,
   categoryPath,
-  onArticleUpdate
+  onArticleUpdate,
 }: ClientArticleShellProps) {
   const { isLoggedIn, user } = useAuth();
   const { setConfig } = usePageShell();
   const { isMobile } = useResponsive();
-  const [article, setArticle] = React.useState(initialArticle);
-  const [editMode, setEditMode] = React.useState<'view' | 'edit' | 'preview'>('view');
+  const [article, setArticle] = useState<any>(initialArticle);
+  const [editMode, setEditMode] = useState<'view' | 'edit' | 'preview'>('view');
+  const editorRef = useRef<ArticleEditorHandle>(null);
 
   // 同步外部 article 更新
-  React.useEffect(() => {
-    if (initialArticle) {
-      setArticle(initialArticle);
-    }
+  useEffect(() => {
+    if (initialArticle) setArticle(initialArticle);
   }, [initialArticle]);
 
   // 设置 box1Content：面包屑 + 标题 + 标签
@@ -80,19 +79,36 @@ export default function ClientArticleShell({
     return () => {
       setConfig({ box1Content: null });
     };
-  }, [article, articleId, categoryPath, setConfig]);
+  }, [article, articleId, categoryPath, setConfig, isMobile]);
 
   const handleArticleUpdate = (updatedArticle: any) => {
     setArticle(updatedArticle);
-    if (onArticleUpdate) {
-      onArticleUpdate(updatedArticle);
-    }
+    setEditMode('view'); // 保存后回到预览/查看态
+    onArticleUpdate?.(updatedArticle);
   };
 
   return (
     <>
       <ClientHeaderSetter articleId={articleId} editMode={editMode} />
-      
+
+      {/* 文章正文区域：根据 editMode 状态条件渲染 */}
+      <div style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 20px' }}>
+        {editMode === 'view' ? (
+          // 查看模式：显示静态内容
+          <ArticleStaticView article={article} />
+        ) : (
+          // 编辑模式：显示编辑器
+          <ClientArticleEditor
+            ref={editorRef}
+            articleId={articleId}
+            initialArticle={article}
+            isEditing={editMode === 'edit'}
+            onArticleUpdate={handleArticleUpdate}
+            onEditModeChange={setEditMode}
+          />
+        )}
+      </div>
+
       {/* 互动按钮区域 */}
       <div
         style={{
@@ -114,32 +130,39 @@ export default function ClientArticleShell({
           }}
           data-export-hide
         >
-        <ClientArticleActions 
-          articleId={articleId} 
-          initialLikes={initialLikes}
-          initialComments={initialComments}
-        />
+          <ClientArticleActions
+            articleId={articleId}
+            initialLikes={initialLikes}
+            initialComments={initialComments}
+          />
 
-        {/* 评论区 - 延迟加载 */}
-        <CommentSection 
-          articleId={articleId}
-          currentUser={user ? { 
-            username: user.username, 
-            avatar: user.avatar_base64 as string, 
-            role: user.role 
-          } : null}
-          isLoggedIn={isLoggedIn}
-        />
+          {/* 评论区 - 延迟加载 */}
+          <CommentSection
+            articleId={articleId}
+            currentUser={user ? {
+              username: user.username,
+              avatar: user.avatar_base64 as string,
+              role: user.role
+            } : null}
+            isLoggedIn={isLoggedIn}
+          />
         </div>
       </div>
 
-      {/* 编辑器组件（处理编辑模式） */}
-      <ClientArticleEditor
-        articleId={articleId}
-        initialArticle={article}
-        onArticleUpdate={handleArticleUpdate}
-        onEditModeChange={(mode) => setEditMode(mode)}
+      {/* 浮动遥控器：只负责切换 editMode 与触发保存等 */}
+      <ArticleEditFloat
+        mode={editMode}
+        onEdit={() => setEditMode('edit')}
+        onPreview={() => setEditMode('preview')}
+        onSave={() => editorRef.current?.save()}
+        onCancel={() => setEditMode('view')}
+        onDelete={() => editorRef.current?.delete()}
+        categoryId={article?.category_id}
+        articleAuthor={article?.author}
+        currentUser={user?.username}
+        userRole={user?.role}
       />
+
     </>
   );
 }
