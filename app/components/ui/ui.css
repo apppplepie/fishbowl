@@ -1074,6 +1074,12 @@
   height: 100px;
 }
 
+/* 侧边栏内的小型 spin 进一步缩小 */
+.generic-index-tree-container .ui-spin-small .ui-spinner {
+  width: 60px;
+  height: 60px;
+}
+
 .ui-spin-middle .ui-spinner {
   width: 150px;
   height: 150px;

@@ -19,14 +19,14 @@ import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext
  * 侧边栏加载组件
  */
 const SidebarLoading: React.FC = () => (
-  <div style={{ 
-    padding: '16px', 
-    display: 'flex', 
-    justifyContent: 'center', 
+  <div style={{
+    padding: '16px',
+    display: 'flex',
+    justifyContent: 'center',
     alignItems: 'center',
     minHeight: '200px'
   }}>
-    <Spin size="middle" />
+    <Spin size="small" />
   </div>
 );
 
