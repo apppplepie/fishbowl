@@ -149,7 +149,7 @@
   font-size: var(--ui-font-size-base);
   line-height: var(--ui-line-height-base);
   color: var(--ui-color-text);
-  background: var(--ui-color-bg);
+  background: transparent;
   border: 1px solid var(--ui-color-border);
   border-radius: var(--ui-border-radius-base);
   transition: var(--ui-transition-base);
@@ -251,7 +251,7 @@
   font-size: var(--ui-font-size-base);
   line-height: var(--ui-line-height-base);
   color: var(--ui-color-text);
-  background: var(--ui-color-bg);
+  background: transparent;
   border: 1px solid var(--ui-color-border);
   border-radius: var(--ui-border-radius-base);
   transition: var(--ui-transition-base);
