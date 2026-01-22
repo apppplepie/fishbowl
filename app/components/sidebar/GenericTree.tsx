@@ -26,7 +26,7 @@ const SidebarLoading: React.FC = () => (
     alignItems: 'center',
     minHeight: '200px'
   }}>
-    <Spin size="small" />
+    <Spin size="small" style={{ width: '32px', height: '32px' }} />
   </div>
 );
 
