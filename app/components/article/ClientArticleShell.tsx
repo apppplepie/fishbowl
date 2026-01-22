@@ -75,9 +75,9 @@ export default function ClientArticleShell({
       ),
       box2Style: {
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
+        flexDirection: 'column',
         justifyContent: 'center',
-        alignItems: 'flex-start',
+        alignItems: 'center',
       },
     });
 
@@ -110,9 +110,9 @@ export default function ClientArticleShell({
         ),
         box2Style: {
           display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
+          flexDirection: 'column',
           justifyContent: 'center',
-          alignItems: 'flex-start',
+          alignItems: 'center',
         },
       });
     }, 100);
