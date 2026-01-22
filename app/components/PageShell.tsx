@@ -80,7 +80,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
     paddingTop: '45px',
     marginLeft: sidebarOffset,
     transition: 'margin-left 0.3s ease',
-    background: currentTheme?.pageLayout?.containerBg || currentTheme?.skyGradient || DEFAULT_THEME.skyGradient,
+    background: currentTheme?.skyGradient || DEFAULT_THEME.skyGradient,
   }), [sidebarOffset, currentTheme]);
 
   // box1 动画高度的状态（数字 px 或 'auto'）
