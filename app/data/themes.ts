@@ -147,26 +147,26 @@ export const themes: Theme[] = [
     }
   },
   {
-    id: 'neon',
-    name: 'Neon Synth',
-    pageBg: 'bg-fuchsia-950',
-    skyGradient: 'bg-gradient-to-b from-fuchsia-900 via-purple-800 to-violet-900',
-    waterGradient: 'bg-gradient-to-b from-violet-900 via-indigo-900 to-cyan-900',
+    id: 'deep-ocean',
+    name: 'Deep Sea Abyss',
+    pageBg: 'bg-slate-950', // 使用极深的底色呼应深蓝色调
+    skyGradient: 'bg-gradient-to-b from-[#081c54] via-[#225ea8] to-[#1d91c0]', // 深蓝到湖蓝的过渡
+    waterGradient: 'bg-gradient-to-b from-[#41b6c4] via-[#7fcdbb] to-[#f3f8cf]', // 青绿到浅黄的透光感
     orbColors: {
-      sun: 'rgba(255, 0, 255, 0.4)',
-      atmosphere: 'rgba(138, 43, 226, 0.5)',
-      waterLight: 'rgba(0, 255, 255, 0.2)',
-      waterDeep: 'rgba(75, 0, 130, 0.5)',
+      sun: 'rgba(243, 248, 207, 0.6)', // 使用最亮的浅黄色作为光源
+      atmosphere: 'rgba(127, 205, 187, 0.3)', // 蓝绿色大气感
+      waterLight: 'rgba(65, 182, 196, 0.4)', // 青蓝色水光
+      waterDeep: 'rgba(8, 28, 84, 0.5)', // 深蓝色基调
     },
     waveColors: [
-      'rgba(255, 192, 203, 0.6)',
-      'rgba(238, 130, 238, 0.5)',
-      'rgba(224, 255, 255, 0.7)',
-      'rgba(148, 0, 211, 0.3)',
+      'rgba(243, 248, 207, 0.7)', // 浅黄色的浪尖亮光
+      'rgba(199, 233, 180, 0.4)', // 浅绿色的过渡波纹
+      'rgba(255, 255, 255, 0.5)', // 纯白浪花
+      'rgba(34, 94, 168, 0.3)',   // 中段蓝色的阴影
     ],
     pageLayout: {
       box1Bg: 'transparent',
-      box2Bg: 'bg-fuchsia-950',
+      box2Bg: 'bg-[#081c54]/20', // 半透明的深蓝背景
       containerPaddingTop: '0px',
     }
   },

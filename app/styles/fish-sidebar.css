@@ -2,7 +2,7 @@
 
 .fish-sidebar {
   position: absolute;
-  top: 300px; /* 对应 top-20 */
+  top: 200px; /* 对应 top-20 */
   left: 50%;
   transform: translateX(-50%);
   width: 320px; /* 增加宽度从256px到320px */
@@ -93,7 +93,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px; /* 对应 px-5 py-4 */
+  padding: 10px; /* 对应 px-5 py-4 */
   border-bottom: 1px solid #f5f5f4; /* 对应 border-stone-100 */
 }
 
@@ -135,7 +135,7 @@
 }
 
 .fish-sidebar-section {
-  margin-bottom: 28px; /* 对应 space-y-7 */
+  margin-bottom: 0px; /* 对应 space-y-7 */
 }
 
 .fish-sidebar-section:last-child {
@@ -227,30 +227,38 @@
 
 /* 滑块行样式 */
 .fish-sidebar-slider-row {
-  margin-bottom: 16px; /* 对应 space-y-4 */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px; /* 减少行间距，与渐变行保持一致 */
 }
 
 .fish-sidebar-slider-row:last-child {
   margin-bottom: 0;
 }
 
-.fish-sidebar-slider-label-container {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.fish-sidebar-slider-label-container > span:first-child {
+.fish-sidebar-slider-label {
   font-size: 14px; /* 从10px增加到14px，比title的12px稍大 */
   font-weight: bold; /* 从600改为bold，与title一致 */
   color: #292524; /* 从stone-400改为stone-800，与title一致 */
   text-transform: uppercase;
   letter-spacing: 0.25em; /* 从0.1em改为0.25em，与title一致 */
+  width: 48px; /* 与gradient-label保持一致 */
+  flex-shrink: 0;
 }
 
-.fish-sidebar-slider-label {
+.fish-sidebar-slider-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: flex-end;
+  gap: 8px; /* 对应 gap-2 */
+}
+
+.fish-sidebar-slider-value {
   color: #57534e; /* stone-600 */
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
 }
 
 .fish-sidebar-slider {

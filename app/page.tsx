@@ -1,7 +1,7 @@
 'use client';
 
-import { Button, Typography } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import { Button } from '@/app/components/ui';
+import { ChevronDown } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppTheme } from './contexts/AppThemeContext';
@@ -20,8 +20,6 @@ import { DEFAULT_FISH_CONFIG } from './config/fishConfig';
 import { PlantGrowthEngine } from './engine/PlantGrowthEngine';
 import Goldfish, { FishBounds } from './components/fish/Goldfish';
 import { FishConfig } from './components/fish/Sidebar';
-
-const { Title, Paragraph } = Typography;
 
 // 根系数据类型
 interface RootData {
@@ -714,16 +712,16 @@ export default function Home() {
           }}
         >
           <div className="text-center text-black px-8" style={{ position: 'relative', zIndex: 5 }}>
-            <Title level={1} className="!text-black mb-6" style={{ fontSize: '3.5rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+            <h1 className="mb-6" style={{ fontSize: '3.5rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)', color: '#000000' }}>
               Fishbowl
-            </Title>
-            <Paragraph className="!text-black text-xl mb-8 max-w-2xl" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-              没开发完，先这样吧
-            </Paragraph>
+            </h1>
+            <p className="text-xl mb-8 max-w-2xl mx-auto" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)', color: '#000000' }}>
+              植物长的太慢就说明你需要买新手机了
+            </p>
             <Button
               type="primary"
               size="large"
-              icon={<DownOutlined />}
+              icon={<ChevronDown size={18} />}
               className="animate-bounce"
               style={{
                 height: '50px',

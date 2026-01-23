@@ -192,16 +192,16 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const SliderRow = ({ label, value, onChange, min, max, step, displayValue }: any) => (
       <div className="fish-sidebar-slider-row">
-        <div className="fish-sidebar-slider-label-container">
-          <span>{label}</span>
-          <span className="fish-sidebar-slider-label">{displayValue}</span>
+        <span className="fish-sidebar-slider-label">{label}</span>
+        <div className="fish-sidebar-slider-container">
+          <input
+            type="range" min={min} max={max} step={step}
+            value={value}
+            onChange={(e) => onChange(parseFloat(e.target.value))}
+            className="fish-sidebar-slider"
+          />
+          <span className="fish-sidebar-slider-value">{displayValue}</span>
         </div>
-        <input
-          type="range" min={min} max={max} step={step}
-          value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value))}
-          className="fish-sidebar-slider"
-        />
      </div>
   );
 
@@ -244,7 +244,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Divider */}
-        <div className="fish-sidebar-divider" />
+        {/* <div className="fish-sidebar-divider" /> */}
 
         {/* Section: Dynamics */}
         <div className="fish-sidebar-section">

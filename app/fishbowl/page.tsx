@@ -25,7 +25,16 @@ export default function FishbowlPage() {
   const { isMobile } = useResponsive();
   const { setConfig } = usePageShell();
   const { setLeftContent } = useHeader();
-  const { currentFishbowlTheme } = useAppTheme();
+  const {
+    currentFishbowlTheme,
+    activeFishbowlThemeId,
+    setActiveFishbowlThemeId,
+    skyHue,
+    setSkyHue,
+    waterHue,
+    setWaterHue,
+    fishbowlThemes
+  } = useAppTheme();
   const { refreshUser } = useAuth();
   const [settings, setSettings] = useState<PlantSettings>(PRESET_VINE);
   const [clearTrigger, setClearTrigger] = useState(0);
@@ -506,6 +515,9 @@ export default function FishbowlPage() {
     };
   }, [getBox1ToBox2Offset, getPageHeight]); // 依赖获取尺寸函数
 
+  // 主题亮度控制
+  const [brightness, setBrightness] = useState(100);
+
   // 基本的鱼配置
   const [fishConfig, setFishConfig] = useState<FishConfig>(DEFAULT_FISH_CONFIG);
 
@@ -542,7 +554,93 @@ export default function FishbowlPage() {
     setToastMessage('鱼配置已重置');
   };
 
+  // Theme Controller Component
+  const ThemeController: React.FC = () => {
+    return (
+      <div className="bg-white/40 backdrop-blur-xl border border-white/40 shadow-xl rounded-2xl p-6 flex flex-col gap-4 transition-all duration-300 w-[320px]">
+        <h3 className="text-sm font-semibold text-gray-800 text-center mb-2">鱼缸主题</h3>
 
+        {/* --- 主题预设列表 --- */}
+        <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-3 justify-items-center">
+          {fishbowlThemes.map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => setActiveFishbowlThemeId(theme.id)}
+              className={`w-8 h-8 rounded-full transition-all duration-300 ring-2 ring-offset-2 ring-offset-transparent ${
+                activeFishbowlThemeId === theme.id
+                  ? 'scale-125 ring-white/80 shadow-md'
+                  : 'scale-100 hover:scale-110 ring-transparent opacity-70 hover:opacity-100'
+              }`}
+              style={{
+                background: `linear-gradient(135deg, ${theme.orbColors.sun}, ${theme.orbColors.waterDeep})`
+              }}
+              title={theme.name}
+            />
+          ))}
+
+          {/* 自定义模式按钮 (adj) */}
+          <button
+            onClick={() => setActiveFishbowlThemeId('custom')}
+            className={`w-8 h-8 rounded-full transition-all duration-300 ring-2 ring-offset-2 ring-offset-transparent flex items-center justify-center text-[10px] font-bold text-gray-600 bg-gray-100 border border-gray-300 ${
+              activeFishbowlThemeId === 'custom'
+                ? 'scale-125 ring-white/80 shadow-md bg-white'
+                : 'scale-100 hover:scale-110 opacity-70 hover:opacity-100'
+            }`}
+            title="自定义模式"
+          >
+            adj
+          </button>
+        </div>
+
+        {/* --- 全局控制区 --- */}
+        <div className="w-full flex flex-col gap-4 pt-2 border-t border-white/30">
+          {/* 亮度调节 */}
+          {/* <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-gray-800 w-20 text-right flex-shrink-0">亮度</span>
+            <input
+              type="range"
+              min="20"
+              max="120"
+              value={brightness}
+              onChange={(e) => setBrightness(Number(e.target.value))}
+              className="flex-1 h-2 bg-gradient-to-r from-black via-gray-400 to-white rounded-lg appearance-none cursor-pointer accent-gray-600"
+            />
+            <span className="text-xs font-mono text-gray-600 w-8 text-right flex-shrink-0">{brightness}%</span>
+          </div> */}
+
+          {/* 自定义 HSL 色相调节 (仅在 activeThemeId 为 'custom' 时显示) */}
+          {activeFishbowlThemeId === 'custom' && (
+            <div className="space-y-3 animate-in fade-in duration-500">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-gray-800 w-20 text-right flex-shrink-0">天空色相</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  value={skyHue}
+                  onChange={(e) => setSkyHue(Number(e.target.value))}
+                  className="flex-1 h-2 bg-gradient-to-r from-red-500 via-green-500 to-blue-500 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs font-mono text-gray-600 w-8 text-right flex-shrink-0">{skyHue}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-gray-800 w-20 text-right flex-shrink-0">水面色相</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  value={waterHue}
+                  onChange={(e) => setWaterHue(Number(e.target.value))}
+                  className="flex-1 h-2 bg-gradient-to-r from-red-500 via-green-500 to-blue-500 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs font-mono text-gray-600 w-8 text-right flex-shrink-0">{waterHue}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -558,6 +656,7 @@ export default function FishbowlPage() {
           pointerEvents: 'none', // 让画布本身不拦截事件
           zIndex: 10, // 在内容之上但在交互之下
           background: 'transparent',
+          filter: `brightness(${brightness}%)`,
         }}
       >
         <GardenCanvas
@@ -685,6 +784,11 @@ export default function FishbowlPage() {
         onConfigSaved={handleFishConfigSaved}
         onConfigReset={handleFishConfigReset}
       />
+
+      {/* Theme Controller */}
+      <div className="absolute top-[580px] left-1/2 transform -translate-x-1/2 z-40">
+        <ThemeController />
+      </div>
 
       {/* Toast Notification */}
       {toastMessage && (
