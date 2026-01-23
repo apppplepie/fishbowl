@@ -14,8 +14,14 @@
 }
 
 body {
-  /* 全局背景色 - 首页由组件控制，避免与固定背景冲突 */
-  background: transparent;
+  background: var(--theme-body-gradient, linear-gradient(to bottom, 
+    #ffedd5 0%,      /* orange-100 - 天空顶部 */
+    #fef3c7 25%,     /* amber-100 - 天空中部 */
+    #fef9c3 50%,     /* yellow-100 - 天空底部/水面开始 */
+    #99f6e4 75%,     /* teal-200 - 水中 */
+    #14b8a6 100%     /* teal-500 - 水底 */
+  ));
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;

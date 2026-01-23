@@ -2,7 +2,7 @@
 
 .fish-sidebar {
   position: absolute;
-  top: 200px; /* 对应 top-20 */
+  top: 100px; /* 对应 top-20 */
   left: 50%;
   transform: translateX(-50%);
   width: 320px; /* 增加宽度从256px到320px */

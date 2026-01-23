@@ -601,15 +601,14 @@ export default function Home() {
 
   return (
     <>
-      {/* 固定背景层 - 覆盖整个视窗，显示天空渐变 */}
+      {/* 固定背景层 - 只铺 100vh，显示天空渐变 */}
       <div
         style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
-          width: '100%',
-          height: '100vh', // 覆盖整个视窗
+          height: '100vh',
           background: getSkyGradient(),
           zIndex: -1,
         }}

@@ -103,6 +103,7 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
         pageBg: 'bg-gray-100',
         skyGradient: `linear-gradient(to bottom, hsl(${skyHue}, 70%, 95%), hsl(${skyHue}, 60%, 90%), hsl(${skyHue + 20}, 50%, 85%))`,
         waterGradient: `linear-gradient(to bottom, hsl(${waterHue}, 60%, 85%), hsl(${waterHue}, 50%, 40%), hsl(${waterHue}, 70%, 15%))`,
+        buttonGradient: `linear-gradient(135deg, hsl(${waterHue}, 50%, 80%), hsl(${waterHue}, 40%, 60%), hsl(${waterHue}, 30%, 40%))`,
         orbColors: {
           sun: `hsla(${skyHue + 30}, 80%, 70%, 0.6)`,
           atmosphere: `hsla(${skyHue}, 60%, 80%, 0.4)`,

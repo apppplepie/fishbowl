@@ -58,6 +58,7 @@ export default function PageLayout({
     pageBg: 'bg-gray-50',
     skyGradient: processBg(box1BgColor),
     waterGradient: processBg(box2BgColor),
+    buttonGradient: 'linear-gradient(135deg, rgb(156, 163, 175), rgb(107, 114, 128), rgb(75, 85, 99))',
     orbColors: {
       sun: 'rgba(255, 255, 255, 0.3)',
       atmosphere: 'rgba(255, 255, 255, 0.2)',
