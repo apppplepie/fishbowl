@@ -35,14 +35,13 @@ export default function ClientArticleShell({
   onArticleUpdate,
 }: ClientArticleShellProps) {
   const { isLoggedIn, user } = useAuth();
-  const { canEdit } = useCanEditArticle ? useCanEditArticle(articleId) : { canEdit: true }; // fallback true
-  const canEditBool = canEdit ?? true;
+  const { canEdit } = useCanEditArticle(articleId);
+  const canEditBool = canEdit ?? false;
   const { setConfig } = usePageShell();
   const { isMobile } = useResponsive();
 
   const [article, setArticle] = useState<any>(initialArticle);
   const [editMode, setEditMode] = useState<'view' | 'edit' | 'preview'>('view');
-  const [isBox1ContentSet, setIsBox1ContentSet] = useState(false);
   const editorRef = useRef<ArticleEditorHandle | null>(null);
 
   // expose for debug
@@ -58,38 +57,29 @@ export default function ClientArticleShell({
     }
   }, [initialArticle, article]);
 
-  // 立即设置 box1 占位符，避免布局跳动
+  // 设置 box1 内容，根据 article 是否存在渲染完整内容或占位符
   useEffect(() => {
-    if (isBox1ContentSet) return; // 已经设置过完整内容了
-
-    // 设置初始占位符内容，保持布局稳定
-    setConfig({
-      box1Content: (
-        <div style={{ opacity: 0.7 }}>
-          <BreadcrumbBox1
-            type="article"
-            articleId={articleId}
-            categoryPath={categoryPath}
-          />
-        </div>
-      ),
-      box2Style: {
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-      },
-    });
-
-    setIsBox1ContentSet(true);
-  }, [articleId, categoryPath, setConfig, isMobile, isBox1ContentSet]);
-
-  // 异步设置完整内容
-  useEffect(() => {
-    if (!article || !isBox1ContentSet) return;
-
-    // 短暂延迟后更新为完整内容，实现平滑过渡
-    const timer = setTimeout(() => {
+    if (!article) {
+      // 没有文章数据时，设置占位符内容
+      setConfig({
+        box1Content: (
+          <div style={{ opacity: 0.7 }}>
+            <BreadcrumbBox1
+              type="article"
+              articleId={articleId}
+              categoryPath={categoryPath}
+            />
+          </div>
+        ),
+        box2Style: {
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+      });
+    } else {
+      // 有文章数据时，直接设置完整内容
       setConfig({
         box1Content: (
           <div>
@@ -115,10 +105,8 @@ export default function ClientArticleShell({
           alignItems: 'center',
         },
       });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [article, articleId, categoryPath, setConfig, isMobile, isBox1ContentSet]);
+    }
+  }, [article, articleId, categoryPath, setConfig, isMobile]);
 
   // 组件卸载时清理
   useEffect(() => {
