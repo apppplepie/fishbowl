@@ -156,7 +156,7 @@ export const themes: Theme[] = [
     id: 'deep-ocean',
     name: 'Deep Sea Abyss',
     pageBg: 'bg-slate-950', // 使用极深的底色呼应深蓝色调#c7e9b4
-    skyGradient: 'bg-gradient-to-b from-[#7fcdbb] via-[#c7e9b4] to-[#c7e9b4]', // 青绿到浅黄的透光感
+    skyGradient: 'bg-gradient-to-b from-[#7fcdbb] via-[#a8d5c4] to-[#c7e9b4]', // 青绿到浅黄的透光感
     waterGradient: 'bg-gradient-to-b from-[#c7e9b4] via-[#41b6c4] via-[#1d91c0] to-[#14768a]', // 深蓝到湖蓝的过渡
     buttonGradient: 'linear-gradient(135deg, rgb(199, 233, 180), rgb(65, 182, 196), rgb(29, 145, 192), rgb(20, 118, 138))',
     orbColors: {
