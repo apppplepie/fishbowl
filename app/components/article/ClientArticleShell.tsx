@@ -128,7 +128,7 @@ export default function ClientArticleShell({
       {/* 内容区：单一入口 */}
       <div
         data-content-area
-        style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 20px', boxSizing: 'border-box' }}>
+        style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 0px', boxSizing: 'border-box' }}>
         {editMode === 'view' ? (
           <ArticleContentClient article={article} />
         ) : (
@@ -152,9 +152,9 @@ export default function ClientArticleShell({
         style={{
           width: '100%',
           maxWidth: '800px',
-          minWidth: isMobile ? 'auto' : '600px',
+          minWidth: isMobile ? 'auto' : '800px',
           margin: '0 auto',
-          padding: isMobile ? '20px' : '40px',
+          padding: isMobile ? '0px' : '0px',
           boxSizing: 'border-box',
         }}
         data-export-hide

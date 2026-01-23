@@ -19,7 +19,7 @@ export default function ArticleContentClient({ article }: ArticleContentClientPr
         background: 'rgba(255, 255, 255, 0.9)',
         backdropFilter: 'blur(8px)',
         minHeight: '50vh',
-        padding: '40px',
+        padding: '20px',
         borderRadius: '12px',
         marginBottom: '40px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
