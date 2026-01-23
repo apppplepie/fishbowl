@@ -43,6 +43,19 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     // initHeavyIfAny();
   }, []);
 
+  // 统一的加载通知数量函数
+  const loadNotificationCount = useCallback(async () => {
+    try {
+      const result = await apiGetJson<{ success: boolean; count?: number; error?: string }>('/api/notifications/count');
+      if (result.success && result.count !== undefined) {
+        setNotificationCount(result.count);
+      }
+    } catch (error) {
+      console.error('获取通知数量失败:', error);
+      setNotificationCount(0);
+    }
+  }, []);
+
   // login prompt listener - 只显示提示，不自动弹出登录框
   useEffect(() => {
     const handleLoginPrompt = (e: Event) => {
@@ -50,11 +63,19 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
       message.warning(customEvent?.detail?.message || '登录已过期，请重新登录', 4);
       // 移除自动弹出登录框的逻辑，右上角会自动变为登出状态
     };
+
+    // 处理通知已读事件，立即刷新通知数量
+    const handleNotificationRead = () => {
+      loadNotificationCount();
+    };
+
     window.addEventListener('showLoginPrompt', handleLoginPrompt);
+    window.addEventListener('notificationRead', handleNotificationRead);
     return () => {
       window.removeEventListener('showLoginPrompt', handleLoginPrompt);
+      window.removeEventListener('notificationRead', handleNotificationRead);
     };
-  }, []);
+  }, [loadNotificationCount]);
 
   // 加载未读通知数量（优化版：使用轻量级端点，页面不可见时停止轮询）
   useEffect(() => {
@@ -64,19 +85,6 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     }
 
     let interval: NodeJS.Timeout | null = null;
-
-    const loadNotificationCount = async () => {
-      try {
-        // 使用轻量级的 count 端点，只返回数量，不返回完整数据
-        const result = await apiGetJson<{ success: boolean; count?: number; error?: string }>('/api/notifications/count');
-        if (result.success && result.count !== undefined) {
-          setNotificationCount(result.count);
-        }
-      } catch (error) {
-        console.error('获取通知数量失败:', error);
-        setNotificationCount(0);
-      }
-    };
 
     // 初始加载
     loadNotificationCount();
@@ -112,7 +120,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
         clearInterval(interval);
       }
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, loadNotificationCount]);
 
   // stable icon getter (no change)
   const getIcon = useCallback((iconName?: string) => {

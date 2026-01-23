@@ -35,22 +35,34 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
 
   // 加载通知列表
   useEffect(() => {
+    setIsLoading(true);
     loadNotifications();
-    
+
     // 当页面重新获得焦点时刷新通知列表（确保能看到最新消息）
     const handleFocus = () => {
+      setIsLoading(true);
       loadNotifications();
     };
-    
+
     window.addEventListener('focus', handleFocus);
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
+  // 当通知数量从非空变为0时，触发小红点更新
+  useEffect(() => {
+    if (notifications.length === 0 && !isLoading) {
+      // 延迟一点时间，确保API调用已经完成
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('notificationRead'));
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [notifications.length, isLoading]);
+
   const loadNotifications = async () => {
     try {
-      setIsLoading(true);
       const result = await apiGetJson<{ success: boolean; notifications?: Notification[]; error?: string }>('/api/notifications');
 
       if (result.success && result.notifications) {
@@ -81,6 +93,9 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
         onNotificationRead();
       }
 
+      // 触发全局事件，通知 Header 立即更新通知数量
+      window.dispatchEvent(new CustomEvent('notificationRead'));
+
       // 跳转到文章页面，定位到评论区域
       router.push(`/article/${notification.article_id}#comment-section`);
     } catch (error) {
@@ -98,15 +113,8 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
     return content.substring(0, maxLength) + '...';
   };
 
+  // 显示加载状态
   if (isLoading) {
-    return (
-      <div className="pt-4 h-full flex items-center justify-center">
-        <div style={{ color: '#000000', fontSize: '14px' }}>加载中...</div>
-      </div>
-    );
-  }
-
-  if (notifications.length === 0) {
     return (
       <div className="pt-4 h-full flex flex-col items-center justify-center">
         <div
@@ -115,6 +123,16 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
         >
           <MessageCircle size={24} />
         </div>
+        <div style={{ color: '#000000', fontSize: '14px', textAlign: 'center' }}>
+          {/* 加载中... */}
+        </div>
+      </div>
+    );
+  }
+
+  if (notifications.length === 0) {
+    return (
+      <div className="pt-4 h-full flex flex-col items-center justify-center">
         <div style={{ color: '#000000', fontSize: '14px', textAlign: 'center' }}>
           暂无未读通知
         </div>

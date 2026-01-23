@@ -138,7 +138,9 @@ export default function ClientArticleShell({
       <ClientHeaderSetter articleId={articleId} editMode={editMode} />
 
       {/* 内容区：单一入口 */}
-      <div style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 20px', boxSizing: 'border-box' }}>
+      <div
+        data-content-area
+        style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 20px', boxSizing: 'border-box' }}>
         {editMode === 'view' ? (
           <ArticleContentClient article={article} />
         ) : (
