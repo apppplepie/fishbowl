@@ -1305,144 +1305,144 @@ export default function BookPage() {
               width: '100%',
               maxWidth: '800px',
               minWidth: isMobile ? 'auto' : '600px',
-              minHeight: '100vh',
+              minHeight: '50vh',
               padding: isMobile ? '20px' : '40px',
               background: 'rgba(255, 255, 255, 0.9)',
               backdropFilter: 'blur(8px)',
               borderRadius: '12px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
               boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
             }}
             data-content-area
           >
-            {editMode === 'edit' ? (
-              <BlockEditor
-                blocks={book.blocks || []}
-                onChange={(blocks) => setBook({ ...book, blocks })}
-              />
-            ) : (
-              // 渲染书籍内容（简化动画，移除延迟，提升性能）
-              <div>
-                {book.blocks && book.blocks.map((block: any, index: number) => {
-                  const blockStyle = {
-                    marginBottom: block.type === 'text' ? (isMobile ? '16px' : '24px') : '24px',
-                  };
+            {/* 书籍内容区域 */}
+            <div style={{ flex: 1 }}>
+              {editMode === 'edit' ? (
+                <BlockEditor
+                  blocks={book.blocks || []}
+                  onChange={(blocks) => setBook({ ...book, blocks })}
+                />
+              ) : (
+                // 渲染书籍内容（简化动画，移除延迟，提升性能）
+                <div>
+                  {book.blocks && book.blocks.map((block: any, index: number) => {
+                    const blockStyle = {
+                      marginBottom: block.type === 'text' ? (isMobile ? '16px' : '24px') : '24px',
+                    };
 
-                  switch (block.type) {
-                    case 'text':
-                      return (
-                        <div key={block.id || index} className="book-content-block" style={blockStyle}>
-                          <TextBlock block={block} mode="view" />
-                        </div>
-                      );
+                    switch (block.type) {
+                      case 'text':
+                        return (
+                          <div key={block.id || index} className="book-content-block" style={blockStyle}>
+                            <TextBlock block={block} mode="view" />
+                          </div>
+                        );
 
-                    case 'image':
-                      return (
-                        <div key={block.id || index} className="book-content-block" style={blockStyle}>
-                          <ImageBlock block={block} mode="view" />
-                        </div>
-                      );
+                      case 'image':
+                        return (
+                          <div key={block.id || index} className="book-content-block" style={blockStyle}>
+                            <ImageBlock block={block} mode="view" />
+                          </div>
+                        );
 
-                    case 'code':
-                      return (
-                        <div key={block.id || index} className="book-content-block" style={blockStyle}>
-                          <CodeBlock block={block} mode="view" />
-                        </div>
-                      );
+                      case 'code':
+                        return (
+                          <div key={block.id || index} className="book-content-block" style={blockStyle}>
+                            <CodeBlock block={block} mode="view" />
+                          </div>
+                        );
 
-                    case 'placeholder':
-                      return (
-                        <div key={block.id || index} className="book-content-block" style={blockStyle}>
-                          <PlaceholderBlock block={block as any} />
-                        </div>
-                      );
+                      case 'placeholder':
+                        return (
+                          <div key={block.id || index} className="book-content-block" style={blockStyle}>
+                            <PlaceholderBlock block={block as any} />
+                          </div>
+                        );
 
-                    default:
-                      return null;
-                  }
-                })}
+                      default:
+                        return null;
+                    }
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 文章导航 - 延迟加载 */}
+            {shouldLoadNavigation && navigation && !navigationLoading && (navigation.canGoPrev || navigation.canGoNext) && (
+              <div style={{
+                width: '100%',
+                maxWidth: '800px',
+                padding: isMobile ? '20px 8px 0' : '40px 20px 0',
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr',
+                alignItems: 'center',
+                gap: '16px',
+              }}>
+                <div style={{ textAlign: 'left' }}>
+                  {navigation.canGoPrev && (
+                    <Button
+                      type="link"
+                      icon={<LeftOutlined />}
+                      onClick={async () => {
+                        const prevId = goToPrev();
+                        if (prevId) {
+                          // 从 BookStore 获取分类（优先使用已设置的 bookCategoryId，避免额外查找）
+                          const { bookCategoryId } = useBookStore.getState();
+                          const targetCategory = bookCategoryId || getArticleCategory(prevId) || undefined;
+                          await virtualNavigate(prevId, targetCategory);
+                        }
+                      }}
+                      className="nav-button-prev"
+                    >
+                      上一页
+                    </Button>
+                  )}
+                </div>
+
+                <div style={{
+                  fontSize: '14px',
+                  color: '#666',
+                  textAlign: 'center',
+                  justifySelf: 'center',
+                }}>
+                  {navigation.currentIndex + 1} / {navigation.totalCount}
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  {navigation.canGoNext && (
+                    <Button
+                      type="link"
+                      onClick={async () => {
+                        const nextId = goToNext();
+                        if (nextId) {
+                          // 从 BookStore 获取分类（优先使用已设置的 bookCategoryId，避免额外查找）
+                          const { bookCategoryId } = useBookStore.getState();
+                          const targetCategory = bookCategoryId || getArticleCategory(nextId) || undefined;
+                          await virtualNavigate(nextId, targetCategory);
+                        }
+                      }}
+                      className="nav-button-next"
+                    >
+                      下一页
+                      <RightOutlined />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>
-
-          {/* 文章导航 - 延迟加载 */}
-          {shouldLoadNavigation && navigation && !navigationLoading && (navigation.canGoPrev || navigation.canGoNext) && (
-            <div style={{
-              width: '100%',
-              maxWidth: '800px',
-              padding: isMobile ? '12px 8px 0' : '40px 20px 0',
-              display: 'grid',
-              gridTemplateColumns: '1fr auto 1fr',
-              alignItems: 'center',
-              gap: '16px',
-            }}>
-              <div style={{ textAlign: 'left' }}>
-                {navigation.canGoPrev && (
-                  <Button
-                    type="link"
-                    icon={<LeftOutlined />}
-                    onClick={async () => {
-                      const prevId = goToPrev();
-                      if (prevId) {
-                        // 从 BookStore 获取分类（优先使用已设置的 bookCategoryId，避免额外查找）
-                        const { bookCategoryId } = useBookStore.getState();
-                        const targetCategory = bookCategoryId || getArticleCategory(prevId) || undefined;
-                        await virtualNavigate(prevId, targetCategory);
-                      }
-                    }}
-                    style={{
-                      color: '#1890ff',
-                      padding: '4px 8px',
-                    }}
-                  >
-                    上一页
-                  </Button>
-                )}
-              </div>
-
-              <div style={{
-                fontSize: '14px',
-                color: '#666',
-                textAlign: 'center',
-                justifySelf: 'center',
-              }}>
-                {navigation.currentIndex + 1} / {navigation.totalCount}
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
-                {navigation.canGoNext && (
-                  <Button
-                    type="link"
-                    icon={<RightOutlined />}
-                    onClick={async () => {
-                      const nextId = goToNext();
-                      if (nextId) {
-                        // 从 BookStore 获取分类（优先使用已设置的 bookCategoryId，避免额外查找）
-                        const { bookCategoryId } = useBookStore.getState();
-                        const targetCategory = bookCategoryId || getArticleCategory(nextId) || undefined;
-                        await virtualNavigate(nextId, targetCategory);
-                      }
-                    }}
-                    style={{
-                      color: '#1890ff',
-                      padding: '4px 8px',
-                    }}
-                  >
-                    下一页
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* 互动按钮 */}
           <div
             style={{
               width: '100%',
               maxWidth: '800px',
-              minWidth: isMobile ? 'auto' : '600px',
+              minWidth: isMobile ? 'auto' : '800px',
               margin: '0 auto',
-              padding: isMobile ? '20px' : '40px',
+              padding: isMobile ? '0px' : '0px',
               boxSizing: 'border-box',
             }}
             data-export-hide
@@ -1454,6 +1454,7 @@ export default function BookPage() {
                 padding: isMobile ? '20px' : '40px',
                 borderRadius: '12px',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                marginTop: '20px'
               }}
               data-export-hide
             >

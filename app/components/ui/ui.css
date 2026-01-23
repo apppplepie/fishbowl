@@ -82,6 +82,17 @@
   text-decoration: underline;
 }
 
+/* Navigation Button Enhancements */
+.nav-button-prev,
+.nav-button-next {
+  color: #000000;
+}
+
+.nav-button-prev:active:not(:disabled),
+.nav-button-next:active:not(:disabled) {
+  color: #ffffff;
+}
+
 .ui-button-danger {
   border-color: var(--ui-color-error);
   color: var(--ui-color-error);
