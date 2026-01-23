@@ -200,6 +200,20 @@ export function lerpColor(start: string, end: string, t: number): string {
  * tailwindToCSS('bg-gradient-to-b from-orange-50 to-rose-200')
  * // => 'linear-gradient(to bottom, #fff7ed 0%, #fecdd3 100%)'
  */
+/**
+ * 解析颜色值，支持Tailwind标准颜色和自定义十六进制颜色
+ */
+function resolveColor(colorValue: string): string {
+  // 如果是十六进制颜色（如[#7fcdbb]），直接提取
+  const hexMatch = colorValue.match(/^\[([#\w]+)\]$/);
+  if (hexMatch) {
+    return hexMatch[1];
+  }
+
+  // 否则查找Tailwind颜色映射
+  return TAILWIND_COLOR_MAP[colorValue] || '#ffffff';
+}
+
 export function tailwindToCSS(tailwindClass: string): string {
   // 检查缓存
   if (gradientCache.has(tailwindClass)) {
@@ -211,13 +225,13 @@ export function tailwindToCSS(tailwindClass: string): string {
   const viaMatch = tailwindClass.match(/via-(\S+)/);
   const toMatch = tailwindClass.match(/to-(\S+)/);
 
-  const fromColor = fromMatch ? TAILWIND_COLOR_MAP[fromMatch[1]] || '#ffffff' : '#ffffff';
-  const toColor = toMatch ? TAILWIND_COLOR_MAP[toMatch[1]] || '#ffffff' : '#ffffff';
+  const fromColor = fromMatch ? resolveColor(fromMatch[1]) : '#ffffff';
+  const toColor = toMatch ? resolveColor(toMatch[1]) : '#ffffff';
 
   let result: string;
 
   if (viaMatch) {
-    const viaColor = TAILWIND_COLOR_MAP[viaMatch[1]] || '#ffffff';
+    const viaColor = resolveColor(viaMatch[1]);
     result = `linear-gradient(to bottom, ${fromColor} 0%, ${viaColor} 50%, ${toColor} 100%)`;
   } else {
     result = `linear-gradient(to bottom, ${fromColor} 0%, ${toColor} 100%)`;
@@ -225,7 +239,7 @@ export function tailwindToCSS(tailwindClass: string): string {
 
   // 存入缓存
   gradientCache.set(tailwindClass, result);
-  
+
   return result;
 }
 

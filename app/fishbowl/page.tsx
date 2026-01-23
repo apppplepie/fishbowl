@@ -572,7 +572,7 @@ export default function FishbowlPage() {
                   : 'scale-100 hover:scale-110 ring-transparent opacity-70 hover:opacity-100'
               }`}
               style={{
-                background: `linear-gradient(135deg, ${theme.orbColors.sun}, ${theme.orbColors.waterDeep})`
+                background: theme.buttonGradient
               }}
               title={theme.name}
             />

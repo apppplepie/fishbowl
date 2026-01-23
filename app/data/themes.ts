@@ -8,6 +8,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-[#f2f0eb]',
     skyGradient: 'bg-gradient-to-b from-orange-100 via-rose-100 to-indigo-100',
     waterGradient: 'bg-gradient-to-b from-indigo-100 via-teal-100 to-emerald-100',
+    buttonGradient: 'linear-gradient(135deg, rgb(224, 242, 254), rgb(20, 184, 166), rgb(16, 185, 129))',
     orbColors: {
       sun: 'rgba(255, 218, 185, 0.6)',
       atmosphere: 'rgba(255, 228, 225, 0.4)',
@@ -32,6 +33,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-pink-50',
     skyGradient: 'bg-gradient-to-b from-red-50 via-pink-100 to-purple-100',
     waterGradient: 'bg-gradient-to-b from-purple-100 via-fuchsia-200 to-violet-300',
+    buttonGradient: 'linear-gradient(135deg, rgb(243, 232, 255), rgb(232, 121, 249), rgb(124, 58, 237))',
     orbColors: {
       sun: 'rgba(255, 240, 245, 0.8)', // Lavender Blush
       atmosphere: 'rgba(255, 192, 203, 0.4)', // Pink
@@ -56,6 +58,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-orange-50',
     skyGradient: 'bg-gradient-to-b from-orange-100 via-amber-100 to-yellow-100',
     waterGradient: 'bg-gradient-to-b from-yellow-100 via-teal-200 to-teal-500',
+    buttonGradient: 'linear-gradient(135deg, rgb(254, 240, 138), rgb(20, 184, 166), rgb(5, 150, 105))',
     orbColors: {
       sun: 'rgba(255, 160, 122, 0.5)', // Light Salmon
       atmosphere: 'rgba(255, 218, 185, 0.4)', // Peach
@@ -80,6 +83,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-sky-50',
     skyGradient: 'bg-gradient-to-b from-sky-300 via-sky-200 to-white',
     waterGradient: 'bg-gradient-to-b from-cyan-100 via-cyan-400 to-blue-600',
+    buttonGradient: 'linear-gradient(135deg, rgb(165, 243, 252), rgb(34, 211, 238), rgb(37, 99, 235))',
     orbColors: {
       sun: 'rgba(255, 255, 224, 0.9)', // Light Yellow Sun
       atmosphere: 'rgba(224, 255, 255, 0.4)', // Light Cyan
@@ -104,6 +108,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-green-50',
     skyGradient: 'bg-gradient-to-b from-yellow-50 via-lime-50 to-green-100',
     waterGradient: 'bg-gradient-to-b from-emerald-100 via-emerald-600 to-green-900',
+    buttonGradient: 'linear-gradient(135deg, rgb(209, 250, 229), rgb(5, 150, 105), rgb(22, 101, 52))',
     orbColors: {
       sun: 'rgba(250, 250, 210, 0.6)',
       atmosphere: 'rgba(152, 251, 152, 0.3)',
@@ -128,6 +133,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-slate-900',
     skyGradient: 'bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900',
     waterGradient: 'bg-gradient-to-b from-indigo-950 via-blue-950 to-slate-950',
+    buttonGradient: 'linear-gradient(135deg, rgb(30, 58, 138), rgb(23, 37, 84), rgb(15, 23, 42))',
     orbColors: {
       sun: 'rgba(100, 149, 237, 0.3)',
       atmosphere: 'rgba(25, 25, 112, 0.6)',
@@ -149,9 +155,10 @@ export const themes: Theme[] = [
   {
     id: 'deep-ocean',
     name: 'Deep Sea Abyss',
-    pageBg: 'bg-slate-950', // 使用极深的底色呼应深蓝色调
-    skyGradient: 'bg-gradient-to-b from-[#081c54] via-[#225ea8] to-[#1d91c0]', // 深蓝到湖蓝的过渡
-    waterGradient: 'bg-gradient-to-b from-[#41b6c4] via-[#7fcdbb] to-[#f3f8cf]', // 青绿到浅黄的透光感
+    pageBg: 'bg-slate-950', // 使用极深的底色呼应深蓝色调#c7e9b4
+    skyGradient: 'bg-gradient-to-b from-[#7fcdbb] via-[#c7e9b4] to-[#c7e9b4]', // 青绿到浅黄的透光感
+    waterGradient: 'bg-gradient-to-b from-[#c7e9b4] via-[#41b6c4] via-[#1d91c0] to-[#14768a]', // 深蓝到湖蓝的过渡
+    buttonGradient: 'linear-gradient(135deg, rgb(199, 233, 180), rgb(65, 182, 196), rgb(29, 145, 192), rgb(20, 118, 138))',
     orbColors: {
       sun: 'rgba(243, 248, 207, 0.6)', // 使用最亮的浅黄色作为光源
       atmosphere: 'rgba(127, 205, 187, 0.3)', // 蓝绿色大气感
@@ -160,7 +167,7 @@ export const themes: Theme[] = [
     },
     waveColors: [
       'rgba(243, 248, 207, 0.7)', // 浅黄色的浪尖亮光
-      'rgba(199, 233, 180, 0.4)', // 浅绿色的过渡波纹
+      'rgba(65, 182, 196, 0.4)', // 浅绿色的过渡波纹
       'rgba(255, 255, 255, 0.5)', // 纯白浪花
       'rgba(34, 94, 168, 0.3)',   // 中段蓝色的阴影
     ],
@@ -176,6 +183,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-stone-100',
     skyGradient: 'bg-gradient-to-b from-orange-400 via-amber-200 to-yellow-100',
     waterGradient: 'bg-gradient-to-b from-amber-100 via-orange-200 to-red-200',
+    buttonGradient: 'linear-gradient(135deg, rgb(254, 243, 199), rgb(251, 146, 60), rgb(244, 114, 182))',
     orbColors: {
       sun: 'rgba(255, 69, 0, 0.4)',
       atmosphere: 'rgba(255, 215, 0, 0.3)',
@@ -200,6 +208,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-gray-200',
     skyGradient: 'bg-gradient-to-b from-gray-100 via-gray-300 to-gray-400',
     waterGradient: 'bg-gradient-to-b from-gray-500 via-gray-700 to-black',
+    buttonGradient: 'linear-gradient(135deg, rgb(107, 114, 128), rgb(55, 65, 81), rgb(0, 0, 0))',
     orbColors: {
       sun: 'rgba(255, 255, 255, 0.8)',
       atmosphere: 'rgba(200, 200, 200, 0.5)',
@@ -224,6 +233,7 @@ export const themes: Theme[] = [
     pageBg: 'bg-slate-50',
     skyGradient: 'bg-gradient-to-b from-slate-50 via-cyan-50 to-sky-100',
     waterGradient: 'bg-gradient-to-b from-sky-100 via-cyan-200 to-blue-300',
+    buttonGradient: 'linear-gradient(135deg, rgb(224, 242, 254), rgb(103, 232, 249), rgb(59, 130, 246))',
     orbColors: {
       sun: 'rgba(224, 255, 255, 0.6)',
       atmosphere: 'rgba(240, 255, 255, 0.5)',

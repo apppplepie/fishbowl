@@ -27,6 +27,7 @@ export interface Bubble {
     name: string;
     skyGradient: string; // Tailwind classes or CSS gradients
     waterGradient: string; // Tailwind classes or CSS gradients
+    buttonGradient: string; // CSS gradient for theme selector buttons
     pageBg: string; // Tailwind class for the outer background
     orbColors: {
       sun: string; // Hex or RGBA
