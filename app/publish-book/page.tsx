@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Form,
   Input,
@@ -83,9 +83,10 @@ function PublishBookPage() {
   // 为悬浮按钮提供必要的状态
   const [blocks] = useState<Block[]>([]);
 
-  // 自动保存相关
+  // 自动保存相关 - 脏标志 + 防抖
+  const saveTimeoutRef = useRef<number | null>(null);
+  const dirtyRef = useRef(false);
   const lastSavedFormRef = useRef<string>('');
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 保存草稿功能
   const saveDraft = useCallback(() => {
@@ -112,25 +113,53 @@ function PublishBookPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    console.log('保存书籍草稿:', draft);
-
-    // 保存到本地存储
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('book-draft', JSON.stringify(draft));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('保存书籍草稿:', draft);
     }
 
-    // message.success('书籍草稿已保存到本地');
+    // 将写操作安排在空闲时段执行，避免打断主渲染
+    const doWrite = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('book-draft', JSON.stringify(draft));
+          const currentFormData = {
+            ...values,
+            coverFileList: coverFileList.map(file => ({
+              uid: file.uid,
+              name: file.name,
+              status: file.status,
+              url: file.url
+            }))
+          };
+          lastSavedFormRef.current = JSON.stringify(currentFormData);
+          dirtyRef.current = false;
+        }
+      } catch (e) {
+        console.warn('保存草稿失败', e);
+      }
+    };
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
+    } else {
+      // fallback：短延迟异步写
+      setTimeout(doWrite, 0);
+    }
   }, [form, user, coverFileList]);
 
-  // 检查并保存草稿（带防抖）
-  const checkAndSaveDraft = useCallback(() => {
-    // 清除之前的定时器
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+  // 使用 Form.useWatch 监听表单值变化
+  const watchedTitle = Form.useWatch('title', form);
+  const watchedDescription = Form.useWatch('description', form);
+  const watchedTags = Form.useWatch('tags', form);
 
-    // 延迟2秒后保存（防抖）
-    saveTimeoutRef.current = setTimeout(() => {
+  // 标记为脏（在表单值或封面变化时触发）
+  useEffect(() => {
+    dirtyRef.current = true;
+
+    // 防抖：编辑停止 10s 后触发保存
+    if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = window.setTimeout(() => {
+      if (!dirtyRef.current) return;
       const values = form.getFieldsValue();
       const hasContent = (values.title || '').trim() ||
         (values.description || '').trim() ||
@@ -151,13 +180,15 @@ function PublishBookPage() {
         const currentFormStr = JSON.stringify(currentFormData);
 
         if (currentFormStr !== lastSavedFormRef.current) {
-          console.log('🔄 检测到表单变化，自动保存草稿...');
           saveDraft();
-          lastSavedFormRef.current = currentFormStr;
         }
       }
-    }, 2000); // 2秒防抖
-  }, [form, coverFileList, saveDraft]);
+    }, 10000); // 10秒防抖
+
+    return () => {
+      if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
+    };
+  }, [watchedTitle, watchedDescription, watchedTags, coverFileList, form, saveDraft]);
 
   // 加载草稿
   const loadDraft = () => {
@@ -195,32 +226,10 @@ function PublishBookPage() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('book-draft');
     }
-    console.log('已清除书籍草稿');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('已清除书籍草稿');
+    }
   };
-
-  // 使用 Form.useWatch 监听表单值变化
-  const watchedTitle = Form.useWatch('title', form);
-  const watchedDescription = Form.useWatch('description', form);
-  const watchedTags = Form.useWatch('tags', form);
-
-  // 当表单值或封面变化时，触发检查并保存
-  useEffect(() => {
-    checkAndSaveDraft();
-  }, [watchedTitle, watchedDescription, watchedTags, coverFileList, checkAndSaveDraft]);
-
-  // 定期保存（每60秒）作为备份
-  useEffect(() => {
-    const autoSaveInterval = setInterval(() => {
-      checkAndSaveDraft();
-    }, 60000); // 60秒检查一次
-
-    return () => {
-      clearInterval(autoSaveInterval);
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [checkAndSaveDraft]);
 
   // 表单提交
   const onFinish = async (values: any) => {
@@ -292,6 +301,12 @@ function PublishBookPage() {
         coverAccessLevel = 1; // 书籍封面永远公开
       }
 
+      // 书籍简介都是公开内容，两个字段都设为1
+      const visibleAccessLevel = 1;
+      const fullAccessLevel = blocks.length > 0
+        ? Math.max(...blocks.map((block: any) => block.access_level || 1))
+        : 1;
+
       const articleData = {
         title: '简介',
         author: user?.username || '匿名',
@@ -299,7 +314,8 @@ function PublishBookPage() {
         tags: values.tags || [],
         category_id: categoryId,
         blocks: blocks,
-        max_access_level: 1, // 书籍简介都是公开内容
+        visible_access_level: visibleAccessLevel, // 书籍简介可见门槛是公开
+        full_access_level: fullAccessLevel, // 完整阅读权限取决于blocks的最大值
         cover_image: coverImage,
         cover_access_level: coverAccessLevel,
         status: 'published' as const,
@@ -399,10 +415,6 @@ function PublishBookPage() {
             form={form}
             layout="vertical"
             onFinish={onFinish}
-            onValuesChange={() => {
-              // 表单值变化时触发检查
-              checkAndSaveDraft();
-            }}
             initialValues={{
               tags: [],
             }}

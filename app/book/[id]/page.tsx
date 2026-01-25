@@ -710,6 +710,20 @@ export default function BookPage() {
       // 根据当前blocks重新生成excerpt
       const updatedExcerpt = generateExcerptFromBlocks(book.blocks) || '暂无简介';
 
+      // 计算 visible_access_level（所有 blocks 的最小值）和 full_access_level（所有 blocks 的最大值）
+      let visibleAccessLevel: number;
+      let fullAccessLevel: number;
+      
+      if ((book.blocks || []).length > 0) {
+        const accessLevels = (book.blocks || []).map((block: any) => block.access_level || 1);
+        visibleAccessLevel = Math.min(...accessLevels);
+        fullAccessLevel = Math.max(...accessLevels);
+      } else {
+        // 如果没有 blocks，使用现有值或默认值
+        visibleAccessLevel = book.visible_access_level ?? book.max_access_level ?? book.maxAccessLevel ?? 1;
+        fullAccessLevel = book.full_access_level ?? book.max_access_level ?? book.maxAccessLevel ?? 1;
+      }
+
       const updateData = {
         title: book.title,
         author: book.author,
@@ -717,6 +731,8 @@ export default function BookPage() {
         category_id: book.category_id,
         blocks: book.blocks,
         tags: book.tags,
+        visible_access_level: visibleAccessLevel,
+        full_access_level: fullAccessLevel,
         // 封面图片由后端自动计算，无需前端提供
       };
 

@@ -24,6 +24,8 @@ interface RawArticle {
   comments: number;
   category_id: string;
   order_index: number;
+  visible_access_level: number | null;
+  full_access_level: number | null;
   category_name: string;
   category_path: string | null;
   category_depth: number | null;
@@ -48,6 +50,8 @@ interface ProcessedArticle {
   comments: number;
   categoryId: string;
   orderInCategory: number;
+  visibleAccessLevel: number | null;
+  fullAccessLevel: number | null;
   categoryName: string;
   coverImage: any | null; // 封面图片对象
   coverIsPlaceholder: boolean; // 是否为占位符封面
@@ -211,6 +215,8 @@ export async function GET(request: NextRequest) {
         a.comments,
         a.category_id,
         a.order_index,
+        a.visible_access_level,
+        a.full_access_level,
         c.name as category_name,
         c.path as category_path,
         c.depth as category_depth,
@@ -268,6 +274,8 @@ export async function GET(request: NextRequest) {
       comments: article.comments,
       categoryId: article.category_id,
       orderInCategory: article.order_index,
+      visibleAccessLevel: article.visible_access_level,
+      fullAccessLevel: article.full_access_level,
       categoryName: article.category_name,
       coverImage: article.cover_image,
       coverIsPlaceholder: article.cover_is_placeholder,

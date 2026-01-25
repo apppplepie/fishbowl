@@ -30,7 +30,9 @@ interface CreateArticleRequest {
   tags?: string[];
   category_id?: string | null;
   order_index?: number;
-  max_access_level?: number;
+  visible_access_level?: number; // 宽松模式：文章可见的最低权限门槛（所有blocks的最小值）
+  full_access_level?: number; // 严格模式：完整阅读所需的权限等级（所有blocks的最大值）
+  max_access_level?: number; // 向后兼容，已废弃
   cover_image?: any | null; // 封面图片对象，由前端指定或后端自动计算
   cover_access_level?: number; // 封面访问等级，默认为1
   status?: 'draft' | 'published';
@@ -159,11 +161,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 计算 visible_access_level（所有 blocks 的最小 access_level）和 full_access_level（所有 blocks 的最大 access_level）
+    let visibleAccessLevel = 1;
+    let fullAccessLevel = 1;
+    if (body.blocks && body.blocks.length > 0) {
+      const accessLevels = body.blocks.map((block: any) => block.access_level || 1);
+      visibleAccessLevel = Math.min(...accessLevels);
+      fullAccessLevel = Math.max(...accessLevels);
+    } else {
+      // 如果没有 blocks，使用前端传入的值或默认值
+      visibleAccessLevel = body.visible_access_level ?? body.max_access_level ?? 1;
+      fullAccessLevel = body.full_access_level ?? 1;
+    }
+
     // 2. 插入文章记录（使用当前登录用户作者）
     await query(
       `INSERT INTO articles
-       (id, title, author, author_id, published_at, excerpt, type, category_id, order_index, status, max_access_level, cover_image, cover_access_level, likes, shares, comments)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+       (id, title, author, author_id, published_at, excerpt, type, category_id, order_index, status, visible_access_level, full_access_level, cover_image, cover_access_level, likes, shares, comments)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
       [
         articleId,
         body.title,
@@ -175,7 +190,8 @@ export async function POST(request: NextRequest) {
         body.category_id || 'cat_uncategorized',  // 默认分类
         body.order_index || 0,
         body.status || 'published',
-        body.max_access_level || 1,  // 添加 max_access_level，默认值为1
+        visibleAccessLevel,  // visible_access_level：所有 blocks 的最小值
+        fullAccessLevel,    // full_access_level：所有 blocks 的最大值
         coverImage ? JSON.stringify(coverImage) : null,  // 封面图片JSON
         coverAccessLevel,  // 封面访问等级
       ]

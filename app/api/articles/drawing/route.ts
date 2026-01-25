@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
         a.likes,
         a.comments,
         a.shares,
+        a.visible_access_level,
+        a.full_access_level,
         -- 封面图片处理：根据权限返回真实封面或占位符
         CASE
           WHEN a.cover_image IS NOT NULL AND a.cover_access_level <= ? THEN

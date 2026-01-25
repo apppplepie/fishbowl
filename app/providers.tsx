@@ -7,6 +7,7 @@ import { AppThemeProvider } from './contexts/AppThemeContext';
 import { HeaderProvider } from './contexts/HeaderContext';
 import { PageShellProvider } from './contexts/PageShellContext';
 import { ResponsiveProvider } from './contexts/ResponsiveContext';
+import { AccessFilterProvider } from './contexts/AccessFilterContext';
 
 /**
  * 客户端 Providers 包装组件
@@ -25,13 +26,15 @@ export default function Providers({ children }: { children: ReactNode }) {
     <AppThemeProvider>
       <ResponsiveProvider>
         <AuthProvider>
-          <HeaderProvider>
-            <PageShellProvider>         {/* <- 包裹在 Header 之后，GlobalLayout 之前 */}
-              <ChapterLabelProvider>
-                {children}
-              </ChapterLabelProvider>
-            </PageShellProvider>
-          </HeaderProvider>
+          <AccessFilterProvider>
+            <HeaderProvider>
+              <PageShellProvider>         {/* <- 包裹在 Header 之后，GlobalLayout 之前 */}
+                <ChapterLabelProvider>
+                  {children}
+                </ChapterLabelProvider>
+              </PageShellProvider>
+            </HeaderProvider>
+          </AccessFilterProvider>
         </AuthProvider>
       </ResponsiveProvider>
     </AppThemeProvider>

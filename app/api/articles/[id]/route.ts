@@ -184,9 +184,41 @@ export async function PUT(
       updateValues.push(body.excerpt);
     }
 
-    // 如果提供了 max_access_level，更新最大访问等级
-    if (body.max_access_level !== undefined) {
-      updateFields.push('max_access_level = ?');
+    // 计算 visible_access_level 和 full_access_level
+    // 如果提供了 blocks，根据 blocks 计算；否则使用传入的值
+    let visibleAccessLevel: number | undefined;
+    let fullAccessLevel: number | undefined;
+    
+    if (body.blocks && Array.isArray(body.blocks) && body.blocks.length > 0) {
+      // 根据 blocks 计算
+      const accessLevels = body.blocks.map((block: any) => block.access_level || 1);
+      visibleAccessLevel = Math.min(...accessLevels);
+      fullAccessLevel = Math.max(...accessLevels);
+    } else if (body.visible_access_level !== undefined || body.full_access_level !== undefined) {
+      // 直接使用传入的值
+      visibleAccessLevel = body.visible_access_level;
+      fullAccessLevel = body.full_access_level;
+    } else if (body.max_access_level !== undefined) {
+      // 向后兼容：如果只提供了 max_access_level，同时设置两个字段
+      visibleAccessLevel = body.max_access_level;
+      fullAccessLevel = body.max_access_level;
+    }
+
+    // 更新 visible_access_level 和 full_access_level
+    if (visibleAccessLevel !== undefined) {
+      updateFields.push('visible_access_level = ?');
+      updateValues.push(visibleAccessLevel);
+    }
+    if (fullAccessLevel !== undefined) {
+      updateFields.push('full_access_level = ?');
+      updateValues.push(fullAccessLevel);
+    }
+
+    // 向后兼容：如果提供了 max_access_level，也更新（但优先使用上面的计算值）
+    if (body.max_access_level !== undefined && visibleAccessLevel === undefined) {
+      updateFields.push('visible_access_level = ?');
+      updateValues.push(body.max_access_level);
+      updateFields.push('full_access_level = ?');
       updateValues.push(body.max_access_level);
     }
 

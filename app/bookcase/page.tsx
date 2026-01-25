@@ -33,6 +33,8 @@ import { cacheArticleList, getCachedArticleList, clearBookCache } from '@/app/ut
 import '../styles/articles-filter.css';
 import { useHeader } from '../contexts/HeaderContext';
 import { apiGet } from '@/lib/apiClient';
+import { useAccessFilter } from '@/app/hooks/useAccessFilter';
+import { useAuth } from '@/app/hooks/useAuth';
 
 // 预缓存所有书籍的文章列表
 const preloadAllBookArticleLists = async () => {
@@ -131,6 +133,8 @@ function BookcasePageContent() {
   const { setConfig } = usePageShell();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { filterMode } = useAccessFilter();
+  const { user, isLoggedIn } = useAuth();
   
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -535,26 +539,49 @@ function BookcasePageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryFromUrl]);
 
+  // 获取用户权限等级（未登录用户默认为2）
+  const userMaxAccessLevel = useMemo(() => {
+    if (!isLoggedIn || !user) return 2; // 未登录用户默认2级
+    return user.max_access_level ?? 2;
+  }, [isLoggedIn, user]);
+
   // 过滤文章
   const filteredCards = useMemo(() => {
     const filtered = cards.filter(article => {
-      // 1. 标签过滤（如果选了标签，文章必须包含至少一个选中的标签）
+      // 获取文章的权限字段（兼容新旧字段名）
+      const articleVisibleLevel = article.visible_access_level ?? article.visibleAccessLevel ?? article.max_access_level ?? article.maxAccessLevel ?? 1;
+      const articleFullLevel = article.full_access_level ?? article.fullAccessLevel ?? articleVisibleLevel;
+
+      // 根据过滤模式进行过滤
+      let matchAccessLevel = false;
+      if (filterMode === 'study') {
+        // 学习模式：只显示完全公开的文章
+        matchAccessLevel = articleFullLevel === 1;
+      } else if (filterMode === 'strict') {
+        // 严格模式：用户权限 >= 文章完整阅读权限
+        matchAccessLevel = userMaxAccessLevel >= articleFullLevel;
+      } else if (filterMode === 'loose') {
+        // 宽松模式：用户权限 >= 文章可见权限
+        matchAccessLevel = userMaxAccessLevel >= articleVisibleLevel;
+      }
+
+      // 2. 标签过滤（如果选了标签，文章必须包含至少一个选中的标签）
       const matchTags = selectedTags.length === 0 ||
         article.tags?.some((tag: string) => selectedTags.includes(tag));
 
-      // 2. 关键词过滤（搜索标题、作者、摘要）
+      // 3. 关键词过滤（搜索标题、作者、摘要）
       const keyword = searchKeyword.toLowerCase().trim();
       const matchSearch = !keyword ||
         article.title?.toLowerCase().includes(keyword) ||
         article.author?.toLowerCase().includes(keyword) ||
         article.excerpt?.toLowerCase().includes(keyword);
 
-      // 两个条件都要满足
-      return matchTags && matchSearch;
+      // 三个条件都要满足
+      return matchAccessLevel && matchTags && matchSearch;
     });
 
     return filtered;
-  }, [cards, selectedTags, searchKeyword]);
+  }, [cards, selectedTags, searchKeyword, filterMode, userMaxAccessLevel]);
 
   const triggerLoadMore = useCallback(() => {
     if (!hasMore || loadingRef.current) return;

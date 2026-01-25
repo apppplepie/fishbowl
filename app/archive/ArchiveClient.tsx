@@ -9,6 +9,8 @@ import { usePageShell } from '@/app/contexts/PageShellContext';
 import { apiGet } from '@/lib/apiClient';
 import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
+import { useAccessFilter } from '@/app/hooks/useAccessFilter';
+import { useAuth } from '@/app/hooks/useAuth';
 
 // 轻量级瀑布流组件
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
@@ -57,6 +59,8 @@ export default function ArchiveClient({
     const router = useRouter();
     const searchParams = useSearchParams();
     const pathname = usePathname();
+    const { filterMode } = useAccessFilter();
+    const { user, isLoggedIn } = useAuth();
 
     // 使用服务端预取的数据初始化
     const [cards, setCards] = useState<any[]>(initialArticles);
@@ -386,15 +390,39 @@ export default function ArchiveClient({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchKeyword, selectedCategoryId]); // 移除 loadArticles 依赖，避免不必要的重新创建
 
-    // 过滤文章（仅用于客户端标签筛选，搜索由服务端处理）
+    // 获取用户权限等级（未登录用户默认为2）
+    const userMaxAccessLevel = useMemo(() => {
+        if (!isLoggedIn || !user) return 2; // 未登录用户默认2级
+        return user.max_access_level ?? 2;
+    }, [isLoggedIn, user]);
+
+    // 过滤文章（权限过滤 + 标签筛选，搜索由服务端处理）
     const filteredCards = useMemo(() => {
         return cards.filter(article => {
+            // 获取文章的权限字段（兼容新旧字段名）
+            const articleVisibleLevel = article.visible_access_level ?? article.visibleAccessLevel ?? article.max_access_level ?? article.maxAccessLevel ?? 1;
+            const articleFullLevel = article.full_access_level ?? article.fullAccessLevel ?? articleVisibleLevel;
+
+            // 根据过滤模式进行过滤
+            let matchAccessLevel = false;
+            if (filterMode === 'study') {
+                // 学习模式：只显示完全公开的文章
+                matchAccessLevel = articleFullLevel === 1;
+            } else if (filterMode === 'strict') {
+                // 严格模式：用户权限 >= 文章完整阅读权限
+                matchAccessLevel = userMaxAccessLevel >= articleFullLevel;
+            } else if (filterMode === 'loose') {
+                // 宽松模式：用户权限 >= 文章可见权限
+                matchAccessLevel = userMaxAccessLevel >= articleVisibleLevel;
+            }
+
+            // 标签过滤
             const matchTags = selectedTags.length === 0 ||
                 article.tags?.some((tag: string) => selectedTags.includes(tag));
 
-            return matchTags;
+            return matchAccessLevel && matchTags;
         });
-    }, [cards, selectedTags]);
+    }, [cards, selectedTags, filterMode, userMaxAccessLevel]);
 
     // 点击卡片处理
     const handleCardClick = useCallback((card: any) => {

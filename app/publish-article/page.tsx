@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Form, 
   Input, 
@@ -98,7 +98,9 @@ export default function PublishArticlePage() {
           tags: draft.tags,
         });
         setBlocks(draft.blocks || []);
-        console.log('✅ 自动加载了文章草稿');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ 自动加载了文章草稿');
+        }
       } catch (error) {
         console.warn('自动加载草稿失败:', error);
       }
@@ -116,33 +118,54 @@ export default function PublishArticlePage() {
   ]);
   
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  // 自动保存相关
+  // 自动保存相关 - 脏标志 + 防抖
+  const saveTimeoutRef = useRef<number | null>(null);
+  const dirtyRef = useRef(false);
   const lastSavedBlocksRef = useRef<string>('');
 
-  // 自动保存草稿 - 每60秒检查一次
+  // 标记为脏（在 blocks 变化时触发）
   useEffect(() => {
-    const autoSaveInterval = setInterval(() => {
-      // 检查 blocks 是否有实际内容且有更新
-      const hasContent = blocks.some(block => {
-        if (block.type === 'text') return (block.content || '').trim().length > 0;
-        if (block.type === 'code') return (block.code || '').trim().length > 0;
-        if (block.type === 'image') return true;
-        return false;
-      });
+    dirtyRef.current = true;
 
-      if (hasContent) {
-        // 比较当前 blocks 与上次保存的是否不同
-        const currentBlocksStr = JSON.stringify(blocks);
-        if (currentBlocksStr !== lastSavedBlocksRef.current) {
-          console.log('🔄 检测到内容变化，自动保存草稿...');
-          saveDraft();
-          lastSavedBlocksRef.current = currentBlocksStr;
+    // 防抖：编辑停止 10s 后触发保存
+    if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = window.setTimeout(() => {
+      if (!dirtyRef.current) return;
+      const values = form.getFieldsValue();
+      const draft = {
+        id: `draft-${Date.now()}`,
+        title: values.title || '未命名草稿',
+        author: user?.username || '匿名',
+        tags: values.tags || [],
+        category_id: values.category_id || null,
+        blocks,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // 将写操作安排在空闲时段执行，避免打断主渲染
+      const doWrite = () => {
+        try {
+          localStorage.setItem('article-draft', JSON.stringify(draft));
+          lastSavedBlocksRef.current = JSON.stringify(blocks);
+          dirtyRef.current = false;
+        } catch (e) {
+          console.warn('保存草稿失败', e);
         }
-      }
-    }, 60000); // 60秒检查一次
+      };
 
-    return () => clearInterval(autoSaveInterval);
-  }, [blocks]);
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
+      } else {
+        // fallback：短延迟异步写
+        setTimeout(doWrite, 0);
+      }
+    }, 10000);
+
+    return () => {
+      if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
+    };
+  }, [blocks, form, user?.username]); // 仅在 blocks 变化时触发
 
   // 表单提交
   const onFinish = async (values: any) => {
@@ -177,9 +200,12 @@ export default function PublishArticlePage() {
       // 继续发布，后端可能会自动处理
     }
 
-    // 计算所有 blocks 中 access_level 的最小值
-    const maxAccessLevel = blocks.length > 0
+    // 计算 visible_access_level（所有 blocks 的最小值）和 full_access_level（所有 blocks 的最大值）
+    const visibleAccessLevel = blocks.length > 0
       ? Math.min(...blocks.map(block => block.access_level || 1))
+      : 1;
+    const fullAccessLevel = blocks.length > 0
+      ? Math.max(...blocks.map(block => block.access_level || 1))
       : 1;
 
     const articleData = {
@@ -190,7 +216,8 @@ export default function PublishArticlePage() {
       category_id: categoryId,
       order_index: orderInCategory,
       blocks: blocks,
-      max_access_level: maxAccessLevel,
+      visible_access_level: visibleAccessLevel,
+      full_access_level: fullAccessLevel,
       // 封面图片由后端自动计算，无需前端提供
       status: 'published' as const,
     };
@@ -239,12 +266,28 @@ export default function PublishArticlePage() {
       updatedAt: new Date().toISOString(),
     };
 
-    console.log('保存草稿:', draft);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('保存草稿:', draft);
+    }
     
-    // 这里应该保存到本地存储或后端
-    localStorage.setItem('article-draft', JSON.stringify(draft));
-    
-    message.success('草稿已保存到本地');
+    // 将写操作安排在空闲时段执行，避免打断主渲染
+    const doWrite = () => {
+      try {
+        localStorage.setItem('article-draft', JSON.stringify(draft));
+        lastSavedBlocksRef.current = JSON.stringify(blocks);
+        dirtyRef.current = false;
+        message.success('草稿已保存到本地');
+      } catch (e) {
+        console.warn('保存草稿失败', e);
+      }
+    };
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
+    } else {
+      // fallback：短延迟异步写
+      setTimeout(doWrite, 0);
+    }
   };
 
   // 加载草稿
@@ -270,47 +313,29 @@ export default function PublishArticlePage() {
   // 清除草稿
   const clearDraft = () => {
     localStorage.removeItem('article-draft');
-    console.log('已清除文章草稿');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('已清除文章草稿');
+    }
   };
 
-  // 统计信息
-  const getStatistics = () => {
+  // 统计信息 - 使用 useMemo 缓存，避免每次渲染都循环 blocks
+  const stats = useMemo(() => {
     const textBlocks = blocks.filter(b => b.type === 'text');
     const imageBlocks = blocks.filter(b => b.type === 'image');
     const codeBlocks = blocks.filter(b => b.type === 'code');
-    
-    const totalChars = textBlocks.reduce((sum, block) => {
-      return sum + (block as any).content?.length || 0;
-    }, 0);
-
+    const totalChars = textBlocks.reduce((sum, block) => sum + ((block as any).content?.length || 0), 0);
     return {
       totalBlocks: blocks.length,
       textBlocks: textBlocks.length,
       imageBlocks: imageBlocks.length,
       codeBlocks: codeBlocks.length,
       totalChars,
-      estimatedReadTime: Math.max(1, Math.ceil(totalChars / 400)), // 假设每分钟阅读400字
+      estimatedReadTime: Math.max(1, Math.ceil(totalChars / 400)),
     };
-  };
+  }, [blocks]);
 
-  const stats = getStatistics();
-
-  // 批量格式化所有文字块
+  // 批量格式化所有文字块 - 使用 requestIdleCallback 避免阻塞主线程
   const batchFormat = (option: FormatOption) => {
-    let count = 0;
-    const newBlocks = blocks.map(block => {
-      if (block.type === 'text') {
-        count++;
-        return {
-          ...block,
-          content: applyFormat((block as TextBlockType).content, option),
-        };
-      }
-      return block;
-    });
-
-    setBlocks(newBlocks);
-
     const messages: Record<FormatOption, string> = {
       indent: '首行缩进',
       removeEmpty: '去除所有空行',
@@ -320,7 +345,32 @@ export default function PublishArticlePage() {
       removeIndent: '移除缩进',
     };
 
-    message.success(`已对 ${count} 个文字块应用【${messages[option]}】`);
+    message.loading({ content: `正在应用【${messages[option]}】...`, key: 'format', duration: 0 });
+
+    // 将耗时文本处理移到空闲时段执行
+    const doFormat = () => {
+      let count = 0;
+      const newBlocks = blocks.map(block => {
+        if (block.type === 'text') {
+          count++;
+          return {
+            ...block,
+            content: applyFormat((block as TextBlockType).content, option),
+          };
+        }
+        return block;
+      });
+
+      setBlocks(newBlocks);
+      message.success({ content: `已对 ${count} 个文字块应用【${messages[option]}】`, key: 'format' });
+    };
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(doFormat, { timeout: 3000 });
+    } else {
+      // fallback：短延迟异步执行
+      setTimeout(doFormat, 0);
+    }
   };
 
   // 批量格式化菜单

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Masonry, message } from 'antd';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,8 @@ import { usePageShell } from '@/app/contexts/PageShellContext';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
 import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
 import { apiGet } from '@/lib/apiClient';
+import { useAccessFilter } from '@/app/hooks/useAccessFilter';
+import { useAuth } from '@/app/hooks/useAuth';
 
 // 注入动画样式和图片 hover 效果
 if (typeof document !== 'undefined') {
@@ -160,6 +162,8 @@ GalleryImage.displayName = 'GalleryImage';
 export default function GalleryPage() {
   const router = useRouter();
   const { setConfig } = usePageShell();
+  const { filterMode } = useAccessFilter();
+  const { user, isLoggedIn } = useAuth();
 
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -325,6 +329,34 @@ export default function GalleryPage() {
     };
   }, [setConfig]);
 
+  // 获取用户权限等级（未登录用户默认为2）
+  const userMaxAccessLevel = useMemo(() => {
+    if (!isLoggedIn || !user) return 2; // 未登录用户默认2级
+    return user.max_access_level ?? 2;
+  }, [isLoggedIn, user]);
+
+  // 过滤文章：根据过滤模式进行过滤
+  const filteredArticles = useMemo(() => {
+    return articles.filter(article => {
+      // 获取文章的权限字段（兼容新旧字段名）
+      const articleVisibleLevel = article.visible_access_level ?? article.visibleAccessLevel ?? article.max_access_level ?? article.maxAccessLevel ?? 1;
+      const articleFullLevel = article.full_access_level ?? article.fullAccessLevel ?? articleVisibleLevel;
+
+      // 根据过滤模式进行过滤
+      if (filterMode === 'study') {
+        // 学习模式：只显示完全公开的文章
+        return articleFullLevel === 1;
+      } else if (filterMode === 'strict') {
+        // 严格模式：用户权限 >= 文章完整阅读权限
+        return userMaxAccessLevel >= articleFullLevel;
+      } else if (filterMode === 'loose') {
+        // 宽松模式：用户权限 >= 文章可见权限
+        return userMaxAccessLevel >= articleVisibleLevel;
+      }
+      return false;
+    });
+  }, [articles, filterMode, userMaxAccessLevel]);
+
   return (
     <>
       {/* 主内容 - 直接渲染在 Box2 里，无闭包问题 */}
@@ -333,7 +365,7 @@ export default function GalleryPage() {
           <div style={{ textAlign: 'center', padding: '100px 0' }}>
             <Spin size="large" />
           </div>
-        ) : articles.length === 0 ? (
+        ) : filteredArticles.length === 0 ? (
           <Empty
             icon="🎨"
             title="还没有作品"
@@ -344,7 +376,7 @@ export default function GalleryPage() {
             <Masonry
               columns={columns}
               gutter={8}
-              items={articles.map(article => ({ key: article.id, data: article }))}
+              items={filteredArticles.map(article => ({ key: article.id, data: article }))}
               itemRender={({ data }) => (
                 <GalleryImage
                   article={data}
@@ -358,7 +390,7 @@ export default function GalleryPage() {
                 <div style={{ marginTop: 12, fontSize: 14 }}>加载更多作品...</div>
               </div>
             )}
-            {!hasMore && articles.length > 0 && (
+            {!hasMore && filteredArticles.length > 0 && (
               <LoadEnd message="没了" />
             )}
           </>

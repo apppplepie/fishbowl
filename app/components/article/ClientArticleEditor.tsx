@@ -112,6 +112,21 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
     try {
       message.loading({ content: '正在保存...', key: 'save' });
       const updatedExcerpt = generateExcerptFromBlocks(current.editorBlocks || []);
+      
+      // 计算 visible_access_level（所有 blocks 的最小值）和 full_access_level（所有 blocks 的最大值）
+      let visibleAccessLevel: number;
+      let fullAccessLevel: number;
+      
+      if ((current.editorBlocks || []).length > 0) {
+        const accessLevels = (current.editorBlocks || []).map((block: any) => block.access_level || 1);
+        visibleAccessLevel = Math.min(...accessLevels);
+        fullAccessLevel = Math.max(...accessLevels);
+      } else {
+        // 如果没有 blocks，使用现有值或默认值
+        visibleAccessLevel = current.visible_access_level ?? current.max_access_level ?? current.maxAccessLevel ?? 1;
+        fullAccessLevel = current.full_access_level ?? current.max_access_level ?? current.maxAccessLevel ?? 1;
+      }
+      
       const payload: any = {
         title: current.title,
         type: current.type || 'text',
@@ -119,6 +134,8 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
         tags: current.tags || [],
         blocks: current.editorBlocks || [],
         excerpt: updatedExcerpt,
+        visible_access_level: visibleAccessLevel,
+        full_access_level: fullAccessLevel,
       };
 
       // category order logic preserved

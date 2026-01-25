@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button, Space, Modal, Input, Upload, message, Dropdown } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Upload, Dropdown } from 'antd';
+import { Button, Space, Modal, Input, message } from '@/app/components/ui';
 import type { MenuProps } from 'antd';
 import {
   PlusOutlined,
@@ -187,13 +188,76 @@ function SortableItem({
   );
 }
 
+// 图片压缩工具函数
+function compressImage(file: File, maxWidth: number = 1920, maxHeight: number = 1920, quality: number = 0.8): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // 计算缩放比例
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = width * ratio;
+          height = height * ratio;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('无法创建 canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('压缩失败'));
+              return;
+            }
+            const compressedFile = new File([blob], file.name, {
+              type: file.type || 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          file.type || 'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function BlockEditor({ blocks, onChange, showAddButton = true }: BlockEditorProps) {
   const { isMobile } = useResponsive();
   const [addBlockModalVisible, setAddBlockModalVisible] = useState(false);
   const [addImageModalVisible, setAddImageModalVisible] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [previewUrl, setPreviewUrl] = useState<string>(''); // 预览 URL
   const [insertPosition, setInsertPosition] = useState<number>(-1); // 记录要插入的位置，-1表示末尾
+
+  // 清理预览 URL（组件卸载时）
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -336,13 +400,23 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     if (fileList.length > 0 && fileList[0].originFileObj) {
       try {
         // 初始化 loading（持久显示，后面用相同 key 更新）
+        message.loading({ content: '正在压缩图片...', key: 'upload', duration: 0 });
+
+        // 压缩图片（在 requestIdleCallback 中执行，避免阻塞）
+        let fileToUpload: File = fileList[0].originFileObj as File;
+        
+        // 如果文件是图片且大于 500KB，则压缩
+        if (fileToUpload.type.startsWith('image/') && fileToUpload.size > 500 * 1024) {
+          fileToUpload = await compressImage(fileToUpload);
+        }
+
         message.loading({ content: '正在上传图片... 0%', key: 'upload', duration: 0 });
 
         // 节流：只在百分比增加 >=3 或达到 100 时更新一次提示，避免频繁渲染
         let lastPercent = -1;
 
         const result = await uploadFileWithProgress(
-          fileList[0].originFileObj,
+          fileToUpload,
           (percent: number) => {
             if (percent - lastPercent >= 3 || percent === 100) {
               lastPercent = percent;
@@ -398,11 +472,16 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     setAddImageModalVisible(false);
     setImageUrl('');
     setFileList([]);
+    // 清理预览 URL，避免内存泄漏
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl('');
+    }
     setInsertPosition(-1);
   };
 
   // 放在组件内部（handleAddImageBlock 同级），负责上传并回传结果/进度
-  function uploadFileWithProgress(file: File, onProgress: (p: number) => void) {
+  function uploadFileWithProgress(file: File | Blob, onProgress: (p: number) => void) {
     return new Promise<{ success: boolean; url?: string; error?: any }>((resolve) => {
       const xhr = new XMLHttpRequest();
       const form = new FormData();
@@ -665,7 +744,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
         footer={null}
         width={500}
       >
-        <Space vertical style={{ width: '100%' }} size="large">
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
           <Button
             type="default"
             size="large"
@@ -735,13 +814,18 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
           setAddImageModalVisible(false);
           setImageUrl('');
           setFileList([]);
+          // 清理预览 URL
+          if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl('');
+          }
           setInsertPosition(-1);
         }}
         onOk={handleAddImageBlock}
         okText="添加"
         cancelText="取消"
       >
-        <Space vertical style={{ width: '100%' }} size="middle">
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <div>
             <div style={{ marginBottom: '8px' }}>方式一：输入图片URL</div>
             <Input
@@ -759,7 +843,26 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
             <Upload
               listType="picture-card"
               fileList={fileList}
-              onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+              onChange={({ fileList: newFileList }) => {
+                setFileList(newFileList);
+                // 创建预览 URL
+                if (newFileList.length > 0 && newFileList[0].originFileObj) {
+                  // 清理旧的预览 URL
+                  if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                  }
+                  const url = URL.createObjectURL(newFileList[0].originFileObj);
+                  setPreviewUrl(url);
+                  // 更新 fileList 以显示预览
+                  newFileList[0].thumbUrl = url;
+                } else {
+                  // 清理预览 URL
+                  if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    setPreviewUrl('');
+                  }
+                }
+              }}
               beforeUpload={() => false}
               maxCount={1}
             >
