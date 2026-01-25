@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import Image from 'next/image';
 import { Masonry, message } from 'antd';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
@@ -58,10 +59,13 @@ const calculateColumns = (width: number) => {
   return 2;
 };
 
-// 图片项组件 - 使用 React.memo 优化渲染
-const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => void }> = React.memo(({ article, onImageClick }) => {
+// 图片项组件 - 使用 React.memo 优化渲染，使用 Next.js Image 组件 + IntersectionObserver 实现真正的懒加载
+const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => void; priority?: boolean }> = React.memo(({ article, onImageClick, priority = false }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(priority); // 是否应该加载图片
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   const coverImage = article?.cover_image || article?.coverImage || null;
   const imageUrl = article?.cover_image_url
     || coverImage?.url
@@ -75,10 +79,43 @@ const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => voi
       : '3 / 2';
   const [aspectRatio, setAspectRatio] = useState(initialAspectRatio);
 
+  // 使用 IntersectionObserver 实现真正的懒加载（只在视口内或接近视口时加载）
+  useEffect(() => {
+    // priority 图片立即加载
+    if (priority) {
+      setShouldLoad(true);
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    // 创建 IntersectionObserver，提前 200px 开始加载
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setShouldLoad(true);
+            observer.disconnect(); // 加载后断开观察
+          }
+        });
+      },
+      {
+        rootMargin: '200px', // 提前 200px 开始加载
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [priority]);
+
   // 使用 useCallback 避免每次渲染创建新函数
-  const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget;
-    if (img.naturalWidth && img.naturalHeight) {
+  const handleLoadingComplete = useCallback((img: HTMLImageElement | null) => {
+    if (img?.naturalWidth && img?.naturalHeight) {
       setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
     }
     setImgLoaded(true);
@@ -97,8 +134,12 @@ const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => voi
     if (!imageUrl) setImgError(true);
   }, [imageUrl]);
 
+  // 模糊占位符（与 ImageCard 保持一致）
+  const blurDataURL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI2NyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI2NyIgZmlsbD0iI2YwZjBmMCIvPjwvc3ZnPg==";
+
   return (
     <div
+      ref={containerRef}
       role="button"
       tabIndex={0}
       onKeyDown={handleKeyDown}
@@ -112,38 +153,41 @@ const GalleryImage: React.FC<{ article: any; onImageClick: (article: any) => voi
       }}
       onClick={handleClick}
     >
-      {!imgLoaded && !imgError && (
-        <div style={{ width: '100%', aspectRatio, position: 'relative' }}>
-          <svg
-            viewBox="0 0 400 300"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden
-          >
-            <rect width="400" height="300" fill="#f0f0f0" />
-            <path d="M200 120 L200 180 M170 150 L230 150" stroke="#d0d0d0" strokeWidth="4" strokeLinecap="round" />
-          </svg>
+      {!imgError && imageUrl && shouldLoad && (
+        <div style={{ 
+          width: '100%', 
+          aspectRatio, 
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          <Image
+            src={imageUrl}
+            alt={article.title ?? '作品封面'}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1440px) 25vw, 20vw"
+            style={{
+              objectFit: 'cover',
+              transition: 'opacity 0.2s ease, transform 0.32s ease',
+              opacity: imgLoaded ? 1 : 0,
+            }}
+            className="gallery-image"
+            onLoadingComplete={handleLoadingComplete}
+            onError={handleError}
+            loading="lazy" // 始终使用 lazy，由 shouldLoad 控制是否真正加载
+            priority={priority}
+            placeholder="blur"
+            blurDataURL={blurDataURL}
+          />
         </div>
       )}
-
-      {!imgError && imageUrl && (
-        <img
-          src={imageUrl}
-          alt={article.title ?? '作品封面'}
-          onLoad={handleLoad}
-          onError={handleError}
-          loading="lazy"
-          decoding="async"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            opacity: imgLoaded ? 1 : 0,
-            transition: 'opacity 0.2s ease',
-          }}
-          className="gallery-image"
-        />
+      
+      {!shouldLoad && !imgError && (
+        // 占位符：在图片进入视口前显示
+        <div style={{ width: '100%', aspectRatio, position: 'relative', background: '#f0f0f0' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '12px' }}>
+            等待加载...
+          </div>
+        </div>
       )}
       
       {imgError && (
@@ -181,6 +225,7 @@ export default function GalleryPage() {
   const loadingMoreRef = useRef(loadingMore);
   const hasMoreRef = useRef(hasMore);
   const isMountedRef = useRef(true); // 用于防止组件卸载后更新状态
+  const abortControllerRef = useRef<AbortController | null>(null); // 用于取消请求
   
   useEffect(() => { offsetRef.current = offset; }, [offset]);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
@@ -192,21 +237,50 @@ export default function GalleryPage() {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      // 组件卸载时取消所有进行中的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
-  // 获取数据
+  // 获取数据 - 添加请求取消支持
   const fetchDrawingArticles = useCallback(async (currentOffset: number, append = false) => {
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // 创建新的 AbortController
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       if (!isMountedRef.current) return;
       
       if (append) setLoadingMore(true);
-      else setLoading(true);
+      else {
+        setLoading(true);
+        // 重置状态，清空之前的文章列表
+        setArticles([]);
+        setOffset(0);
+        setHasMore(true);
+      }
 
-      const res = await apiGet(`/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`, { requiresAuth: false });
+      const res = await apiGet(`/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`, { 
+        requiresAuth: false,
+        signal: controller.signal // 传递 signal 以支持取消
+      });
+      
+      // 检查请求是否被取消
+      if (controller.signal.aborted) return;
+
       const data = await res.json();
 
       if (!isMountedRef.current) return; // 检查组件是否已卸载
+
+      // 再次检查是否被取消（在异步操作后）
+      if (controller.signal.aborted) return;
 
       if (data.success) {
         if (append) {
@@ -226,22 +300,35 @@ export default function GalleryPage() {
         message.error('获取作品失败');
         setHasMore(false);
       }
-    } catch (err) {
+    } catch (err: any) {
+      // 忽略取消请求的错误
+      if (err.name === 'AbortError' || controller.signal.aborted) {
+        return;
+      }
       console.error(err);
       if (isMountedRef.current) {
         message.error('获取作品失败');
         setHasMore(false);
       }
     } finally {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && !controller.signal.aborted) {
         setLoading(false);
         setLoadingMore(false);
       }
     }
   }, []);
 
-  // 初次加载
-  useEffect(() => { fetchDrawingArticles(0); }, [fetchDrawingArticles]);
+  // 初次加载和 filterMode 变化时重新加载
+  useEffect(() => { 
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    // 重置状态并重新加载
+    setOffset(0);
+    setHasMore(true);
+    fetchDrawingArticles(0, false); 
+  }, [fetchDrawingArticles, filterMode]); // 当 filterMode 变化时也重新加载
 
   // 响应列数
   useEffect(() => {
@@ -376,13 +463,21 @@ export default function GalleryPage() {
             <Masonry
               columns={columns}
               gutter={8}
-              items={filteredArticles.map(article => ({ key: article.id, data: article }))}
-              itemRender={({ data }) => (
-                <GalleryImage
-                  article={data}
-                  onImageClick={handleImageClick}
-                />
-              )}
+              items={filteredArticles.map((article, index) => ({ 
+                key: article.id, 
+                data: article,
+                index // 将 index 存储在 item 中
+              }))}
+              itemRender={(itemInfo: any) => {
+                const { data, index } = itemInfo;
+                return (
+                  <GalleryImage
+                    article={data}
+                    onImageClick={handleImageClick}
+                    priority={index !== undefined && index < columns * 2} // 首屏前两行图片使用 priority
+                  />
+                );
+              }}
             />
             {loadingMore && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>

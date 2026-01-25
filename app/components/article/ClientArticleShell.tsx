@@ -11,6 +11,7 @@ import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { BreadcrumbBox1, TitleBox1, TagBox1 } from '@/app/components/box1';
+import { apiGet } from '@/lib/apiClient';
 
 const CommentSection = dynamic(
   () => import('@/app/components/CommentSection').catch(() => () => null),
@@ -41,6 +42,11 @@ export default function ClientArticleShell({
   const { isMobile } = useResponsive();
 
   const [article, setArticle] = useState<any>(initialArticle);
+  const [categoryPathState, setCategoryPathState] = useState(categoryPath);
+  const [likes, setLikes] = useState(initialLikes);
+  const [comments, setComments] = useState(initialComments);
+  const [loading, setLoading] = useState(!initialArticle);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<'view' | 'edit' | 'preview'>('view');
   const editorRef = useRef<ArticleEditorHandle | null>(null);
 
@@ -54,8 +60,66 @@ export default function ClientArticleShell({
   useEffect(() => {
     if (initialArticle && initialArticle !== article) {
       setArticle(initialArticle);
+      setLikes(initialArticle.likes || initialLikes || 0);
+      setComments(initialArticle.comments || initialComments || 0);
     }
-  }, [initialArticle, article]);
+  }, [initialArticle, initialLikes, initialComments, article]);
+
+  // 客户端加载文章内容（避免进入页面前阻塞）
+  useEffect(() => {
+    if (!articleId) return;
+    if (article && article.id === articleId) return;
+
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError(null);
+
+    apiGet(`/api/articles/${articleId}`, { requiresAuth: false, signal: controller.signal })
+      .then(async (res) => {
+        const result = await res.json();
+        if (!res.ok || !result?.success || !result?.article) {
+          throw new Error(result?.error || '文章不存在');
+        }
+
+        const fetchedArticle = result.article;
+        setArticle(fetchedArticle);
+        setLikes(fetchedArticle.likes || 0);
+        setComments(fetchedArticle.comments || 0);
+
+        if (fetchedArticle.category_id) {
+          return apiGet(`/api/categories/${fetchedArticle.category_id}/path`, {
+            requiresAuth: false,
+            signal: controller.signal,
+          });
+        }
+        return null;
+      })
+      .then(async (pathRes) => {
+        if (!pathRes) {
+          setCategoryPathState([]);
+          return;
+        }
+        const pathResult = await pathRes.json();
+        if (pathRes.ok && pathResult?.success && pathResult?.path) {
+          setCategoryPathState(pathResult.path);
+        } else {
+          setCategoryPathState([]);
+        }
+      })
+      .catch((error: any) => {
+        if (error?.name === 'AbortError') return;
+        console.error('加载文章失败:', error);
+        setLoadError(error?.message || '加载文章失败');
+        setArticle(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [articleId, article]);
 
   // 设置 box1 内容，根据 article 是否存在渲染完整内容或占位符
   useEffect(() => {
@@ -67,7 +131,7 @@ export default function ClientArticleShell({
             <BreadcrumbBox1
               type="article"
               articleId={articleId}
-              categoryPath={categoryPath}
+              categoryPath={categoryPathState}
             />
           </div>
         ),
@@ -86,7 +150,7 @@ export default function ClientArticleShell({
             <BreadcrumbBox1
               type="article"
               articleId={articleId}
-              categoryPath={categoryPath}
+              categoryPath={categoryPathState}
             />
             <TitleBox1
               title={article.title}
@@ -106,7 +170,7 @@ export default function ClientArticleShell({
         },
       });
     }
-  }, [article, articleId, categoryPath, setConfig, isMobile]);
+  }, [article, articleId, categoryPathState, setConfig, isMobile]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -130,7 +194,22 @@ export default function ClientArticleShell({
         data-content-area
         style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 0px', boxSizing: 'border-box' }}>
         {editMode === 'view' ? (
-          <ArticleContentClient article={article} />
+          article ? (
+            <ArticleContentClient article={article} />
+          ) : (
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.9)',
+                padding: '24px',
+                borderRadius: '12px',
+                marginBottom: '40px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                color: '#666',
+              }}
+            >
+              {loadError ? `加载失败：${loadError}` : (loading ? '加载文章中...' : '暂无文章内容')}
+            </div>
+          )
         ) : (
           <ClientArticleEditor
             ref={editorRef}
@@ -170,8 +249,8 @@ export default function ClientArticleShell({
         >
           <ClientArticleActions
             articleId={articleId}
-            initialLikes={initialLikes}
-            initialComments={initialComments}
+            initialLikes={likes}
+            initialComments={comments}
             articleTitle={article?.title}
           />
 

@@ -6,7 +6,7 @@
  * 因为 Next.js 在生产模式下可能无法直接服务挂载的 volume 文件
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 
@@ -45,6 +45,26 @@ export async function GET(
       );
     }
 
+    // 获取文件统计信息（用于生成 ETag）
+    const fileStats = await stat(filePath);
+    
+    // 生成 ETag：基于文件修改时间和大小（高效且唯一）
+    // 格式：W/"mtime-size"（弱 ETag，因为基于时间而非内容 hash）
+    const etag = `W/"${fileStats.mtime.getTime()}-${fileStats.size}"`;
+
+    // 检查客户端是否发送了 If-None-Match 头
+    const ifNoneMatch = request.headers.get('If-None-Match');
+    if (ifNoneMatch === etag) {
+      // 文件未修改，返回 304 Not Modified（不传输文件内容）
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          'ETag': etag,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
+
     // 读取文件
     const fileBuffer = await readFile(filePath);
     
@@ -63,11 +83,12 @@ export async function GET(
     };
     const mimeType = mimeTypes[ext] || 'application/octet-stream';
 
-    // 返回文件
+    // 返回文件（包含 ETag 头）
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
         'Content-Type': mimeType,
+        'ETag': etag,
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });

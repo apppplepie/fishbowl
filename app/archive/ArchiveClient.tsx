@@ -432,6 +432,44 @@ export default function ArchiveClient({
         }
     }, [router]);
 
+    // ✅ 添加 hover 预取逻辑，提升导航速度
+    // 使用 Set 记录正在预取的 ID，避免重复请求
+    const prefetchingRef = useRef<Set<string>>(new Set());
+    
+    const handleCardHover = useCallback((card: any) => {
+        if (card.type === 'text' || card.type === 'image' || card.type === 'code' ||
+            card.type === 'diary' || card.type === 'drawing' || card.type === 'article') {
+            const articleId = card.id;
+            
+            // 如果正在预取或已经预取过，跳过
+            if (prefetchingRef.current.has(articleId)) {
+                return;
+            }
+            
+            // 标记为正在预取
+            prefetchingRef.current.add(articleId);
+            
+            // 1. 预取路由（预取 JavaScript bundle）
+            router.prefetch(`/article/${articleId}`);
+            
+            // 2. 预取 API 数据（后台静默请求，不阻塞 UI）
+            // 这样当用户点击时，数据可能已经在 HTTP 缓存中了
+            apiGet(`/api/articles/${articleId}`, { requiresAuth: false })
+                .then(() => {
+                    // 预取成功，数据已经在 HTTP 缓存中
+                })
+                .catch(() => {
+                    // 预取失败，忽略错误（不影响用户体验）
+                })
+                .finally(() => {
+                    // 延迟移除标记，避免短时间内重复预取
+                    setTimeout(() => {
+                        prefetchingRef.current.delete(articleId);
+                    }, 5000);
+                });
+        }
+    }, [router]);
+
     // ✅ 修复 handleCategorySelect - 立即加载数据
     const handleCategorySelect = useCallback((categoryId: string | null) => {
         setSelectedCategoryId(categoryId);
@@ -444,20 +482,37 @@ export default function ArchiveClient({
         loadArticles(0, false, categoryId);
     }, [loadArticles]);
 
-    // ✅ 渲染卡片（添加 priority 属性 + masonry-item className）
+    // ✅ 渲染卡片（添加 priority 属性 + masonry-item className + hover 预取）
     const renderCard = useCallback((article: any, index: number) => {
         const handleClick = () => handleCardClick(article);
+        const handleHover = () => handleCardHover(article);
         const isPriority = index < 6; // 首屏前6个优先加载
         const masonryClassName = 'masonry-item'; // 瀑布流布局需要的 className
+        const articleId = article.id; // 用于 key
+
+        // 使用 div 包装器添加 hover 预取，确保不影响布局
+        const cardWrapper = (cardComponent: React.ReactElement) => (
+            <div 
+                key={articleId}
+                onMouseEnter={handleHover} 
+                style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    display: 'contents' // 使用 contents 确保不影响布局
+                }}
+            >
+                {cardComponent}
+            </div>
+        );
 
         switch (article.type) {
             case 'text':
-                return <ArticleCard key={article.id} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />;
+                return cardWrapper(<ArticleCard key={articleId} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
             case 'image':
-                return <ImageCard key={article.id} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />;
+                return cardWrapper(<ImageCard key={articleId} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
             case 'drawing':
-                return <ImageCard
-                    key={article.id}
+                return cardWrapper(<ImageCard
+                    key={articleId}
                     card={{
                         ...article,
                         description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
@@ -465,15 +520,15 @@ export default function ArchiveClient({
                     onClick={handleClick}
                     priority={isPriority}
                     className={masonryClassName}
-                />;
+                />);
             case 'code':
-                return <CodeCard key={article.id} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />;
+                return cardWrapper(<CodeCard key={articleId} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
             case 'diary':
-                return <DiaryCard key={article.id} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />;
+                return cardWrapper(<DiaryCard key={articleId} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
             default:
-                return <CardRenderer key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
+                return cardWrapper(<CardRenderer key={articleId} card={article} onClick={handleClick} className={masonryClassName} />);
         }
-    }, [handleCardClick]);
+    }, [handleCardClick, handleCardHover]);
 
     // Box1 内容
     // 第 318-360 行，修改 box1Content

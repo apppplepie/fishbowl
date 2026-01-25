@@ -22,6 +22,10 @@ export default function ClientArticleActions({
   const [liked, setLiked] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    setLikes(initialLikes || 0);
+  }, [initialLikes]);
+
   const handleLike = async () => {
     setLoading(true);
     try {
