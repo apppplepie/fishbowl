@@ -822,7 +822,7 @@ export default function Home() {
               top: `calc(${crowTop} - 80vh)`,
               left: '60%',
               transform: 'translateX(-50%)',
-              zIndex: 1001,
+              zIndex: 999,
               pointerEvents: 'auto',
               width: '90vw', // 使用 vw 单位，根据屏幕宽度等比例缩放
               // SVG viewBox 是 1300x1400，宽高比 = 1400/1300 ≈ 1.077
