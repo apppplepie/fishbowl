@@ -759,17 +759,41 @@ export default function Home() {
 
         {/* 第一部分 - 首屏 */}
         <div
-          className="flex flex-col items-center justify-center"
+          className="flex flex-col items-center"
           style={{
             height: '80vh',
             background: 'transparent',
+            paddingTop: '15vh', // 往上移动
+            justifyContent: 'flex-start',
           }}
         >
           <div className="text-center text-black px-8" style={{ position: 'relative', zIndex: 5 }}>
-            <h1 className="mb-6" style={{ fontSize: '3.5rem', textShadow: '0 2px 4px rgba(0,0,0,0.3)', color: '#000000' }}>
+            <h1 
+              className="mb-6" 
+              style={{ 
+                fontSize: '5rem', // 增大标题字体
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                lineHeight: '1.1',
+                textShadow: '0 4px 8px rgba(0,0,0,0.2)', 
+                color: '#000000',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              }}
+            >
               Fishbowl
             </h1>
-            <p className="text-xl mb-8 max-w-2xl mx-auto" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)', color: '#000000' }}>
+            <p 
+              className="text-xl mb-8 max-w-2xl mx-auto" 
+              style={{ 
+                fontSize: '1.25rem',
+                fontWeight: 400,
+                letterSpacing: '0.01em',
+                lineHeight: '1.6',
+                textShadow: '0 2px 4px rgba(0,0,0,0.15)', 
+                color: '#333333',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              }}
+            >
               植物长的慢就说明你需要买新手机了
             </p>
             <Button
@@ -786,7 +810,7 @@ export default function Home() {
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 color: 'black',
-                marginTop: '40px',
+                marginTop: '20px',
               }}
               onClick={() => {
                 const snapPoint = window.innerHeight * 0.8;

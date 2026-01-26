@@ -34,7 +34,7 @@ if (typeof document !== 'undefined') {
       }
       .gallery-masonry { 
         column-count: 2; 
-        column-gap: 12px; 
+        column-gap: 6px; 
         width: 100%; 
         max-width: 1400px;
         margin: 0 auto;
@@ -66,10 +66,10 @@ if (typeof document !== 'undefined') {
       }
       .gallery-image { 
         width: 100%; 
-        height: auto; 
+        height: 100%; 
         display: block; 
         opacity: 0; 
-        transition: opacity 0.4s ease; 
+        transition: opacity 0.5s ease; 
         object-fit: cover;
       }
       .gallery-image.loaded { 
@@ -80,9 +80,13 @@ if (typeof document !== 'undefined') {
   }
 }
 
+// 生成模糊占位符（Base64 SVG）- 使用预编码的占位符避免 SSR 问题
+const BLUR_PLACEHOLDER = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiLz48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImdyYWRpZW50IiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZTBlMGUwO3N0b3Atb3BhY2l0eToxIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZjVmNWY1O3N0b3Atb3BhY2l0eToxIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PC9zdmc+";
+
 /**
- * 优化后的图片项：
- * 移除多余的 useEffect，直接通过 onLoad 处理比例
+ * 渐进式加载图片项：
+ * 1. 先显示模糊占位符
+ * 2. 图片加载完成后平滑过渡到清晰图片
  */
 const GalleryImage = React.memo(({ article, onImageClick }: { article: any; onImageClick: (article: any) => void }) => {
   const [aspectRatio, setAspectRatio] = useState<string | number>('3 / 4'); // 默认给一个较长比例的占位
@@ -93,6 +97,22 @@ const GalleryImage = React.memo(({ article, onImageClick }: { article: any; onIm
     || article?.cover_image?.url 
     || article?.imageUrl 
     || article?.firstImageUrl;
+
+  // 获取初始宽高比（如果有）
+  const initialAspectRatio = useMemo(() => {
+    const coverImage = article?.cover_image || article?.coverImage;
+    if (coverImage?.width && coverImage?.height) {
+      return `${coverImage.width} / ${coverImage.height}`;
+    }
+    if (article?.imageWidth && article?.imageHeight) {
+      return `${article.imageWidth} / ${article.imageHeight}`;
+    }
+    return '3 / 4';
+  }, [article]);
+
+  useEffect(() => {
+    setAspectRatio(initialAspectRatio);
+  }, [initialAspectRatio]);
 
   const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { naturalWidth, naturalHeight } = e.currentTarget;
@@ -108,6 +128,27 @@ const GalleryImage = React.memo(({ article, onImageClick }: { article: any; onIm
   return (
     <div className="gallery-masonry-item" onClick={handleClick}>
       <div style={{ position: 'relative', width: '100%', aspectRatio, overflow: 'hidden' }}>
+        {/* 模糊占位符 - 始终显示，直到图片加载完成 */}
+        {!isLoaded && !error && (
+          <img
+            src={BLUR_PLACEHOLDER}
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              filter: 'blur(20px)',
+              transform: 'scale(1.1)', // 放大一点避免模糊边缘
+              opacity: isLoaded ? 0 : 1,
+              transition: 'opacity 0.3s ease',
+            }}
+          />
+        )}
+        
+        {/* 实际图片 - 渐进式显示 */}
         {!error && imageUrl && (
           <img
             src={imageUrl}
@@ -117,9 +158,15 @@ const GalleryImage = React.memo(({ article, onImageClick }: { article: any; onIm
             onLoad={handleLoad}
             onError={handleError}
             className={`gallery-image ${isLoaded ? 'loaded' : ''}`}
+            style={{
+              position: isLoaded ? 'relative' : 'absolute',
+              inset: isLoaded ? 'auto' : 0,
+            }}
           />
         )}
-        {(!isLoaded || error) && (
+        
+        {/* 错误状态 */}
+        {error && (
           <div style={{ 
             position: 'absolute', 
             inset: 0, 
@@ -130,7 +177,7 @@ const GalleryImage = React.memo(({ article, onImageClick }: { article: any; onIm
             color: '#bbb', 
             fontSize: '12px' 
           }}>
-            {error ? '加载失败' : '...'}
+            加载失败
           </div>
         )}
       </div>
@@ -165,14 +212,34 @@ export default function GalleryPage() {
   const sentinelRef = useRef<HTMLDivElement>(null); // 用于触发无限滚动的哨兵
   const isMountedRef = useRef(true);
 
-  // 组件挂载状态追踪
+  // 组件挂载状态追踪 + 导航跳转保护
   useEffect(() => {
     isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
+    
+    // 监听页面卸载/导航跳转事件
+    const handleBeforeUnload = () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+    };
+    
+    // 监听 Next.js 路由变化（如果使用 next/router）
+    const handleRouteChange = () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      isMountedRef.current = false;
+      // 取消所有进行中的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 
@@ -209,6 +276,9 @@ export default function GalleryPage() {
       if (controller.signal.aborted) return;
 
       if (data.success) {
+        // 再次检查组件状态，确保在更新前组件仍然挂载
+        if (!isMountedRef.current || controller.signal.aborted) return;
+        
         setArticles(prev => {
           if (!isAppend) return data.articles;
           const ids = new Set(prev.map(a => a.id));
@@ -217,8 +287,10 @@ export default function GalleryPage() {
         setOffset(currentOffset + data.articles.length);
         setHasMore(data.articles.length === ITEMS_PER_PAGE);
       } else {
-        message.error('获取作品失败');
-        setHasMore(false);
+        if (isMountedRef.current && !controller.signal.aborted) {
+          message.error('获取作品失败');
+          setHasMore(false);
+        }
       }
     } catch (err: any) {
       if (err.name === 'AbortError' || controller.signal.aborted) {
@@ -250,19 +322,27 @@ export default function GalleryPage() {
   // 2. 【性能核心】使用 IntersectionObserver 代替 Scroll 监听
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!sentinel || !isMountedRef.current) return;
 
     const observer = new IntersectionObserver((entries) => {
+      // 检查组件是否仍然挂载
+      if (!isMountedRef.current) {
+        observer.disconnect();
+        return;
+      }
+      
       const target = entries[0];
       const { loading, loadingMore, hasMore, offset } = stateRef.current;
       
-      if (target.isIntersecting && !loading && !loadingMore && hasMore) {
+      if (target.isIntersecting && !loading && !loadingMore && hasMore && isMountedRef.current) {
         fetchDrawingArticles(offset, true);
       }
     }, { rootMargin: '400px' }); // 提前 400px 触发加载
 
     observer.observe(sentinel);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, [fetchDrawingArticles]);
 
   // 3. 权限过滤逻辑
@@ -338,7 +418,7 @@ export default function GalleryPage() {
   return (
     <>
       {/* 主内容 - 使用 CSS Column 瀑布流 */}
-      <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+      <div style={{ maxWidth: '100%', margin: '0 auto' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '100px 0' }}>
             <Spin size="large" />
