@@ -19,6 +19,7 @@ interface MasonryGridProps {
 export default function MasonryGrid({ children, className = '', minColumns = DEFAULT_MIN_COLUMNS }: MasonryGridProps) {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const itemsRoRef = useRef<ResizeObserver | null>(null);
+  const containerRoRef = useRef<ResizeObserver | null>(null); // 监听容器宽度变化
   const rafRef = useRef<number | null>(null);
   const resizeTimerRef = useRef<number | null>(null);
   const columnsRef = useRef(3);
@@ -245,20 +246,35 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
     const grid = gridRef.current;
     if (!grid) return;
 
-    // 初始化列数
-    updateColumns(grid);
+    // 🔑 初始化函数：确保容器宽度已正确计算
+    const doInit = () => {
+      const containerWidth = grid.offsetWidth;
+      
+      // 如果容器宽度为 0，说明还没有渲染完成，延迟重试
+      if (containerWidth === 0) {
+        requestAnimationFrame(doInit);
+        return;
+      }
 
-    // 🔑 多重 RAF：确保 DOM、样式、字体都已加载
-    requestAnimationFrame(() => {
+      // 初始化列数
+      updateColumns(grid);
+
+      // 🔑 多重 RAF：确保 DOM、样式、字体都已加载
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          calculateInitial(grid);
+          requestAnimationFrame(() => {
+            calculateInitial(grid);
+          });
         });
       });
-    });
+    };
+
+    // 立即尝试初始化
+    doInit();
 
     // 🔑 ResizeObserver：使用 entry 数据，容差判断，防循环
     if (typeof ResizeObserver !== 'undefined') {
+      // 监听卡片高度变化
       const ro = new ResizeObserver((entries) => {
         // 🔑 防止 RO 写循环：如果正在批量写入，忽略本次回调
         if (isApplyingRef.current) return;
@@ -300,6 +316,26 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
       // 监听所有现有卡片
       const items = Array.from(grid.querySelectorAll<HTMLElement>('.masonry-item'));
       items.forEach((item) => ro.observe(item));
+
+      // 🔑 监听容器宽度变化，确保列数正确更新
+      const containerRo = new ResizeObserver((entries) => {
+        if (isApplyingRef.current) return;
+        
+        for (const entry of entries) {
+          const el = entry.target as HTMLElement;
+          if (el !== grid) continue;
+          
+          // 容器宽度变化时，重新计算列数
+          updateColumns(grid);
+          
+          // 重新测量所有卡片（因为列数变化了）
+          const items = Array.from(grid.querySelectorAll<HTMLElement>('.masonry-item'));
+          items.forEach(item => scheduleUpdate(item));
+        }
+      });
+      
+      containerRoRef.current = containerRo;
+      containerRo.observe(grid);
     }
 
     // MutationObserver 处理新增/删除的卡片
@@ -342,6 +378,7 @@ export default function MasonryGrid({ children, className = '', minColumns = DEF
       window.removeEventListener('resize', handleResize);
       mo.disconnect();
       itemsRoRef.current?.disconnect();
+      containerRoRef.current?.disconnect();
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
       pendingUpdatesRef.current.clear();

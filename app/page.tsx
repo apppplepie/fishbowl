@@ -20,6 +20,7 @@ import { DEFAULT_FISH_CONFIG } from './config/fishConfig';
 import { PlantGrowthEngine } from './engine/PlantGrowthEngine';
 import Goldfish, { FishBounds } from './components/fish/Goldfish';
 import { FishConfig } from './components/fish/Sidebar';
+import { Crow } from './components/Crow';
 
 // 根系数据类型
 interface RootData {
@@ -52,6 +53,16 @@ export default function Home() {
   const scrollToPositionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const touchEndTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
+
+  // 乌鸦位置相关
+  const crowContainerRef = useRef<HTMLDivElement>(null);
+  const [crowTop, setCrowTop] = useState<string>('60vh'); // 默认值，会在 useEffect 中动态计算
+  // Crow SVG 的 viewBox 是 "0 0 1300 1400"，脚部 y 坐标是 902
+  // 脚部在 SVG 中的相对位置：902 / 1400 ≈ 0.644 (64.4%)
+  const CROW_FOOT_POSITION_RATIO = 902 / 1400; // 脚部在 SVG 中的相对位置
+  // 目标：让脚部站在指定视口高度的位置（单位：vh）
+  // 例如：80 表示脚部站在 80vh 的位置，可以根据需要调整这个值
+  const TARGET_FOOT_VH = 80;
 
   // 植物系统引用
   const engineRef = useRef<PlantGrowthEngine>(new PlantGrowthEngine());
@@ -278,6 +289,49 @@ export default function Home() {
         clearTimeout(snapToTimer);
         snapToTimer = null;
       }
+    };
+  }, []);
+
+  // 计算乌鸦位置：根据脚部位置动态调整 top 值
+  useEffect(() => {
+    const calculateCrowPosition = () => {
+      if (!crowContainerRef.current || typeof window === 'undefined') return;
+
+      // 获取容器的实际渲染高度
+      const containerHeight = crowContainerRef.current.offsetHeight;
+      if (containerHeight === 0) return; // 如果还没有渲染，等待下次
+
+      // 计算脚部在容器中的像素位置
+      const footPositionInContainer = containerHeight * CROW_FOOT_POSITION_RATIO;
+
+      // 目标：让脚部站在 TARGET_FOOT_VH 的位置
+      // 所以容器的 top 应该是：目标位置 - 脚部在容器中的位置
+      const targetFootPosition = (window.innerHeight * TARGET_FOOT_VH) / 100;
+      const calculatedTop = targetFootPosition - footPositionInContainer;
+
+      // 转换为 vh 单位（更稳定）
+      const topInVh = (calculatedTop / window.innerHeight) * 100;
+      setCrowTop(`${topInVh}vh`);
+    };
+
+    // 初始计算
+    calculateCrowPosition();
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', calculateCrowPosition);
+
+    // 使用 ResizeObserver 监听容器大小变化（更准确）
+    const resizeObserver = new ResizeObserver(() => {
+      calculateCrowPosition();
+    });
+
+    if (crowContainerRef.current) {
+      resizeObserver.observe(crowContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', calculateCrowPosition);
+      resizeObserver.disconnect();
     };
   }, []);
 
@@ -716,7 +770,7 @@ export default function Home() {
               Fishbowl
             </h1>
             <p className="text-xl mb-8 max-w-2xl mx-auto" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)', color: '#000000' }}>
-              植物长的太慢就说明你需要买新手机了
+              植物长的慢就说明你需要买新手机了
             </p>
             <Button
               type="primary"
@@ -760,6 +814,25 @@ export default function Home() {
             flexDirection: 'column',
           }}
         >
+          {/* Crow 组件 - 覆盖在画布上，根据脚部位置动态定位，根据屏幕宽度等比例缩放 */}
+          <div
+            ref={crowContainerRef}
+            style={{
+              position: 'absolute',
+              top: `calc(${crowTop} - 80vh)`,
+              left: '60%',
+              transform: 'translateX(-50%)',
+              zIndex: 1001,
+              pointerEvents: 'auto',
+              width: '90vw', // 使用 vw 单位，根据屏幕宽度等比例缩放
+              // SVG viewBox 是 1300x1400，宽高比 = 1400/1300 ≈ 1.077
+              // 使用 aspect-ratio 保持宽高比，高度会自动计算
+              // aspectRatio: '1300 / 1400',
+            }}
+          >
+            <Crow className="w-full h-full" />
+          </div>
+
           {/* 45px导航栏区域 */}
           <div
             style={{
