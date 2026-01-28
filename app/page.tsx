@@ -52,11 +52,15 @@ export default function Home() {
   const rafIdRef = useRef<number | null>(null);
   const scrollToPositionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const touchEndTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const snapRafIdRef = useRef<number | null>(null);
+  const snapScrollEndTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const snapToTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
   // 乌鸦位置相关
   const crowContainerRef = useRef<HTMLDivElement>(null);
   const [crowTop, setCrowTop] = useState<string>('60vh'); // 默认值，会在 useEffect 中动态计算
+  const [crowVisible, setCrowVisible] = useState(false); // 控制乌鸦渐显
   // Crow SVG 的 viewBox 是 "0 0 1300 1400"，脚部 y 坐标是 902
   // 脚部在 SVG 中的相对位置：902 / 1400 ≈ 0.644 (64.4%)
   const CROW_FOOT_POSITION_RATIO = 902 / 1400; // 脚部在 SVG 中的相对位置
@@ -147,12 +151,9 @@ export default function Home() {
     const getSnapPoint = () => window.innerHeight * 0.8; // 80vh
     const getThreshold = () => window.innerHeight * 0.79; // 导航栏显示阈值
 
-    let scrollEndTimer: NodeJS.Timeout | null = null;
-    let snapToTimer: NodeJS.Timeout | null = null;
     let lastScrollTop = container.scrollTop;
     let lastScrollTime = Date.now();
     let isScrolling = false;
-    let snapRafId: number | null = null;
 
     const snapTo = (target: number) => {
       isAutoScrolling.current = true;
@@ -162,13 +163,13 @@ export default function Home() {
       });
 
       // 在滚动结束后更新导航位置
-      if (snapToTimer) {
-        clearTimeout(snapToTimer);
+      if (snapToTimerRef.current) {
+        clearTimeout(snapToTimerRef.current);
       }
-      snapToTimer = setTimeout(() => {
+      snapToTimerRef.current = setTimeout(() => {
         isAutoScrolling.current = false;
         updateNavBar(container.scrollTop, getThreshold()); // 确保状态同步
-        snapToTimer = null;
+        snapToTimerRef.current = null;
       }, 30);
     };
 
@@ -217,15 +218,15 @@ export default function Home() {
         lastScrollTime = currentTime;
       }
 
-      if (snapRafId) cancelAnimationFrame(snapRafId);
+      if (snapRafIdRef.current) cancelAnimationFrame(snapRafIdRef.current);
 
-      snapRafId = requestAnimationFrame(() => {
+      snapRafIdRef.current = requestAnimationFrame(() => {
         checkSnap();
       });
 
-      if (scrollEndTimer) clearTimeout(scrollEndTimer);
+      if (snapScrollEndTimerRef.current) clearTimeout(snapScrollEndTimerRef.current);
 
-      scrollEndTimer = setTimeout(() => {
+      snapScrollEndTimerRef.current = setTimeout(() => {
         isScrolling = false;
         checkSnap();
       }, 30);
@@ -267,8 +268,22 @@ export default function Home() {
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('resize', handleResize);
-      if (scrollEndTimer) clearTimeout(scrollEndTimer);
-      if (snapRafId) cancelAnimationFrame(snapRafId);
+      
+      // 清理所有定时器和 RAF（使用 ref 确保访问最新值）
+      if (snapScrollEndTimerRef.current) {
+        clearTimeout(snapScrollEndTimerRef.current);
+        snapScrollEndTimerRef.current = null;
+      }
+      if (snapRafIdRef.current) {
+        cancelAnimationFrame(snapRafIdRef.current);
+        snapRafIdRef.current = null;
+      }
+      if (snapToTimerRef.current) {
+        clearTimeout(snapToTimerRef.current);
+        snapToTimerRef.current = null;
+      }
+      
+      // 清理其他 ref 中的定时器
       if (hideNavBarTimerRef.current) {
         clearTimeout(hideNavBarTimerRef.current);
         hideNavBarTimerRef.current = null;
@@ -284,10 +299,6 @@ export default function Home() {
       if (touchEndTimerRef.current) {
         clearTimeout(touchEndTimerRef.current);
         touchEndTimerRef.current = null;
-      }
-      if (snapToTimer) {
-        clearTimeout(snapToTimer);
-        snapToTimer = null;
       }
     };
   }, []);
@@ -332,6 +343,17 @@ export default function Home() {
     return () => {
       window.removeEventListener('resize', calculateCrowPosition);
       resizeObserver.disconnect();
+    };
+  }, []);
+
+  // 乌鸦渐显效果：延迟显示
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCrowVisible(true);
+    }, 800); // 延迟 800ms 后开始渐显
+
+    return () => {
+      clearTimeout(timer);
     };
   }, []);
 
@@ -646,12 +668,72 @@ export default function Home() {
 
     // 清理函数
     return () => {
+      // 停止动画循环
       if (growthAnimationRef.current) {
         cancelAnimationFrame(growthAnimationRef.current);
         growthAnimationRef.current = null;
       }
+      
+      // 清理所有离屏 canvas（释放内存）
+      baselinePlantsDataRef.current.forEach((plant) => {
+        if (plant.canvas) {
+          // 清空 canvas 内容
+          const ctx = plant.ctx;
+          if (ctx) {
+            ctx.clearRect(0, 0, plant.canvas.width, plant.canvas.height);
+          }
+          // 移除 canvas 引用（让 GC 回收）
+          plant.canvas = null as any;
+          plant.ctx = null as any;
+        }
+      });
+      
+      // 清空植物数据数组
+      baselinePlantsDataRef.current = [];
+      
+      // 重置初始化标志（允许重新初始化）
+      hasInitializedPlantsRef.current = false;
     };
   }, [baselineY, canvasHeight, loadedPlants, spawnPlant, updatePlantGrowth]);
+
+  // 注入乌鸦响应式样式
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    
+    const styleId = 'crow-responsive-styles';
+    if (document.getElementById(styleId)) return;
+    
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.innerHTML = `
+      .crow-container {
+        width: 90vw; /* 手机上默认 90vw */
+      }
+      @media (min-width: 768px) {
+        .crow-container {
+          width: 50vw; /* 平板上缩小到 50vw */
+        }
+      }
+      @media (min-width: 1200px) {
+        .crow-container {
+          width: 40vw; /* 电脑上缩小到 40vw */
+        }
+      }
+      @media (min-width: 1400px) {
+        .crow-container {
+          width: 35vw; /* 大屏幕上进一步缩小到 35vw */
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -841,6 +923,7 @@ export default function Home() {
           {/* Crow 组件 - 覆盖在画布上，根据脚部位置动态定位，根据屏幕宽度等比例缩放 */}
           <div
             ref={crowContainerRef}
+            className="crow-container"
             style={{
               position: 'absolute',
               top: `calc(${crowTop} - 80vh)`,
@@ -848,10 +931,11 @@ export default function Home() {
               transform: 'translateX(-50%)',
               zIndex: 999,
               pointerEvents: 'auto',
-              width: '90vw', // 使用 vw 单位，根据屏幕宽度等比例缩放
+              opacity: crowVisible ? 1 : 0,
+              transition: 'opacity 1.2s ease-in-out',
               // SVG viewBox 是 1300x1400，宽高比 = 1400/1300 ≈ 1.077
               // 使用 aspect-ratio 保持宽高比，高度会自动计算
-              // aspectRatio: '1300 / 1400',
+              // 宽度通过 CSS 类控制（响应式）
             }}
           >
             <Crow className="w-full h-full" />
