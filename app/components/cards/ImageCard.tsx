@@ -23,17 +23,27 @@ export default function ImageCard({ card, onClick, priority = false, className =
   const [imgLoaded, setImgLoaded] = useState(false);
   const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
 
-  // 🔑 计算图片的 aspect ratio（优先使用实际尺寸，否则默认 3:2）
-  const imageWidth = card.coverImage?.width || card.imageWidth;
-  const imageHeight = card.coverImage?.height || card.imageHeight;
-  const initialAspectRatio = imageWidth && imageHeight
-    ? `${imageWidth} / ${imageHeight}`
-    : '3 / 2'; // 默认 3:2 比例
-  const [aspectRatio, setAspectRatio] = useState(initialAspectRatio);
+  // 🔑 占位与列表一起用 media 的宽高比：优先 API 返回的 aspect_ratio，其次 width/height，否则默认 3:2
+  const imageWidth = card.coverImage?.width ?? card.imageWidth;
+  const imageHeight = card.coverImage?.height ?? card.imageHeight;
+  const apiAspectRatio = card.coverImage?.aspect_ratio;
+  const initialAspectRatio =
+    apiAspectRatio != null
+      ? Number(apiAspectRatio)
+      : imageWidth && imageHeight
+        ? imageWidth / imageHeight
+        : 3 / 2;
+  const [aspectRatio, setAspectRatio] = useState<number | string>(initialAspectRatio);
 
   useEffect(() => {
-    setAspectRatio(initialAspectRatio);
-  }, [initialAspectRatio]);
+    const next =
+      apiAspectRatio != null
+        ? Number(apiAspectRatio)
+        : imageWidth && imageHeight
+          ? imageWidth / imageHeight
+          : 3 / 2;
+    setAspectRatio(next);
+  }, [apiAspectRatio, imageWidth, imageHeight]);
 
   return (
     <Card
@@ -66,7 +76,7 @@ export default function ImageCard({ card, onClick, priority = false, className =
           className="hover-scale-image"
           onLoadingComplete={(img) => {
             if (img?.naturalWidth && img?.naturalHeight) {
-              setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
+              setAspectRatio(img.naturalWidth / img.naturalHeight);
             }
             setImgLoaded(true);
           }}

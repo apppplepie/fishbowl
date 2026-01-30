@@ -17,6 +17,17 @@ export default function ImageCardServer({ card, priority = false }: ImageCardSer
   const cardId = card.id?.toString() || card._id?.toString() || '';
   const colors = generateVisualsFromId(cardId);
 
+  // 与列表一起加载的 media 宽高比：占位图按真实比例预留
+  const apiAspectRatio = card.coverImage?.aspect_ratio;
+  const w = card.coverImage?.width ?? card.imageWidth;
+  const h = card.coverImage?.height ?? card.imageHeight;
+  const aspectRatio =
+    apiAspectRatio != null
+      ? Number(apiAspectRatio)
+      : w && h
+        ? w / h
+        : 3 / 2;
+
   return (
     <div
       className="relative break-inside-avoid group"
@@ -48,7 +59,7 @@ export default function ImageCardServer({ card, priority = false }: ImageCardSer
             position: 'relative',
             width: '100%',
             maxWidth: '100%',
-            aspectRatio: '3 / 2',
+            aspectRatio,
             background: colors.background,
             overflow: 'hidden',
             boxSizing: 'border-box',

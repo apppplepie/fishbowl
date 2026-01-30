@@ -84,19 +84,25 @@ export async function GET(request: NextRequest) {
           a.category_id,
           a.order_index,
           c.name as category_name,
-          -- 封面图片处理：根据权限返回真实封面或占位符
+          -- 封面图片处理：根据权限返回真实封面或占位符，并带上 media 的 width/height 供瀑布流按比例占位
           CASE
             WHEN a.cover_image IS NOT NULL AND a.cover_access_level <= ? THEN
               JSON_OBJECT(
                 'url', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.url')),
                 'title', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.title')),
-                'description', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.description'))
+                'description', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.description')),
+                'width', m.width,
+                'height', m.height,
+                'aspect_ratio', m.aspect_ratio
               )
             WHEN a.cover_image IS NOT NULL THEN
               JSON_OBJECT(
                 'url', '${PLACEHOLDER_IMG}',
                 'title', '内容受限',
-                'description', CONCAT('需要', a.cover_access_level, '级权限')
+                'description', CONCAT('需要', a.cover_access_level, '级权限'),
+                'width', m.width,
+                'height', m.height,
+                'aspect_ratio', m.aspect_ratio
               )
             ELSE NULL
           END as cover_image,
@@ -156,6 +162,16 @@ export async function GET(request: NextRequest) {
           ROW_NUMBER() OVER (PARTITION BY a.category_id ORDER BY a.order_index ASC, a.updated_at DESC) as rn
         FROM articles a
         LEFT JOIN categories c ON a.category_id = c.id
+        LEFT JOIN (
+          SELECT article_id, block_id FROM (
+            SELECT ab.article_id, ab.block_id,
+              ROW_NUMBER() OVER (PARTITION BY ab.article_id ORDER BY ab.\`order\`) as rn
+            FROM article_blocks ab
+            INNER JOIN blocks b ON b.id = ab.block_id AND b.type = 'image'
+          ) t WHERE rn = 1
+        ) first_img ON first_img.article_id = a.id
+        LEFT JOIN blocks b_cover ON b_cover.id = first_img.block_id
+        LEFT JOIN media m ON m.id = b_cover.media_id
         WHERE a.status = 'published'
           AND a.category_id IN (${placeholders})
       ) ranked

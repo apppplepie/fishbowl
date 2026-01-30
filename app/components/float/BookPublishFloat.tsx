@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, message } from '@/app/components/ui';
-import { Input, Button, Spin } from 'antd'; // 暂时保留，后续实现
+import { Input, Button } from 'antd'; // 暂时保留，后续实现
+import { Spin } from '@/app/components/ui';
 import { Plus, FileText, Trash2, Book } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ChapterManageFloat from './ChapterManageFloat';

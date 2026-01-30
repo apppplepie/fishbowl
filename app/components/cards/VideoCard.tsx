@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card } from 'antd';
+import { Card } from '@/app/components/ui';
 import { PlayCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import type { VideoCard as VideoCardType } from '@/app/types/card';
 
@@ -19,12 +19,9 @@ export default function VideoCard({ card, onClick, className = '' }: VideoCardPr
   return (
     <Card
       hoverable
+      id={card.id?.toString() || (card as any)._id?.toString() || ''}
       className={className}
-      style={{ 
-        borderRadius: '12px',
-        overflow: 'hidden',
-      }}
-      styles={{ body: { padding: 0 } }}
+      bodyStyle={{ padding: 0 }}
       onClick={onClick}
     >
       {/* 缩略图区域 */}

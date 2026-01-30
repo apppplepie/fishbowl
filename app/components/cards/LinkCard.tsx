@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card } from 'antd';
+import { Card } from '@/app/components/ui';
 import { LinkOutlined } from '@ant-design/icons';
 import type { LinkCard as LinkCardType } from '@/app/types/card';
 
@@ -19,13 +19,9 @@ export default function LinkCard({ card, onClick, className = '' }: LinkCardProp
   return (
     <Card
       hoverable
+      id={card.id?.toString() || (card as any)._id?.toString() || ''}
       className={className}
-      style={{ 
-        borderRadius: '12px',
-        overflow: 'hidden',
-        border: '1px solid #e8e8e8',
-      }}
-      styles={{ body: { padding: 0 } }}
+      bodyStyle={{ padding: 0 }}
       onClick={onClick}
     >
       {/* 缩略图区域 */}

@@ -2,9 +2,10 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Spin, message } from 'antd';
+import { Spin } from '@/app/components/ui';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiGetJson } from '@/lib/apiClient';
+import { message } from '@/app/components/ui';
 
 /**
  * 管理员专用路由布局

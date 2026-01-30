@@ -711,7 +711,7 @@ export default function Home() {
       }
       @media (min-width: 768px) {
         .crow-container {
-          width: 50vw; /* 平板上缩小到 50vw */
+          width: 40vw; /* 平板上缩小到 40vw */
         }
       }
       @media (min-width: 1200px) {
@@ -721,7 +721,7 @@ export default function Home() {
       }
       @media (min-width: 1400px) {
         .crow-container {
-          width: 35vw; /* 大屏幕上进一步缩小到 35vw */
+          width: 30vw; /* 大屏幕上进一步缩小到 30vw */
         }
       }
     `;
@@ -927,7 +927,7 @@ export default function Home() {
             style={{
               position: 'absolute',
               top: `calc(${crowTop} - 80vh)`,
-              left: '60%',
+              left: '70%',
               transform: 'translateX(-50%)',
               zIndex: 999,
               pointerEvents: 'auto',

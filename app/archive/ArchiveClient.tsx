@@ -327,23 +327,64 @@ export default function ArchiveClient({
         }
     }, [searchParams, pathname, router, loadArticles, selectedCategoryId]);
 
-    // ✅ 强制滚动到顶部，阻止浏览器恢复滚动位置
+    // ✅ 禁用浏览器自动滚动恢复，让 MasonryGrid 自己控制滚动位置
     useEffect(() => {
-        // 禁用自动滚动恢复
+        // 禁用自动滚动恢复，让 MasonryGrid 的滚动恢复功能能够正常工作
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
         }
         
-        // 强制滚动到顶部
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
+        // 不强制滚动到顶部，让 MasonryGrid 从 sessionStorage 恢复滚动位置
         
         // 组件卸载时恢复默认行为
         return () => {
             if ('scrollRestoration' in history) {
                 history.scrollRestoration = 'auto';
             }
+        };
+    }, []);
+    
+    // ✅ 追踪筛选条件的变化，只在变化时滚动到顶部
+    const prevFilterRef = useRef<{ categoryId: string | null; tagsCount: number; keyword: string }>({
+        categoryId: null,
+        tagsCount: 0,
+        keyword: ''
+    });
+    
+    useEffect(() => {
+        const currentFilter = {
+            categoryId: selectedCategoryId,
+            tagsCount: selectedTags.length,
+            keyword: searchKeyword
+        };
+        
+        const prevFilter = prevFilterRef.current;
+        
+        // 只在筛选条件真正改变时才滚动到顶部（排除首次渲染）
+        const hasChanged = 
+            prevFilter.categoryId !== currentFilter.categoryId ||
+            prevFilter.tagsCount !== currentFilter.tagsCount ||
+            prevFilter.keyword !== currentFilter.keyword;
+        
+        if (hasChanged && (prevFilter.categoryId !== null || prevFilter.tagsCount > 0 || prevFilter.keyword)) {
+            // 延迟执行，确保 DOM 已更新
+            requestAnimationFrame(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+        
+        // 更新 ref
+        prevFilterRef.current = currentFilter;
+    }, [selectedCategoryId, selectedTags.length, searchKeyword]);
+
+    // ✅ 在页面卸载/刷新前保存滚动位置
+    useEffect(() => {
+        const onBeforeUnload = () => {
+            window.dispatchEvent(new Event('masonry:saveState'));
+        };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', onBeforeUnload);
         };
     }, []);
 
@@ -428,6 +469,8 @@ export default function ArchiveClient({
     const handleCardClick = useCallback((card: any) => {
         if (card.type === 'text' || card.type === 'image' || card.type === 'code' ||
             card.type === 'diary' || card.type === 'drawing' || card.type === 'article') {
+            // 跳转前立即保存滚动位置，确保返回时能恢复
+            window.dispatchEvent(new Event('masonry:saveState'));
             router.push(`/article/${card.id}`);
         }
     }, [router]);
@@ -490,15 +533,15 @@ export default function ArchiveClient({
         const masonryClassName = 'masonry-item'; // 瀑布流布局需要的 className
         const articleId = article.id; // 用于 key
 
-        // 使用 div 包装器添加 hover 预取，确保不影响布局
+        // 使用 div 包装器添加 hover 预取，确保 MasonryGrid 能正确观察和定位
         const cardWrapper = (cardComponent: React.ReactElement) => (
             <div 
                 key={articleId}
+                className="masonry-item"
+                data-article-id={articleId}
                 onMouseEnter={handleHover} 
                 style={{ 
-                    width: '100%', 
-                    height: '100%',
-                    display: 'contents' // 使用 contents 确保不影响布局
+                    width: '100%'
                 }}
             >
                 {cardComponent}
@@ -507,12 +550,11 @@ export default function ArchiveClient({
 
         switch (article.type) {
             case 'text':
-                return cardWrapper(<ArticleCard key={articleId} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
+                return cardWrapper(<ArticleCard card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
             case 'image':
-                return cardWrapper(<ImageCard key={articleId} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
+                return cardWrapper(<ImageCard card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
             case 'drawing':
                 return cardWrapper(<ImageCard
-                    key={articleId}
                     card={{
                         ...article,
                         description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
@@ -522,11 +564,11 @@ export default function ArchiveClient({
                     className={masonryClassName}
                 />);
             case 'code':
-                return cardWrapper(<CodeCard key={articleId} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
+                return cardWrapper(<CodeCard card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
             case 'diary':
-                return cardWrapper(<DiaryCard key={articleId} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
+                return cardWrapper(<DiaryCard card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
             default:
-                return cardWrapper(<CardRenderer key={articleId} card={article} onClick={handleClick} className={masonryClassName} />);
+                return cardWrapper(<CardRenderer card={article} onClick={handleClick} className={masonryClassName} />);
         }
     }, [handleCardClick, handleCardHover]);
 
@@ -628,7 +670,11 @@ export default function ArchiveClient({
                     ) : (
                         <>
                             <div style={{ minHeight: '400px' }}>
-                                <MasonryGrid minColumns={2}>
+                                <MasonryGrid 
+                                    minColumns={2}
+                                    restoreChunkRatio={0.85}
+                                    restoreDelay={420}
+                                >
                                     {filteredCards.map((card, index) => renderCard(card, index))}
                                 </MasonryGrid>
                             </div>

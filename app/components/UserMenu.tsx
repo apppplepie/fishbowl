@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Avatar, Button, Card } from 'antd';
-import { UserOutlined, LoginOutlined } from '@ant-design/icons';
+import { Button, Card } from '@/app/components/ui';
+import { Avatar } from 'antd';
+import { User, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import '../styles/user-menu.css';
@@ -59,10 +60,8 @@ export default function UserMenu({
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
         backdropFilter: 'blur(10px)',
       }}
-      styles={{
-        body: {
-          padding: isMobile ? '20px 16px' : '16px 20px',
-        },
+      bodyStyle={{
+        padding: isMobile ? '20px 16px' : '16px 20px',
       }}
     >
       <div style={{
@@ -78,7 +77,7 @@ export default function UserMenu({
         }}>
           <Avatar
             size={isMobile ? 48 : 48}
-            icon={<UserOutlined />}
+            icon={<User size={20} />}
             style={{
               backgroundColor: isLoggedIn ? '#1677ff' : '#666',
               border: '2px solid rgba(255, 255, 255, 0.2)',
@@ -147,7 +146,7 @@ export default function UserMenu({
           {!isLoggedIn && (
             <Button
               type="primary"
-              icon={<LoginOutlined />}
+              icon={<LogIn size={18} />}
               onClick={handleLogin}
               size="middle"
               style={{

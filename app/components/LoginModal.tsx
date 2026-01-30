@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, Form, Input, Button, Flex, Checkbox, message } from 'antd';
-import { LockOutlined, UserOutlined } from '@ant-design/icons';
+import { Modal, Input, Button, message } from '@/app/components/ui';
+import { Lock, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
+import { Checkbox } from 'antd';
+import { Form } from 'antd';
 
 interface LoginModalProps {
   open: boolean;
@@ -111,7 +113,7 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
             rules={[{ required: true, message: '请输入用户名！' }]}
           >
             <Input 
-              prefix={<UserOutlined />} 
+              prefix={<User size={16} />} 
               placeholder="用户名" 
               size="large"
             />
@@ -122,21 +124,21 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
             rules={[{ required: true, message: '请输入密码！' }]}
           >
             <Input.Password
-              prefix={<LockOutlined />}
+              prefix={<Lock size={16} />}
               placeholder="密码"
               size="large"
             />
           </Form.Item>
 
           <Form.Item>
-            <Flex justify="space-between" align="center">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Form.Item name="remember" valuePropName="checked" noStyle>
                 <Checkbox>记住我</Checkbox>
               </Form.Item>
               <a onClick={handleForgotPassword} style={{ cursor: 'pointer' }}>
                 忘记密码？
               </a>
-            </Flex>
+            </div>
           </Form.Item>
 
           <Form.Item>

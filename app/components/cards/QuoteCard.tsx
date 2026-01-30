@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card } from 'antd';
+import { Card } from '@/app/components/ui';
 import type { QuoteCard as QuoteCardType } from '@/app/types/card';
 
 interface QuoteCardProps {
@@ -18,20 +18,18 @@ export default function QuoteCard({ card, onClick, className = '' }: QuoteCardPr
   return (
     <Card
       hoverable
+      id={card.id?.toString() || (card as any)._id?.toString() || ''}
       className={className}
       style={{ 
-        borderRadius: '12px',
         background: card.backgroundColor || 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
         border: 'none',
       }}
-      styles={{ 
-        body: { 
-          padding: '32px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          minHeight: '200px',
-        } 
+      bodyStyle={{ 
+        padding: '32px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        minHeight: '200px',
       }}
       onClick={onClick}
     >

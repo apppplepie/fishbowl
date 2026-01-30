@@ -221,19 +221,25 @@ export async function GET(request: NextRequest) {
         c.path as category_path,
         c.depth as category_depth,
         c.order_index as category_order_index,
-        -- 封面图片处理：根据权限返回真实封面或占位符
+        -- 封面图片处理：根据权限返回真实封面或占位符，并带上 media 的 width/height 供瀑布流按比例占位
         CASE
           WHEN a.cover_image IS NOT NULL AND a.cover_access_level <= ? THEN
             JSON_OBJECT(
               'url', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.url')),
               'title', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.title')),
-              'description', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.description'))
+              'description', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.description')),
+              'width', m.width,
+              'height', m.height,
+              'aspect_ratio', m.aspect_ratio
             )
           WHEN a.cover_image IS NOT NULL THEN
             JSON_OBJECT(
               'url', '${PLACEHOLDER_IMAGE_URL}',
               'title', '内容受限',
-              'description', CONCAT('需要', a.cover_access_level, '级权限')
+              'description', CONCAT('需要', a.cover_access_level, '级权限'),
+              'width', m.width,
+              'height', m.height,
+              'aspect_ratio', m.aspect_ratio
             )
           ELSE NULL
         END as cover_image,
@@ -252,6 +258,16 @@ export async function GET(request: NextRequest) {
         ) as tags
        FROM articles a
        LEFT JOIN categories c ON a.category_id = c.id
+       LEFT JOIN (
+         SELECT article_id, block_id FROM (
+           SELECT ab.article_id, ab.block_id,
+             ROW_NUMBER() OVER (PARTITION BY ab.article_id ORDER BY ab.\`order\`) as rn
+           FROM article_blocks ab
+           INNER JOIN blocks b ON b.id = ab.block_id AND b.type = 'image'
+         ) t WHERE rn = 1
+       ) first_img ON first_img.article_id = a.id
+       LEFT JOIN blocks b_cover ON b_cover.id = first_img.block_id
+       LEFT JOIN media m ON m.id = b_cover.media_id
        WHERE ${whereClause}
        ${shouldOrderByPath ? '' : `ORDER BY a.updated_at DESC LIMIT ${queryLimit} OFFSET ${queryOffset}`}`,
       queryParams

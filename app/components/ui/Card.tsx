@@ -58,6 +58,7 @@ export default function Card({
       className={`relative break-inside-avoid group ${className}`}
       style={cardStyle}
       onClick={onClick}
+      data-article-id={id || undefined}
       onMouseEnter={(e) => {
         if (hoverable || onClick) {
           e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)';

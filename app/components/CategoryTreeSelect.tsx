@@ -7,9 +7,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TreeSelect, Input, Modal, message, Button } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-import type { TreeSelectProps } from 'antd';
+import { TreeSelect } from 'antd';
+import { Plus } from 'lucide-react';
+import { Input, Modal, message, Button } from '@/app/components/ui';
 import { apiGetJson, apiPostJson } from '@/lib/apiClient';
 
 interface Category {
@@ -136,7 +136,7 @@ export default function CategoryTreeSelect({
             <Button
               type="text"
               size="small"
-              icon={<PlusOutlined />}
+              icon={<Plus size={14} />}
               onClick={(e) => {
                 e.stopPropagation();
                 handleAddCategory(cat.id, cat.name);

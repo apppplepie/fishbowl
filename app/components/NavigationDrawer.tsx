@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Drawer, Menu, Modal } from 'antd';
+import { Drawer, Menu } from 'antd';
+import { Modal } from '@/app/components/ui';
 import { usePathname, useRouter } from 'next/navigation';
 import type { MenuProps } from 'antd';
 import {

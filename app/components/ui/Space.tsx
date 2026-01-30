@@ -4,7 +4,7 @@ import React from 'react';
 import './ui.css';
 
 export interface SpaceProps {
-  size?: 'small' | 'middle' | 'large' | number;
+  size?: 'small' | 'middle' | 'large' | number | [number, number];
   direction?: 'horizontal' | 'vertical';
   align?: 'start' | 'end' | 'center' | 'baseline';
   wrap?: boolean;
@@ -24,7 +24,10 @@ const Space: React.FC<SpaceProps> = ({
   className = '',
   style,
 }) => {
-  const getSize = () => {
+  const getSize = (): number | [number, number] => {
+    if (Array.isArray(size)) {
+      return size;
+    }
     if (typeof size === 'number') {
       return size;
     }
@@ -41,6 +44,7 @@ const Space: React.FC<SpaceProps> = ({
   };
 
   const spaceSize = getSize();
+  const [horizontalSize, verticalSize] = Array.isArray(spaceSize) ? spaceSize : [spaceSize, spaceSize];
 
   const spaceClasses = [
     'ui-space',
@@ -53,7 +57,9 @@ const Space: React.FC<SpaceProps> = ({
 
   const spaceStyle: React.CSSProperties = {
     ...style,
-    gap: split ? undefined : `${spaceSize}px`,
+    gap: split ? undefined : Array.isArray(spaceSize) 
+      ? `${verticalSize}px ${horizontalSize}px` 
+      : `${spaceSize}px`,
     alignItems: align,
   };
 
@@ -65,7 +71,7 @@ const Space: React.FC<SpaceProps> = ({
         {childrenArray.map((child, index) => (
           <React.Fragment key={index}>
             {index > 0 && (
-              <span className="ui-space-split" style={{ margin: `0 ${spaceSize / 2}px` }}>
+              <span className="ui-space-split" style={{ margin: `0 ${horizontalSize / 2}px` }}>
                 {split}
               </span>
             )}

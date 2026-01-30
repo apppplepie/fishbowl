@@ -188,7 +188,7 @@ interface Theme {
 | `azure` | Azure Day | 蓝色调，晴朗天空 |
 | `emerald` | Emerald Springs | 绿色调，翠绿湖水 |
 | `midnight` | Deep Ocean | 深蓝色，深海效果 |
-| `neon` | Neon Synth | 霓虹色，赛博朋克风格 |
+| `deep-ocean` | Deep Sea Abyss” (深海之渊) 的配色方案。 |
 | `sunset` | Golden Hour | 金色调，日落余晖 |
 | `noir` | Monochrome Noir | 黑白调，经典风格 |
 | `glacial` | Glacial Melt | 冰蓝色，冰川融化 |

@@ -106,6 +106,7 @@ const LoadEnd: React.FC<LoadEndProps> = ({
   );
 };
 
+/* === 以下为修改后的 Spin 组件：自动检测手机并添加 ui-spin-mobile === */
 const Spin: React.FC<SpinProps> = ({
   size = 'small',
   spinning = true,
@@ -116,6 +117,44 @@ const Spin: React.FC<SpinProps> = ({
   style,
 }) => {
   const [delayedSpinning, setDelayedSpinning] = React.useState(false);
+
+  // 检测是否移动端（max-width:480px）
+  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia && window.matchMedia('(max-width:480px)').matches;
+  });
+
+  React.useEffect(() => {
+    const mql = typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(max-width:480px)')
+      : null;
+    if (!mql) return;
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      // MediaQueryListEvent for modern, MediaQueryList for older addListener
+      // `matches` 在两者都可用
+      // @ts-ignore
+      setIsMobile(!!e.matches);
+    };
+
+    // 新 API
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', handler as EventListener);
+    } else if (typeof (mql as any).addListener === 'function') {
+      // 兼容旧浏览器
+      (mql as any).addListener(handler);
+    }
+
+    // 初始值（以防上面的初始函数未执行）
+    setIsMobile(mql.matches);
+
+    return () => {
+      if (typeof mql.removeEventListener === 'function') {
+        mql.removeEventListener('change', handler as EventListener);
+      } else if (typeof (mql as any).removeListener === 'function') {
+        (mql as any).removeListener(handler);
+      }
+    };
+  }, []);
 
   React.useEffect(() => {
     if (spinning && delay > 0) {
@@ -132,9 +171,11 @@ const Spin: React.FC<SpinProps> = ({
     return <>{children}</>;
   }
 
+  // 这里额外把 ui-spin-mobile 加入 class（在移动端会生效）
   const spinClasses = [
     'ui-spin',
     `ui-spin-${size}`,
+    isMobile ? 'ui-spin-mobile' : '',
     className,
   ].filter(Boolean).join(' ');
 

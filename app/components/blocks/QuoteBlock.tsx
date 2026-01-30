@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, Button, Modal, Typography, Pagination, Spin, Divider, Input } from 'antd';
+import { Card, Modal, Typography, Pagination, Divider, Input } from 'antd';
 import { LinkOutlined, PictureOutlined } from '@ant-design/icons';
 import { Image as AntImage } from 'antd';
 import type { QuoteBlock as QuoteBlockType } from '@/app/types/block';
 import { apiGetJson } from '@/lib/apiClient';
+import { Spin } from '@/app/components/ui';
 
 const { Title, Paragraph, Text } = Typography;
 
