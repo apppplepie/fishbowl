@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ClockCircleOutlined, EditOutlined} from '@ant-design/icons';
-import type { ArticleCard as ArticleCardType } from '@/app/types/card';
+import type { ArticleCard as ArticleCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { Tag, Card } from '@/app/components/ui';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
@@ -10,6 +10,7 @@ import { useCardBackground } from '@/app/components/ui/useCardBackground';
 export interface ArticleCardProps {
   card: ArticleCardType | any;
   onClick?: () => void;
+  onMouseEnter?: () => void;
   priority?: boolean;
   className?: string;
 }
@@ -18,8 +19,15 @@ export interface ArticleCardProps {
  * B. 文章主导卡片
  * 标题+摘要+封面图，适合博客文章、长篇内容
  */
-export default function ArticleCard({ card, onClick, priority = false, className = '' }: ArticleCardProps) {
-  // 使用卡片背景颜色 Hook，基于文章 ID 生成独特的渐变色
+export default function ArticleCard({
+  card,
+  onClick,
+  onMouseEnter,
+  priority = false,
+  className = '',
+  masonry,
+  span,
+}: ArticleCardProps & MasonryProps) {
   const colors = useCardBackground(card.id || card._id?.toString() || '');
 
   return (
@@ -27,8 +35,14 @@ export default function ArticleCard({ card, onClick, priority = false, className
       hoverable
       id={card.id || card._id?.toString() || ''}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
       bodyStyle={{ padding: '20px' }}
-      className={className}
+      className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
+      style={span != null ? { gridRow: `span ${span}` } : undefined}
+      dataMasonry={masonry || undefined}
+      dataMasonrySpan={span != null ? span : undefined}
+      dataCardId={card.id || card._id?.toString() || ''}
+      dataCardType="TEXT_CARD"
     >
 
 

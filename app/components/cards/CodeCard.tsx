@@ -4,6 +4,7 @@ import React from 'react';
 import { CodeOutlined } from '@ant-design/icons';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
+import type { MasonryProps } from '@/app/types/card';
 import { Tag, Card } from '@/app/components/ui';
 
 export interface CodeCardProps {
@@ -23,6 +24,7 @@ export interface CodeCardProps {
     comments?: number;
   };
   onClick?: () => void;
+  onMouseEnter?: () => void;
   priority?: boolean;
   className?: string;
 }
@@ -31,7 +33,15 @@ export interface CodeCardProps {
  * 代码主导卡片 - 方案A：代码预览式
  * 适合技术文章、代码示例分享
  */
-export default function CodeCard({ card, onClick, priority = false, className = '' }: CodeCardProps) {
+export default function CodeCard({
+  card,
+  onClick,
+  onMouseEnter,
+  priority = false,
+  className = '',
+  masonry,
+  span,
+}: CodeCardProps & MasonryProps) {
   // 使用卡片背景颜色 Hook，基于代码卡片 ID 生成独特的渐变色
   const colors = useCardBackground(card.id || '');
   
@@ -45,8 +55,14 @@ export default function CodeCard({ card, onClick, priority = false, className = 
       hoverable
       id={card.id || ''}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
       bodyStyle={{ padding: 0 }}
-      className={className}
+      className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
+      style={span != null ? { gridRow: `span ${span}` } : undefined}
+      dataMasonry={masonry || undefined}
+      dataMasonrySpan={span != null ? span : undefined}
+      dataCardId={card.id || ''}
+      dataCardType="CODE_CARD"
     >
       {/* 标题区域 */}
       <div style={{

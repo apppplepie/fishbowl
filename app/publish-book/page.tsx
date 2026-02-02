@@ -266,16 +266,18 @@ function PublishBookPage() {
       // 2. 创建书籍简介文章
       const blocks: Block[] = [];
 
-      // 如果有封面图片，添加图片块
+      // 如果有封面图片，添加图片块（含 media_id 供列表占位与瀑布流用）
       if (coverFileList.length > 0 && coverFileList[0].response?.url) {
+        const coverResp = coverFileList[0].response as { url: string; media_id?: string };
         blocks.push({
           id: `block-cover-${Date.now()}`,
           type: 'image',
           order: 0,
-          access_level: 1, // 书籍简介所有内容都是公开的
-          imageUrl: coverFileList[0].response.url,
+          access_level: 1,
+          imageUrl: coverResp.url,
           title: `${values.title}封面`,
           description: '',
+          ...(coverResp.media_id && { mediaId: coverResp.media_id }),
         } as any);
       }
 

@@ -10,6 +10,7 @@ import CategoryTreeSelect from '../CategoryTreeSelect';
 import TagInput from '../TagInput';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { apiPostJson } from '@/lib/apiClient';
+import { uploadFileWithProgress } from '@/lib/uploadClient';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
 
 interface GalleryPublishFloatProps {
@@ -67,7 +68,7 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
     setLoading(true);
   
     try {
-      const imageUrls: string[] = [];
+      const imageResults: { url: string; mediaId?: string }[] = [];
 
       // 总体进度提示
       message.loading({ content: `正在上传图片 0/${fileList.length}`, key: 'gallery_upload', duration: 0 });
@@ -104,18 +105,18 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
         );
   
         if (result && result.success) {
-          imageUrls.push(result.url!);
+          imageResults.push({ url: result.url!, mediaId: result.media_id });
           updateFileProgress(i, 100, 'done');
         } else {
           // 上传失败：标记并抛错，退出（也可以选择跳过继续上传其他图片）
           updateFileProgress(i, 0, 'error');
-          throw new Error(result.error || '上传失败');
+          throw new Error((typeof result.error === 'string' ? result.error : null) || '上传失败');
         }
       }
   
-      message.success({ content: `上传完成，共 ${imageUrls.length} 张`, key: 'gallery_upload' });
+      message.success({ content: `上传完成，共 ${imageResults.length} 张`, key: 'gallery_upload' });
   
-      // 构造 blocks (保留你原来的逻辑)
+      // 构造 blocks（含 mediaId 供后端写入 blocks.media_id）
       const blocks: any[] = [];
       if (values.description) {
         blocks.push({
@@ -124,10 +125,11 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           access_level: accessLevel,
         });
       }
-      imageUrls.forEach((url) => {
+      imageResults.forEach((item) => {
         blocks.push({
           type: 'image',
-          imageUrl: url,
+          imageUrl: item.url,
+          mediaId: item.mediaId,
           description: '',
           access_level: accessLevel,
         });
@@ -178,45 +180,6 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
       setLoading(false);
     }
   };
-  
-
-  // 放在组件内部（handleSubmit 同级）
-function uploadFileWithProgress(file: File, onProgress: (p: number) => void) {
-  return new Promise<{ success: boolean; url?: string; error?: any }>((resolve) => {
-    const xhr = new XMLHttpRequest();
-    const form = new FormData();
-    form.append('file', file);
-
-    xhr.open('POST', '/api/upload', true);
-    
-    // 携带 HttpOnly cookie（token 在 cookie 中，不需要手动设置 Authorization header）
-    xhr.withCredentials = true;
-
-    xhr.upload.onprogress = (ev: ProgressEvent) => {
-      if (ev.lengthComputable) {
-        const percent = Math.round((ev.loaded / ev.total) * 100);
-        onProgress(percent);
-      }
-    };
-
-    xhr.onload = () => {
-      try {
-        const resp = xhr.responseText ? JSON.parse(xhr.responseText) : {};
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(resp);
-        } else {
-          resolve({ success: false, error: resp || xhr.statusText || 'upload error' });
-        }
-      } catch (e) {
-        resolve({ success: false, error: 'parse error' });
-      }
-    };
-
-    xhr.onerror = () => resolve({ success: false, error: 'network error' });
-    xhr.send(form);
-  });
-}
-
 
   return (
     <>

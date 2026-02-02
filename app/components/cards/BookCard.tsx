@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { UserOutlined, ClockCircleOutlined, DeleteOutlined, ReadOutlined } from '@ant-design/icons';
-import type { BookCard as BookCardType } from '@/app/types/card';
+import type { BookCard as BookCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import DeleteBookModal from '@/app/components/modal/DeleteBookModal';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
@@ -11,6 +11,7 @@ import { Card } from '@/app/components/ui';
 interface BookCardProps {
   card: BookCardType;
   onClick?: () => void;
+  onMouseEnter?: () => void;
   onDeleteSuccess?: () => void;
   showDeleteIcon?: boolean;
   className?: string;
@@ -22,7 +23,16 @@ interface BookCardProps {
  * 封面图来自该目录下 order_index 最小的文章的第一张图片
  * 点击跳转到书籍详情页 /book/[id]
  */
-export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIcon = false, className = '' }: BookCardProps) {
+export default function BookCard({
+  card,
+  onClick,
+  onMouseEnter,
+  onDeleteSuccess,
+  showDeleteIcon = false,
+  className = '',
+  masonry,
+  span,
+}: BookCardProps & MasonryProps) {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
@@ -51,12 +61,18 @@ export default function BookCard({ card, onClick, onDeleteSuccess, showDeleteIco
       hoverable={!showDeleteIcon}
       id={card.id?.toString() || (card as any)._id?.toString() || ''}
       onClick={showDeleteIcon ? undefined : onClick}
+      onMouseEnter={onMouseEnter}
       style={{
         opacity: showDeleteIcon ? 0.9 : 1,
         cursor: showDeleteIcon ? 'default' : 'pointer',
+        ...(span != null && { gridRow: `span ${span}` }),
       }}
       bodyStyle={{ padding: '16px' }}
-      className={className}
+      className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
+      dataMasonry={masonry || undefined}
+      dataMasonrySpan={span != null ? span : undefined}
+      dataCardId={card.id?.toString() || (card as any)._id?.toString() || ''}
+      dataCardType="BOOK_CARD"
       cover={
         <div style={{
           position: 'relative',

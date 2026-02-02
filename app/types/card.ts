@@ -84,3 +84,12 @@ export interface BookCard extends BaseCard {
 
 export type Card = ImageCard | ArticleCard | DiaryCard | QuoteCard | VideoCard | LinkCard | BookCard;
 
+/** 瀑布流语义：卡片声明“我是 masonry item”，不暴露实现细节 */
+export interface MasonryProps {
+  masonry?: boolean;
+  /** 固定行数（gridRowEnd: span N） */
+  span?: number;
+  /** 动态高度（由 ResizeObserver 处理） */
+  dynamic?: boolean;
+}
+

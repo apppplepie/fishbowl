@@ -42,6 +42,7 @@ import QuoteBlock from './QuoteBlock';
 import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, CodeBlock as CodeBlockType, PlaceholderBlock as PlaceholderBlockType, QuoteBlock as QuoteBlockType } from '@/app/types/block';
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { uploadFileWithProgress } from '@/lib/uploadClient';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -397,6 +398,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     let finalImageUrl = imageUrl;
 
     // 如果用户上传了文件，则上传到服务器（改用 XHR + 进度）
+    let lastUploadMediaId: string | null = null;
     if (fileList.length > 0 && fileList[0].originFileObj) {
       try {
         // 初始化 loading（持久显示，后面用相同 key 更新）
@@ -428,9 +430,10 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
 
         if (result.success) {
           finalImageUrl = result.url || '';
+          lastUploadMediaId = result.media_id ?? null;
           message.success({ content: '图片上传成功！', key: 'upload' });
         } else {
-          message.error({ content: result.error || '图片上传失败', key: 'upload' });
+          message.error({ content: (typeof result.error === 'string' ? result.error : null) || '图片上传失败', key: 'upload' });
           return;
         }
       } catch (error) {
@@ -445,11 +448,12 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       return;
     }
 
-    const newBlock: ImageBlockType = {
+    const newBlock: ImageBlockType & { mediaId?: string | null } = {
       id: generateId(),
       type: 'image',
       order: 0, // 临时值，后面会重新排序
       imageUrl: finalImageUrl,
+      ...(lastUploadMediaId != null && { mediaId: lastUploadMediaId }),
     };
 
     // 在指定位置插入
@@ -479,44 +483,6 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     }
     setInsertPosition(-1);
   };
-
-  // 放在组件内部（handleAddImageBlock 同级），负责上传并回传结果/进度
-  function uploadFileWithProgress(file: File | Blob, onProgress: (p: number) => void) {
-    return new Promise<{ success: boolean; url?: string; error?: any }>((resolve) => {
-      const xhr = new XMLHttpRequest();
-      const form = new FormData();
-      form.append('file', file);
-
-      xhr.open('POST', '/api/upload', true);
-      
-      // 携带 HttpOnly cookie（token 在 cookie 中，不需要手动设置 Authorization header）
-      xhr.withCredentials = true;
-
-      xhr.upload.onprogress = (ev: ProgressEvent<EventTarget>) => {
-        if (ev.lengthComputable) {
-          const percent = Math.round((ev.loaded / ev.total) * 100);
-          onProgress(percent);
-        }
-      };
-
-      xhr.onload = () => {
-        try {
-          const resp = xhr.responseText ? JSON.parse(xhr.responseText) : {};
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(resp);
-          } else {
-            resolve({ success: false, error: resp || xhr.statusText || 'upload error' });
-          }
-        } catch (e) {
-          resolve({ success: false, error: 'parse error' });
-        }
-      };
-
-      xhr.onerror = () => resolve({ success: false, error: 'network error' });
-      xhr.send(form);
-    });
-  }
-
 
   // 更新块
   const updateBlock = (index: number, updatedBlock: Block) => {

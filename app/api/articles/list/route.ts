@@ -230,7 +230,8 @@ export async function GET(request: NextRequest) {
               'description', JSON_UNQUOTE(JSON_EXTRACT(a.cover_image, '$.description')),
               'width', m.width,
               'height', m.height,
-              'aspect_ratio', m.aspect_ratio
+              'aspect_ratio', m.aspect_ratio,
+              'blur_data_url', m.blur_data_url
             )
           WHEN a.cover_image IS NOT NULL THEN
             JSON_OBJECT(
@@ -239,7 +240,8 @@ export async function GET(request: NextRequest) {
               'description', CONCAT('需要', a.cover_access_level, '级权限'),
               'width', m.width,
               'height', m.height,
-              'aspect_ratio', m.aspect_ratio
+              'aspect_ratio', m.aspect_ratio,
+              'blur_data_url', m.blur_data_url
             )
           ELSE NULL
         END as cover_image,

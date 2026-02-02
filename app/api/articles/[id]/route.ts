@@ -272,17 +272,19 @@ export async function PUT(
           };
         }
 
-        // 插入或更新块
+        // 插入或更新块（含 media_id，供列表占位与瀑布流用）
+        const mediaId = block.media_id ?? block.mediaId ?? null;
         await query(
-          `INSERT INTO blocks (id, type, content, author, access_level)
-           VALUES (?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE content = VALUES(content), access_level = VALUES(access_level)`,
+          `INSERT INTO blocks (id, type, content, author, access_level, media_id)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE content = VALUES(content), access_level = VALUES(access_level), media_id = VALUES(media_id)`,
           [
             blockId,
             block.type,
             JSON.stringify(blockContent),
-            'system', // 编辑时使用系统作为作者
-            block.access_level || 1, // 添加 access_level，默认值为1
+            'system',
+            block.access_level || 1,
+            mediaId,
           ]
         );
 

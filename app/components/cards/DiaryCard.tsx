@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { DiaryCard as DiaryCardType } from '@/app/types/card';
+import type { DiaryCard as DiaryCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Card } from '@/app/components/ui';
@@ -10,6 +10,7 @@ import { InsertRowAboveOutlined } from '@ant-design/icons';
 export interface DiaryCardProps {
   card: DiaryCardType | any;
   onClick?: () => void;
+  onMouseEnter?: () => void;
   priority?: boolean;
   className?: string;
 }
@@ -18,7 +19,15 @@ export interface DiaryCardProps {
  * C. 日志卡片
  * 简短文字记录，适合每日感想、随笔
  */
-export default function DiaryCard({ card, onClick, priority = false, className = '' }: DiaryCardProps) {
+export default function DiaryCard({
+  card,
+  onClick,
+  onMouseEnter,
+  priority = false,
+  className = '',
+  masonry,
+  span,
+}: DiaryCardProps & MasonryProps) {
   // 从 excerpt 或 content 中提取日志内容和元信息
   const extractDiaryData = () => {
     const rawContent = card.content || card.excerpt || '';
@@ -111,8 +120,14 @@ export default function DiaryCard({ card, onClick, priority = false, className =
       hoverable
       id={card.id?.toString() || card._id?.toString() || ''}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
       bodyStyle={{ padding: '20px' }}
-      className={className}
+      className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
+      style={span != null ? { gridRow: `span ${span}` } : undefined}
+      dataMasonry={masonry || undefined}
+      dataMasonrySpan={span != null ? span : undefined}
+      dataCardId={card.id?.toString() || card._id?.toString() || ''}
+      dataCardType="DIARY_CARD"
     >
       {/* 标题（日期） */}
       <div style={{

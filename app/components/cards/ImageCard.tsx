@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
-import type { ImageCard as ImageCardType } from '@/app/types/card';
+import type { ImageCard as ImageCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { AreaChartOutlined, PictureOutlined } from '@ant-design/icons';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
@@ -11,6 +11,7 @@ import { Tag, Card } from '@/app/components/ui';
 export interface ImageCardProps {
   card: ImageCardType | any;
   onClick?: () => void;
+  onMouseEnter?: () => void;
   priority?: boolean;
   className?: string;
 }
@@ -19,75 +20,82 @@ export interface ImageCardProps {
  * A. 图片主导卡片
  * 大图展示，适合摄影作品、视觉内容
  */
-export default function ImageCard({ card, onClick, priority = false, className = '' }: ImageCardProps) {
+export default function ImageCard({
+  card,
+  onClick,
+  onMouseEnter,
+  priority = false,
+  className = '',
+  masonry,
+  dynamic: _dynamic,
+}: ImageCardProps & MasonryProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
 
-  // 🔑 占位与列表一起用 media 的宽高比：优先 API 返回的 aspect_ratio，其次 width/height，否则默认 3:2
-  const imageWidth = card.coverImage?.width ?? card.imageWidth;
-  const imageHeight = card.coverImage?.height ?? card.imageHeight;
-  const apiAspectRatio = card.coverImage?.aspect_ratio;
-  const initialAspectRatio =
-    apiAspectRatio != null
-      ? Number(apiAspectRatio)
-      : imageWidth && imageHeight
-        ? imageWidth / imageHeight
-        : 3 / 2;
-  const [aspectRatio, setAspectRatio] = useState<number | string>(initialAspectRatio);
+  // 兼容 camelCase（list API）与 snake_case（部分 API 原始返回）
+  const media = card.coverImage ?? card.cover_image ?? null;
+  const imageWidth = media?.width ?? card.imageWidth;
+  const imageHeight = media?.height ?? card.imageHeight;
+  const apiAspectRatio = media?.aspect_ratio;
 
-  useEffect(() => {
-    const next =
-      apiAspectRatio != null
-        ? Number(apiAspectRatio)
-        : imageWidth && imageHeight
-          ? imageWidth / imageHeight
-          : 3 / 2;
-    setAspectRatio(next);
-  }, [apiAspectRatio, imageWidth, imageHeight]);
+  const DEFAULT_ASPECT = 3 / 2;
+  const toValidAspect = (value: number): number =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : DEFAULT_ASPECT;
+
+  // 比例只来自数据（API/DB width、height、aspect_ratio），不依赖图片加载结果，避免布局抖动
+  const computedFromApi =
+    apiAspectRatio != null && apiAspectRatio !== ''
+      ? toValidAspect(Number(apiAspectRatio))
+      : null;
+  const computedFromSize =
+    imageWidth != null && imageHeight != null && Number(imageWidth) > 0 && Number(imageHeight) > 0
+      ? toValidAspect(Number(imageWidth) / Number(imageHeight))
+      : null;
+  const aspectRatio = computedFromApi ?? computedFromSize ?? DEFAULT_ASPECT;
 
   return (
     <Card
       hoverable
       id={card.id?.toString() || card._id?.toString() || ''}
-      className={className}
+      onMouseEnter={onMouseEnter}
+      className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
       onClick={onClick}
       bodyStyle={{ padding: 0 }}
+      dataMasonry={masonry || undefined}
+      dataCardId={card.id?.toString() || card._id?.toString() || ''}
+      dataCardType="IMAGE_CARD"
     >
       <div style={{ 
         position: 'relative', 
         width: '100%',
         maxWidth: '100%',
-        aspectRatio: aspectRatio, // 🔑 使用实际比例或默认比例
+        aspectRatio: aspectRatio,
+        contain: 'layout paint',
+        containIntrinsicSize: '400px 300px',
         background: colors.background,
         overflow: 'hidden',
         boxSizing: 'border-box',
       }}>
         <Image
-          src={card.coverImage?.url || card.imageUrl || card.firstImageUrl}
-          alt={card.coverImage?.title || card.title}
+          src={media?.url || card.imageUrl || card.firstImageUrl}
+          alt={media?.title || card.title}
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1440px) 25vw, 400px" 
-          /* 响应式尺寸: 小屏2列(50%), 中屏3列(33%), 大屏4列(25%) */
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1440px) 25vw, 400px"
           style={{
             objectFit: 'cover',
             transition: 'transform 0.3s ease',
-            maxWidth: '100%', /* 防止撑开父容器 */
+            maxWidth: '100%',
           }}
           className="hover-scale-image"
-          onLoadingComplete={(img) => {
-            if (img?.naturalWidth && img?.naturalHeight) {
-              setAspectRatio(img.naturalWidth / img.naturalHeight);
-            }
-            setImgLoaded(true);
-          }}
+          onLoadingComplete={() => setImgLoaded(true)}
           onError={() => {
-            console.error('ImageCard 图片加载失败:', card.coverImage?.url || card.imageUrl || card.firstImageUrl);
+            console.error('ImageCard 图片加载失败:', media?.url || card.imageUrl || card.firstImageUrl);
             setImgLoaded(true);
           }}
-          loading={priority ? 'eager' : 'lazy'} // ✅ 首屏立即加载
-          priority={priority} // ✅ 首屏优先级
-          placeholder="blur"
-          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI2NyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI2NyIgZmlsbD0iI2YwZjBmMCIvPjwvc3ZnPg=="
+          loading={priority ? 'eager' : 'lazy'}
+          priority={priority}
+          placeholder={media?.blur_data_url ? 'blur' : 'empty'}
+          blurDataURL={media?.blur_data_url ?? undefined}
         />
       </div>
 
@@ -150,29 +158,6 @@ export default function ImageCard({ card, onClick, priority = false, className =
             </p>
           )}
           
-          {/* 底部信息 */}
-          {/* <div style={{
-            marginTop: '12px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '12px',
-            color: '#999',
-          }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12px' }}>
-              {card.author && <span>👤 {card.author}</span>}
-              <span style={{ color: '#999' }}>
-                📝 {formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {(card.likes !== undefined && card.likes !== null) && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  ❤️ {card.likes}
-                </span>
-              )}
-            </div>
-          </div> */}
         </div>
       )}
     </Card>

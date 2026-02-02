@@ -20,6 +20,8 @@ interface Block {
   author?: string;
   order: number;
   access_level?: number;
+  media_id?: string | null;
+  mediaId?: string | null;
 }
 
 interface CreateArticleRequest {
@@ -228,17 +230,19 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      // 插入块
+      // 插入块（含 media_id，供列表占位与瀑布流用）
+      const mediaId = block.media_id ?? block.mediaId ?? null;
       await query(
-        `INSERT INTO blocks (id, type, content, author, access_level)
-         VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE content = VALUES(content), access_level = VALUES(access_level)`,
+        `INSERT INTO blocks (id, type, content, author, access_level, media_id)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE content = VALUES(content), access_level = VALUES(access_level), media_id = VALUES(media_id)`,
         [
           blockId,
           block.type,
           JSON.stringify(blockContent),
           body.author || '匿名',
-          block.access_level || 1,  // 添加 access_level，默认值为1
+          block.access_level || 1,
+          mediaId,
         ]
       );
 

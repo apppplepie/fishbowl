@@ -7,11 +7,19 @@ export interface CardProps {
   children: React.ReactNode;
   hoverable?: boolean;
   onClick?: () => void;
+  onMouseEnter?: () => void;
   style?: React.CSSProperties;
   className?: string;
   id?: string; // 用于生成背景颜色
   cover?: React.ReactNode; // 封面内容（如图片）
   bodyStyle?: React.CSSProperties; // body 区域样式
+  /** 瀑布流语义：参与 masonry 布局（用于 Grid 查询 [data-masonry]） */
+  dataMasonry?: boolean;
+  /** 固定行数（有则 ResizeObserver 不覆盖），对应 grid-row: span N */
+  dataMasonrySpan?: number;
+  /** 卡片 ID / 类型，供调试或选择器用 */
+  dataCardId?: string;
+  dataCardType?: string;
 }
 
 /**
@@ -22,11 +30,16 @@ export default function Card({
   children,
   hoverable = false,
   onClick,
+  onMouseEnter,
   style,
   className = '',
   id = '',
   cover,
   bodyStyle,
+  dataMasonry,
+  dataMasonrySpan,
+  dataCardId,
+  dataCardType,
 }: CardProps) {
   // 使用卡片背景颜色 Hook，基于 ID 生成独特的渐变色
   const colors = useCardBackground(id);
@@ -59,11 +72,16 @@ export default function Card({
       style={cardStyle}
       onClick={onClick}
       data-article-id={id || undefined}
+      data-masonry={dataMasonry || undefined}
+      data-masonry-span={dataMasonrySpan != null ? String(dataMasonrySpan) : undefined}
+      data-card-id={dataCardId || undefined}
+      data-card-type={dataCardType || undefined}
       onMouseEnter={(e) => {
         if (hoverable || onClick) {
           e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)';
           e.currentTarget.style.boxShadow = `0 12px 40px -8px ${colors.shadowColor}, 0 6px 16px -4px rgba(0,0,0,0.15)`;
         }
+        onMouseEnter?.();
       }}
       onMouseLeave={(e) => {
         if (hoverable || onClick) {

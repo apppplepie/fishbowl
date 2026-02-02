@@ -11,6 +11,7 @@ import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
+import { getCardSpan, type CardType } from '@/lib/constants';
 
 // 轻量级瀑布流组件
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
@@ -20,7 +21,6 @@ import ArticleCard from '@/app/components/cards/ArticleCard';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
-import CardRenderer from '@/app/components/cards/CardRenderer';
 
 // 目录/侧边栏 - 非关键路径，懒加载
 const UnifiedNavigator = dynamic(() => import('@/app/components/sidebar/UnifiedNavigator'), {
@@ -327,21 +327,9 @@ export default function ArchiveClient({
         }
     }, [searchParams, pathname, router, loadArticles, selectedCategoryId]);
 
-    // ✅ 禁用浏览器自动滚动恢复，让 MasonryGrid 自己控制滚动位置
+    // ✅ 进入归档页时从顶部开始（不再记录/恢复滚动位置）
     useEffect(() => {
-        // 禁用自动滚动恢复，让 MasonryGrid 的滚动恢复功能能够正常工作
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
-        
-        // 不强制滚动到顶部，让 MasonryGrid 从 sessionStorage 恢复滚动位置
-        
-        // 组件卸载时恢复默认行为
-        return () => {
-            if ('scrollRestoration' in history) {
-                history.scrollRestoration = 'auto';
-            }
-        };
+        window.scrollTo(0, 0);
     }, []);
     
     // ✅ 追踪筛选条件的变化，只在变化时滚动到顶部
@@ -376,17 +364,6 @@ export default function ArchiveClient({
         // 更新 ref
         prevFilterRef.current = currentFilter;
     }, [selectedCategoryId, selectedTags.length, searchKeyword]);
-
-    // ✅ 在页面卸载/刷新前保存滚动位置
-    useEffect(() => {
-        const onBeforeUnload = () => {
-            window.dispatchEvent(new Event('masonry:saveState'));
-        };
-        window.addEventListener('beforeunload', onBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', onBeforeUnload);
-        };
-    }, []);
 
     // ✅ 组件卸载时清理资源，防止内存泄漏
     useEffect(() => {
@@ -465,12 +442,11 @@ export default function ArchiveClient({
         });
     }, [cards, selectedTags, filterMode, userMaxAccessLevel]);
 
+
     // 点击卡片处理
     const handleCardClick = useCallback((card: any) => {
         if (card.type === 'text' || card.type === 'image' || card.type === 'code' ||
             card.type === 'diary' || card.type === 'drawing' || card.type === 'article') {
-            // 跳转前立即保存滚动位置，确保返回时能恢复
-            window.dispatchEvent(new Event('masonry:saveState'));
             router.push(`/article/${card.id}`);
         }
     }, [router]);
@@ -483,20 +459,9 @@ export default function ArchiveClient({
         if (card.type === 'text' || card.type === 'image' || card.type === 'code' ||
             card.type === 'diary' || card.type === 'drawing' || card.type === 'article') {
             const articleId = card.id;
-            
-            // 如果正在预取或已经预取过，跳过
-            if (prefetchingRef.current.has(articleId)) {
-                return;
-            }
-            
-            // 标记为正在预取
+            if (prefetchingRef.current.has(articleId)) return;
             prefetchingRef.current.add(articleId);
-            
-            // 1. 预取路由（预取 JavaScript bundle）
             router.prefetch(`/article/${articleId}`);
-            
-            // 2. 预取 API 数据（后台静默请求，不阻塞 UI）
-            // 这样当用户点击时，数据可能已经在 HTTP 缓存中了
             apiGet(`/api/articles/${articleId}`, { requiresAuth: false })
                 .then(() => {
                     // 预取成功，数据已经在 HTTP 缓存中
@@ -525,50 +490,104 @@ export default function ArchiveClient({
         loadArticles(0, false, categoryId);
     }, [loadArticles]);
 
-    // ✅ 渲染卡片（添加 priority 属性 + masonry-item className + hover 预取）
+    // 渲染卡片：语义化 masonry（masonry + span/dynamic），卡片内部负责 class/style
     const renderCard = useCallback((article: any, index: number) => {
         const handleClick = () => handleCardClick(article);
         const handleHover = () => handleCardHover(article);
-        const isPriority = index < 6; // 首屏前6个优先加载
-        const masonryClassName = 'masonry-item'; // 瀑布流布局需要的 className
-        const articleId = article.id; // 用于 key
+        const isPriority = index < 6;
+        const articleId = article.id;
 
-        // 使用 div 包装器添加 hover 预取，确保 MasonryGrid 能正确观察和定位
-        const cardWrapper = (cardComponent: React.ReactElement) => (
-            <div 
-                key={articleId}
-                className="masonry-item"
-                data-article-id={articleId}
-                onMouseEnter={handleHover} 
-                style={{ 
-                    width: '100%'
-                }}
-            >
-                {cardComponent}
-            </div>
-        );
+        let cardType: CardType | null = null;
+        if (article.type === 'code' || article.codePreview) {
+          cardType = 'CODE_CARD';
+        } else if (article.type === 'text' || article.type === 'article' || article.content) {
+          cardType = 'TEXT_CARD';
+        } else if (article.type === 'diary' || article.excerpt) {
+          cardType = 'DIARY_CARD';
+        } else if (article.type === 'book') {
+          cardType = 'BOOK_CARD';
+        }
+
+        const spanOrDynamic = cardType ? getCardSpan(cardType) : 'dynamic';
+        const masonrySpan = spanOrDynamic === 'dynamic' ? undefined : spanOrDynamic;
+        const masonryDynamic = spanOrDynamic === 'dynamic';
 
         switch (article.type) {
             case 'text':
-                return cardWrapper(<ArticleCard card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
+                return (
+                    <ArticleCard
+                        key={articleId}
+                        card={article}
+                        onClick={handleClick}
+                        onMouseEnter={handleHover}
+                        priority={isPriority}
+                        masonry
+                        span={masonrySpan ?? 18}
+                    />
+                );
             case 'image':
-                return cardWrapper(<ImageCard card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
+                return (
+                    <ImageCard
+                        key={articleId}
+                        card={article}
+                        onClick={handleClick}
+                        onMouseEnter={handleHover}
+                        priority={isPriority}
+                        masonry
+                        dynamic
+                    />
+                );
             case 'drawing':
-                return cardWrapper(<ImageCard
-                    card={{
-                        ...article,
-                        description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
-                    }}
-                    onClick={handleClick}
-                    priority={isPriority}
-                    className={masonryClassName}
-                />);
+                return (
+                    <ImageCard
+                        key={articleId}
+                        card={{
+                            ...article,
+                            description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
+                        }}
+                        onClick={handleClick}
+                        onMouseEnter={handleHover}
+                        priority={isPriority}
+                        masonry
+                        dynamic
+                    />
+                );
             case 'code':
-                return cardWrapper(<CodeCard card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
+                return (
+                    <CodeCard
+                        key={articleId}
+                        card={article}
+                        onClick={handleClick}
+                        onMouseEnter={handleHover}
+                        priority={isPriority}
+                        masonry
+                        span={masonrySpan}
+                    />
+                );
             case 'diary':
-                return cardWrapper(<DiaryCard card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />);
+                return (
+                    <DiaryCard
+                        key={articleId}
+                        card={article}
+                        onClick={handleClick}
+                        onMouseEnter={handleHover}
+                        priority={isPriority}
+                        masonry
+                        span={masonrySpan}
+                    />
+                );
             default:
-                return cardWrapper(<CardRenderer card={article} onClick={handleClick} className={masonryClassName} />);
+                return (
+                    <ArticleCard
+                        key={articleId}
+                        card={article}
+                        onClick={handleClick}
+                        onMouseEnter={handleHover}
+                        priority={isPriority}
+                        masonry
+                        span={masonrySpan ?? 18}
+                    />
+                );
         }
     }, [handleCardClick, handleCardHover]);
 
@@ -670,11 +689,7 @@ export default function ArchiveClient({
                     ) : (
                         <>
                             <div style={{ minHeight: '400px' }}>
-                                <MasonryGrid 
-                                    minColumns={2}
-                                    restoreChunkRatio={0.85}
-                                    restoreDelay={420}
-                                >
+                                <MasonryGrid minColumns={2}>
                                     {filteredCards.map((card, index) => renderCard(card, index))}
                                 </MasonryGrid>
                             </div>

@@ -1,11 +1,15 @@
 // /app/api/upload/route.ts 或你当前的 upload 路由文件
 import { NextRequest, NextResponse } from 'next/server';
-import { mkdir } from 'fs/promises';
+import { mkdir, readFile } from 'fs/promises';
 import { createWriteStream, existsSync } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { pipeline } from 'stream/promises';
 import { getCurrentUser, canModerate } from '@/lib/auth';
+import { query } from '@/lib/db';
+import { generateBlurDataURL } from '@/lib/blur';
+import sizeOf from 'image-size';
+import crypto from 'crypto';
 
 // 保证在 Node runtime（以便使用文件流等 Node 特性）
 export const runtime = 'nodejs';
@@ -73,19 +77,69 @@ export async function POST(request: NextRequest) {
     }
 
     const fileUrl = `/uploads/${year}/${month}/${filename}`;
+    const sizeBytes = (file as any).size ?? 0;
+
+    // 计算尺寸并写入 media 表，供列表占位与瀑布流使用
+    let mediaId: string | null = null;
+    let width: number | null = null;
+    let height: number | null = null;
+    let aspectRatio: number | null = null;
+    try {
+      const buffer = await readFile(filePath);
+      const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+      let dims: { width?: number; height?: number; type?: string } | null = null;
+      try {
+        dims = sizeOf(buffer);
+      } catch {
+        dims = null;
+      }
+      width = dims?.width ?? null;
+      height = dims?.height ?? null;
+      aspectRatio = width && height ? Number((width / height).toFixed(6)) : null;
+      const mime = dims?.type ? `image/${dims.type}` : (file as any).type || null;
+
+      let blurDataUrl: string | null = null;
+      try {
+        blurDataUrl = await generateBlurDataURL(buffer);
+      } catch (blurErr: any) {
+        console.warn('LQIP 生成失败，跳过 blur_data_url:', blurErr?.message);
+      }
+
+      const existing = await query<{ id: string }[]>(
+        'SELECT id FROM media WHERE sha256 = ? LIMIT 1',
+        [sha256]
+      );
+      if (existing.length > 0) {
+        mediaId = existing[0].id;
+      } else {
+        mediaId = uuidv4();
+        await query(
+          `INSERT INTO media (id, url, mime, width, height, aspect_ratio, size_bytes, sha256, source, blur_data_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'local', ?)`,
+          [mediaId, fileUrl, mime, width, height, aspectRatio, buffer.length, sha256, blurDataUrl]
+        );
+      }
+    } catch (mediaErr: any) {
+      console.warn('media 写入失败，仅返回 url:', mediaErr?.message);
+    }
 
     console.log('文件上传成功:', {
       originalName: (file as any).name,
-      size: (file as any).size,
+      size: sizeBytes,
       type: (file as any).type,
       url: fileUrl,
+      media_id: mediaId,
     });
 
     return NextResponse.json({
       success: true,
       url: fileUrl,
       filename,
-      size: (file as any).size,
+      size: sizeBytes,
+      media_id: mediaId ?? undefined,
+      width: width ?? undefined,
+      height: height ?? undefined,
+      aspect_ratio: aspectRatio ?? undefined,
     });
   } catch (error: any) {
     console.error('文件上传失败:', error);

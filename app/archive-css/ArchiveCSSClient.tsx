@@ -10,6 +10,7 @@ import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import { apiGet } from '@/lib/apiClient';
 import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
+import { getCardSpan, type CardType } from '@/lib/constants';
 
 // ✨ 使用 CSS Grid Masonry 版本
 import MasonryGridCSS from '@/app/components/layout/MasonryGridCSS';
@@ -19,7 +20,6 @@ import ArticleCard from '@/app/components/cards/ArticleCard';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
-import CardRenderer from '@/app/components/cards/CardRenderer';
 
 // 目录/侧边栏 - 非关键路径，懒加载
 const UnifiedNavigator = dynamic(() => import('@/app/components/sidebar/UnifiedNavigator'), {
@@ -318,30 +318,38 @@ export default function ArchiveCSSClient({
     const renderCard = useCallback((article: any, index: number) => {
         const handleClick = () => handleCardClick(article);
         const isPriority = index < 6;
-        const masonryClassName = 'masonry-item';
+
+        let cardType: CardType | null = null;
+        if (article.type === 'code' || article.codePreview) cardType = 'CODE_CARD';
+        else if (article.type === 'text' || article.type === 'article' || article.content) cardType = 'TEXT_CARD';
+        else if (article.type === 'diary' || article.excerpt) cardType = 'DIARY_CARD';
+        else if (article.type === 'book') cardType = 'BOOK_CARD';
+
+        const spanOrDynamic = cardType ? getCardSpan(cardType) : 'dynamic';
+        const masonrySpan = spanOrDynamic === 'dynamic' ? undefined : spanOrDynamic;
 
         switch (article.type) {
             case 'text':
-                return <ArticleCard key={article.id} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />;
+                return <ArticleCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry span={masonrySpan ?? 18} />;
             case 'image':
-                return <ImageCard key={article.id} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />;
+                return <ImageCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry dynamic />;
             case 'drawing':
-                return <ImageCard
-                    key={article.id}
-                    card={{
-                        ...article,
-                        description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
-                    }}
-                    onClick={handleClick}
-                    priority={isPriority}
-                    className={masonryClassName}
-                />;
+                return (
+                    <ImageCard
+                        key={article.id}
+                        card={{ ...article, description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '') }}
+                        onClick={handleClick}
+                        priority={isPriority}
+                        masonry
+                        dynamic
+                    />
+                );
             case 'code':
-                return <CodeCard key={article.id} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />;
+                return <CodeCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry span={masonrySpan} />;
             case 'diary':
-                return <DiaryCard key={article.id} card={article} onClick={handleClick} priority={isPriority} className={masonryClassName} />;
+                return <DiaryCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry span={masonrySpan} />;
             default:
-                return <CardRenderer key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
+                return <ArticleCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry span={masonrySpan ?? 18} />;
         }
     }, [handleCardClick]);
 

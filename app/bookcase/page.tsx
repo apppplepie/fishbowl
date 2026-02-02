@@ -11,7 +11,6 @@ import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
 
 // 卡片组件 - 首屏直接加载（启用 SSR）
-import CardRenderer from '@/app/components/cards/CardRenderer';
 import ArticleCard from '@/app/components/cards/ArticleCard';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
@@ -35,6 +34,7 @@ import { useHeader } from '../contexts/HeaderContext';
 import { apiGet } from '@/lib/apiClient';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
+import { getCardSpan, type CardType } from '@/lib/constants';
 
 // 预缓存所有书籍的文章列表
 const preloadAllBookArticleLists = async () => {
@@ -583,6 +583,7 @@ function BookcasePageContent() {
     return filtered;
   }, [cards, selectedTags, searchKeyword, filterMode, userMaxAccessLevel]);
 
+
   const triggerLoadMore = useCallback(() => {
     if (!hasMore || loadingRef.current) return;
     loadingRef.current = true;
@@ -721,33 +722,82 @@ function BookcasePageContent() {
     };
   }, [setConfig, box1Content]);
 
-  // 根据文章类型渲染对应的卡片
+  // 根据文章类型渲染对应的卡片（语义化 masonry：masonry + span/dynamic）
   const renderCard = useCallback((article: any, index: number) => {
     const handleClick = () => handleCardClick(article);
-    const masonryClassName = 'masonry-item';
+    const articleId = article.id;
+
+    let cardType: CardType | null = null;
+    if (article.type === 'book' || article.categoryType === 'bookcase' || article.coverImage) {
+      cardType = 'BOOK_CARD';
+    }
+
+    const spanOrDynamic = cardType ? getCardSpan(cardType) : 'dynamic';
+    const masonrySpan = spanOrDynamic === 'dynamic' ? undefined : spanOrDynamic;
 
     switch (article.type) {
       case 'text':
-        return <ArticleCard key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
+        return (
+          <ArticleCard
+            key={articleId}
+            card={article}
+            onClick={handleClick}
+            masonry
+            span={masonrySpan ?? 18}
+          />
+        );
       case 'image':
-        return <ImageCard key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
+        return (
+          <ImageCard
+            key={articleId}
+            card={article}
+            onClick={handleClick}
+            masonry
+            dynamic
+          />
+        );
       case 'drawing':
-        return <ImageCard key={article.id} card={{
-          ...article,
-          description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
-        }} onClick={handleClick} className={masonryClassName} />;
+        return (
+          <ImageCard
+            key={articleId}
+            card={{
+              ...article,
+              description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
+            }}
+            onClick={handleClick}
+            masonry
+            dynamic
+          />
+        );
       case 'code':
-        return <CodeCard key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
+        return (
+          <CodeCard
+            key={articleId}
+            card={article}
+            onClick={handleClick}
+            masonry
+            span={masonrySpan}
+          />
+        );
       case 'diary':
-        return <DiaryCard key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
+        return (
+          <DiaryCard
+            key={articleId}
+            card={article}
+            onClick={handleClick}
+            masonry
+            span={masonrySpan}
+          />
+        );
       case 'book':
         return (
-          <BookCard 
-            key={article.id} 
-            card={article} 
+          <BookCard
+            key={articleId}
+            card={article}
             onClick={handleClick}
             showDeleteIcon={deleteMode}
-            className={masonryClassName}
+            masonry
+            span={masonrySpan}
             onDeleteSuccess={() => {
               console.log('书籍删除成功，刷新页面和侧边栏');
               const bookCategoryId = (article as any).categoryId;
@@ -763,7 +813,15 @@ function BookcasePageContent() {
           />
         );
       default:
-        return <CardRenderer key={article.id} card={article} onClick={handleClick} className={masonryClassName} />;
+        return (
+          <ArticleCard
+            key={articleId}
+            card={article}
+            onClick={handleClick}
+            masonry
+            span={masonrySpan ?? 18}
+          />
+        );
     }
   }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles]);
 
