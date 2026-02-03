@@ -146,6 +146,7 @@ function BookcasePageContent() {
   
   const offsetRef = useRef(offset);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [masonryColumnWidth, setMasonryColumnWidth] = useState<number | null>(null);
   const loadingRef = useRef(false); // 防止重复触发加载
   const abortControllerRef = useRef<AbortController | null>(null);
   const loadingDelayTimerRef = useRef<number | null>(null);
@@ -746,17 +747,24 @@ function BookcasePageContent() {
             span={masonrySpan ?? 18}
           />
         );
-      case 'image':
+      case 'image': {
+        const imageSpan = masonryColumnWidth
+          ? getImageCardSpan(article, masonryColumnWidth)
+          : (article.precomputedSpan ?? getImageCardSpan(article));
         return (
           <ImageCard
             key={articleId}
             card={article}
             onClick={handleClick}
             masonry
-            span={article.precomputedSpan ?? getImageCardSpan(article)}
+            span={imageSpan}
           />
         );
-      case 'drawing':
+      }
+      case 'drawing': {
+        const drawingSpan = masonryColumnWidth
+          ? getImageCardSpan(article, masonryColumnWidth)
+          : (article.precomputedSpan ?? getImageCardSpan(article));
         return (
           <ImageCard
             key={articleId}
@@ -766,9 +774,10 @@ function BookcasePageContent() {
             }}
             onClick={handleClick}
             masonry
-            span={article.precomputedSpan ?? getImageCardSpan(article)}
+            span={drawingSpan}
           />
         );
+      }
       case 'code':
         return (
           <CodeCard
@@ -823,7 +832,7 @@ function BookcasePageContent() {
           />
         );
     }
-  }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles]);
+  }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles, masonryColumnWidth]);
 
   return (
     <>
@@ -851,7 +860,7 @@ function BookcasePageContent() {
           ) : (
             <>
               <div style={{ minHeight: '400px' }}>
-                <MasonryGrid>
+                <MasonryGrid onLayoutChange={(info) => setMasonryColumnWidth(info.columnWidth)}>
                   {filteredCards.map((card, index) => renderCard(card, index))}
                 </MasonryGrid>
               </div>

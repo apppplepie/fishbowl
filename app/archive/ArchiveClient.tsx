@@ -115,6 +115,7 @@ export default function ArchiveClient({
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
     const scrollerRef = useRef<HTMLDivElement | null>(null); // 整页滚动时保持 null，用 viewport
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
+    const [masonryColumnWidth, setMasonryColumnWidth] = useState<number | null>(null);
 
     // 延迟加载导航组件，只有在用户打开时才加载
     const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
@@ -504,7 +505,7 @@ export default function ArchiveClient({
     }, [loadArticles]);
 
     // 渲染卡片：语义化 masonry（masonry + span/dynamic），卡片内部负责 class/style
-    const renderCard = useCallback((article: any, index: number) => {
+    const renderCard = useCallback((article: any, index: number, span?: number) => {
         const handleClick = () => handleCardClick(article);
         const handleHover = () => handleCardHover(article);
         const isPriority = index < 6;
@@ -523,7 +524,6 @@ export default function ArchiveClient({
 
         const spanOrDynamic = cardType ? getCardSpan(cardType) : 'dynamic';
         const masonrySpan = spanOrDynamic === 'dynamic' ? undefined : spanOrDynamic;
-        const masonryDynamic = spanOrDynamic === 'dynamic';
 
         switch (article.type) {
             case 'text':
@@ -535,7 +535,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={article.precomputedSpan ?? masonrySpan ?? 18}
+                        span={span ?? masonrySpan ?? 18}
                     />
                 );
             case 'image':
@@ -547,7 +547,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={article.precomputedSpan ?? getImageCardSpan(article)}
+                        span={span ?? getImageCardSpan(article, masonryColumnWidth ?? undefined)}
                     />
                 );
             case 'drawing':
@@ -562,7 +562,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={article.precomputedSpan ?? getImageCardSpan(article)}
+                        span={span ?? getImageCardSpan(article, masonryColumnWidth ?? undefined)}
                     />
                 );
             case 'code':
@@ -574,7 +574,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={article.precomputedSpan ?? masonrySpan}
+                        span={span ?? masonrySpan}
                     />
                 );
             case 'diary':
@@ -586,7 +586,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={article.precomputedSpan ?? masonrySpan}
+                        span={span ?? masonrySpan}
                     />
                 );
             default:
@@ -598,11 +598,22 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={article.precomputedSpan ?? masonrySpan ?? 18}
+                        span={span ?? masonrySpan ?? 18}
                     />
                 );
         }
-    }, [handleCardClick, handleCardHover]);
+    }, [handleCardClick, handleCardHover, masonryColumnWidth]);
+
+    const getMasonrySpan = useCallback((article: any) => {
+        if (article.type === 'image' || article.type === 'drawing') {
+            if (masonryColumnWidth && masonryColumnWidth > 0) {
+                return getImageCardSpan(article, masonryColumnWidth);
+            }
+            return article.precomputedSpan ?? getImageCardSpan(article);
+        }
+
+        return article.precomputedSpan ?? undefined;
+    }, [masonryColumnWidth]);
 
     // Box1 内容
     // 第 318-360 行，修改 box1Content
@@ -705,16 +716,22 @@ export default function ArchiveClient({
                     ) : (
                         <>
                             <div style={{ minHeight: '400px', position: 'relative' }}>
-                                <MasonryGrid minColumns={2}>
-                                    {filteredCards.map((card, index) => (
+                                <MasonryGrid
+                                    minColumns={2}
+                                    onLayoutChange={(info) => setMasonryColumnWidth(info.columnWidth)}
+                                >
+                                    {filteredCards.map((card, index) => {
+                                        const span = getMasonrySpan(card);
+                                        return (
                                         <div
                                             key={card.id}
                                             className="masonry-item"
-                                            style={{ gridRow: `span ${card.precomputedSpan}` }}
+                                            style={span != null ? { gridRow: `span ${span}` } : undefined}
                                         >
-                                            {renderCard(card, index)}
+                                            {renderCard(card, index, span)}
                                         </div>
-                                    ))}
+                                        );
+                                    })}
 
                                     {/* ✅ 哨兵 = 最后一个 grid item */}
                                     <div
@@ -790,4 +807,3 @@ export default function ArchiveClient({
         </>
     );
 }
-
