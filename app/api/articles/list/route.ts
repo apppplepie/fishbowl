@@ -32,6 +32,9 @@ interface RawArticle {
   cover_image: any | null; // 封面图片对象或null
   cover_is_placeholder: boolean; // 是否为占位符封面
   tags: string[] | null;
+  codePreview?: string | null;
+  codeLanguage?: string | null;
+  codeBlockCount?: number | null;
 }
 
 interface ProcessedArticle {
@@ -56,6 +59,9 @@ interface ProcessedArticle {
   coverImage: any | null; // 封面图片对象
   coverIsPlaceholder: boolean; // 是否为占位符封面
   tags: string[];
+  codePreview?: string | null;
+  codeLanguage?: string | null;
+  codeBlockCount?: number | null;
 }
 
 /**
@@ -257,7 +263,39 @@ export async function GET(request: NextRequest) {
           JOIN article_tags at ON t.id = at.tag_id
           WHERE at.article_id = a.id
           ORDER BY t.name ASC
-        ) as tags
+        ) as tags,
+        -- 代码类型：第一个代码块的代码
+        CASE
+          WHEN a.type = 'code' THEN (
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.code'))
+            FROM blocks b
+            JOIN article_blocks ab ON b.id = ab.block_id
+            WHERE ab.article_id = a.id AND b.type = 'code'
+            ORDER BY ab.\`order\` ASC
+            LIMIT 1
+          )
+          ELSE NULL
+        END as codePreview,
+        CASE
+          WHEN a.type = 'code' THEN (
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.language'))
+            FROM blocks b
+            JOIN article_blocks ab ON b.id = ab.block_id
+            WHERE ab.article_id = a.id AND b.type = 'code'
+            ORDER BY ab.\`order\` ASC
+            LIMIT 1
+          )
+          ELSE NULL
+        END as codeLanguage,
+        CASE
+          WHEN a.type = 'code' THEN (
+            SELECT COUNT(*)
+            FROM blocks b
+            JOIN article_blocks ab ON b.id = ab.block_id
+            WHERE ab.article_id = a.id AND b.type = 'code'
+          )
+          ELSE NULL
+        END as codeBlockCount
        FROM articles a
        LEFT JOIN categories c ON a.category_id = c.id
        LEFT JOIN (
@@ -298,6 +336,9 @@ export async function GET(request: NextRequest) {
       coverImage: article.cover_image,
       coverIsPlaceholder: article.cover_is_placeholder,
       tags: article.tags || [],
+      codePreview: article.codePreview ?? undefined,
+      codeLanguage: article.codeLanguage ?? undefined,
+      codeBlockCount: article.codeBlockCount ?? undefined,
     }));
 
     // 如果 orderByPath=true，进行 DFS 排序

@@ -7,6 +7,7 @@ import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { AreaChartOutlined, PictureOutlined } from '@ant-design/icons';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Tag, Card } from '@/app/components/ui';
+import { IMAGE_CARD_META_HEIGHT } from '@/lib/constants';
 
 export interface ImageCardProps {
   card: ImageCardType | any;
@@ -27,6 +28,7 @@ export default function ImageCard({
   priority = false,
   className = '',
   masonry,
+  span,
   dynamic: _dynamic,
 }: ImageCardProps & MasonryProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -59,9 +61,11 @@ export default function ImageCard({
       id={card.id?.toString() || card._id?.toString() || ''}
       onMouseEnter={onMouseEnter}
       className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
+      style={span != null ? { gridRow: `span ${span}` } : undefined}
       onClick={onClick}
       bodyStyle={{ padding: 0 }}
       dataMasonry={masonry || undefined}
+      dataMasonrySpan={span != null ? span : undefined}
       dataCardId={card.id?.toString() || card._id?.toString() || ''}
       dataCardType="IMAGE_CARD"
     >
@@ -87,7 +91,7 @@ export default function ImageCard({
             maxWidth: '100%',
           }}
           className="hover-scale-image"
-          onLoadingComplete={() => setImgLoaded(true)}
+          onLoad={() => setImgLoaded(true)}
           onError={() => {
             console.error('ImageCard 图片加载失败:', media?.url || card.imageUrl || card.firstImageUrl);
             setImgLoaded(true);
@@ -99,9 +103,18 @@ export default function ImageCard({
         />
       </div>
 
-      {/* 信息区域 */}
+      {/* 信息区域：固定高度与 getImageCardSpan 共用 IMAGE_CARD_META_HEIGHT */}
       {(card.title || card.description || card.excerpt) && (
-        <div style={{ padding: '16px' }}>
+        <div style={{
+          padding: `${IMAGE_CARD_META_HEIGHT.PADDING}px`,
+          height: IMAGE_CARD_META_HEIGHT.TITLE + IMAGE_CARD_META_HEIGHT.PADDING + (card.tags?.length ? IMAGE_CARD_META_HEIGHT.TAGS : 0),
+          minHeight: IMAGE_CARD_META_HEIGHT.TITLE + IMAGE_CARD_META_HEIGHT.PADDING + (card.tags?.length ? IMAGE_CARD_META_HEIGHT.TAGS : 0),
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+        }}>
           {card.title && (
             <div style={{
               display: 'flex',
@@ -126,20 +139,20 @@ export default function ImageCard({
           )}
 
           {/* 标签 */}
-          {card.tags && card.tags.length > 0 && (
+          {/* {card.tags && card.tags.length > 0 && (
             <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {card.tags.slice(0, 5).map((tag: string, index: number) => (
+              {card.tags.slice(0, 3).map((tag: string, index: number) => (
                 <Tag key={index} id={tag}>
                   {tag}
                 </Tag>
               ))}
-              {card.tags.length > 5 && (
+              {card.tags.length > 3 && (
                 <Tag id={`more-${card.id || card._id || ''}`}>
-                  +{card.tags.length - 5}
+                  +{card.tags.length - 3}
                 </Tag>
               )}
             </div>
-          )}
+          )} */}
 
           {(card.description || card.excerpt) && (
             <p style={{
@@ -149,10 +162,11 @@ export default function ImageCard({
               fontSize: '14px',
               lineHeight: '1.5',
               display: '-webkit-box',
-              WebkitLineClamp: 2,
+              WebkitLineClamp: 1,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
-              whiteSpace: 'pre-wrap',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
             }}>
               {card.description || card.excerpt}
             </p>

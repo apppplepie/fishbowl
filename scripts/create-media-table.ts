@@ -42,6 +42,7 @@ async function createMediaTable() {
           \`orientation\` SMALLINT DEFAULT NULL COMMENT 'EXIF orientation if available',
           \`source\` VARCHAR(50) DEFAULT NULL COMMENT 'local|cdn|external|base64',
           \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+          \`blur_data_url\` TEXT COLLATE utf8mb4_unicode_ci COMMENT 'LQIP base64 placeholder',
           INDEX \`idx_sha256\` (\`sha256\`(32)),
           INDEX \`idx_mime\` (\`mime\`),
           INDEX \`idx_source\` (\`source\`)

@@ -67,22 +67,7 @@ export default function ArticleCard({
           {card.title}
         </h3>
       </div>
-      {/* 标签 */}
-      {card.tags && card.tags.length > 0 && (
-        <div style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-          {card.tags.slice(0, 5).map((tag: string, index: number) => (
-            <Tag key={index} id={tag}>
-              {tag}
-            </Tag>
-          ))}
-          {card.tags.length > 5 && (
-            <Tag id={`more-${card.id}`}>
-              +{card.tags.length - 5}
-            </Tag>
-          )}
-        </div>
-      )}
-      {/* 摘要 - 只有当有摘要时才显示 */}
+      {/* 摘要 - 只有当有摘要时才显示；每行开头空两格都去掉 */}
       {card.excerpt && (
         <p style={{
           margin: '0 0 16px 0',
@@ -91,20 +76,20 @@ export default function ArticleCard({
           fontSize: '14px',
           lineHeight: '1.6',
           display: '-webkit-box',
-          WebkitLineClamp: 3,
+          WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           whiteSpace: 'pre-wrap',
         }}>
-          {card.excerpt}
+          {card.excerpt.split('\n').map((line: string) => line.replace(/^(  )+/g, '')).join('\n')}
         </p>
       )}
 
-      {/* 元信息 */}
+      {/* 元信息：顶部对齐，标签换行时日期不跟着错位 */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         paddingTop: '12px',
         borderTop: `1px solid ${colors.borderColor}`,
         fontSize: '12px',
@@ -118,6 +103,21 @@ export default function ArticleCard({
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {card.readTime && <span><ClockCircleOutlined /> {card.readTime}min</span>}
+                {/* 标签 */}
+      {card.tags && card.tags.length > 0 && (
+        <div style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {card.tags.slice(0, 1).map((tag: string, index: number) => (
+            <Tag key={index} id={tag}>
+              {tag}
+            </Tag>
+          ))}
+          {card.tags.length > 1 && (
+            <Tag id={`more-${card.id}`}>
+              +{card.tags.length - 1}
+            </Tag>
+          )}
+        </div>
+      )}
           {/* {(card.likes !== undefined && card.likes !== null) && <span> {card.likes}</span>} */}
           {/* {(card.comments !== undefined && card.comments !== null) && <span><MessageOutlined /> {card.comments}</span>} */}
         </div>

@@ -1,17 +1,25 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import './MasonryGridCSS.css';
 
 // --- 配置常量 ---
 const DEFAULT_MIN_COLUMNS = 1;
 const MAX_COLUMNS = 4;
 const MIN_COLUMN_WIDTH = 280; // 每列最小宽度（px）
+const GAP_PX = 20; // 与 MasonryGridCSS.css gap 一致
+
+export interface MasonryLayoutInfo {
+  containerWidth: number;
+  columns: number;
+  columnWidth: number;
+}
 
 interface MasonryGridCSSProps {
   children: React.ReactNode;
   className?: string;
   minColumns?: number;
+  onLayoutChange?: (info: MasonryLayoutInfo) => void;
 }
 
 /**
@@ -29,30 +37,41 @@ interface MasonryGridCSSProps {
  * 降级方案：
  * - 不支持 masonry 的浏览器会回退到普通 grid 布局
  */
-export default function MasonryGridCSS({ 
-  children, 
-  className = '', 
-  minColumns = DEFAULT_MIN_COLUMNS 
+export default function MasonryGridCSS({
+  children,
+  className = '',
+  minColumns = DEFAULT_MIN_COLUMNS,
+  onLayoutChange,
 }: MasonryGridCSSProps) {
-  
-  // 动态计算列数（CSS 变量方式）
-  React.useEffect(() => {
-    const updateColumns = () => {
-      const containerWidth = window.innerWidth - 64; // 减去左右 padding
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const update = () => {
+      const containerWidth = grid.offsetWidth || grid.clientWidth || 0;
       let cols = Math.floor(containerWidth / MIN_COLUMN_WIDTH);
       cols = Math.max(minColumns, Math.min(MAX_COLUMNS, cols));
-      
+      const columnWidth = containerWidth > 0 && cols > 0
+        ? (containerWidth - (cols - 1) * GAP_PX) / cols
+        : MIN_COLUMN_WIDTH;
       document.documentElement.style.setProperty('--masonry-columns', String(cols));
+      onLayoutChange?.({ containerWidth, columns: cols, columnWidth });
     };
-    
-    updateColumns();
-    window.addEventListener('resize', updateColumns);
-    
-    return () => window.removeEventListener('resize', updateColumns);
-  }, [minColumns]);
+
+    update();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    if (ro) ro.observe(grid);
+    window.addEventListener('resize', update);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [minColumns, onLayoutChange]);
 
   return (
-    <div className={`masonry-grid-css ${className}`}>
+    <div ref={gridRef} className={`masonry-grid-css ${className}`}>
       {children}
     </div>
   );

@@ -1,28 +1,38 @@
 'use client';
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useLayoutEffect, useEffect, useRef, useMemo } from 'react';
 import './MasonryGrid.css';
 
 // 精简版 MasonryGrid：只负责列数计算和动态项观察
 const DEFAULT_MIN_COLUMNS = 1;
 const MAX_COLUMNS = 4;
 const MIN_COLUMN_WIDTH = 280;
+const GAP_PX = 8;
+
+export interface MasonryLayoutInfo {
+  containerWidth: number;
+  columns: number;
+  columnWidth: number;
+}
 
 interface MasonryGridProps {
   children: React.ReactNode;
   className?: string;
   minColumns?: number;
+  /** 网格测量完成后回调，用于父组件算图片卡 span 等；resize 时会再次调用 */
+  onLayoutChange?: (info: MasonryLayoutInfo) => void;
 }
 
 export default function MasonryGrid({
   children,
   className = '',
   minColumns = DEFAULT_MIN_COLUMNS,
+  onLayoutChange,
 }: MasonryGridProps) {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const containerRoRef = useRef<ResizeObserver | null>(null);
   const dynamicItemsRoRef = useRef<ResizeObserver | null>(null);
-  const columnsRef = useRef(3);
+  const columnsRef = useRef(0);
   const childrenCount = useMemo(() => React.Children.count(children), [children]);
 
   // 计算列数
@@ -32,14 +42,18 @@ export default function MasonryGrid({
     return cols;
   };
 
-  // 更新列数
-  const updateColumns = (grid: HTMLElement) => {
-    const containerWidth = grid.offsetWidth || grid.clientWidth;
+  // 更新列数，并通知父组件列宽（用于图片卡 span 等）
+  const updateColumns = (grid: HTMLElement, fallbackWidth?: number) => {
+    const containerWidth = grid.getBoundingClientRect().width || grid.offsetWidth || grid.clientWidth || fallbackWidth || 0;
     const newColumns = calculateColumns(containerWidth);
+    const columnWidth = containerWidth > 0 && newColumns > 0
+      ? (containerWidth - (newColumns - 1) * GAP_PX) / newColumns
+      : MIN_COLUMN_WIDTH;
     if (newColumns !== columnsRef.current) {
       columnsRef.current = newColumns;
       grid.style.setProperty('--masonry-columns', String(newColumns));
     }
+    onLayoutChange?.({ containerWidth, columns: newColumns, columnWidth });
   };
 
   // 设置动态项观察器（只观察ImageCard等动态高度项）
@@ -72,38 +86,36 @@ export default function MasonryGrid({
     }
   };
 
-  // 初始化
-  useEffect(() => {
+  // 布局初始化：useLayoutEffect 在 paint 前运行，早写 CSS 变量 + 显示前隐藏，首帧无闪动
+  useLayoutEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
 
-    const doInit = () => {
-      const containerWidth = grid.offsetWidth;
-      if (containerWidth === 0) {
-        requestAnimationFrame(doInit);
-        return;
-      }
+    const containerWidth = grid.getBoundingClientRect().width || (typeof window !== 'undefined' ? window.innerWidth : 0);
+    const cols = calculateColumns(containerWidth);
+    columnsRef.current = cols;
+    grid.style.setProperty('--masonry-columns', String(cols));
+    grid.style.setProperty('--masonry-row-px', '8px');
+    grid.style.setProperty('--masonry-gap-px', `${GAP_PX}px`);
 
-      updateColumns(grid);
-      setupDynamicItemsObserver(grid);
-      grid.dataset.ready = 'true';
-    };
+    const columnWidth = containerWidth > 0 && cols > 0
+      ? (containerWidth - (cols - 1) * GAP_PX) / cols
+      : MIN_COLUMN_WIDTH;
+    onLayoutChange?.({ containerWidth, columns: cols, columnWidth });
 
-    // 容器大小变化观察器
+    setupDynamicItemsObserver(grid);
+    grid.querySelectorAll<HTMLElement>('[data-masonry][data-masonry-span]').forEach((el) => {
+      el.dataset.ready = 'true';
+    });
+    grid.dataset.ready = 'true';
+
     if (typeof ResizeObserver !== 'undefined') {
       const containerRo = new ResizeObserver(() => {
         updateColumns(grid);
       });
       containerRoRef.current = containerRo;
       containerRo.observe(grid);
-    } else {
-      // fallback
-      const onResize = () => updateColumns(grid);
-      window.addEventListener('resize', onResize);
-      return () => window.removeEventListener('resize', onResize);
     }
-
-    doInit();
 
     return () => {
       containerRoRef.current?.disconnect();
@@ -111,17 +123,29 @@ export default function MasonryGrid({
     };
   }, [minColumns]);
 
-  // 子元素变化时重新设置观察器
+  // 非 SSR 时窗口 resize 兜底（无 ResizeObserver 时）
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || typeof ResizeObserver !== 'undefined') return;
+    const onResize = () => updateColumns(grid);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [minColumns]);
+
+  // 子元素变化时重新设置观察器，并给新挂载的固定 span 项打 ready
   useEffect(() => {
     const grid = gridRef.current;
     if (grid) {
       updateColumns(grid);
       setupDynamicItemsObserver(grid);
+      grid.querySelectorAll<HTMLElement>('[data-masonry][data-masonry-span]').forEach((el) => {
+        el.dataset.ready = 'true';
+      });
     }
   }, [childrenCount, minColumns]);
 
   return (
-    <div ref={gridRef} className={`masonry-grid ${className}`}>
+    <div ref={gridRef} className={`masonry-grid ${className}`} data-ready={undefined}>
       {children}
     </div>
   );

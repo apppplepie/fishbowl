@@ -1,42 +1,30 @@
+// lib/constants.ts
+
 // Application constants
 export const PLACEHOLDER_IMAGE_URL = '/static/covers/locked.svg';
 
-// Masonry Grid Configuration - 固定高度卡片配置
-// 基于 grid-auto-rows: 8px, row-gap: 8px 的网格系统
-export const CARD_HEIGHT_CONFIG = {
-  // 这里的数值明确为 rows（行数）
-  TEXT_CARD: 12,      // 12 rows -> 12 * GRID_AUTO_ROWS px
-  DIARY_CARD: 9,     // 9 rows -> 9 * GRID_AUTO_ROWS px
-  CODE_CARD: 14,      // 14 rows -> 14 * GRID_AUTO_ROWS px
-  BOOK_CARD: 27,      // 27 rows -> 27 * GRID_AUTO_ROWS px
-
-  // 动态高度卡片类型（保持aspect-ratio）
-  IMAGE_CARD: 'dynamic', // 图片卡片保持动态高度
-
-  // Grid基础配置
-  GRID_AUTO_ROWS: 8,  // px
-  GRID_ROW_GAP: 8,    // px
+/** Grid 基础配置（不参与 CardType） */
+export const GRID_CONFIG = {
+  GRID_AUTO_ROWS: 8, // px
+  GRID_ROW_GAP: 8,   // px
+  DEFAULT_COL_WIDTH: 280,
 } as const;
 
-// 卡片类型映射
-export type CardType = keyof typeof CARD_HEIGHT_CONFIG;
+/** 图片卡信息区高度（px），与 getImageCardSpan、ImageCard 共用，改一处即可 */
+export const IMAGE_CARD_META_HEIGHT = {
+  TITLE: 48,   // 标题/描述区预留
+  PADDING: 16, // 信息区内边距（上下）
+  TAGS: 28,    // 有标签时额外高度
+} as const;
 
-// 获取卡片高度的辅助函数
-export const getCardHeight = (cardType: CardType): number | 'dynamic' => {
-  return CARD_HEIGHT_CONFIG[cardType];
-};
+/** 卡片高度配置（单位：rows） */
+export const CARD_HEIGHTS = {
+  TEXT_CARD: 11,
+  DIARY_CARD: 9,
+  CODE_CARD: 14,
+  BOOK_CARD: 27,
+  IMAGE_CARD: 'dynamic',
+} as const;
 
-// 修正后的 getCardSpan：
-// - 如果配置的是 rows（number），直接返回该 rows（span）
-// - 如果是 'dynamic'，返回 'dynamic'
-export const getCardSpan = (cardType: CardType): number | 'dynamic' => {
-  const heightOrDynamic = getCardHeight(cardType);
-  if (heightOrDynamic === 'dynamic') return 'dynamic';
-
-  // 此处 heightOrDynamic 是 rows（整数），直接作为 span 返回
-  if (typeof heightOrDynamic === 'number' && Number.isFinite(heightOrDynamic)) {
-    return Math.max(1, Math.floor(heightOrDynamic)); // 确保为正整数
-  }
-
-  return 'dynamic';
-};
+/** 只包含真正的卡片类型 */
+export type CardType = keyof typeof CARD_HEIGHTS;

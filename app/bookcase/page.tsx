@@ -34,7 +34,7 @@ import { useHeader } from '../contexts/HeaderContext';
 import { apiGet } from '@/lib/apiClient';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
-import { getCardSpan, type CardType } from '@/lib/constants';
+import { getCardSpan, getImageCardSpan, type CardType } from '@/lib/utils';
 
 // 预缓存所有书籍的文章列表
 const preloadAllBookArticleLists = async () => {
@@ -170,7 +170,8 @@ function BookcasePageContent() {
 
   // 侧边栏展开状态（桌面端）
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
-  
+  const [masonryColumnWidth, setMasonryColumnWidth] = useState<number | null>(null);
+
   // 延迟加载导航组件
   const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
   
@@ -753,7 +754,7 @@ function BookcasePageContent() {
             card={article}
             onClick={handleClick}
             masonry
-            dynamic
+            span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
           />
         );
       case 'drawing':
@@ -766,7 +767,7 @@ function BookcasePageContent() {
             }}
             onClick={handleClick}
             masonry
-            dynamic
+            span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
           />
         );
       case 'code':
@@ -823,7 +824,7 @@ function BookcasePageContent() {
           />
         );
     }
-  }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles]);
+  }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles, masonryColumnWidth]);
 
   return (
     <>
@@ -851,7 +852,10 @@ function BookcasePageContent() {
           ) : (
             <>
               <div style={{ minHeight: '400px' }}>
-                <MasonryGrid minColumns={isMobile ? 1 : 2}>
+                <MasonryGrid
+                  minColumns={isMobile ? 1 : 2}
+                  onLayoutChange={(info) => setMasonryColumnWidth(info.columnWidth)}
+                >
                   {filteredCards.map((card, index) => renderCard(card, index))}
                 </MasonryGrid>
               </div>

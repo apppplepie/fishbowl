@@ -11,7 +11,7 @@ import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
-import { getCardSpan, type CardType } from '@/lib/constants';
+import { getCardSpan, getImageCardSpan, type CardType } from '@/lib/utils';
 
 // 轻量级瀑布流组件
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
@@ -84,6 +84,8 @@ export default function ArchiveClient({
 
   // 侧边栏展开状态（桌面端）
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  /** 当前瀑布流单列宽度（由 MasonryGrid onLayoutChange 上报），用于图片卡 span；未上报前用默认值 */
+  const [masonryColumnWidth, setMasonryColumnWidth] = useState<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // 延迟加载导航组件，只有在用户打开时才加载
@@ -534,7 +536,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        dynamic
+                        span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
                     />
                 );
             case 'drawing':
@@ -549,7 +551,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        dynamic
+                        span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
                     />
                 );
             case 'code':
@@ -589,7 +591,7 @@ export default function ArchiveClient({
                     />
                 );
         }
-    }, [handleCardClick, handleCardHover]);
+    }, [handleCardClick, handleCardHover, masonryColumnWidth]);
 
     // Box1 内容
     // 第 318-360 行，修改 box1Content
@@ -689,7 +691,10 @@ export default function ArchiveClient({
                     ) : (
                         <>
                             <div style={{ minHeight: '400px' }}>
-                                <MasonryGrid minColumns={2}>
+                                <MasonryGrid
+                                    minColumns={2}
+                                    onLayoutChange={(info) => setMasonryColumnWidth(info.columnWidth)}
+                                >
                                     {filteredCards.map((card, index) => renderCard(card, index))}
                                 </MasonryGrid>
                             </div>

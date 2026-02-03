@@ -29,6 +29,9 @@ interface BookPreview {
     coverImage: any | null;
     coverIsPlaceholder: boolean;
     tags: string[];
+    codePreview?: string | null;
+    codeLanguage?: string | null;
+    codeBlockCount?: number | null;
   };
 }
 
@@ -214,6 +217,9 @@ export async function GET(request: NextRequest) {
           coverImage: article.cover_image,
           coverIsPlaceholder: article.cover_image && article.cover_image.url === PLACEHOLDER_IMG,
           tags: article.tags || [],
+          codePreview: article.codePreview ?? undefined,
+          codeLanguage: article.codeLanguage ?? undefined,
+          codeBlockCount: article.codeBlockCount ?? undefined,
         };
       }
 

@@ -45,10 +45,12 @@ export default function CodeCard({
   // 使用卡片背景颜色 Hook，基于代码卡片 ID 生成独特的渐变色
   const colors = useCardBackground(card.id || '');
   
-  // 代码预览（最多显示5行）
-  const codeLines = card.codePreview 
-    ? card.codePreview.split('\n').slice(0, 5) 
-    : ['// 代码示例', 'function example() {', '  return "Hello World";', '}'];
+  // 代码预览：固定 3 行，不足用空行填充
+  const CODE_LINE_COUNT = 4;
+  const rawLines = card.codePreview
+    ? card.codePreview.split('\n').slice(0, CODE_LINE_COUNT)
+    : ['// 代码示例', 'function example() {', '  return "Hello World";'];
+  const codeLines = [...rawLines, ...Array(Math.max(0, CODE_LINE_COUNT - rawLines.length)).fill('')];
 
   return (
     <Card
@@ -106,7 +108,7 @@ export default function CodeCard({
         )}
 
         {/* 摘要 */}
-        {card.excerpt && (
+        {/* {card.excerpt && (
           <p style={{
             margin: 0,
             fontSize: '14px',
@@ -120,7 +122,7 @@ export default function CodeCard({
           }}>
             {card.excerpt}
           </p>
-        )}
+        )} */}
       </div>
 
       {/* 代码预览区域 */}
@@ -163,7 +165,7 @@ export default function CodeCard({
                 {line || ' '}
               </div>
             ))}
-            {card.codePreview && card.codePreview.split('\n').length > 5 && (
+            {card.codePreview && card.codePreview.split('\n').length > CODE_LINE_COUNT && (
               <div style={{ color: '#61dafb', marginTop: '4px' }}>
                 // ...
               </div>

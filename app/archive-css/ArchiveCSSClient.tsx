@@ -10,7 +10,7 @@ import ArchiveActionFloat from '@/app/components/float/ArchiveActionFloat';
 import { apiGet } from '@/lib/apiClient';
 import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
-import { getCardSpan, type CardType } from '@/lib/constants';
+import { getCardSpan, getImageCardSpan, type CardType } from '@/lib/utils';
 
 // ✨ 使用 CSS Grid Masonry 版本
 import MasonryGridCSS from '@/app/components/layout/MasonryGridCSS';
@@ -71,6 +71,7 @@ export default function ArchiveCSSClient({
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
+    const [masonryColumnWidth, setMasonryColumnWidth] = useState<number | null>(null);
     const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -332,7 +333,7 @@ export default function ArchiveCSSClient({
             case 'text':
                 return <ArticleCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry span={masonrySpan ?? 18} />;
             case 'image':
-                return <ImageCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry dynamic />;
+                return <ImageCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry span={getImageCardSpan(article, masonryColumnWidth ?? undefined)} />;
             case 'drawing':
                 return (
                     <ImageCard
@@ -341,7 +342,7 @@ export default function ArchiveCSSClient({
                         onClick={handleClick}
                         priority={isPriority}
                         masonry
-                        dynamic
+                        span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
                     />
                 );
             case 'code':
@@ -351,7 +352,7 @@ export default function ArchiveCSSClient({
             default:
                 return <ArticleCard key={article.id} card={article} onClick={handleClick} priority={isPriority} masonry span={masonrySpan ?? 18} />;
         }
-    }, [handleCardClick]);
+    }, [handleCardClick, masonryColumnWidth]);
 
     const box1Content = useMemo(() => (
         <div style={{ padding: '16px 24px' }}>
@@ -465,7 +466,10 @@ export default function ArchiveCSSClient({
                         <>
                             <div style={{ minHeight: '400px' }}>
                                 {/* ✨ 使用 CSS Grid Masonry */}
-                                <MasonryGridCSS minColumns={2}>
+                                <MasonryGridCSS
+                                    minColumns={2}
+                                    onLayoutChange={(info) => setMasonryColumnWidth(info.columnWidth)}
+                                >
                                     {filteredCards.map((card, index) => renderCard(card, index))}
                                 </MasonryGridCSS>
                             </div>
