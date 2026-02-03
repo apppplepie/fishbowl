@@ -170,7 +170,6 @@ function BookcasePageContent() {
 
   // 侧边栏展开状态（桌面端）
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 默认关闭
-  const [masonryColumnWidth, setMasonryColumnWidth] = useState<number | null>(null);
 
   // 延迟加载导航组件
   const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
@@ -754,7 +753,7 @@ function BookcasePageContent() {
             card={article}
             onClick={handleClick}
             masonry
-            span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
+            span={article.precomputedSpan ?? getImageCardSpan(article)}
           />
         );
       case 'drawing':
@@ -767,7 +766,7 @@ function BookcasePageContent() {
             }}
             onClick={handleClick}
             masonry
-            span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
+            span={article.precomputedSpan ?? getImageCardSpan(article)}
           />
         );
       case 'code':
@@ -824,7 +823,7 @@ function BookcasePageContent() {
           />
         );
     }
-  }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles, masonryColumnWidth]);
+  }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles]);
 
   return (
     <>
@@ -852,10 +851,7 @@ function BookcasePageContent() {
           ) : (
             <>
               <div style={{ minHeight: '400px' }}>
-                <MasonryGrid
-                  minColumns={isMobile ? 1 : 2}
-                  onLayoutChange={(info) => setMasonryColumnWidth(info.columnWidth)}
-                >
+                <MasonryGrid>
                   {filteredCards.map((card, index) => renderCard(card, index))}
                 </MasonryGrid>
               </div>

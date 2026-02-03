@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { headers } from 'next/headers';
 import ArchiveClient from './ArchiveClient';
+import { calculateServerSpan, getAspectRatioFromArticle } from '@/lib/masonry-server-utils';
 import '../styles/articles-filter.css';
 
 /**
@@ -75,11 +76,22 @@ export default async function ArchivePage({
   const { category } = (await searchParams) ?? {};
   const { articles, hasMore } = await getInitialArticles(category);
 
+  // 服务端预计算 span，直接作为数据传给前端，无需前端测量
+  const articlesWithLayout = articles.map((a: any) => ({
+    ...a,
+    precomputedSpan: calculateServerSpan(
+      getAspectRatioFromArticle(a),
+      a.type,
+      Array.isArray(a.tags) ? a.tags.length : 0
+    ),
+  }));
+  
+
   return (
     <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
       {/* 所有卡片都在 ArchiveClient 的 MasonryGrid 里统一渲染 */}
       <ArchiveClient 
-        initialArticles={articles}
+        initialArticles={articlesWithLayout}
         initialHasMore={hasMore}
         initialOffset={0} // 从头开始
       />

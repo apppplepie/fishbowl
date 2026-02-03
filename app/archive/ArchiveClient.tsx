@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
@@ -36,6 +36,33 @@ const UnifiedNavigatorButton = dynamic(
 const ArchiveActionFloat = dynamic(() => import('@/app/components/float/ArchiveActionFloat'), {
     ssr: false
 });
+
+/** 按小块 append，利用 requestIdleCallback 或 requestAnimationFrame 回退，减少长帧 */
+function appendInChunks(
+    newItems: any[],
+    appendFn: (items: any[]) => void,
+    chunkSize = 20
+) {
+    let i = 0;
+    const runner = () => {
+        const end = Math.min(i + chunkSize, newItems.length);
+        const slice = newItems.slice(i, end);
+        appendFn(slice);
+        i = end;
+        if (i < newItems.length) {
+            if (typeof (window as any).requestIdleCallback !== 'undefined') {
+                (window as any).requestIdleCallback(runner, { timeout: 200 });
+            } else {
+                requestAnimationFrame(runner);
+            }
+        }
+    };
+    if (typeof (window as any).requestIdleCallback !== 'undefined') {
+        (window as any).requestIdleCallback(runner, { timeout: 200 });
+    } else {
+        requestAnimationFrame(runner);
+    }
+}
 
 interface ArchiveClientProps {
     initialArticles?: any[];
@@ -82,22 +109,23 @@ export default function ArchiveClient({
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  // 侧边栏展开状态（桌面端）
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  /** 当前瀑布流单列宽度（由 MasonryGrid onLayoutChange 上报），用于图片卡 span；未上报前用默认值 */
-  const [masonryColumnWidth, setMasonryColumnWidth] = useState<number | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+    const [isPending, startTransition] = useTransition();
 
-  // 延迟加载导航组件，只有在用户打开时才加载
-  const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
+    // 侧边栏展开状态（桌面端）
+    const [sidebarExpanded, setSidebarExpanded] = useState(false);
+    const scrollerRef = useRef<HTMLDivElement | null>(null); // 整页滚动时保持 null，用 viewport
+    const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  // 延迟挂载 ArchiveActionFloat，非首屏关键交互
-  const [shouldLoadActionFloat, setShouldLoadActionFloat] = useState(false);
+    // 延迟加载导航组件，只有在用户打开时才加载
+    const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
 
-  // 进入页面时重置侧边栏状态
-  useEffect(() => {
-    setSidebarExpanded(false);
-  }, []);
+    // 延迟挂载 ArchiveActionFloat，非首屏关键交互
+    const [shouldLoadActionFloat, setShouldLoadActionFloat] = useState(false);
+
+    // 进入页面时重置侧边栏状态
+    useEffect(() => {
+        setSidebarExpanded(false);
+    }, []);
     const loadingRef = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const prevConfigRef = useRef<any | null>(null);
@@ -209,10 +237,20 @@ export default function ArchiveClient({
                         const newArticles = articles.filter(
                             (article: any) => !existingIds.has(article.id)
                         );
-                        return [...prev, ...newArticles];
+                        if (newArticles.length === 0) return prev;
+                        appendInChunks(newArticles, (batch) =>
+                            setCards(p => [...p, ...batch])
+                        );
+                        return prev;
                     });
+                    // append 时 appendInChunks 内部会分批 setCards，这里只更新 offset/hasMore
                 } else {
-                    setCards(articles);
+                    setCards([]);
+                    requestAnimationFrame(() => {
+                        appendInChunks(articles, (batch) =>
+                            setCards(prev => [...prev, ...batch])
+                        );
+                    });
                 }
 
                 setHasMore(articles.length === ITEMS_PER_PAGE);
@@ -245,59 +283,33 @@ export default function ArchiveClient({
         });
     }, [hasMore, loadArticles, selectedCategoryId]);
 
-    // ✅ 使用 IntersectionObserver 代替 scroll 事件（使用 offsetRef 避免闭包问题）
+    // 哨兵在 MasonryGrid 内、横跨整行；root 为 null 时用 viewport，有内部滚动容器时挂 scrollerRef
+    // 哨兵观察逻辑优化
     useEffect(() => {
-        if (!hasMore) return;
+        const node = loadMoreRef.current;
+        if (!node) return;
 
-        const element = loadMoreRef.current;
-        if (!element) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting) {
+        // 如果当前已经没有更多，或者正在加载，暂时不观察（或者在回调里挡住）
+        // 注意：不要在依赖项里写过多变量，否则 io 会频繁销毁重启
+        const io = new IntersectionObserver(
+            ([entry]) => {
+                console.log('👀', entry.isIntersecting, entry.boundingClientRect.top);
+                if (entry.isIntersecting) {
                     triggerLoadMore();
                 }
             },
             {
                 root: null,
-                rootMargin: '400px', // 提前400px加载
+                rootMargin: '0px 0px 600px 0px', // 👈 关键：下方提前 600px
                 threshold: 0,
             }
         );
 
-        observer.observe(element);
+        io.observe(node);
+        return () => io.disconnect();
+    }, [hasMore, triggerLoadMore]); // 只需要依赖这两个
 
-        return () => {
-            observer.disconnect();
-        };
-    }, [hasMore, triggerLoadMore]);
-
-    // ✅ 滚动兜底：偶发 IO 失效时也能继续加载
-    useEffect(() => {
-        if (!hasMore) return;
-
-        let rafId: number | null = null;
-        const thresholdPx = 600;
-
-        const onScroll = () => {
-            if (rafId !== null) return;
-            rafId = requestAnimationFrame(() => {
-                rafId = null;
-                const scrollTop = window.scrollY || document.documentElement.scrollTop;
-                const viewportH = window.innerHeight;
-                const docH = document.documentElement.scrollHeight;
-                if (docH - (scrollTop + viewportH) < thresholdPx) {
-                    triggerLoadMore();
-                }
-            });
-        };
-
-        window.addEventListener('scroll', onScroll, { passive: true });
-        return () => {
-            window.removeEventListener('scroll', onScroll);
-            if (rafId !== null) cancelAnimationFrame(rafId);
-        };
-    }, [hasMore, triggerLoadMore]);
+    // 已使用 IntersectionObserver，不再用 scroll 兜底（避免每帧回调）
 
     // 注释掉：服务端已经提供初始数据，不需要客户端再次加载
     // 移除此 useEffect 避免重复加载和 React Strict Mode 的双重调用问题
@@ -333,36 +345,36 @@ export default function ArchiveClient({
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
-    
+
     // ✅ 追踪筛选条件的变化，只在变化时滚动到顶部
     const prevFilterRef = useRef<{ categoryId: string | null; tagsCount: number; keyword: string }>({
         categoryId: null,
         tagsCount: 0,
         keyword: ''
     });
-    
+
     useEffect(() => {
         const currentFilter = {
             categoryId: selectedCategoryId,
             tagsCount: selectedTags.length,
             keyword: searchKeyword
         };
-        
+
         const prevFilter = prevFilterRef.current;
-        
+
         // 只在筛选条件真正改变时才滚动到顶部（排除首次渲染）
-        const hasChanged = 
+        const hasChanged =
             prevFilter.categoryId !== currentFilter.categoryId ||
             prevFilter.tagsCount !== currentFilter.tagsCount ||
             prevFilter.keyword !== currentFilter.keyword;
-        
+
         if (hasChanged && (prevFilter.categoryId !== null || prevFilter.tagsCount > 0 || prevFilter.keyword)) {
             // 延迟执行，确保 DOM 已更新
             requestAnimationFrame(() => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         }
-        
+
         // 更新 ref
         prevFilterRef.current = currentFilter;
     }, [selectedCategoryId, selectedTags.length, searchKeyword]);
@@ -390,25 +402,24 @@ export default function ArchiveClient({
         return () => clearTimeout(timer);
     }, []);
 
-    // ✅ 防抖搜索 - 350ms 延迟
+    // ✅ 防抖搜索 + startTransition：将大量渲染标为过渡，优先保证输入/交互流畅
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            if (searchKeyword.trim()) {
-                // 有搜索关键词时，重新加载
-                setOffset(0);
-                setHasMore(true);
-                loadArticles(0, false, selectedCategoryId, { search: searchKeyword });
-            } else if (searchKeyword === '') {
-                // 清空搜索时，重新加载（仅当关键词从非空变为空时）
-                setOffset(0);
-                setHasMore(true);
-                loadArticles(0, false, selectedCategoryId);
-            }
+            startTransition(() => {
+                if (searchKeyword.trim()) {
+                    setOffset(0);
+                    setHasMore(true);
+                    loadArticles(0, false, selectedCategoryId, { search: searchKeyword });
+                } else {
+                    setOffset(0);
+                    setHasMore(true);
+                    loadArticles(0, false, selectedCategoryId);
+                }
+            });
         }, 350);
 
         return () => clearTimeout(timeoutId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchKeyword, selectedCategoryId]); // 移除 loadArticles 依赖，避免不必要的重新创建
+    }, [searchKeyword, selectedCategoryId, loadArticles]);
 
     // 获取用户权限等级（未登录用户默认为2）
     const userMaxAccessLevel = useMemo(() => {
@@ -456,7 +467,7 @@ export default function ArchiveClient({
     // ✅ 添加 hover 预取逻辑，提升导航速度
     // 使用 Set 记录正在预取的 ID，避免重复请求
     const prefetchingRef = useRef<Set<string>>(new Set());
-    
+
     const handleCardHover = useCallback((card: any) => {
         if (card.type === 'text' || card.type === 'image' || card.type === 'code' ||
             card.type === 'diary' || card.type === 'drawing' || card.type === 'article') {
@@ -501,13 +512,13 @@ export default function ArchiveClient({
 
         let cardType: CardType | null = null;
         if (article.type === 'code' || article.codePreview) {
-          cardType = 'CODE_CARD';
+            cardType = 'CODE_CARD';
         } else if (article.type === 'text' || article.type === 'article' || article.content) {
-          cardType = 'TEXT_CARD';
+            cardType = 'TEXT_CARD';
         } else if (article.type === 'diary' || article.excerpt) {
-          cardType = 'DIARY_CARD';
+            cardType = 'DIARY_CARD';
         } else if (article.type === 'book') {
-          cardType = 'BOOK_CARD';
+            cardType = 'BOOK_CARD';
         }
 
         const spanOrDynamic = cardType ? getCardSpan(cardType) : 'dynamic';
@@ -524,7 +535,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={masonrySpan ?? 18}
+                        span={article.precomputedSpan ?? masonrySpan ?? 18}
                     />
                 );
             case 'image':
@@ -536,7 +547,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
+                        span={article.precomputedSpan ?? getImageCardSpan(article)}
                     />
                 );
             case 'drawing':
@@ -551,7 +562,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={getImageCardSpan(article, masonryColumnWidth ?? undefined)}
+                        span={article.precomputedSpan ?? getImageCardSpan(article)}
                     />
                 );
             case 'code':
@@ -563,7 +574,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={masonrySpan}
+                        span={article.precomputedSpan ?? masonrySpan}
                     />
                 );
             case 'diary':
@@ -575,7 +586,7 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={masonrySpan}
+                        span={article.precomputedSpan ?? masonrySpan}
                     />
                 );
             default:
@@ -587,11 +598,11 @@ export default function ArchiveClient({
                         onMouseEnter={handleHover}
                         priority={isPriority}
                         masonry
-                        span={masonrySpan ?? 18}
+                        span={article.precomputedSpan ?? masonrySpan ?? 18}
                     />
                 );
         }
-    }, [handleCardClick, handleCardHover, masonryColumnWidth]);
+    }, [handleCardClick, handleCardHover]);
 
     // Box1 内容
     // 第 318-360 行，修改 box1Content
@@ -604,7 +615,7 @@ export default function ArchiveClient({
                 alignItems: isMobile ? 'stretch' : 'flex-end',
                 justifyContent: isMobile ? 'flex-start' : 'space-between',
             }}>
-                <div style={{ width: isMobile ? '100%' : '320px' }}>
+                <div style={{ width: isMobile ? '100%' : '320px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Input.Search
                         className="search-input-transparent"
                         placeholder="搜索标题、作者、摘要..."
@@ -616,6 +627,9 @@ export default function ArchiveClient({
                         allowClear
                         style={{ width: '100%' }}
                     />
+                    {isPending && (
+                        <Spin size="small" style={{ flexShrink: 0 }} />
+                    )}
                 </div>
             </div>
 
@@ -640,7 +654,7 @@ export default function ArchiveClient({
             )}
         </div>
     ), [isMobile, searchKeyword, selectedTags, selectedCategoryId]); // ✅ 移除 filteredCards.length
-    
+
     useEffect(() => {
         // 安全地保存前一个配置，并合并新值（不覆盖其它字段）
         setConfig((prev: any) => {
@@ -690,17 +704,33 @@ export default function ArchiveClient({
                         />
                     ) : (
                         <>
-                            <div style={{ minHeight: '400px' }}>
-                                <MasonryGrid
-                                    minColumns={2}
-                                    onLayoutChange={(info) => setMasonryColumnWidth(info.columnWidth)}
-                                >
-                                    {filteredCards.map((card, index) => renderCard(card, index))}
-                                </MasonryGrid>
-                            </div>
+                            <div style={{ minHeight: '400px', position: 'relative' }}>
+                                <MasonryGrid minColumns={2}>
+                                    {filteredCards.map((card, index) => (
+                                        <div
+                                            key={card.id}
+                                            className="masonry-item"
+                                            style={{ gridRow: `span ${card.precomputedSpan}` }}
+                                        >
+                                            {renderCard(card, index)}
+                                        </div>
+                                    ))}
 
-                            {/* ✅ IntersectionObserver 哨兵元素 */}
-                            <div ref={loadMoreRef} style={{ height: 1 }} />
+                                    {/* ✅ 哨兵 = 最后一个 grid item */}
+                                    <div
+                                        ref={loadMoreRef}
+                                        className="masonry-sentinel"
+                                    />
+                                </MasonryGrid>
+                                {/* <div
+                                    ref={loadMoreRef}
+                                    style={{
+                                        height: '200px',
+                                        width: '100%',
+                                        background: 'red' // 甚至可以先给个 'red' 看看它在哪
+                                    }}
+                                /> */}
+                            </div>
 
                             {loadingMore && (
                                 <div style={{

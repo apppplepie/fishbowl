@@ -1,11 +1,9 @@
-/* MasonryGrid 样式 - 动态列数，响应式布局；首帧无变量时不可见，避免 3 列闪动 */
+/* MasonryGrid 样式 - 纯 CSS：auto-fill + minmax，span 由服务端预计算 */
 .masonry-grid {
   display: grid;
-  /* 不给 fallback，首帧不可见，由 useLayoutEffect 写入变量后再显示 */
-  opacity: 0;
-  grid-template-columns: repeat(var(--masonry-columns), 1fr);
-  grid-auto-rows: var(--masonry-row-px, 8px);
-  gap: var(--masonry-gap-px, 8px);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 8px;
+  gap: 8px;
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -17,8 +15,17 @@
   overflow: visible;
 }
 
+/* 最小 2 列：50% 减去 gap 的一半(4px)，两列+间距刚好 100%，避免窄屏跳回一列 */
+.masonry-grid--min-2-cols {
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, calc(50% - 4px)), 1fr));
+}
 
-/* 响应式列数：最少 2 列，最多 4 列，根据容器宽度自动调整 */
+/* 大屏限制最多 4 列，避免卡片过细 */
+@media (min-width: 1200px) {
+  .masonry-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 
 .masonry-item {
   display: block;
@@ -26,19 +33,12 @@
   box-sizing: border-box;
   min-width: 0;
   padding: 0;
-  overflow: visible;
-
-  /* ❌ 建议移除：你已经有 aspect-ratio 占位了 */
-  /* min-height: 120px; */
-
-  /* ✅ 只动画不影响 layout 的属性 */
-
-  transform: translateY(8px);
-  transition: opacity 240ms ease, transform 240ms ease;
-
-  /* ✅ 合成层优化（保留一个即可） */
-  backface-visibility: hidden;
-  will-change: opacity, transform;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  animation: fadeIn 0.4s ease-out forwards;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 300px;
 }
 
 /* 确保卡片内的所有内容都受宽度约束 */
@@ -47,6 +47,8 @@
   max-width: 100%;
   box-sizing: border-box;
 }
+
+/* ImageCard 图片容器：aspect-ratio 由组件内联样式传入，不在此写死 */
 
 /* 强制约束图片和媒体内容 */
 .masonry-item img,
@@ -63,19 +65,7 @@
   overflow-wrap: break-word;
 }
 
-/* 当 JS 设置了 data-ready 后，使项淡入（等待 JS 先设置好） */
-.masonry-item[data-ready="true"] {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Grid ready 后再整体显示，避免初始抖动/闪烁 */
-.masonry-grid[data-ready="true"] {
-  opacity: 1;
-  transition: opacity 160ms ease;
-}
-
-/* 平滑的渐显动画（备份） */
+/* 卡片淡入动画 */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -85,4 +75,10 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.masonry-sentinel {
+  grid-column: 1 / -1;  /* 横跨所有列 */
+  height: 1px;
+  pointer-events: none;
 }

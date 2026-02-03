@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { calculateServerSpan, getAspectRatioFromArticle } from '@/lib/masonry-server-utils';
 
 // 类型定义
 interface RawArticle {
@@ -62,6 +63,7 @@ interface ProcessedArticle {
   codePreview?: string | null;
   codeLanguage?: string | null;
   codeBlockCount?: number | null;
+  precomputedSpan?: number; // 服务端预计算的 masonry span
 }
 
 /**
@@ -313,33 +315,42 @@ export async function GET(request: NextRequest) {
       queryParams
     );
 
-    // 处理和清理查询结果
-    let processedArticles: ProcessedArticle[] = articles.map((article: RawArticle) => ({
-      id: article.id,
-      title: article.title,
-      author: article.author,
-      authorId: article.author_id,
-      publishedAt: article.published_at,
-      createdAt: article.created_at,
-      updatedAt: article.updated_at,
-      excerpt: article.excerpt,
-      type: article.type,
-      status: article.status,
-      likes: article.likes,
-      shares: article.shares,
-      comments: article.comments,
-      categoryId: article.category_id,
-      orderInCategory: article.order_index,
-      visibleAccessLevel: article.visible_access_level,
-      fullAccessLevel: article.full_access_level,
-      categoryName: article.category_name,
-      coverImage: article.cover_image,
-      coverIsPlaceholder: article.cover_is_placeholder,
-      tags: article.tags || [],
-      codePreview: article.codePreview ?? undefined,
-      codeLanguage: article.codeLanguage ?? undefined,
-      codeBlockCount: article.codeBlockCount ?? undefined,
-    }));
+    // 处理和清理查询结果，并附加服务端预计算的 masonry span
+    let processedArticles: ProcessedArticle[] = articles.map((article: RawArticle) => {
+      const coverImage = article.cover_image;
+      const tags = article.tags || [];
+      return {
+        id: article.id,
+        title: article.title,
+        author: article.author,
+        authorId: article.author_id,
+        publishedAt: article.published_at,
+        createdAt: article.created_at,
+        updatedAt: article.updated_at,
+        excerpt: article.excerpt,
+        type: article.type,
+        status: article.status,
+        likes: article.likes,
+        shares: article.shares,
+        comments: article.comments,
+        categoryId: article.category_id,
+        orderInCategory: article.order_index,
+        visibleAccessLevel: article.visible_access_level,
+        fullAccessLevel: article.full_access_level,
+        categoryName: article.category_name,
+        coverImage,
+        coverIsPlaceholder: article.cover_is_placeholder,
+        tags,
+        codePreview: article.codePreview ?? undefined,
+        codeLanguage: article.codeLanguage ?? undefined,
+        codeBlockCount: article.codeBlockCount ?? undefined,
+        precomputedSpan: calculateServerSpan(
+          getAspectRatioFromArticle({ coverImage }),
+          article.type,
+          tags.length
+        ),
+      };
+    });
 
     // 如果 orderByPath=true，进行 DFS 排序
     if (shouldOrderByPath) {

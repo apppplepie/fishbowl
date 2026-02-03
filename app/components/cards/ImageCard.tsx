@@ -69,17 +69,20 @@ export default function ImageCard({
       dataCardId={card.id?.toString() || card._id?.toString() || ''}
       dataCardType="IMAGE_CARD"
     >
-      <div style={{ 
-        position: 'relative', 
-        width: '100%',
-        maxWidth: '100%',
-        aspectRatio: aspectRatio,
-        contain: 'layout paint',
-        containIntrinsicSize: '400px 300px',
-        background: colors.background,
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-      }}>
+      {/* 强制 aspect-ratio 占位，图片未加载时避免高度为 0 导致布局塌陷 */}
+      <div
+        className="image-card-media"
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '100%',
+          aspectRatio: aspectRatio,
+          contain: 'layout paint',
+          background: colors.background,
+          overflow: 'hidden',
+          boxSizing: 'border-box',
+        }}
+      >
         <Image
           src={media?.url || card.imageUrl || card.firstImageUrl}
           alt={media?.title || card.title}
