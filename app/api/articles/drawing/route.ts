@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
        LEFT JOIN (
          SELECT article_id, block_id FROM (
            SELECT ab.article_id, ab.block_id,
-             ROW_NUMBER() OVER (PARTITION BY ab.article_id ORDER BY ab.\`order\`) as rn
+             ROW_NUMBER() OVER (PARTITION BY ab.article_id ORDER BY COALESCE(b.access_level, 1) ASC, ab.\`order\` ASC) as rn
            FROM article_blocks ab
            INNER JOIN blocks b ON b.id = ab.block_id AND b.type = 'image'
          ) t WHERE rn = 1

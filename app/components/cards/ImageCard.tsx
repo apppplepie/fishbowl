@@ -8,6 +8,7 @@ import { AreaChartOutlined, PictureOutlined } from '@ant-design/icons';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Card } from '@/app/components/ui';
 import { IMAGE_CARD_META_HEIGHT } from '@/lib/constants';
+import { getImageSrc } from '@/lib/imageUrl';
 
 export interface ImageCardProps {
   card: ImageCardType | any;
@@ -84,7 +85,7 @@ export default function ImageCard({
         }}
       >
         <Image
-          src={media?.url || card.imageUrl || card.firstImageUrl}
+          src={getImageSrc(media?.url || card.imageUrl || card.firstImageUrl) ?? (media?.url || card.imageUrl || card.firstImageUrl)}
           alt={media?.title || card.title}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1440px) 25vw, 400px"

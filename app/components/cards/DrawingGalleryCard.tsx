@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import { getImageSrc } from '@/lib/imageUrl';
 import { PlaceholderBlock } from '@/app/types/block';
 import PlaceholderDisplay from '@/app/components/blocks/PlaceholderDisplay';
 
@@ -16,6 +17,8 @@ type DrawingGalleryCardProps = {
   coverHeight?: number;
   /** 外部传入缩略图（blur base64 或低清图 URL），用于占位加载 */
   coverThumbnail?: string;
+  /** 封面模式：只显示图组中 access_level 最小且 order 最小的那一张图，不显示标题/指示点等 */
+  coverOnly?: boolean;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
   onTitleClick?: () => void;
   style?: React.CSSProperties;
@@ -26,6 +29,7 @@ export default function DrawingGalleryCard({
   coverWidth: propCoverWidth,
   coverHeight: propCoverHeight,
   coverThumbnail: propCoverThumbnail,
+  coverOnly = false,
   onClick,
   onTitleClick,
   style,
@@ -35,6 +39,9 @@ export default function DrawingGalleryCard({
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
   const touchStartRef = useRef<number | null>(null);
   const hasSwipedRef = useRef(false);
+
+  const coverMedia = article?.cover_image ?? article?.coverImage ?? null;
+  const coverUrl = article?.cover_image_url ?? article?.cover_image?.url ?? article?.coverImage?.url ?? article?.imageUrl ?? null;
 
   const images = useMemo(() => {
     const coverMedia = article?.cover_image ?? article?.coverImage ?? null;
@@ -123,6 +130,39 @@ export default function DrawingGalleryCard({
 
   const markFailed = () => setFailedImages(prev => new Set(prev).add(currentIndex));
 
+  // 封面模式：后端已定封面，按长宽比直接显示，无壳
+  if (coverOnly) {
+    const w = coverMedia?.width ?? propCoverWidth ?? 300;
+    const h = coverMedia?.height ?? propCoverHeight ?? 400;
+    const aspectRatio = toValidAspect(w / h);
+    if (!coverUrl) {
+      return (
+        <div onClick={onClick} style={{ position: 'relative', width: '100%', aspectRatio, overflow: 'hidden', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#999', ...style }}>
+          暂无封面
+        </div>
+      );
+    }
+    const blur = coverMedia?.blur_data_url ?? (coverMedia as any)?.blurDataUrl ?? propCoverThumbnail ?? undefined;
+    return (
+      <div
+        onClick={onClick}
+        style={{ position: 'relative', width: '100%', aspectRatio, overflow: 'hidden', ...style }}
+      >
+        <Image
+          src={getImageSrc(coverUrl) ?? coverUrl}
+          alt={article?.title ?? '作品封面'}
+          fill
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          style={{ objectFit: 'cover' }}
+          loading="lazy"
+          placeholder={blur ? 'blur' : 'empty'}
+          blurDataURL={blur}
+          draggable={false}
+        />
+      </div>
+    );
+  }
+
   if (!currentImage) {
     return (
       <div style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, overflow: 'hidden', background: '#f6f6f6', ...style }} onClick={onClick}>
@@ -146,7 +186,7 @@ export default function DrawingGalleryCard({
           </div>
         ) : currentImage.url ? (
           <div style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', aspectRatio: currentImage.aspectRatio, position: 'relative', contain: 'layout paint', background: 'transparent', overflow: 'hidden' }}>
-            <Image src={currentImage.url} alt={article.title || 'image'} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 80vw, 90vw" style={{ objectFit: 'contain', transition: 'transform 0.28s ease, opacity 0.28s ease' }} onError={markFailed} loading="lazy" placeholder={currentImage.blur_data_url ? 'blur' : 'empty'} blurDataURL={currentImage.blur_data_url ?? undefined} draggable={false} />
+            <Image src={getImageSrc(currentImage.url) ?? currentImage.url} alt={article.title || 'image'} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 80vw, 90vw" style={{ objectFit: 'contain', transition: 'transform 0.28s ease, opacity 0.28s ease' }} onError={markFailed} loading="lazy" placeholder={currentImage.blur_data_url ? 'blur' : 'empty'} blurDataURL={currentImage.blur_data_url ?? undefined} draggable={false} />
           </div>
         ) : (
           <div style={{ color: '#888' }}>图片不可用</div>

@@ -64,128 +64,10 @@ if (typeof document !== 'undefined') {
       .gallery-masonry-item:hover { 
         transform: translateY(-2px); 
       }
-      .gallery-image { 
-        width: 100%; 
-        height: 100%; 
-        display: block; 
-        opacity: 0; 
-        transition: opacity 0.5s ease; 
-        object-fit: cover;
-      }
-      .gallery-image.loaded { 
-        opacity: 1; 
-      }
     `;
     document.head.appendChild(style);
   }
 }
-
-// 生成模糊占位符（Base64 SVG）- 使用预编码的占位符避免 SSR 问题
-const BLUR_PLACEHOLDER = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiLz48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImdyYWRpZW50IiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZTBlMGUwO3N0b3Atb3BhY2l0eToxIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZjVmNWY1O3N0b3Atb3BhY2l0eToxIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PC9zdmc+";
-
-/**
- * 渐进式加载图片项：
- * 1. 先显示模糊占位符
- * 2. 图片加载完成后平滑过渡到清晰图片
- */
-const GalleryImage = React.memo(({ article, onImageClick }: { article: any; onImageClick: (article: any) => void }) => {
-  const [aspectRatio, setAspectRatio] = useState<string | number>('3 / 4'); // 默认给一个较长比例的占位
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [error, setError] = useState(false);
-
-  const imageUrl = article?.cover_image_url 
-    || article?.cover_image?.url 
-    || article?.imageUrl 
-    || article?.firstImageUrl;
-
-  // 获取初始宽高比（如果有）
-  const initialAspectRatio = useMemo(() => {
-    const coverImage = article?.cover_image || article?.coverImage;
-    if (coverImage?.width && coverImage?.height) {
-      return `${coverImage.width} / ${coverImage.height}`;
-    }
-    if (article?.imageWidth && article?.imageHeight) {
-      return `${article.imageWidth} / ${article.imageHeight}`;
-    }
-    return '3 / 4';
-  }, [article]);
-
-  useEffect(() => {
-    setAspectRatio(initialAspectRatio);
-  }, [initialAspectRatio]);
-
-  const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { naturalWidth, naturalHeight } = e.currentTarget;
-    if (naturalWidth && naturalHeight) {
-      setAspectRatio(`${naturalWidth} / ${naturalHeight}`);
-    }
-    setIsLoaded(true);
-  }, []);
-
-  const handleError = useCallback(() => setError(true), []);
-  const handleClick = useCallback(() => onImageClick(article), [onImageClick, article]);
-
-  return (
-    <div className="gallery-masonry-item" onClick={handleClick}>
-      <div style={{ position: 'relative', width: '100%', aspectRatio, overflow: 'hidden' }}>
-        {/* 模糊占位符 - 始终显示，直到图片加载完成 */}
-        {!isLoaded && !error && (
-          <img
-            src={BLUR_PLACEHOLDER}
-            alt=""
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              filter: 'blur(20px)',
-              transform: 'scale(1.1)', // 放大一点避免模糊边缘
-              opacity: isLoaded ? 0 : 1,
-              transition: 'opacity 0.3s ease',
-            }}
-          />
-        )}
-        
-        {/* 实际图片 - 渐进式显示 */}
-        {!error && imageUrl && (
-          <img
-            src={imageUrl}
-            alt={article.title ?? '作品封面'}
-            loading="lazy"
-            decoding="async"
-            onLoad={handleLoad}
-            onError={handleError}
-            className={`gallery-image ${isLoaded ? 'loaded' : ''}`}
-            style={{
-              position: isLoaded ? 'relative' : 'absolute',
-              inset: isLoaded ? 'auto' : 0,
-            }}
-          />
-        )}
-        
-        {/* 错误状态 */}
-        {error && (
-          <div style={{ 
-            position: 'absolute', 
-            inset: 0, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            background: '#eee', 
-            color: '#bbb', 
-            fontSize: '12px' 
-          }}>
-            加载失败
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
-
-GalleryImage.displayName = 'GalleryImage';
 
 export default function GalleryPage() {
   const router = useRouter();
@@ -433,11 +315,16 @@ export default function GalleryPage() {
           <>
             <div className="gallery-masonry">
               {filteredArticles.map((article) => (
-                <GalleryImage
-                  key={article.id}
-                  article={article}
-                  onImageClick={handleImageClick}
-                />
+                <div key={article.id} className="gallery-masonry-item">
+                  <DrawingGalleryCard
+                    article={article}
+                    coverOnly
+                    coverWidth={article.cover_image?.width || 300}
+                    coverHeight={article.cover_image?.height || 400}
+                    coverThumbnail={article.cover_image?.blur_data_url}
+                    onClick={() => handleImageClick(article)}
+                  />
+                </div>
               ))}
             </div>
             

@@ -26,8 +26,9 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import { getConnectionConfig } from '../lib/db-config';
 
-// 如果 content 中是相对路径，拼接域名（用于远程 URL）
-const BASE_ORIGIN = process.env.BASE_ORIGIN || 'https://yourcdn.example.com';
+// 仅用于：本地文件不存在时尝试远程拉取、以及判断 source（cdn/external）。
+// 存 media.url 时同源路径只存相对路径（见下），不写死域名，换域名后图片仍可用。
+const BASE_ORIGIN = process.env.BASE_ORIGIN || '';
 
 // 本地文件根目录（支持子目录，如 uploads/2025/12、uploads/2026/01）
 const UPLOADS_DIR = path.resolve(__dirname, '../public/uploads');
@@ -210,12 +211,12 @@ async function processBlock(conn: mysql.Connection, block: { id: string; content
       // 创建新的 media 记录
       mediaId = uuidv4();
       
-      // 存储 URL：base64 用特殊标记，相对路径拼接 BASE_ORIGIN，远程 URL 保持原样
+      // 存储 URL：base64 用 inline://；同源相对路径只存路径不存域名，换域名也不受影响；远程 URL 保持原样
       let storedUrl: string;
       if (imageUrl.startsWith('data:image/')) {
         storedUrl = `inline://${mediaId}`;
       } else if (imageUrl.startsWith('/')) {
-        storedUrl = BASE_ORIGIN + imageUrl;
+        storedUrl = imageUrl; // 只存 /uploads/...，不存 BASE_ORIGIN，域名无关
       } else {
         storedUrl = imageUrl;
       }

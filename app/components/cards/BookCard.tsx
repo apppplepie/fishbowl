@@ -6,6 +6,7 @@ import type { BookCard as BookCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import DeleteBookModal from '@/app/components/modal/DeleteBookModal';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
+import { getImageSrc } from '@/lib/imageUrl';
 import { Card } from '@/app/components/ui';
 
 interface BookCardProps {
@@ -104,7 +105,7 @@ export default function BookCard({
           {/* 图片 - 始终渲染，使用 opacity 控制显示 */}
           {coverImageUrl && (
             <img
-              src={coverImageUrl}
+              src={getImageSrc(coverImageUrl) ?? coverImageUrl}
               alt={coverImageTitle || card.title}
               width={400}
               height={280}
