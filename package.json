@@ -27,6 +27,7 @@
     "db:migrate:access-level": "ts-node --project tsconfig.node.json scripts/update-users-table.ts",
     "db:migrate:create-media": "ts-node --project tsconfig.node.json scripts/create-media-table.ts",
     "db:migrate:media": "ts-node --project tsconfig.node.json scripts/migrate-to-media.ts",
+    "db:scan:media": "ts-node --project tsconfig.node.json scripts/scan-dir-to-media.ts",
     "db:backfill:blur": "ts-node --project tsconfig.node.json scripts/backfill-media-blur-data-url.ts",
     "db:rollback:galleries": "ts-node --project tsconfig.node.json scripts/remove-galleries-tables.ts",
     "db:fix:blocks": "ts-node --project tsconfig.node.json scripts/fix-blocks-content-size.ts"
