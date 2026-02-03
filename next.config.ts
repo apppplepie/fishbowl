@@ -39,6 +39,13 @@ const nextConfig: NextConfig = withBundleAnalyzer({
               chunks: 'all',
               priority: 15,
             },
+            // 合并小 CSS 文件，减少请求数
+            styles: {
+              name: 'styles',
+              test: /\.css$/,
+              chunks: 'all',
+              enforce: true,
+            },
           },
         },
       };

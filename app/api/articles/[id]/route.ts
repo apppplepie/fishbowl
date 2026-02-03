@@ -492,19 +492,21 @@ export async function GET(
 
     const article = articles[0];
 
-    // 2. 获取文章的所有块（按 order 排序）
+    // 2. 获取文章的所有块（按 order 排序），并 JOIN media 以返回图片块的 width/height/blur 供前端占位与优化
     const blocks = await query<any[]>(
       `SELECT
-        b.id, b.type, b.content, b.author, b.created_at, b.access_level,
-        ab.\`order\` as \`order\`
+        b.id, b.type, b.content, b.author, b.created_at, b.access_level, b.media_id,
+        ab.\`order\` as \`order\`,
+        m.width as media_width, m.height as media_height, m.aspect_ratio as media_aspect_ratio, m.blur_data_url as media_blur_data_url
        FROM blocks b
        INNER JOIN article_blocks ab ON b.id = ab.block_id
+       LEFT JOIN media m ON m.id = b.media_id
        WHERE ab.article_id = ?
        ORDER BY ab.\`order\` ASC`,
       [articleId]
     );
 
-    // 3. 解析块的 content 并检查权限
+    // 3. 解析块的 content 并检查权限；为 image 块附带 media 尺寸与模糊图
     const parsedBlocks = blocks.map(block => {
       try {
         // 权限检查
@@ -521,15 +523,23 @@ export async function GET(
           };
         }
 
-        // 权限足够，返回真实内容
-        return {
+        const parsedContent = JSON.parse(block.content);
+        const result: any = {
           ...block,
           order: block.order,
-          parsedContent: JSON.parse(block.content),
+          parsedContent,
         };
+        if (block.type === 'image' && (block.media_width != null || block.media_height != null || block.media_aspect_ratio != null || block.media_blur_data_url)) {
+          result.media = {
+            width: block.media_width ?? undefined,
+            height: block.media_height ?? undefined,
+            aspect_ratio: block.media_aspect_ratio ?? undefined,
+            blur_data_url: block.media_blur_data_url ?? undefined,
+          };
+        }
+        return result;
       } catch (parseError) {
         console.error('解析块内容失败:', block.id, block.content, parseError);
-        // 如果解析失败，返回原始内容
         return {
           ...block,
           order: block.order,

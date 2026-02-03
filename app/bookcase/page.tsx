@@ -844,9 +844,9 @@ function BookcasePageContent() {
             </div>
           ) : filteredCards.length === 0 ? (
             <Empty
-              icon="📚"
-              title="书架还是空的"
-              description="试试调整筛选条件或添加一些书籍吧？"
+              icon=" "
+              title=" "
+              description=" "
             />
           ) : (
             <>
