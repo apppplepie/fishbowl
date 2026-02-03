@@ -6,7 +6,7 @@ import type { ImageCard as ImageCardType, MasonryProps } from '@/app/types/card'
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { AreaChartOutlined, PictureOutlined } from '@ant-design/icons';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
-import { Tag, Card } from '@/app/components/ui';
+import { Card } from '@/app/components/ui';
 import { IMAGE_CARD_META_HEIGHT } from '@/lib/constants';
 
 export interface ImageCardProps {
@@ -106,75 +106,31 @@ export default function ImageCard({
         />
       </div>
 
-      {/* 信息区域：固定高度与 getImageCardSpan 共用 IMAGE_CARD_META_HEIGHT */}
-      {(card.title || card.description || card.excerpt) && (
+      {/* 信息区域：仅标题，固定高度与 getImageCardSpan 共用 IMAGE_CARD_META_HEIGHT */}
+      {card.title && (
         <div style={{
-          padding: `${IMAGE_CARD_META_HEIGHT.PADDING}px`,
-          height: IMAGE_CARD_META_HEIGHT.TITLE + IMAGE_CARD_META_HEIGHT.PADDING + (card.tags?.length ? IMAGE_CARD_META_HEIGHT.TAGS : 0),
-          minHeight: IMAGE_CARD_META_HEIGHT.TITLE + IMAGE_CARD_META_HEIGHT.PADDING + (card.tags?.length ? IMAGE_CARD_META_HEIGHT.TAGS : 0),
+          padding: '0 12px',
+          height: IMAGE_CARD_META_HEIGHT.TITLE,
+          minHeight: IMAGE_CARD_META_HEIGHT.TITLE,
           boxSizing: 'border-box',
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-start',
+          alignItems: 'center',
+          gap: '8px',
         }}>
-          {card.title && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '12px',
-            }}>
-              <PictureOutlined style={{ fontSize: '20px'}} />
-              <h3 style={{
-                margin: 0,
-                fontSize: '18px',
-                fontWeight: 600,
-                color: colors.textColor,
-                flex: 1,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {card.title}
-              </h3>
-            </div>
-          )}
-
-          {/* 标签 */}
-          {/* {card.tags && card.tags.length > 0 && (
-            <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {card.tags.slice(0, 3).map((tag: string, index: number) => (
-                <Tag key={index} id={tag}>
-                  {tag}
-                </Tag>
-              ))}
-              {card.tags.length > 3 && (
-                <Tag id={`more-${card.id || card._id || ''}`}>
-                  +{card.tags.length - 3}
-                </Tag>
-              )}
-            </div>
-          )} */}
-
-          {(card.description || card.excerpt) && (
-            <p style={{
-              margin: 0,
-              color: colors.textColor,
-              opacity: 0.8,
-              fontSize: '14px',
-              lineHeight: '1.5',
-              display: '-webkit-box',
-              WebkitLineClamp: 1,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow: 'ellipsis',
-            }}>
-              {card.description || card.excerpt}
-            </p>
-          )}
-          
+          <PictureOutlined style={{ fontSize: '20px' }} />
+          <h3 style={{
+            margin: 0,
+            fontSize: '18px',
+            fontWeight: 600,
+            color: colors.textColor,
+            flex: 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {card.title}
+          </h3>
         </div>
       )}
     </Card>

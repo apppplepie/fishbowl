@@ -17,7 +17,7 @@
 
 /* 最小 2 列：50% 减去 gap 的一半(4px)，两列+间距刚好 100%，避免窄屏跳回一列 */
 .masonry-grid--min-2-cols {
-  grid-template-columns: repeat(auto-fill, minmax(min(280px, calc(50% - 4px)), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, calc(50% - 4px)), 1fr));
 }
 
 /* 大屏限制最多 4 列，避免卡片过细 */

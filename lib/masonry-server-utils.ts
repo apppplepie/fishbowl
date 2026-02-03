@@ -32,10 +32,7 @@ export function calculateServerSpan(
   // image / drawing 或未知类型按图片卡公式
   if (type === 'image' || type === 'drawing') {
     const imageH = ESTIMATED_COL_WIDTH / (Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 3 / 2);
-    const metaHeight =
-      IMAGE_CARD_META_HEIGHT.TITLE +
-      IMAGE_CARD_META_HEIGHT.PADDING +
-      (tagsCount > 0 ? IMAGE_CARD_META_HEIGHT.TAGS : 0);
+    const metaHeight = IMAGE_CARD_META_HEIGHT.TITLE;
     const estimatedTotal = imageH + metaHeight;
     const ROW_PX = GRID_CONFIG.GRID_AUTO_ROWS;
     const GAP_PX = GRID_CONFIG.GRID_ROW_GAP;

@@ -7,14 +7,12 @@ export const PLACEHOLDER_IMAGE_URL = '/static/covers/locked.svg';
 export const GRID_CONFIG = {
   GRID_AUTO_ROWS: 8, // px
   GRID_ROW_GAP: 8,   // px
-  DEFAULT_COL_WIDTH: 280,
+  DEFAULT_COL_WIDTH: 180,
 } as const;
 
-/** 图片卡信息区高度（px），与 getImageCardSpan、ImageCard 共用，改一处即可 */
+/** 图片卡信息区高度（px），仅标题，与 getImageCardSpan、ImageCard 共用 */
 export const IMAGE_CARD_META_HEIGHT = {
-  TITLE: 48,   // 标题/描述区预留
-  PADDING: 16, // 信息区内边距（上下）
-  TAGS: 28,    // 有标签时额外高度
+  TITLE: 48, // 标题区总高度（含内边距）
 } as const;
 
 /** 卡片高度配置（单位：rows） */

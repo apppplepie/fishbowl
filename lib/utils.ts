@@ -39,10 +39,8 @@ export function getImageCardSpan(article: ArticleLike, columnWidth?: number): nu
   const imageH = colW / aspect;
 
   const TITLE_AREA = IMAGE_CARD_META_HEIGHT.TITLE;
-  const PADDING = IMAGE_CARD_META_HEIGHT.PADDING;
-  const TAGS = Array.isArray(article.tags) && article.tags.length > 0 ? IMAGE_CARD_META_HEIGHT.TAGS : 0;
 
-  const estimatedTotal = imageH + TITLE_AREA + PADDING + TAGS;
+  const estimatedTotal = imageH + TITLE_AREA;
   const ROW_PX = GRID_CONFIG.GRID_AUTO_ROWS;
   const GAP_PX = GRID_CONFIG.GRID_ROW_GAP;
 
