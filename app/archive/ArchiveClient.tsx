@@ -91,7 +91,8 @@ export default function ArchiveClient({
 
     // 使用服务端预取的数据初始化
     const [cards, setCards] = useState<any[]>(initialArticles);
-    const [loading, setLoading] = useState(false); // 首屏已由 server 渲染，不需要 loading
+    const [loading, setLoading] = useState(true); // 默认为 true
+    const [hasFetched, setHasFetched] = useState(false); // 真正完成过的标记
     const [showLoading, setShowLoading] = useState(false); // 延迟显示加载中文字
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(initialHasMore);
@@ -121,6 +122,9 @@ export default function ArchiveClient({
 
     // 延迟挂载 ArchiveActionFloat，非首屏关键交互
     const [shouldLoadActionFloat, setShouldLoadActionFloat] = useState(false);
+
+    // 页面稳定后再允许哨兵 observe，避免一挂载就触发
+    const [isMounted, setIsMounted] = useState(false);
 
     // 进入页面时重置侧边栏状态
     useEffect(() => {
@@ -179,152 +183,138 @@ export default function ArchiveClient({
         currentOffset: number,
         append: boolean = false,
         categoryId?: string | null,
-        query?: { search?: string } // 新增：支持搜索参数
+        query?: { search?: string }
     ) => {
-        // 取消之前的请求
+        // 1. 立即中断上一个请求
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
-
+    
         const controller = new AbortController();
         abortControllerRef.current = controller;
-
+        let aborted = false;
+    
         try {
             if (append) {
                 setLoadingMore(true);
             } else {
+                // 如果不是追加，说明是重置列表，此时开启全屏 loading 逻辑
                 setLoading(true);
-                // 延迟 500ms 显示"加载中"文字，避免闪烁
-                if (loadingDelayTimerRef.current) {
-                    clearTimeout(loadingDelayTimerRef.current);
-                }
+                setHasFetched(false); // 重置此标记，防止旧数据的 Empty 状态闪现
+                
+                if (loadingDelayTimerRef.current) clearTimeout(loadingDelayTimerRef.current);
                 loadingDelayTimerRef.current = window.setTimeout(() => {
                     setShowLoading(true);
                 }, 500);
             }
-
+    
             const params = new URLSearchParams({
                 status: 'published',
                 limit: ITEMS_PER_PAGE.toString(),
                 offset: currentOffset.toString(),
             });
-
-            if (categoryId) {
-                params.append('categoryId', categoryId);
-            }
-
-            // 添加搜索参数
-            if (query?.search) {
-                params.append('search', query.search);
-            }
-
-            const response = await apiGet(
-                `/api/articles/list?${params.toString()}`,
-                {
-                    requiresAuth: false,
-                    signal: controller.signal // 添加 signal
-                }
-            );
-
+    
+            if (categoryId) params.append('categoryId', categoryId);
+            if (query?.search) params.append('search', query.search);
+    
+            const response = await apiGet(`/api/articles/list?${params.toString()}`, {
+                requiresAuth: false,
+                signal: controller.signal 
+            });
+    
             const result = await response.json();
-
+    
             if (response.ok && result.success) {
                 const articles = result.articles || [];
 
                 if (append) {
                     setCards(prev => {
-                        const existingIds = new Set(prev.map(card => card.id));
-                        const newArticles = articles.filter(
-                            (article: any) => !existingIds.has(article.id)
-                        );
-                        if (newArticles.length === 0) return prev;
-                        appendInChunks(newArticles, (batch) =>
-                            setCards(p => [...p, ...batch])
-                        );
-                        return prev;
+                        const existingIds = new Set(prev.map((card: any) => card.id));
+                        const newArticles = articles.filter((a: any) => !existingIds.has(a.id));
+                        return newArticles.length === 0 ? prev : [...prev, ...newArticles];
                     });
-                    // append 时 appendInChunks 内部会分批 setCards，这里只更新 offset/hasMore
+                    const nextOffset = currentOffset + articles.length;
+                    setOffset(nextOffset);
+                    offsetRef.current = nextOffset;
                 } else {
-                    setCards([]);
-                    requestAnimationFrame(() => {
-                        appendInChunks(articles, (batch) =>
-                            setCards(prev => [...prev, ...batch])
-                        );
-                    });
+                    setCards(articles);
+                    setOffset(articles.length);
+                    offsetRef.current = articles.length;
                 }
-
                 setHasMore(articles.length === ITEMS_PER_PAGE);
-                setOffset(currentOffset + articles.length);
             }
         } catch (error: any) {
             if (error.name === 'AbortError') {
-                console.log('请求已取消');
+                aborted = true;
                 return;
             }
             console.error('加载文章失败:', error);
         } finally {
-            setLoading(false);
-            setShowLoading(false);
-            setLoadingMore(false);
-            loadingRef.current = false;
-            // 清除延迟定时器
-            if (loadingDelayTimerRef.current) {
-                clearTimeout(loadingDelayTimerRef.current);
-                loadingDelayTimerRef.current = null;
+            // 关键：只有当前请求没被 Abort 时，才关闭 loading 状态
+            if (!aborted) {
+                setLoading(false);
+                setShowLoading(false);
+                setLoadingMore(false);
+                setHasFetched(true); // 只有成功/失败了且没被中断，才算“完成过”
+                loadingRef.current = false;
+                if (loadingDelayTimerRef.current) {
+                    clearTimeout(loadingDelayTimerRef.current);
+                    loadingDelayTimerRef.current = null;
+                }
             }
         }
     }, []);
 
     const triggerLoadMore = useCallback(() => {
         if (!hasMore || loadingRef.current) return;
+        if (offsetRef.current === 0) {
+            console.log('拦截：第一页还没稳，哨兵别急');
+            return;
+        }
         loadingRef.current = true;
+        setLoadingMore(true);
         loadArticles(offsetRef.current, true, selectedCategoryId).finally(() => {
             loadingRef.current = false;
+            setLoadingMore(false);
         });
-    }, [hasMore, loadArticles, selectedCategoryId]);
+    }, [hasMore, selectedCategoryId, loadArticles]);
 
-    // 哨兵在 MasonryGrid 内、横跨整行；root 为 null 时用 viewport，有内部滚动容器时挂 scrollerRef
-    // 哨兵观察逻辑优化
+    // 页面挂载后延迟 500ms 再允许哨兵工作，给 Masonry 完成初次排版的时间
+    useEffect(() => {
+        const timer = setTimeout(() => setIsMounted(true), 500);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // 哨兵：仅在 isMounted 且“有更多”时 observe
     useEffect(() => {
         const node = loadMoreRef.current;
-        if (!node) return;
+        if (!node || !hasMore || !isMounted) return;
 
-        // 如果当前已经没有更多，或者正在加载，暂时不观察（或者在回调里挡住）
-        // 注意：不要在依赖项里写过多变量，否则 io 会频繁销毁重启
         const io = new IntersectionObserver(
             ([entry]) => {
-                console.log('👀', entry.isIntersecting, entry.boundingClientRect.top);
-                if (entry.isIntersecting) {
+                if (entry.isIntersecting && !loadingRef.current && hasMore) {
                     triggerLoadMore();
                 }
             },
             {
                 root: null,
-                rootMargin: '0px 0px 600px 0px', // 👈 关键：下方提前 600px
-                threshold: 0,
+                rootMargin: '100px',
+                threshold: 0.1,
             }
         );
 
         io.observe(node);
         return () => io.disconnect();
-    }, [hasMore, triggerLoadMore]); // 只需要依赖这两个
+    }, [hasMore, triggerLoadMore, isMounted]);
 
-    // 已使用 IntersectionObserver，不再用 scroll 兜底（避免每帧回调）
-
-    // 注释掉：服务端已经提供初始数据，不需要客户端再次加载
-    // 移除此 useEffect 避免重复加载和 React Strict Mode 的双重调用问题
-
-    // ✅ 同步 initialArticles 到 cards 状态（修复页面切换时的闪烁问题）
+    // ✅ 无 SSR 时：首屏由客户端拉取（仅执行一次）
+    const hasInitialLoadRef = useRef(false);
     useEffect(() => {
-        // 只在 initialArticles 引用改变时才更新
-        if (initialArticles !== prevInitialArticlesRef.current) {
-            prevInitialArticlesRef.current = initialArticles;
-            if (initialArticles.length > 0) {
-                setCards(initialArticles);
-                setOffset(initialArticles.length);
-            }
-        }
-    }, [initialArticles]);
+        if (initialArticles.length > 0 || hasInitialLoadRef.current) return;
+        hasInitialLoadRef.current = true;
+        const categoryParam = searchParams.get('category') ?? null;
+        loadArticles(0, false, categoryParam);
+    }, [initialArticles.length, searchParams, loadArticles]);
 
     // ✅ 发布后强制刷新一次（通过 ?refresh=1）
     useEffect(() => {
@@ -503,6 +493,19 @@ export default function ArchiveClient({
         loadArticles(0, false, categoryId);
     }, [loadArticles]);
 
+    // 根据卡片类型计算 gridRow span（无 precomputedSpan 时客户端用）
+    const getSpanForCard = useCallback((article: any): number => {
+        if (article.precomputedSpan != null) return article.precomputedSpan;
+        if (article.type === 'image' || article.type === 'drawing') return getImageCardSpan(article);
+        let cardType: CardType | null = null;
+        if (article.type === 'code' || article.codePreview) cardType = 'CODE_CARD';
+        else if (article.type === 'text' || article.type === 'article' || article.content) cardType = 'TEXT_CARD';
+        else if (article.type === 'diary' || article.excerpt) cardType = 'DIARY_CARD';
+        else if (article.type === 'book') cardType = 'BOOK_CARD';
+        const spanOrDynamic = cardType ? getCardSpan(cardType) : 18;
+        return typeof spanOrDynamic === 'number' ? spanOrDynamic : 18;
+    }, []);
+
     // 渲染卡片：语义化 masonry（masonry + span/dynamic），卡片内部负责 class/style
     const renderCard = useCallback((article: any, index: number) => {
         const handleClick = () => handleCardClick(article);
@@ -634,7 +637,7 @@ export default function ArchiveClient({
             </div>
 
             {/* 只在有筛选条件时才显示统计信息，避免数据加载时的闪烁 */}
-            {(selectedTags.length > 0 || searchKeyword || selectedCategoryId) && (
+            {/* {(selectedTags.length > 0 || searchKeyword || selectedCategoryId) && (
                 <div style={{
                     marginTop: '12px',
                     fontSize: '13px',
@@ -648,10 +651,9 @@ export default function ArchiveClient({
                     {searchKeyword && (
                         <span>搜索 "<strong>{searchKeyword}</strong>"</span>
                     )}
-                    {/* 移除这行，避免初始加载时的闪烁 */}
-                    {/* <span> · 找到 <strong>{filteredCards.length}</strong> 篇文章</span> */}
+
                 </div>
-            )}
+            )} */}
         </div>
     ), [isMobile, searchKeyword, selectedTags, selectedCategoryId]); // ✅ 移除 filteredCards.length
 
@@ -683,75 +685,67 @@ export default function ArchiveClient({
     return (
         <>
             <div style={{
-                transform: isMobile ? 'none' : (sidebarExpanded ? 'translateX(280px)' : 'translateX(0)'),
-                transition: 'transform 0.3s ease',
-                willChange: 'transform',
-            }}>
-                <div style={{
-                    maxWidth: '1400px',
-                    margin: '0 auto',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                }}>
-                    {showLoading ? (
-                        <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
-                            {/* 加载中... */}
-                        </div>
-                    ) : filteredCards.length === 0 ? (
-                        <Empty
-                            title="未找到匹配的文章"
-                            description="试试调整筛选条件或搜索其他关键词？"
-                        />
-                    ) : (
-                        <>
-                            <div style={{ minHeight: '400px', position: 'relative' }}>
-                                <MasonryGrid minColumns={2}>
-                                    {filteredCards.map((card, index) => (
-                                        <div
-                                            key={card.id}
-                                            className="masonry-item"
-                                            style={{ gridRow: `span ${card.precomputedSpan}` }}
-                                        >
-                                            {renderCard(card, index)}
-                                        </div>
-                                    ))}
-
-                                    {/* ✅ 哨兵 = 最后一个 grid item */}
+            transform: isMobile ? 'none' : (sidebarExpanded ? 'translateX(280px)' : 'translateX(0)'),
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            willChange: 'transform',
+        }}>
+            <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+                
+                {/* 1. 初始加载状态：还没拿到第一波数据且正在 loading */}
+                {loading && cards.length === 0 ? (
+                    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Spin tip="正在开启档案库..." />
+                    </div>
+                ) : (hasFetched && filteredCards.length === 0) ? (
+                    /* 2. 确认请求完成且真的没数据 */
+                    <Empty
+                        title="未找到匹配的文章"
+                        description="试试调整筛选条件或搜索其他关键词？"
+                    />
+                ) : (
+                    /* 3. 正常内容区 */
+                    <>
+                        <div style={{ minHeight: '400px' }}>
+                            {/* 瀑布流只放卡片 */}
+                            <MasonryGrid minColumns={2}>
+                                {filteredCards.map((card, index) => (
                                     <div
-                                        ref={loadMoreRef}
-                                        className="masonry-sentinel"
-                                    />
-                                </MasonryGrid>
-                                {/* <div
-                                    ref={loadMoreRef}
-                                    style={{
-                                        height: '200px',
-                                        width: '100%',
-                                        background: 'red' // 甚至可以先给个 'red' 看看它在哪
-                                    }}
-                                /> */}
-                            </div>
-
-                            {loadingMore && (
-                                <div style={{
-                                    textAlign: 'center',
-                                    padding: '40px 0',
-                                    color: '#999',
-                                }}>
-                                    <Spin size="small" />
-                                    <div style={{ marginTop: '12px', fontSize: '14px' }}>
-                                        加载更多...
+                                        key={card.id}
+                                        className="masonry-item"
+                                        style={{ gridRow: `span ${getSpanForCard(card)}` }}
+                                    >
+                                        {renderCard(card, index)}
                                     </div>
-                                </div>
-                            )}
+                                ))}
+                            </MasonryGrid>
+                            
+{/* 只有 isMounted 为 true 才绑定 ref，哨兵在页面稳定后再 observe */}
+{hasFetched && cards.length > 0 && (
+    <div
+        ref={isMounted ? loadMoreRef : null}
+        style={{
+            height: '50px',
+            margin: '20px 0',
+            visibility: 'hidden',
+            backgroundColor: 'black',
+        }}
+    />
+)}
+                        </div>
 
-                            {!hasMore && filteredCards.length > 0 && (
-                                <LoadEnd />
-                            )}
-                        </>
-                    )}
-                </div>
+                        {/* 加载更多 UI */}
+                        {loadingMore && (
+                            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                                <Spin size="small" />
+                                <div style={{ marginTop: '8px', fontSize: '14px', color: '#999' }}> </div>
+                            </div>
+                        )}
+
+                        {!hasMore && filteredCards.length > 0 && <LoadEnd />}
+                    </>
+                )}
             </div>
+        </div>
 
             {/* 延迟加载导航组件，只有在用户打开时才加载 */}
             {shouldLoadNavigator && (
