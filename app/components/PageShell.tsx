@@ -103,16 +103,32 @@ function PageShell({ children }: { children: React.ReactNode }) {
   }), [box1Height, config.box1Style]);
 
   // box2 内部样式（确保内容层级在 wave 之上，且有安全 top padding）
-  const box2InnerStyle = useMemo(() => ({
-    padding: '40px 20px 20px',
-    minHeight: '100vh',
-    width: '100%',
-    boxSizing: 'border-box' as const,
-    flex: '1 0 auto',
-    position: 'relative' as const,
-    zIndex: 20,
-    ...config.box2Style,
-  }), [config.box2Style, currentTheme?.pageLayout?.containerPaddingTop]);
+  const box2InnerStyle = useMemo(() => {
+    // 1. 基础样式定义
+    const baseStyle = {
+      padding: '40px 20px 20px',
+      minHeight: '100vh',
+      width: '100%',
+      boxSizing: 'border-box' as const,
+      flex: '1 0 auto',
+      position: 'relative' as const,
+      zIndex: 20,
+      // --- 关键补丁：强制布局模式为列式拉伸，防止坍缩 ---
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'stretch' as const, // 强制子元素（1400px层）宽度拉满
+    };
+  
+    // 2. 合并配置，并确保 alignItems 不会被 config 里的 center 覆盖
+    const mergedStyle = { ...baseStyle, ...config.box2Style };
+  
+    // 3. 强制校验：如果配置里误传了 center，我们在这里强行纠正回 stretch
+    if (mergedStyle.alignItems === 'center') {
+      mergedStyle.alignItems = 'stretch';
+    }
+  
+    return mergedStyle;
+  }, [config.box2Style, currentTheme?.pageLayout?.containerPaddingTop]);
 
   // useLayoutEffect 用于同步测量，避免闪烁
   useLayoutEffect(() => {

@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Button, Input, Image as AntImage, Segmented, Space, Modal } from 'antd';
+import { getImageSrc } from '@/lib/imageUrl';
 import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, EyeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import ImageCardModal from '../ImageCardModal';
 import type { ImageBlock as ImageBlockType } from '@/app/types/block';
@@ -72,8 +74,20 @@ export default function ImageBlock({
     });
   };
 
-  // 浏览模式渲染
+  // 浏览模式渲染：使用 Next/Image + getImageSrc + 可选 media（blur_data_url、宽高），与 ImageCard 一致，加载更快
   if (mode === 'view') {
+    const pc = block.parsedContent as { url?: string; title?: string; description?: string } | undefined;
+    const media = (block as any).media as { width?: number; height?: number; aspect_ratio?: number | string; blur_data_url?: string } | undefined;
+    const imageUrl = pc?.url ?? '';
+    const resolvedSrc = getImageSrc(imageUrl) ?? imageUrl;
+    const DEFAULT_ASPECT = 3 / 2;
+    const toValidAspect = (v: number) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : DEFAULT_ASPECT);
+    const apiAspect = media?.aspect_ratio != null && media.aspect_ratio !== '' ? toValidAspect(Number(media.aspect_ratio)) : null;
+    const sizeAspect = media?.width != null && media?.height != null && Number(media.width) > 0 && Number(media.height) > 0
+      ? toValidAspect(Number(media.width) / Number(media.height))
+      : null;
+    const aspectRatio = apiAspect ?? sizeAspect ?? DEFAULT_ASPECT;
+
     return (
       <div style={{
         width: '100%',
@@ -108,6 +122,12 @@ export default function ImageBlock({
             cursor: 'pointer',
             textAlign: 'center',
             transition: 'transform 0.2s',
+            position: 'relative',
+            width: '100%',
+            aspectRatio,
+            overflow: 'hidden',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           }}
           onClick={() => setShowModal(true)}
           onMouseEnter={(e) => {
@@ -117,34 +137,44 @@ export default function ImageBlock({
             e.currentTarget.style.transform = 'scale(1)';
           }}
         >
-          <AntImage
-            src={(block.parsedContent as any).url}
-            alt="图片"
-            preview={false}
-            style={{
-              width: '100%',
-              height: 'auto',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              objectFit: 'contain',
-            }}
-          />
-          {(block.parsedContent as any).description && (
-            <div style={{
-              marginTop: '8px',
-              fontSize: '13px',
-              color: '#999',
-            }}>
-              {(block.parsedContent as any).description}
+          {resolvedSrc ? (
+            <Image
+              src={resolvedSrc}
+              alt={pc?.title ?? '图片'}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 800px"
+              style={{
+                objectFit: 'contain',
+                transition: 'transform 0.3s ease',
+              }}
+              loading="lazy"
+              placeholder={media?.blur_data_url ? 'blur' : 'empty'}
+              blurDataURL={media?.blur_data_url ?? undefined}
+              onError={() => {
+                console.error('ImageBlock 图片加载失败:', imageUrl);
+              }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+              图片地址为空
             </div>
           )}
         </div>
+        {pc?.description && (
+          <div style={{
+            marginTop: '8px',
+            fontSize: '13px',
+            color: '#999',
+          }}>
+            {pc.description}
+          </div>
+        )}
         {showModal && (
           <ImageCardModal
             visible={showModal}
-            imageUrl={(block.parsedContent as any).url}
-            title={(block.parsedContent as any).title || ''}
-            description={(block.parsedContent as any).description || ''}
+            imageUrl={resolvedSrc || imageUrl}
+            title={pc?.title ?? ''}
+            description={pc?.description ?? ''}
             onClose={() => setShowModal(false)}
           />
         )}
