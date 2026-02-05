@@ -197,6 +197,9 @@ export default function CodeBlock({
               fontSize: '14px',
               marginBottom: '12px',
               fontWeight: 500,
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              whiteSpace: 'normal',
             }}>
               {(codeContent as any).title}
             </div>
@@ -214,7 +217,9 @@ export default function CodeBlock({
             color: '#abb2bf',
             fontSize: '14px',
             lineHeight: '1.6',
-            overflowX: 'auto',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
             userSelect: 'text',
             WebkitUserSelect: 'text',
           }}>

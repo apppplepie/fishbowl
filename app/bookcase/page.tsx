@@ -11,7 +11,6 @@ import MasonryGrid from '@/app/components/layout/MasonryGrid';
 
 // 卡片组件 - 首屏直接加载（启用 SSR）
 import ArticleCard from '@/app/components/cards/ArticleCard';
-import ArticleCardBlocks from '@/app/components/cards/ArticleCardBlocks';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
@@ -593,7 +592,7 @@ function BookcasePageContent() {
     return () => setConfig((prev: any) => ({ ...prev, box1Content: null }));
   }, [setConfig, box1Content]);
 
-  // --- 卡片渲染逻辑：有 blocks 用 ArticleCardBlocks，其余用 span + layout ---
+  // --- 卡片渲染逻辑：统一用 span + layout（文章卡用 ArticleCard） ---
   const renderCard = useCallback((article: any, index: number) => {
     const span = getSpan(article);
     const commonProps = {
@@ -603,9 +602,6 @@ function BookcasePageContent() {
       masonry: true,
       span,
     };
-    if (article.blocks && (article.type === 'text' || article.type === 'article')) {
-      return <ArticleCardBlocks {...commonProps} blocks={article.blocks} />;
-    }
     const layout = getLayoutForCard(article, columnWidth);
     switch (article.type) {
       case 'image':

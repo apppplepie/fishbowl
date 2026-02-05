@@ -7,6 +7,7 @@ import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import type { MasonryProps } from '@/app/types/card';
 import { Tag, Card } from '@/app/components/ui';
+import { BLOCK_SPANS, spanToHeightPx } from '@/lib/lib-card-layout/constants';
 
 export interface CodeCardProps {
   card: {
@@ -46,6 +47,10 @@ export default function CodeCard({
 }: CodeCardProps & MasonryProps) {
   const colors = useCardBackground(card.id || '');
   const CODE_LINE_COUNT = 4;
+  const codeBlockHeightPx = spanToHeightPx(BLOCK_SPANS.CODE_BLOCK);
+  const codeWrapPaddingVertical = 32;
+  const codeInnerHeightPx = codeBlockHeightPx - codeWrapPaddingVertical;
+  const codeLineHeightPx = codeInnerHeightPx / CODE_LINE_COUNT;
   const rawLines = card.codePreview
     ? card.codePreview.split('\n').slice(0, CODE_LINE_COUNT)
     : ['// 代码示例', 'function example() {', '  return "Hello World";'];
@@ -105,18 +110,19 @@ export default function CodeCard({
           </div>
         )}
 
-        {/* 代码内容 */}
+        {/* 代码内容：高度与 CODE_BLOCK span 对齐，避免卡片撑不开 */}
         <pre style={{
           margin: 0,
+          minHeight: codeInnerHeightPx,
           fontSize: '13px',
-          lineHeight: '1.5',
+          lineHeight: `${codeLineHeightPx}px`,
           color: '#abb2bf',
           fontFamily: '"Fira Code", "Courier New", monospace',
           overflow: 'hidden',
         }}>
           <code>
             {codeLines.map((line, index) => (
-              <div key={index} style={{ minHeight: '19.5px' }}>
+              <div key={index} style={{ minHeight: codeLineHeightPx }}>
                 {line || ' '}
               </div>
             ))}

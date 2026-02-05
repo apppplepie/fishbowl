@@ -14,7 +14,6 @@ import { getSpanForCard, getLayoutForCard } from '@/lib/masonry-server-utils';
 
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
 import ArticleCard from '@/app/components/cards/ArticleCard';
-import ArticleCardBlocks from '@/app/components/cards/ArticleCardBlocks';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
@@ -234,9 +233,6 @@ function ArchivePageContent(props?: ArchivePageProps) {
       masonry: true,
       span,
     };
-    if (article.blocks && (article.type === 'text' || article.type === 'article')) {
-      return <ArticleCardBlocks {...commonProps} blocks={article.blocks} />;
-    }
     const layout = getLayoutForCard(article, columnWidth);
     switch (article.type) {
       case 'image':

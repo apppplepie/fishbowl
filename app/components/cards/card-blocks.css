@@ -3,15 +3,23 @@
  * 1 span = 1 row = 8px；所有高度、间距、留白均 N×8px，不再用 row+gap 公式。
  *
  * 铁律：行数靠 clamp，高度靠 span。
- * 简介每行 span：与 constants.ts BLOCK_SPANS.EXCERPT_LINE 同步，改此处即可统一简介行高。
- *
- * 含 ArticleCardBlocks（blocks[] 驱动）：高度由内联 --span 控制，.card-block 基类见下方。
+ * 以下 :root 变量与 lib/lib-card-layout/constants.ts 的 BLOCK_SPANS、ROW_HEIGHT_PX、INTERVAL_BLOCK_SPAN 同步，改 constants 时请同步改此处。
  */
 :root {
-  --card-row: 8px;
-  --excerpt-span-per-line: 2; /* 与 lib-card-layout/constants BLOCK_SPANS.EXCERPT_LINE 同步 */
+  --card-row: 8px;            /* ROW_HEIGHT_PX */
+  --title-span: 3;            /* BLOCK_SPANS.TITLE */
+  --excerpt-span-per-line: 3; /* BLOCK_SPANS.EXCERPT_LINE */
+  --divider-span: 1;          /* BLOCK_SPANS.DIVIDER */
+  --date-span: 2;             /* BLOCK_SPANS.DATE */
+  --tags-span: 3;             /* BLOCK_SPANS.TAGS */
+  --emoji-weather-span: 3;    /* BLOCK_SPANS.EMOJI_WEATHER */
+  --code-block-span: 15;       /* BLOCK_SPANS.CODE_BLOCK */
+  --gap-span: 1;              /* BLOCK_SPANS.GAP / INTERVAL_BLOCK_SPAN */
+  --pad-top-span: 3;          /* BLOCK_SPANS.PAD_TOP */
+  --pad-bottom-span: 2;       /* BLOCK_SPANS.PAD_BOTTOM */
+
   --excerpt-line-cap: calc(var(--excerpt-span-per-line) * var(--card-row));
-  --title-line-cap: 24px;     /* 3 span = 24px */
+  --title-line-cap: calc(var(--title-span) * var(--card-row));
 }
 
 /* blocks[] 驱动（ArticleCardBlocks）：高度由内联 --span 控制 */
@@ -30,21 +38,21 @@
 
 /* N span = N×8px */
 .card-block--title {
-  height: calc(3 * var(--card-row));
+  height: calc(var(--title-span) * var(--card-row));
 }
-/* 分割线：单独占 1 span，空 div 也占位；border 用 border-box 包在高度内 */
 .card-block--divider {
-  height: calc(1 * var(--card-row));
-  min-height: calc(1 * var(--card-row));
+  height: calc(var(--divider-span) * var(--card-row));
   box-sizing: border-box;
   flex-shrink: 0;
 }
 .card-block--date {
-  height: calc(2 * var(--card-row));
+  height: calc(var(--date-span) * var(--card-row));
 }
-.card-block--tags,
+.card-block--tags {
+  height: calc(var(--tags-span) * var(--card-row));
+}
 .card-block--emoji-weather {
-  height: calc(3 * var(--card-row));
+  height: calc(var(--emoji-weather-span) * var(--card-row));
 }
 
 /* 标签行：标签垂直居中，不受行高影响 */
@@ -56,25 +64,21 @@
   box-sizing: border-box;
 }
 .card-block--code {
-  height: calc(8 * var(--card-row));
+  height: calc(var(--code-block-span) * var(--card-row));
 }
 
-/* 区块间：1 区间块 = INTERVAL_BLOCK_SPAN(1) span，与 lib-card-layout/constants 一致 */
 .card-block--gap {
-  height: calc(1 * var(--card-row));
-  min-height: calc(1 * var(--card-row));
+  height: calc(var(--gap-span) * var(--card-row));
   flex-shrink: 0;
   box-sizing: border-box;
 }
 .card-block--pad-top {
-  height: calc(2 * var(--card-row));
-  min-height: calc(2 * var(--card-row));
+  height: calc(var(--pad-top-span) * var(--card-row));
   flex-shrink: 0;
   box-sizing: border-box;
 }
 .card-block--pad-bottom {
-  height: calc(2 * var(--card-row));
-  min-height: calc(2 * var(--card-row));
+  height: calc(var(--pad-bottom-span) * var(--card-row));
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -175,7 +179,10 @@
   box-sizing: border-box;
 }
 
-/* 代码块容器 */
+/* 代码块容器：高度由 .card-block--code 决定，padding 含在高度内 */
+.card-block--code.card-block-code-wrap {
+  box-sizing: border-box;
+}
 .card-block-code-wrap {
   padding: 16px 20px;
   position: relative;
@@ -188,7 +195,8 @@
   padding: 0 12px;
 }
 
-/* 代码卡标题区 */
+/* 代码卡标题区：padding 须在 --title-span(3)×8px 内，否则会多占 span */
 .card-block-title--code {
-  padding: 20px 20px 16px 20px;
+  padding: 4px 20px 4px 20px;
+  box-sizing: border-box;
 }

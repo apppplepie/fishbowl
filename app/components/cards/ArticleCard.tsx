@@ -30,7 +30,13 @@ export default function ArticleCard({
   layout,
 }: ArticleCardProps & MasonryProps) {
   const colors = useCardBackground(card.id || card._id?.toString() || '');
-  const excerptLines = Math.min(4, Math.max(1, layout?.excerptLines ?? 2));
+  // 行数：优先从 blocks 中 excerpt 块的 lines 取（与 buildBlocksFromArticle 一致），否则用 layout
+  const excerptLinesFromBlocks =
+    card?.blocks?.find((b: { type?: string; lines?: number }) => b.type === 'excerpt')?.lines;
+  const excerptLines = Math.min(
+    4,
+    Math.max(1, excerptLinesFromBlocks ?? layout?.excerptLines ?? 2)
+  );
 
   const hasTags = card.tags && card.tags.length > 0;
   const hasExcerpt = !!card.excerpt;

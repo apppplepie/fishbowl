@@ -8,6 +8,7 @@ import {
   BLOCK_SPANS,
   INTERVAL_BLOCK_SPAN,
   DEFAULT_IMAGE_HEIGHT_PX,
+  CARD_BOTTOM_GAP_SPAN,
 } from '@/lib/lib-card-layout/constants';
 import { computeSpanFromBlocks } from '@/lib/lib-card-layout';
 
@@ -69,7 +70,7 @@ const IMAGE_PRESET: LayoutHint = {
   codeBlockSpan: 0,
   imageHeightPx: DEFAULT_IMAGE_HEIGHT_PX,
   topPaddingSpan: 0,
-  bottomPaddingSpan: 2,
+  bottomPaddingSpan: BLOCK_SPANS.PAD_BOTTOM,
 };
 const ARTICLE_PRESET: LayoutHint = {
   titleSpan: BLOCK_SPANS.TITLE,
@@ -80,8 +81,8 @@ const ARTICLE_PRESET: LayoutHint = {
   emojiWeatherSpan: 0,
   codeBlockSpan: 0,
   imageHeightPx: 0,
-  topPaddingSpan: 2,
-  bottomPaddingSpan: 2,
+  topPaddingSpan: BLOCK_SPANS.PAD_TOP,
+  bottomPaddingSpan: BLOCK_SPANS.PAD_BOTTOM,
 };
 const DIARY_PRESET: LayoutHint = {
   titleSpan: BLOCK_SPANS.TITLE,
@@ -92,8 +93,8 @@ const DIARY_PRESET: LayoutHint = {
   emojiWeatherSpan: BLOCK_SPANS.EMOJI_WEATHER,
   codeBlockSpan: 0,
   imageHeightPx: 0,
-  topPaddingSpan: 2,
-  bottomPaddingSpan: 2,
+  topPaddingSpan: BLOCK_SPANS.PAD_TOP,
+  bottomPaddingSpan: BLOCK_SPANS.PAD_BOTTOM,
 };
 const BOOK_PRESET: LayoutHint = {
   titleSpan: BLOCK_SPANS.TITLE,
@@ -104,8 +105,8 @@ const BOOK_PRESET: LayoutHint = {
   emojiWeatherSpan: 0,
   codeBlockSpan: 0,
   imageHeightPx: 280,
-  topPaddingSpan: 2,
-  bottomPaddingSpan: 2,
+  topPaddingSpan: BLOCK_SPANS.PAD_TOP,
+  bottomPaddingSpan: BLOCK_SPANS.PAD_BOTTOM,
 };
 const CODE_PRESET: LayoutHint = {
   titleSpan: BLOCK_SPANS.TITLE,
@@ -116,7 +117,7 @@ const CODE_PRESET: LayoutHint = {
   emojiWeatherSpan: 0,
   codeBlockSpan: BLOCK_SPANS.CODE_BLOCK,
   imageHeightPx: 0,
-  topPaddingSpan: 2,
+  topPaddingSpan: BLOCK_SPANS.PAD_TOP,
   bottomPaddingSpan: 0,
 };
 
@@ -200,8 +201,8 @@ export function getLayoutForCard(
   return { ...ARTICLE_PRESET, ...hint };
 }
 
-/** 任意卡：precomputedSpan / blocks 优先，否则 preset+layout 计算 */
-export function getSpanForCard(article: ArticleLike, columnWidth?: number): number {
+/** 仅内容 span（不含卡片底部间隔），供服务端存 precomputedSpan 用 */
+function getContentSpanForCard(article: ArticleLike, columnWidth?: number): number {
   if (article.precomputedSpan != null && Number.isFinite(article.precomputedSpan)) {
     return Math.max(1, Math.floor(article.precomputedSpan));
   }
@@ -215,8 +216,14 @@ export function getSpanForCard(article: ArticleLike, columnWidth?: number): numb
   return computeSpanFromLayout(layout);
 }
 
+/** 任意卡：precomputedSpan / blocks 优先，否则 preset+layout 计算；返回值含卡片底部间隔 CARD_BOTTOM_GAP_SPAN（仅占网格行，卡片内不渲染） */
+export function getSpanForCard(article: ArticleLike, columnWidth?: number): number {
+  return getContentSpanForCard(article, columnWidth) + CARD_BOTTOM_GAP_SPAN;
+}
+
+/** 服务端计算 span 用，仅内容高度（不含 CARD_BOTTOM_GAP_SPAN），存为 precomputedSpan */
 export function calculateServerSpan(article: ArticleLike): number {
-  return getSpanForCard(article, DEFAULT_COL_WIDTH_PX);
+  return getContentSpanForCard(article, DEFAULT_COL_WIDTH_PX);
 }
 
 export function getAspectRatioFromArticle(article: {

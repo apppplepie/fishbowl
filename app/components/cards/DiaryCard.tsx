@@ -156,6 +156,7 @@ export default function DiaryCard({
           )}
         </p>
       </div>
+      {/* 尾部留白：与 card-blocks.css 的 .card-block--pad-bottom 一致，使用全局变量 --pad-bottom-span */}
       <div className="card-block--pad-bottom" aria-hidden />
     </Card>
   );
