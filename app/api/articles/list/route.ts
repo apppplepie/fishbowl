@@ -175,6 +175,7 @@ export async function GET(request: NextRequest) {
       : Math.max(parseInt(offsetParam || '0', 10), 0);
     const categoryId = searchParams.get('categoryId');
     const orderByPath = searchParams.get('orderByPath') === 'true';
+    const search = (searchParams.get('search') || '').trim();
 
     // 验证状态参数
     const validStatuses = ['published', 'draft', 'archived'];
@@ -201,6 +202,11 @@ export async function GET(request: NextRequest) {
       } else {
         console.log('No category IDs found for', categoryId);
       }
+    }
+
+    if (search) {
+      whereClause += ` AND (a.title LIKE ? OR a.excerpt LIKE ?)`;
+      queryParams.push(`%${search}%`, `%${search}%`);
     }
 
     // 在前面添加封面权限参数

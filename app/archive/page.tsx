@@ -244,20 +244,20 @@ function ArchivePageContent(props?: ArchivePageProps) {
   }, [handleCardClick, getSpan]);
 
 
-  // --- Header Search Bar ---
+  // --- Header Search Bar（稳定 key 避免每次输入重挂载导致失焦）---
   useEffect(() => {
     setConfig((prev: any) => ({
       ...prev,
       box1Content: (
-        <div style={{ padding: '16px 24px' }}>
+        <div key="archive-search" style={{ padding: '16px 24px' }}>
           <div style={{ maxWidth: isMobile ? '100%' : '320px' }}>
-             <Input.Search
-                placeholder="搜索..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                allowClear
-                className="search-input-transparent"
-             />
+            <Input.Search
+              placeholder="搜索标题或摘要..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              allowClear
+              className="search-input-transparent"
+            />
           </div>
         </div>
       )
