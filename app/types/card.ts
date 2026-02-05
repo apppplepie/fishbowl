@@ -91,5 +91,7 @@ export interface MasonryProps {
   span?: number;
   /** 动态高度（由 ResizeObserver 处理） */
   dynamic?: boolean;
+  /** 档位/行数提示，用于 line-clamp 与固定高度（来自 masonry-server-utils getLayoutForCard） */
+  layout?: import('@/lib/masonry-server-utils').LayoutHint;
 }
 

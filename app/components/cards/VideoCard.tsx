@@ -70,10 +70,10 @@ export default function VideoCard({ card, onClick, className = '' }: VideoCardPr
         </div>
       </div>
 
-      {/* 信息区域 */}
-      <div style={{ padding: '16px' }}>
+      {/* 信息区域：子级无 margin，用 gap 控制间距 */}
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <h4 style={{ 
-          margin: '0 0 8px 0',
+          margin: 0,
           fontSize: '16px',
           fontWeight: 600,
           display: '-webkit-box',
@@ -88,6 +88,7 @@ export default function VideoCard({ card, onClick, className = '' }: VideoCardPr
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          margin: 0,
           fontSize: '12px',
           color: '#999',
         }}>

@@ -6,7 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
-import { calculateServerSpan, getAspectRatioFromArticle } from '@/lib/masonry-server-utils';
+import { calculateServerSpan, charCountToLinesForDiary } from '@/lib/masonry-server-utils';
+import { buildBlocksFromArticle } from '@/lib/lib-card-layout';
+import type { ArticleBlock } from '@/lib/lib-card-layout';
 
 // 类型定义
 interface RawArticle {
@@ -18,7 +20,7 @@ interface RawArticle {
   created_at: Date;
   updated_at: Date;
   excerpt: string | null;
-  type: 'text' | 'image' | 'drawing' | 'code';
+  type: 'text' | 'image' | 'drawing' | 'code' | 'diary';
   status: string;
   likes: number;
   shares: number;
@@ -47,7 +49,7 @@ interface ProcessedArticle {
   createdAt: Date;
   updatedAt: Date;
   excerpt: string | null;
-  type: 'text' | 'image' | 'drawing' | 'code';
+  type: 'text' | 'image' | 'drawing' | 'code' | 'diary';
   status: string;
   likes: number;
   shares: number;
@@ -64,6 +66,10 @@ interface ProcessedArticle {
   codeLanguage?: string | null;
   codeBlockCount?: number | null;
   precomputedSpan?: number; // 服务端预计算的 masonry span
+  /** 文章卡 blocks 驱动：仅 type 为 text 时存在 */
+  blocks?: ArticleBlock[];
+  /** 日记卡：后端按正文字符数算好的行数，用于 span 与 line-clamp */
+  layoutHint?: { excerptLines?: number };
 }
 
 /**
@@ -315,11 +321,11 @@ export async function GET(request: NextRequest) {
       queryParams
     );
 
-    // 处理和清理查询结果，并附加服务端预计算的 masonry span
+    // 处理和清理查询结果：文章卡用 blocks + precomputedSpan，其余用 calculateServerSpan
     let processedArticles: ProcessedArticle[] = articles.map((article: RawArticle) => {
       const coverImage = article.cover_image;
       const tags = article.tags || [];
-      return {
+      const base = {
         id: article.id,
         title: article.title,
         author: article.author,
@@ -344,11 +350,51 @@ export async function GET(request: NextRequest) {
         codePreview: article.codePreview ?? undefined,
         codeLanguage: article.codeLanguage ?? undefined,
         codeBlockCount: article.codeBlockCount ?? undefined,
-        precomputedSpan: calculateServerSpan(
-          getAspectRatioFromArticle({ coverImage }),
-          article.type,
-          tags.length
-        ),
+      };
+      if (article.type === 'text') {
+        const { blocks, precomputedSpan } = buildBlocksFromArticle(
+          {
+            id: article.id,
+            title: article.title,
+            excerpt: article.excerpt ?? undefined,
+            tags,
+            updatedAt: article.updated_at?.toISOString?.(),
+            publishedAt: article.published_at?.toISOString?.(),
+            createdAt: article.created_at?.toISOString?.(),
+          },
+          'desktop'
+        );
+        return { ...base, blocks, precomputedSpan };
+      }
+      if (article.type === 'diary') {
+        const contentChars = (article.excerpt ?? '').trim().length;
+        const excerptLines = charCountToLinesForDiary(contentChars);
+        const layoutHint = { excerptLines };
+        return {
+          ...base,
+          layoutHint,
+          precomputedSpan: calculateServerSpan({
+            ...base,
+            type: 'diary',
+            layoutHint,
+            coverImage,
+            cover_image: coverImage,
+            mood: (article as any).mood,
+            weather: (article as any).weather,
+            location: (article as any).location,
+          }),
+        };
+      }
+      return {
+        ...base,
+        precomputedSpan: calculateServerSpan({
+          ...base,
+          type: article.type,
+          coverImage,
+          cover_image: coverImage,
+          imageWidth: coverImage?.width,
+          imageHeight: coverImage?.height,
+        }),
       };
     });
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import './card-blocks.css';
 import type { DiaryCard as DiaryCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
@@ -16,8 +17,7 @@ export interface DiaryCardProps {
 }
 
 /**
- * C. 日志卡片
- * 简短文字记录，适合每日感想、随笔
+ * C. 日志卡片（块状样式见 card-blocks.css）
  */
 export default function DiaryCard({
   card,
@@ -27,7 +27,10 @@ export default function DiaryCard({
   className = '',
   masonry,
   span,
+  layout,
 }: DiaryCardProps & MasonryProps) {
+  const excerptLines = Math.min(4, Math.max(1, layout?.excerptLines ?? 4));
+  const hasEmoji = (layout?.emojiWeatherSpan ?? 0) > 0;
   // 从 excerpt 或 content 中提取日志内容和元信息
   const extractDiaryData = () => {
     const rawContent = card.content || card.excerpt || '';
@@ -73,21 +76,14 @@ export default function DiaryCard({
     return { status, location, content };
   };
 
-  const { status, location, content } = extractDiaryData();
+  const { location, content } = extractDiaryData();
 
   // 使用卡片背景颜色 Hook，基于日记 ID 生成独特的渐变色
   const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
 
-  // 判断是否为表情符号（简单的emoji检测）
-  const isEmoji = (str: string): boolean => {
-    if (!str || str.trim() === '') return false;
-    // 过滤掉常见的非表情文本
-    const nonEmojiTexts = ['published', 'draft', 'archived', 'deleted'];
-    if (nonEmojiTexts.includes(str.toLowerCase())) return false;
-    // 简单的emoji检测：检查是否包含emoji字符（Unicode范围）
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/u;
-    return emojiRegex.test(str);
-  };
+  // 地点：type 上的 location 或 content 里解析出的 location；3 span 块只装地点，没有就不显示该块
+  const locationText = (card.location ?? location ?? '').trim();
+  const hasLocation = !!locationText;
 
   // 格式化日期：从月份开始显示到分钟 (MM-DD HH:mm)
   const formatDateFromMonth = (dateString: string | Date | undefined | null): string => {
@@ -115,13 +111,17 @@ export default function DiaryCard({
   const publishDate = card.updatedAt || card.publishedAt || card.createdAt;
   const formattedDate = formatDateFromMonth(publishDate);
 
+  // 有地点且 layout 分配了 3 span 时才渲染地点块
+  const showLocationBlock = hasEmoji && hasLocation;
+
   return (
     <Card
       hoverable
       id={card.id?.toString() || card._id?.toString() || ''}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      bodyStyle={{ padding: '20px' }}
+      borderSides="x"
+      bodyStyle={{ padding: '0 20px', display: 'flex', flexDirection: 'column' }}
       className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
       style={span != null ? { gridRow: `span ${span}` } : undefined}
       dataMasonry={masonry || undefined}
@@ -129,71 +129,34 @@ export default function DiaryCard({
       dataCardId={card.id?.toString() || card._id?.toString() || ''}
       dataCardType="DIARY_CARD"
     >
-      {/* 标题（日期） */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        marginBottom: '12px',
-      }}>
-        <InsertRowAboveOutlined style={{ fontSize: '20px'}} />
-        <h3 style={{
-          margin: 0,
-          fontSize: '18px',
-          fontWeight: 600,
-          color: colors.textColor,
-          flex: 1,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
+      <div className="card-block--pad-top" aria-hidden />
+      <div className="card-block-title card-block--title">
+        <InsertRowAboveOutlined style={{ fontSize: '20px' }} />
+        <h3 className="card-block-title__text" style={{ color: colors.textColor }}>
           {formattedDate}
         </h3>
       </div>
-
-      {/* 日期和状态 */}
-      {status && isEmoji(status) && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          marginBottom: '12px',
-          fontSize: '16px',
-        }}>
-          <span>{status}</span>
-        </div>
+      <div className="card-block--gap" aria-hidden />
+      {showLocationBlock && (
+        <>
+          <div className="card-block-emoji card-block--emoji-weather" title="地点">
+            <span style={{ opacity: 0.9 }}>📍 {locationText}</span>
+          </div>
+          <div className="card-block--gap" aria-hidden />
+        </>
       )}
-
-      {/* 日志内容 */}
-      <p style={{
-        margin: '0 0 12px 0',
-        fontSize: '15px',
-        lineHeight: '1.8',
-        color: colors.textColor,
-        opacity: 0.9,
-        whiteSpace: 'pre-wrap',
-        display: '-webkit-box',
-        WebkitLineClamp: 4,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-      }}>
-        {content}
-      </p>
-
-      {/* 底部信息 */}
-      {location && (
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          fontSize: '12px',
-          color: colors.textColor,
-          opacity: 0.6,
-          paddingTop: '12px',
-          borderTop: `1px solid ${colors.borderColor}`,
-        }}>
-          <span>📍 {location}</span>
-        </div>
-      )}
+      <div className={`card-block-excerpt-wrap card-block--excerpt-lines-${excerptLines}`}>
+        <p
+          className={`card-block-excerpt card-block--excerpt-lines-${excerptLines}`}
+          style={{ fontSize: '15px', lineHeight: '24px', color: colors.textColor, opacity: 0.9 }}
+        >
+          {content.replace(/\n/g, ' ')}
+          {hasLocation && !showLocationBlock && (
+            <span style={{ opacity: 0.8, marginLeft: '0.5em' }}>📍 {locationText}</span>
+          )}
+        </p>
+      </div>
+      <div className="card-block--pad-bottom" aria-hidden />
     </Card>
   );
 }

@@ -11,6 +11,7 @@ import MasonryGrid from '@/app/components/layout/MasonryGrid';
 
 // 卡片组件 - 首屏直接加载（启用 SSR）
 import ArticleCard from '@/app/components/cards/ArticleCard';
+import ArticleCardBlocks from '@/app/components/cards/ArticleCardBlocks';
 import ImageCard from '@/app/components/cards/ImageCard';
 import CodeCard from '@/app/components/cards/CodeCard';
 import DiaryCard from '@/app/components/cards/DiaryCard';
@@ -33,7 +34,7 @@ import { useHeader } from '../contexts/HeaderContext';
 import { apiGet } from '@/lib/apiClient';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
-import { getCardSpan, getImageCardSpan, type CardType } from '@/lib/utils';
+import { getSpanForCard, getLayoutForCard } from '@/lib/masonry-server-utils';
 
 // 预缓存所有书籍的文章列表
 const preloadAllBookArticleLists = async () => {
@@ -536,18 +537,12 @@ function BookcasePageContent() {
     }
   }, [router]);
 
-  // --- 卡片 span 计算 (与 archive 一致) ---
-  const getSpanForCard = useCallback((article: any): number => {
-    if (article.precomputedSpan != null) return article.precomputedSpan;
-    if (article.type === 'image' || article.type === 'drawing') return getImageCardSpan(article);
-    let cardType: CardType | null = null;
-    if (article.type === 'code' || article.codePreview) cardType = 'CODE_CARD';
-    else if (article.type === 'text' || article.type === 'article' || article.content) cardType = 'TEXT_CARD';
-    else if (article.type === 'diary' || article.excerpt) cardType = 'DIARY_CARD';
-    else if (article.type === 'book' || article.coverImage) cardType = 'BOOK_CARD';
-    const spanOrDynamic = cardType ? getCardSpan(cardType) : 18;
-    return typeof spanOrDynamic === 'number' ? spanOrDynamic : 18;
-  }, []);
+  // --- 卡片 span：统一由 lib-card-layout 的 getSpanForCard 计算（优先 precomputedSpan / layoutHint.spanOverride） ---
+  const columnWidth = columnCount > 0 ? containerWidth / columnCount : undefined;
+  const getSpan = useCallback(
+    (article: any) => getSpanForCard(article, columnWidth),
+    [columnWidth]
+  );
 
   // 创建 box1Content
   const box1Content = useMemo(() => (
@@ -598,29 +593,34 @@ function BookcasePageContent() {
     return () => setConfig((prev: any) => ({ ...prev, box1Content: null }));
   }, [setConfig, box1Content]);
 
-  // --- 卡片渲染逻辑 (与 archive 一致：commonProps + span 由父级传入) ---
+  // --- 卡片渲染逻辑：有 blocks 用 ArticleCardBlocks，其余用 span + layout ---
   const renderCard = useCallback((article: any, index: number) => {
+    const span = getSpan(article);
     const commonProps = {
       card: article,
       onClick: () => handleCardClick(article),
       priority: index < 6,
       masonry: true,
-      span: article.precomputedSpan ?? getSpanForCard(article),
+      span,
     };
-
+    if (article.blocks && (article.type === 'text' || article.type === 'article')) {
+      return <ArticleCardBlocks {...commonProps} blocks={article.blocks} />;
+    }
+    const layout = getLayoutForCard(article, columnWidth);
     switch (article.type) {
       case 'image':
-        return <ImageCard {...commonProps} />;
+        return <ImageCard {...commonProps} layout={layout} />;
       case 'drawing':
-        return <ImageCard {...commonProps} card={{ ...article, description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '') }} />;
+        return <ImageCard {...commonProps} layout={layout} card={{ ...article, description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '') }} />;
       case 'code':
-        return <CodeCard {...commonProps} />;
+        return <CodeCard {...commonProps} layout={layout} />;
       case 'diary':
-        return <DiaryCard {...commonProps} />;
+        return <DiaryCard {...commonProps} layout={layout} />;
       case 'book':
         return (
           <BookCard
             {...commonProps}
+            layout={layout}
             showDeleteIcon={deleteMode}
             onDeleteSuccess={() => {
               const bookCategoryId = (article as any).categoryId;
@@ -634,9 +634,9 @@ function BookcasePageContent() {
           />
         );
       default:
-        return <ArticleCard {...commonProps} />;
+        return <ArticleCard {...commonProps} layout={layout} />;
     }
-  }, [handleCardClick, getSpanForCard, deleteMode, categoryFromUrl, loadBookcaseArticles]);
+  }, [handleCardClick, getSpan, columnWidth, deleteMode, categoryFromUrl, loadBookcaseArticles]);
 
   return (
     <>
@@ -656,7 +656,7 @@ function BookcasePageContent() {
                 style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
               >
                 {filteredCards.map((card, index) => (
-                  <div key={card.id} className="masonry-item animate" style={{ gridRow: `span ${getSpanForCard(card)}` }}>
+                  <div key={card.id} className="masonry-item animate" style={{ gridRow: `span ${getSpan(card)}` }}>
                     {renderCard(card, index)}
                   </div>
                 ))}

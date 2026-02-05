@@ -29,6 +29,7 @@ export default function QuoteCard({ card, onClick, className = '' }: QuoteCardPr
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
+        gap: '12px',
         minHeight: '200px',
       }}
       onClick={onClick}
@@ -38,14 +39,14 @@ export default function QuoteCard({ card, onClick, className = '' }: QuoteCardPr
         fontSize: '48px',
         color: 'rgba(0,0,0,0.1)',
         lineHeight: 1,
-        marginBottom: '16px',
+        margin: 0,
       }}>
         "
       </div>
 
       {/* 引言内容 */}
       <p style={{
-        margin: '0 0 20px 0',
+        margin: 0,
         fontSize: '16px',
         lineHeight: '1.8',
         color: '#333',
@@ -56,6 +57,7 @@ export default function QuoteCard({ card, onClick, className = '' }: QuoteCardPr
 
       {/* 作者 */}
       <div style={{
+        margin: 0,
         textAlign: 'right',
         fontSize: '14px',
         color: '#666',

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UserOutlined, ClockCircleOutlined, DeleteOutlined, ReadOutlined } from '@ant-design/icons';
+import './card-blocks.css';
+import { UserOutlined, DeleteOutlined, ReadOutlined } from '@ant-design/icons';
 import type { BookCard as BookCardType, MasonryProps } from '@/app/types/card';
-import { formatRelativeTime } from '@/app/utils/timeFormat';
 import DeleteBookModal from '@/app/components/modal/DeleteBookModal';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { getImageSrc } from '@/lib/imageUrl';
@@ -63,12 +63,13 @@ export default function BookCard({
       id={card.id?.toString() || (card as any)._id?.toString() || ''}
       onClick={showDeleteIcon ? undefined : onClick}
       onMouseEnter={onMouseEnter}
+      borderSides="x"
       style={{
         opacity: showDeleteIcon ? 0.9 : 1,
         cursor: showDeleteIcon ? 'default' : 'pointer',
         ...(span != null && { gridRow: `span ${span}` }),
       }}
-      bodyStyle={{ padding: '16px' }}
+      bodyStyle={{ padding: '0 16px', display: 'flex', flexDirection: 'column' }}
       className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
       dataMasonry={masonry || undefined}
       dataMasonrySpan={span != null ? span : undefined}
@@ -183,79 +184,31 @@ export default function BookCard({
         </div>
       }
     >
-
-      {/* 书名 */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        marginBottom: '12px',
-      }}>
-        <ReadOutlined style={{ fontSize: '20px'}} />
-        <h3 style={{
-          margin: 0,
-          fontSize: '18px',
-          fontWeight: 600,
-          color: colors.textColor,
-          flex: 1,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
+      <div className="card-block--pad-top" aria-hidden />
+      <div className="card-block-title card-block--title" style={{ margin: 0 }}>
+        <ReadOutlined style={{ fontSize: '20px' }} />
+        <h3 className="card-block-title__text" style={{ color: colors.textColor, margin: 0 }}>
           {card.title}
         </h3>
       </div>
-
-      {/* 简介 - 只有当有简介时才显示 */}
-      {card.description && (
-        <p style={{
-          margin: '0 0 16px 0',
-          color: colors.textColor,
-          opacity: 0.8,
-          fontSize: '14px',
-          lineHeight: '1.5',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          whiteSpace: 'pre-wrap',
-        }}>
-          {card.description}
-        </p>
-      )}
-
-      {/* 元信息 */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: '12px',
-        borderTop: `1px solid ${colors.borderColor}`,
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '13px',
-          color: colors.textColor,
-          opacity: 0.7,
-        }}>
+      <div className="card-block--gap" aria-hidden />
+      {card.description ? (
+        <>
+          <div className="card-block-excerpt-wrap card-block--excerpt-lines-2">
+            <p className="card-block-excerpt card-block--excerpt-lines-2" style={{ color: colors.textColor, opacity: 0.8, whiteSpace: 'pre-wrap' }}>
+              {card.description}
+            </p>
+          </div>
+          <div className="card-block--gap" aria-hidden />
+        </>
+      ) : null}
+      <div className="card-block-meta card-block--date" style={{ borderTop: `1px solid ${colors.borderColor}`, color: colors.textColor, opacity: 0.7 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <UserOutlined />
           <span>{card.author}</span>
         </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          fontSize: '12px',
-          color: colors.textColor,
-          opacity: 0.6,
-        }}>
-          {/* <ClockCircleOutlined />
-          <span>{formatRelativeTime(card.updatedAt)}</span> */}
-        </div>
       </div>
-
+      <div className="card-block--pad-bottom" aria-hidden />
 
       {/* 删除书籍确认对话框 */}
       <DeleteBookModal

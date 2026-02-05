@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import './card-blocks.css';
 import Image from 'next/image';
 import type { ImageCard as ImageCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { AreaChartOutlined, PictureOutlined } from '@ant-design/icons';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Card } from '@/app/components/ui';
-import { IMAGE_CARD_META_HEIGHT } from '@/lib/constants';
 import { getImageSrc } from '@/lib/imageUrl';
 
 export interface ImageCardProps {
@@ -30,6 +30,7 @@ export default function ImageCard({
   className = '',
   masonry,
   span,
+  layout,
   dynamic: _dynamic,
 }: ImageCardProps & MasonryProps) {
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -61,16 +62,16 @@ export default function ImageCard({
       hoverable
       id={card.id?.toString() || card._id?.toString() || ''}
       onMouseEnter={onMouseEnter}
+      onClick={onClick}
+      borderSides="x"
+      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column' }}
       className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
       style={span != null ? { gridRow: `span ${span}` } : undefined}
-      onClick={onClick}
-      bodyStyle={{ padding: 0 }}
       dataMasonry={masonry || undefined}
       dataMasonrySpan={span != null ? span : undefined}
       dataCardId={card.id?.toString() || card._id?.toString() || ''}
       dataCardType="IMAGE_CARD"
     >
-      {/* 强制 aspect-ratio 占位，图片未加载时避免高度为 0 导致布局塌陷 */}
       <div
         className="image-card-media"
         style={{
@@ -89,51 +90,26 @@ export default function ImageCard({
           alt={media?.title || card.title}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1440px) 25vw, 400px"
-          style={{
-            objectFit: 'cover',
-            transition: 'transform 0.3s ease',
-            maxWidth: '100%',
-          }}
+          style={{ objectFit: 'cover', transition: 'transform 0.3s ease', maxWidth: '100%' }}
           className="hover-scale-image"
           onLoad={() => setImgLoaded(true)}
-          onError={() => {
-            console.error('ImageCard 图片加载失败:', media?.url || card.imageUrl || card.firstImageUrl);
-            setImgLoaded(true);
-          }}
+          onError={() => { setImgLoaded(true); }}
           loading={priority ? 'eager' : 'lazy'}
           priority={priority}
           placeholder={media?.blur_data_url ? 'blur' : 'empty'}
           blurDataURL={media?.blur_data_url ?? undefined}
         />
       </div>
-
-      {/* 信息区域：仅标题，固定高度与 getImageCardSpan 共用 IMAGE_CARD_META_HEIGHT */}
-      {card.title && (
-        <div style={{
-          padding: '0 12px',
-          height: IMAGE_CARD_META_HEIGHT.TITLE,
-          minHeight: IMAGE_CARD_META_HEIGHT.TITLE,
-          boxSizing: 'border-box',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        }}>
+      <div className="card-block--gap" aria-hidden />
+      {card.title ? (
+        <div className="card-block-title card-block-title--image card-block--title" style={{ padding: '0 20px' }}>
           <PictureOutlined style={{ fontSize: '20px' }} />
-          <h3 style={{
-            margin: 0,
-            fontSize: '18px',
-            fontWeight: 600,
-            color: colors.textColor,
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
+          <h3 className="card-block-title__text" style={{ color: colors.textColor }}>
             {card.title}
           </h3>
         </div>
-      )}
+      ) : <div className="card-block--title" style={{ padding: '0 20px' }} aria-hidden />}
+      <div className="card-block--pad-bottom" aria-hidden />
     </Card>
   );
 }

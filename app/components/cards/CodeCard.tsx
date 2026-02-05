@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import './card-blocks.css';
 import { CodeOutlined } from '@ant-design/icons';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
@@ -41,11 +42,9 @@ export default function CodeCard({
   className = '',
   masonry,
   span,
+  layout,
 }: CodeCardProps & MasonryProps) {
-  // 使用卡片背景颜色 Hook，基于代码卡片 ID 生成独特的渐变色
   const colors = useCardBackground(card.id || '');
-  
-  // 代码预览：固定 3 行，不足用空行填充
   const CODE_LINE_COUNT = 4;
   const rawLines = card.codePreview
     ? card.codePreview.split('\n').slice(0, CODE_LINE_COUNT)
@@ -58,7 +57,8 @@ export default function CodeCard({
       id={card.id || ''}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      bodyStyle={{ padding: 0 }}
+      borderSides="x"
+      bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column' }}
       className={[className, masonry && 'masonry-item'].filter(Boolean).join(' ') || undefined}
       style={span != null ? { gridRow: `span ${span}` } : undefined}
       dataMasonry={masonry || undefined}
@@ -66,73 +66,28 @@ export default function CodeCard({
       dataCardId={card.id || ''}
       dataCardType="CODE_CARD"
     >
-      {/* 标题区域 */}
-      <div style={{
-        padding: '20px 20px 16px 20px',
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          marginBottom: '12px',
-        }}>
-          <CodeOutlined style={{ fontSize: '20px'}} />
-          <h3 style={{
-            margin: 0,
-            fontSize: '18px',
-            fontWeight: 600,
-            color: colors.textColor,
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
+      <div className="card-block--pad-top" aria-hidden />
+      <div className="card-block-title card-block-title--code card-block--title">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <CodeOutlined style={{ fontSize: '20px' }} />
+          <h3 className="card-block-title__text" style={{ color: colors.textColor }}>
             {card.title}
           </h3>
         </div>
-
-        {/* 标签 */}
         {card.tags && card.tags.length > 0 && (
-          <div style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ margin: 0, display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {card.tags.slice(0, 5).map((tag: string, index: number) => (
-              <Tag key={index} id={tag}>
-                {tag}
-              </Tag>
+              <Tag key={index} id={tag}>{tag}</Tag>
             ))}
-            {card.tags.length > 5 && (
-              <Tag id={`more-${card.id}`}>
-                +{card.tags.length - 5}
-              </Tag>
-            )}
+            {card.tags.length > 5 && <Tag id={`more-${card.id}`}>+{card.tags.length - 5}</Tag>}
           </div>
         )}
-
-        {/* 摘要 */}
-        {/* {card.excerpt && (
-          <p style={{
-            margin: 0,
-            fontSize: '14px',
-            color: colors.textColor,
-            opacity: 0.8,
-            lineHeight: '1.6',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}>
-            {card.excerpt}
-          </p>
-        )} */}
       </div>
-
-      {/* 代码预览区域 */}
-      <div style={{
-        background: '#282c34',
-        padding: '16px 20px',
-        position: 'relative',
-        borderTop: `2px solid ${colors.borderColor}`,
-        borderBottom: `2px solid ${colors.borderColor}`,
-      }}>
+      <div className="card-block--gap" aria-hidden />
+      <div
+        className="card-block-code-wrap card-block--code"
+        style={{ background: '#282c34', borderTop: `2px solid ${colors.borderColor}`, borderBottom: `2px solid ${colors.borderColor}` }}
+      >
         {/* 语言标签 */}
         {card.codeLanguage && (
           <div style={{

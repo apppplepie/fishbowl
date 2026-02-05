@@ -6,7 +6,8 @@
     /* 核心修改：禁止 CSS 自动计算列数，完全交给 JS 的 gridTemplateColumns 注入 */
     grid-template-columns: none; 
     grid-auto-rows: 8px;
-    gap: 8px;
+    row-gap: 0;
+    column-gap: 8px;
     width: 100%;
     max-width: 100%;
     margin: 0 auto;

@@ -1,48 +1,224 @@
-import { CARD_HEIGHTS, GRID_CONFIG, IMAGE_CARD_META_HEIGHT, type CardType } from './constants';
+/**
+ * Masonry span / layout：服务端预算 span；非文章卡用 preset + layout 算 span。
+ * 文章卡用 blocks + precomputedSpan（lib-card-layout buildBlocksFromArticle）。
+ */
+import {
+  DEFAULT_COL_WIDTH_PX,
+  ROW_HEIGHT_PX,
+  BLOCK_SPANS,
+  INTERVAL_BLOCK_SPAN,
+  DEFAULT_IMAGE_HEIGHT_PX,
+} from '@/lib/lib-card-layout/constants';
+import { computeSpanFromBlocks } from '@/lib/lib-card-layout';
 
-/** 与前端 getImageCardSpan 一致：用 DEFAULT_COL_WIDTH 估算列宽，保证 precomputedSpan 与前端无 columnWidth 时一致 */
-const ESTIMATED_COL_WIDTH = GRID_CONFIG.DEFAULT_COL_WIDTH;
-
-/** API 文章 type 与 CARD_HEIGHTS 的映射 */
-const TYPE_TO_CARD: Record<string, CardType> = {
-  text: 'TEXT_CARD',
-  article: 'TEXT_CARD',
-  code: 'CODE_CARD',
-  diary: 'DIARY_CARD',
-  book: 'BOOK_CARD',
+export type LayoutHint = {
+  titleSpan?: number;
+  excerptLines?: number;
+  dividerSpan?: number;
+  dateSpan?: number;
+  tagsSpan?: number;
+  emojiWeatherSpan?: number;
+  codeBlockSpan?: number;
+  imageHeightPx?: number;
+  topPaddingSpan?: number;
+  bottomPaddingSpan?: number;
+  spanOverride?: number | null;
 };
 
-/**
- * 服务端预计算 masonry 项的 grid-row span
- * 与 getImageCardSpan 逻辑一致，使用固定列宽估算，避免前端测量
- */
-export function calculateServerSpan(
-  aspectRatio: number,
-  type: string,
-  tagsCount = 0
-): number {
-  const cardType = TYPE_TO_CARD[type];
-  if (cardType && cardType !== 'IMAGE_CARD') {
-    const h = CARD_HEIGHTS[cardType];
-    if (typeof h === 'number' && Number.isFinite(h)) {
-      return Math.max(1, Math.round(h));
-    }
-  }
+export type ArticleLike = {
+  type?: string;
+  layoutHint?: LayoutHint | null;
+  precomputedSpan?: number | null;
+  blocks?: Array<{ type: string; span?: number }>;
+  coverImage?: { aspect_ratio?: number | string; width?: number; height?: number } | null;
+  cover_image?: { aspect_ratio?: number | string; width?: number; height?: number } | null;
+  imageWidth?: number;
+  imageHeight?: number;
+  [k: string]: unknown;
+};
 
-  // image / drawing 或未知类型按图片卡公式
-  if (type === 'image' || type === 'drawing') {
-    const imageH = ESTIMATED_COL_WIDTH / (Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 3 / 2);
-    const metaHeight = IMAGE_CARD_META_HEIGHT.TITLE;
-    const estimatedTotal = imageH + metaHeight;
-    const ROW_PX = GRID_CONFIG.GRID_AUTO_ROWS;
-    const GAP_PX = GRID_CONFIG.GRID_ROW_GAP;
-    return Math.max(1, Math.ceil((estimatedTotal + GAP_PX) / (ROW_PX + GAP_PX)));
+/** 按正文字符数得到行数档位（desktop），用于日记正文 span；上限 4 行 */
+export function charCountToLinesForDiary(charCount: number, maxLines = 4): number {
+  const thresholds = [15, 30, 90];
+  for (let i = 0; i < thresholds.length; i++) {
+    if (charCount <= thresholds[i]) return Math.min(i + 1, maxLines);
   }
-
-  return 10;
+  return maxLines;
 }
 
-/** 从文章对象解析 aspect_ratio（供服务端/API 计算 precomputedSpan） */
+function parseAspectRatio(article: ArticleLike, fallback: number): number {
+  const media = article.coverImage ?? article.cover_image ?? null;
+  if (media?.aspect_ratio != null) {
+    const v =
+      typeof media.aspect_ratio === 'number' ? media.aspect_ratio : parseFloat(String(media.aspect_ratio));
+    if (Number.isFinite(v) && v > 0) return v;
+  }
+  if (article.imageWidth != null && article.imageHeight != null && Number(article.imageHeight) > 0) {
+    return Number(article.imageWidth) / Number(article.imageHeight);
+  }
+  return fallback;
+}
+
+const IMAGE_PRESET: LayoutHint = {
+  titleSpan: BLOCK_SPANS.TITLE,
+  excerptLines: 0,
+  dividerSpan: 0,
+  dateSpan: 0,
+  tagsSpan: 0,
+  emojiWeatherSpan: 0,
+  codeBlockSpan: 0,
+  imageHeightPx: DEFAULT_IMAGE_HEIGHT_PX,
+  topPaddingSpan: 0,
+  bottomPaddingSpan: 2,
+};
+const ARTICLE_PRESET: LayoutHint = {
+  titleSpan: BLOCK_SPANS.TITLE,
+  excerptLines: 1,
+  dividerSpan: BLOCK_SPANS.DIVIDER,
+  dateSpan: BLOCK_SPANS.DATE,
+  tagsSpan: BLOCK_SPANS.TAGS,
+  emojiWeatherSpan: 0,
+  codeBlockSpan: 0,
+  imageHeightPx: 0,
+  topPaddingSpan: 2,
+  bottomPaddingSpan: 2,
+};
+const DIARY_PRESET: LayoutHint = {
+  titleSpan: BLOCK_SPANS.TITLE,
+  excerptLines: 1,
+  dividerSpan: 0,
+  dateSpan: 0,
+  tagsSpan: 0,
+  emojiWeatherSpan: BLOCK_SPANS.EMOJI_WEATHER,
+  codeBlockSpan: 0,
+  imageHeightPx: 0,
+  topPaddingSpan: 2,
+  bottomPaddingSpan: 2,
+};
+const BOOK_PRESET: LayoutHint = {
+  titleSpan: BLOCK_SPANS.TITLE,
+  excerptLines: 1,
+  dividerSpan: 0,
+  dateSpan: BLOCK_SPANS.DATE,
+  tagsSpan: 0,
+  emojiWeatherSpan: 0,
+  codeBlockSpan: 0,
+  imageHeightPx: 280,
+  topPaddingSpan: 2,
+  bottomPaddingSpan: 2,
+};
+const CODE_PRESET: LayoutHint = {
+  titleSpan: BLOCK_SPANS.TITLE,
+  excerptLines: 0,
+  dividerSpan: 0,
+  dateSpan: 0,
+  tagsSpan: 0,
+  emojiWeatherSpan: 0,
+  codeBlockSpan: BLOCK_SPANS.CODE_BLOCK,
+  imageHeightPx: 0,
+  topPaddingSpan: 2,
+  bottomPaddingSpan: 0,
+};
+
+function computeSpanFromLayout(layout: LayoutHint): number {
+  if (layout.spanOverride != null && Number.isFinite(layout.spanOverride) && layout.spanOverride > 0) {
+    return Math.max(1, Math.floor(layout.spanOverride));
+  }
+  let imageSpan = 0;
+  if (layout.imageHeightPx != null && layout.imageHeightPx > 0) {
+    imageSpan = Math.ceil(layout.imageHeightPx / ROW_HEIGHT_PX);
+  }
+  const titleSpan = layout.titleSpan ?? 0;
+  const excerptSpan = (layout.excerptLines ?? 0) * BLOCK_SPANS.EXCERPT_LINE;
+  const dividerSpan = layout.dividerSpan ?? 0;
+  const dateSpan = layout.dateSpan ?? 0;
+  const tagsSpan = layout.tagsSpan ?? 0;
+  const emojiSpan = layout.emojiWeatherSpan ?? 0;
+  const codeSpan = layout.codeBlockSpan ?? 0;
+  const blockCount =
+    (imageSpan > 0 ? 1 : 0) +
+    (titleSpan > 0 ? 1 : 0) +
+    (excerptSpan > 0 ? 1 : 0) +
+    (dividerSpan > 0 ? 1 : 0) +
+    (dateSpan > 0 ? 1 : 0) +
+    (tagsSpan > 0 ? 1 : 0) +
+    (emojiSpan > 0 ? 1 : 0) +
+    (codeSpan > 0 ? 1 : 0);
+  const internalGapSpan = Math.max(0, blockCount - 1) * INTERVAL_BLOCK_SPAN;
+  const topPad = layout.topPaddingSpan ?? 0;
+  const bottomPad = layout.bottomPaddingSpan ?? 0;
+  let span =
+    imageSpan +
+    titleSpan +
+    excerptSpan +
+    dividerSpan +
+    dateSpan +
+    tagsSpan +
+    emojiSpan +
+    codeSpan +
+    internalGapSpan +
+    topPad +
+    bottomPad;
+  return Math.max(1, span);
+}
+
+/** 非文章卡：preset + layoutHint → LayoutHint */
+export function getLayoutForCard(
+  article: ArticleLike,
+  columnWidth?: number
+): LayoutHint {
+  const hint = article.layoutHint ?? {};
+  const colW = columnWidth && columnWidth > 0 ? columnWidth : DEFAULT_COL_WIDTH_PX;
+
+  if (article.type === 'image' || article.type === 'drawing') {
+    const aspect = parseAspectRatio(article, 3 / 2);
+    const imageHeightPx = hint.imageHeightPx ?? colW / aspect;
+    return { ...IMAGE_PRESET, ...hint, imageHeightPx };
+  }
+  if (article.type === 'code' || (article as any).codePreview) {
+    return { ...CODE_PRESET, ...hint };
+  }
+  if (article.type === 'text' || article.type === 'article' || (article as any).content) {
+    const layout = { ...ARTICLE_PRESET, ...hint };
+    const hasDate =
+      (article as any).updated_at != null ||
+      (article as any).published_at != null ||
+      (article as any).created_at != null;
+    if (hasDate && (layout.dateSpan ?? 0) === 0) layout.dateSpan = BLOCK_SPANS.DATE;
+    return layout;
+  }
+  if (article.type === 'diary' || (article as any).excerpt) {
+    const layout = { ...DIARY_PRESET, ...hint };
+    // 日记 3 span 只给地点用；有地点才占这块，没有就不渲染
+    const hasLocation = !!(article as any).location;
+    if (!hasLocation) layout.emojiWeatherSpan = 0;
+    return layout;
+  }
+  if (article.type === 'book' || (article as any).coverImage) {
+    return { ...BOOK_PRESET, ...hint };
+  }
+  return { ...ARTICLE_PRESET, ...hint };
+}
+
+/** 任意卡：precomputedSpan / blocks 优先，否则 preset+layout 计算 */
+export function getSpanForCard(article: ArticleLike, columnWidth?: number): number {
+  if (article.precomputedSpan != null && Number.isFinite(article.precomputedSpan)) {
+    return Math.max(1, Math.floor(article.precomputedSpan));
+  }
+  if (article.blocks && article.blocks.length > 0) {
+    return computeSpanFromBlocks(article.blocks);
+  }
+  const layout = getLayoutForCard(article, columnWidth);
+  if (layout.spanOverride != null && Number.isFinite(layout.spanOverride) && layout.spanOverride > 0) {
+    return Math.max(1, Math.floor(layout.spanOverride));
+  }
+  return computeSpanFromLayout(layout);
+}
+
+export function calculateServerSpan(article: ArticleLike): number {
+  return getSpanForCard(article, DEFAULT_COL_WIDTH_PX);
+}
+
 export function getAspectRatioFromArticle(article: {
   coverImage?: { aspect_ratio?: number | string; width?: number; height?: number } | null;
   cover_image?: { aspect_ratio?: number | string; width?: number; height?: number } | null;
@@ -58,14 +234,10 @@ export function getAspectRatioFromArticle(article: {
   return 3 / 2;
 }
 
-/**
- * 画廊封面专用：仅按封面长宽比算 span，无 meta 高度
- * 与 MasonryWall 的 grid-auto-rows + row-gap 一致，前后端可共用
- */
-export function calculateGalleryCoverSpan(article: Parameters<typeof getAspectRatioFromArticle>[0]): number {
+export function calculateGalleryCoverSpan(
+  article: Parameters<typeof getAspectRatioFromArticle>[0]
+): number {
   const ar = getAspectRatioFromArticle(article);
-  const ROW_PX = GRID_CONFIG.GRID_AUTO_ROWS;
-  const GAP_PX = GRID_CONFIG.GRID_ROW_GAP;
-  const heightPx = ESTIMATED_COL_WIDTH / (Number.isFinite(ar) && ar > 0 ? ar : 3 / 2);
-  return Math.max(1, Math.ceil((heightPx + GAP_PX) / (ROW_PX + GAP_PX)));
+  const heightPx = DEFAULT_COL_WIDTH_PX / (Number.isFinite(ar) && ar > 0 ? ar : 3 / 2);
+  return Math.max(1, Math.ceil(heightPx / ROW_HEIGHT_PX));
 }

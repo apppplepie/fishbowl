@@ -43,14 +43,14 @@ export default function LinkCard({ card, onClick, className = '' }: LinkCardProp
         </div>
       )}
 
-      {/* 信息区域 */}
-      <div style={{ padding: '16px' }}>
+      {/* 信息区域：子级无 margin，用 gap 控制间距 */}
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {/* 网站图标和URL */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          marginBottom: '12px',
+          margin: 0,
         }}>
           {card.favicon ? (
             <img 
@@ -74,7 +74,7 @@ export default function LinkCard({ card, onClick, className = '' }: LinkCardProp
 
         {/* 标题 */}
         <h4 style={{ 
-          margin: '0 0 8px 0',
+          margin: 0,
           fontSize: '16px',
           fontWeight: 600,
           display: '-webkit-box',

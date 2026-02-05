@@ -13,6 +13,8 @@ export interface CardProps {
   id?: string; // 用于生成背景颜色
   cover?: React.ReactNode; // 封面内容（如图片）
   bodyStyle?: React.CSSProperties; // body 区域样式
+  /** 边框：all=四边，x=仅左右（块状卡片统一用 x） */
+  borderSides?: 'all' | 'x';
   /** 瀑布流语义：参与 masonry 布局（用于 Grid 查询 [data-masonry]） */
   dataMasonry?: boolean;
   /** 固定行数（有则 ResizeObserver 不覆盖），对应 grid-row: span N */
@@ -36,6 +38,7 @@ export default function Card({
   id = '',
   cover,
   bodyStyle,
+  borderSides = 'all',
   dataMasonry,
   dataMasonrySpan,
   dataCardId,
@@ -44,7 +47,7 @@ export default function Card({
   // 使用卡片背景颜色 Hook，基于 ID 生成独特的渐变色
   const colors = useCardBackground(id);
 
-  // 合并样式
+  // 合并样式；borderSides='x' 时仅左右边框
   const cardStyle: React.CSSProperties = useMemo(() => ({
     position: 'relative',
     width: '100%', /* 强制占满父容器宽度 */
@@ -55,7 +58,9 @@ export default function Card({
     cursor: hoverable || onClick ? 'pointer' : 'default',
     background: colors.background,
     color: colors.textColor,
-    border: `1px solid ${colors.borderColor}`,
+    ...(borderSides === 'x'
+      ? { borderTop: 'none', borderBottom: 'none', borderLeft: `1px solid ${colors.borderColor}`, borderRight: `1px solid ${colors.borderColor}` }
+      : { border: `1px solid ${colors.borderColor}` }),
     boxShadow: `0 8px 30px -6px ${colors.shadowColor}, 0 4px 12px -4px rgba(0,0,0,0.1)`,
     transition: 'all 0.3s ease',
     ...(hoverable && {
@@ -64,7 +69,7 @@ export default function Card({
       },
     }),
     ...style,
-  }), [colors, hoverable, onClick, style]);
+  }), [colors, hoverable, onClick, style, borderSides]);
 
   return (
     <div

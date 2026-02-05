@@ -1,0 +1,194 @@
+/**
+ * 卡片区块统一样式：与 lib-card-layout BLOCK_SPANS 对应
+ * 1 span = 1 row = 8px；所有高度、间距、留白均 N×8px，不再用 row+gap 公式。
+ *
+ * 铁律：行数靠 clamp，高度靠 span。
+ * 简介每行 span：与 constants.ts BLOCK_SPANS.EXCERPT_LINE 同步，改此处即可统一简介行高。
+ *
+ * 含 ArticleCardBlocks（blocks[] 驱动）：高度由内联 --span 控制，.card-block 基类见下方。
+ */
+:root {
+  --card-row: 8px;
+  --excerpt-span-per-line: 2; /* 与 lib-card-layout/constants BLOCK_SPANS.EXCERPT_LINE 同步 */
+  --excerpt-line-cap: calc(var(--excerpt-span-per-line) * var(--card-row));
+  --title-line-cap: 24px;     /* 3 span = 24px */
+}
+
+/* blocks[] 驱动（ArticleCardBlocks）：高度由内联 --span 控制 */
+.card-block {
+  box-sizing: border-box;
+  height: calc(var(--span, 1) * var(--card-row));
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.card-block-pad {
+  /* 留白块，无可见内容 */
+}
+
+/* N span = N×8px */
+.card-block--title {
+  height: calc(3 * var(--card-row));
+}
+/* 分割线：单独占 1 span，空 div 也占位；border 用 border-box 包在高度内 */
+.card-block--divider {
+  height: calc(1 * var(--card-row));
+  min-height: calc(1 * var(--card-row));
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.card-block--date {
+  height: calc(2 * var(--card-row));
+}
+.card-block--tags,
+.card-block--emoji-weather {
+  height: calc(3 * var(--card-row));
+}
+
+/* 标签行：标签垂直居中，不受行高影响 */
+.card-block-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  box-sizing: border-box;
+}
+.card-block--code {
+  height: calc(8 * var(--card-row));
+}
+
+/* 区块间：1 区间块 = INTERVAL_BLOCK_SPAN(1) span，与 lib-card-layout/constants 一致 */
+.card-block--gap {
+  height: calc(1 * var(--card-row));
+  min-height: calc(1 * var(--card-row));
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.card-block--pad-top {
+  height: calc(2 * var(--card-row));
+  min-height: calc(2 * var(--card-row));
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.card-block--pad-bottom {
+  height: calc(2 * var(--card-row));
+  min-height: calc(2 * var(--card-row));
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.card-block-excerpt-wrap {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  box-sizing: border-box;
+}
+.card-block.card-block-excerpt-wrap {
+  padding-left: 4px;
+}
+/* 简介每行 span = --excerpt-span-per-line，N 行 = N×span×8px */
+.card-block-excerpt-wrap.card-block--excerpt-lines-1 {
+  height: calc(1 * var(--excerpt-span-per-line) * var(--card-row));
+}
+.card-block-excerpt-wrap.card-block--excerpt-lines-2 {
+  height: calc(2 * var(--excerpt-span-per-line) * var(--card-row));
+}
+.card-block-excerpt-wrap.card-block--excerpt-lines-3 {
+  height: calc(3 * var(--excerpt-span-per-line) * var(--card-row));
+}
+.card-block-excerpt-wrap.card-block--excerpt-lines-4 {
+  height: calc(4 * var(--excerpt-span-per-line) * var(--card-row));
+}
+
+/* ExcerptText：最多 N 行，标准方案 -webkit-line-clamp，不设 height/max-height */
+.card-block--excerpt-lines-1 { -webkit-line-clamp: 1; }
+.card-block--excerpt-lines-2 { -webkit-line-clamp: 2; }
+.card-block--excerpt-lines-3 { -webkit-line-clamp: 3; }
+.card-block--excerpt-lines-4 { -webkit-line-clamp: 4; }
+
+/* 标题区：布局 + 标题文字 */
+.card-block-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  box-sizing: border-box;
+}
+.card-block.card-block-title {
+  padding-left: 4px;
+}
+.card-block-title__text {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: var(--title-line-cap); /* ≤ 24px，服从 TITLE=3 span */
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+/* 简介内层：line-height ≤ 16px（2 span/行）否则会多塞行 */
+.card-block-excerpt {
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: var(--excerpt-line-cap); /* 与 --excerpt-span-per-line 同步 */
+  opacity: 0.8;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3; /* 默认上限，由 .card-block--excerpt-lines-N 覆盖 */
+  overflow: hidden;
+  white-space: normal;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* 分割线 + 元信息区：日期/数字垂直居中 */
+.card-block-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  opacity: 0.6;
+  box-sizing: border-box;
+}
+.card-block-meta .meta-left,
+.card-block-meta .meta-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 表情/天气行 */
+.card-block-emoji {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+/* 代码块容器 */
+.card-block-code-wrap {
+  padding: 16px 20px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* 图片卡标题区：与通用标题统一用 .card-block--title 高度，仅改 padding */
+.card-block-title--image {
+  margin: 0;
+  padding: 0 12px;
+}
+
+/* 代码卡标题区 */
+.card-block-title--code {
+  padding: 20px 20px 16px 20px;
+}
