@@ -1,6 +1,7 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import ClientArticleActions from './ClientArticleActions';
 import ClientHeaderSetter from './ClientHeaderSetter';
 import ArticleEditFloat from '@/app/components/float/ArticleEditFloat';
@@ -11,7 +12,8 @@ import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { BreadcrumbBox1, TitleBox1, TagBox1 } from '@/app/components/box1';
-import { apiGet } from '@/lib/apiClient';
+import { message } from '@/app/components/ui';
+import { apiGet, apiDeleteJson } from '@/lib/apiClient';
 
 const CommentSection = dynamic(
   () => import('@/app/components/CommentSection').catch(() => () => null),
@@ -35,6 +37,7 @@ export default function ClientArticleShell({
   categoryPath,
   onArticleUpdate,
 }: ClientArticleShellProps) {
+  const router = useRouter();
   const { isLoggedIn, user } = useAuth();
   const { canEdit } = useCanEditArticle(articleId);
   const canEditBool = canEdit ?? false;
@@ -185,6 +188,18 @@ export default function ClientArticleShell({
     onArticleUpdate?.(updatedArticle);
   };
 
+  // 删除文章：在 Shell 里直接调 API，不依赖 editorRef（view 模式下编辑器未挂载，ref 为 null）
+  const handleDelete = useCallback(() => {
+    apiDeleteJson(`/api/articles/${articleId}`)
+      .then(() => {
+        message.success('文章已删除');
+        router.push('/archive');
+      })
+      .catch((e: any) => {
+        message.error('删除失败: ' + (e?.message || '未知错误'));
+      });
+  }, [articleId]);
+
   return (
     <>
       <ClientHeaderSetter articleId={articleId} editMode={editMode} />
@@ -274,7 +289,7 @@ export default function ClientArticleShell({
         onPreview={() => setEditMode('preview')}
         onSave={() => editorRef.current?.save()}
         onCancel={() => setEditMode('view')}
-        onDelete={() => editorRef.current?.delete()}
+        onDelete={handleDelete}
         categoryId={article?.category_id}
         articleAuthor={article?.author}
         currentUser={user?.username}

@@ -57,3 +57,15 @@ export function getAspectRatioFromArticle(article: {
   }
   return 3 / 2;
 }
+
+/**
+ * 画廊封面专用：仅按封面长宽比算 span，无 meta 高度
+ * 与 MasonryWall 的 grid-auto-rows + row-gap 一致，前后端可共用
+ */
+export function calculateGalleryCoverSpan(article: Parameters<typeof getAspectRatioFromArticle>[0]): number {
+  const ar = getAspectRatioFromArticle(article);
+  const ROW_PX = GRID_CONFIG.GRID_AUTO_ROWS;
+  const GAP_PX = GRID_CONFIG.GRID_ROW_GAP;
+  const heightPx = ESTIMATED_COL_WIDTH / (Number.isFinite(ar) && ar > 0 ? ar : 3 / 2);
+  return Math.max(1, Math.ceil((heightPx + GAP_PX) / (ROW_PX + GAP_PX)));
+}

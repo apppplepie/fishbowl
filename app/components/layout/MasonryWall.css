@@ -1,0 +1,30 @@
+.masonry-wall {
+    display: grid;
+  
+    /* 列：横向铺开，最少两列（窄屏时每列最多占一半减去 gap） */
+    grid-template-columns: repeat(auto-fill, minmax(min(180px, calc((100% - 8px) / 2)), 1fr));
+  
+    /* 核心：你的 span 数学模型 */
+    grid-auto-rows: 8px;
+  
+    /* 这里的 gap 是 grid 计算的一部分，不是外层容器 */
+    row-gap: 8px;
+    column-gap: 8px;
+  
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .masonry-item {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  
+  .masonry-sentinel {
+    grid-column: 1 / -1;
+    height: 1px;
+    pointer-events: none;
+  }
+  

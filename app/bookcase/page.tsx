@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
 import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
@@ -129,7 +128,6 @@ const preloadAllBookArticleLists = async () => {
  */
 function BookcasePageContent() {
   const { isMobile } = useResponsive();
-  const { currentFishbowlTheme } = useAppTheme();
   const { setConfig } = usePageShell();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -138,26 +136,47 @@ function BookcasePageContent() {
   
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showLoading, setShowLoading] = useState(false); // 延迟显示的加载状态
-  const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const { setLeftContent } = useHeader();
-  
-  const offsetRef = useRef(offset);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const loadingRef = useRef(false); // 防止重复触发加载
+
+  const loadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const loadingDelayTimerRef = useRef<number | null>(null);
 
   // 过滤条件状态
   const [allTags, setAllTags] = useState<string[]>([]); // 所有可用标签
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 选中的标签
   const [searchKeyword, setSearchKeyword] = useState(''); // 搜索关键词
 
-  // 从URL参数获取category
+  // 从 URL 获取状态 (Source of Truth)
   const categoryFromUrl = searchParams.get('category');
   const pathname = usePathname();
+
+  // --- 瀑布流布局计算：用 ResizeObserver 在容器真实尺寸就绪时再测，避免从别的页面回来时测到 0 或错误时机 ---
+  const contentContainerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState(1400); // 默认偏大，避免先出现 3 列再闪成 4 列
+
+  useLayoutEffect(() => {
+    const el = contentContainerRef.current;
+    if (!el) return;
+
+    const updateWidth = () => {
+      const w = el.clientWidth;
+      if (w > 0) setContainerWidth(w);
+    };
+
+    updateWidth(); // 先测一次
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const columnCount = useMemo(() => {
+    const w = containerWidth || 0;
+    if (w >= 1200) return 4;
+    if (w >= 800) return 3;
+    return 2;
+  }, [containerWidth]);
 
   // 目录抽屉状态（移动端）
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -173,72 +192,26 @@ function BookcasePageContent() {
 
   // 延迟加载导航组件
   const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
-  
-  // 保存配置引用
-  const prevConfigRef = useRef<any | null>(null);
 
-  // 切换目录抽屉的函数（移动端）- 使用 useCallback 固定引用
-  const openCategoryDrawer = useCallback(() => {
-    setShouldLoadNavigator(true); // 首次打开时加载组件
-    setDrawerVisible(true);
-  }, []);
-
-  // 切换侧边栏展开/收起（桌面端）- 使用 useCallback 固定引用
-  const toggleSidebar = useCallback(() => {
-    setShouldLoadNavigator(true); // 首次打开时加载组件
-    setSidebarExpanded((prev) => !prev);
-  }, []);
-
-  // 使用 useMemo 缓存 leftContent，避免每次渲染都创建新元素
-  const leftContentElement = useMemo(
-    () => (
+  // --- 导航栏逻辑 (与 archive 一致) ---
+  useEffect(() => {
+    setLeftContent(
       <UnifiedNavigatorButton
-        onClick={openCategoryDrawer}
+        onClick={() => {
+          setShouldLoadNavigator(true);
+          setDrawerVisible(true);
+        }}
         expanded={sidebarExpanded}
-        onToggle={toggleSidebar}
+        onToggle={() => {
+          setShouldLoadNavigator(true);
+          setSidebarExpanded(p => !p);
+        }}
       />
-    ),
-    [openCategoryDrawer, sidebarExpanded, toggleSidebar]
-  );
-
-  // 设置 Header 的 leftContent
-  useEffect(() => {
-    setLeftContent(leftContentElement);
-
-    return () => {
-      setLeftContent(null);
-    };
-  }, [setLeftContent, leftContentElement]);
-
-  // 同步 offset 到 ref
-  useEffect(() => {
-      offsetRef.current = offset;
-  }, [offset]);
+    );
+    return () => setLeftContent(null);
+  }, [setLeftContent, sidebarExpanded]);
 
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
-
-  // 强制滚动到顶部
-  useEffect(() => {
-    // 禁用自动滚动恢复
-    if ('scrollRestoration' in history) {
-      history.scrollRestoration = 'manual';
-    }
-    
-    // 强制滚动到顶部
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    
-    // 重置侧边栏状态
-    setSidebarExpanded(false);
-    
-    // 组件卸载时恢复默认行为
-    return () => {
-      if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'auto';
-      }
-    };
-  }, []);
 
   // 加载所有可用标签和预缓存书籍文章列表
   useEffect(() => {
@@ -292,30 +265,18 @@ function BookcasePageContent() {
   }, []);
 
 
-  // 加载书架文章数据
+  // --- 数据加载核心逻辑 (与 archive 一致：loadingRef 防重入) ---
   const loadBookcaseArticles = useCallback(async (currentOffset: number, append: boolean = false, categoryId?: string | null) => {
-    // 取消之前的请求
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    if (loadingRef.current) return;
+    loadingRef.current = true;
 
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    if (!append) setLoading(true);
+
     try {
-      if (append) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-        // 延迟 500ms 显示"加载中"文字，避免闪烁
-        if (loadingDelayTimerRef.current) {
-          clearTimeout(loadingDelayTimerRef.current);
-        }
-        loadingDelayTimerRef.current = window.setTimeout(() => {
-          setShowLoading(true);
-        }, 500);
-      }
-      loadingRef.current = true;
 
       let articles: any[] = [];
 
@@ -464,15 +425,8 @@ function BookcasePageContent() {
         setHasMore(false);
       }
     } finally {
-      setLoading(false);
-      setShowLoading(false);
-      setLoadingMore(false);
       loadingRef.current = false;
-      // 清除延迟定时器
-      if (loadingDelayTimerRef.current) {
-        clearTimeout(loadingDelayTimerRef.current);
-        loadingDelayTimerRef.current = null;
-      }
+      setLoading(false);
     }
   }, []);
 
@@ -491,53 +445,31 @@ function BookcasePageContent() {
     setSidebarKey(prev => prev + 1);
   }, [categoryFromUrl, loadBookcaseArticles]);
 
-  // ✅ 组件卸载时清理资源，防止内存泄漏
-  useEffect(() => {
-    return () => {
-      // 取消所有请求
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      // 清除延迟定时器
-      if (loadingDelayTimerRef.current) {
-        clearTimeout(loadingDelayTimerRef.current);
-      }
-    };
-  }, []);
-
-  // 检查时间戳参数，强制刷新数据（用于从书籍编辑页跳转回来时刷新）
+  // --- 监听 URL category 变化 (主触发器，与 archive 一致) ---
   useEffect(() => {
     const timestampParam = searchParams.get('t');
-    
-    if (timestampParam) {
-      console.log('检测到时间戳参数，强制刷新书橱数据');
-      // 强制刷新数据
-      setOffset(0);
-      setHasMore(true);
-      loadBookcaseArticles(0, false, categoryFromUrl);
-      // 移除 URL 中的时间戳参数，避免重复刷新
-      const newSearchParams = new URLSearchParams(searchParams.toString());
-      newSearchParams.delete('t');
-      const newUrl = newSearchParams.toString() 
-        ? `${pathname}?${newSearchParams.toString()}` 
-        : pathname;
-      router.replace(newUrl);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, pathname, router]);
+    if (timestampParam) return; // 时间戳由下方 effect 处理
 
-  // 初次加载和category变化时重新加载
+    setCards([]);
+    setOffset(0);
+    setHasMore(true);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    loadBookcaseArticles(0, false, categoryFromUrl);
+  }, [categoryFromUrl, loadBookcaseArticles]);
+
+  // 时间戳参数：强制刷新后移除
   useEffect(() => {
     const timestampParam = searchParams.get('t');
-    // 如果有时间戳参数，上面的 useEffect 会处理，这里跳过
-    if (timestampParam) return;
-    
-    console.log('加载数据库书籍数据，category:', categoryFromUrl);
+    if (!timestampParam) return;
+    setCards([]);
     setOffset(0);
     setHasMore(true);
     loadBookcaseArticles(0, false, categoryFromUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFromUrl]);
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    newSearchParams.delete('t');
+    const newUrl = newSearchParams.toString() ? `${pathname}?${newSearchParams.toString()}` : pathname;
+    router.replace(newUrl);
+  }, [searchParams, pathname, router, categoryFromUrl, loadBookcaseArticles]);
 
   // 获取用户权限等级（未登录用户默认为2）
   const userMaxAccessLevel = useMemo(() => {
@@ -584,78 +516,38 @@ function BookcasePageContent() {
   }, [cards, selectedTags, searchKeyword, filterMode, userMaxAccessLevel]);
 
 
-  const triggerLoadMore = useCallback(() => {
-    if (!hasMore || loadingRef.current) return;
-    loadingRef.current = true;
-    loadBookcaseArticles(offsetRef.current, true, categoryFromUrl).finally(() => {
-      loadingRef.current = false;
-    });
-  }, [hasMore, categoryFromUrl, loadBookcaseArticles]);
+  // --- 滚动加载 (Infinite Scroll，与 archive 一致：sentinelRef) ---
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node || loadingRef.current || !hasMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !loadingRef.current) {
+        loadBookcaseArticles(offset, true, categoryFromUrl);
+      }
+    }, { rootMargin: '400px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, offset, categoryFromUrl, loadBookcaseArticles]);
 
-  // ✅ 使用 IntersectionObserver 代替 scroll 事件（使用 offsetRef 避免闭包问题）
-  useEffect(() => {
-      if (!hasMore) return;
-
-      const element = loadMoreRef.current;
-      if (!element) return;
-
-      const observer = new IntersectionObserver(
-          (entries) => {
-              if (entries[0].isIntersecting) {
-                  triggerLoadMore();
-              }
-          },
-          {
-              root: null,
-              rootMargin: '400px', // 提前400px加载
-              threshold: 0,
-          }
-      );
-
-      observer.observe(element);
-
-      return () => {
-          observer.disconnect();
-      };
-  }, [hasMore, triggerLoadMore]);
-
-  // ✅ 滚动兜底：偶发 IO 失效时也能继续加载
-  useEffect(() => {
-      if (!hasMore) return;
-
-      let rafId: number | null = null;
-      const thresholdPx = 600;
-
-      const onScroll = () => {
-        if (rafId !== null) return;
-        rafId = requestAnimationFrame(() => {
-          rafId = null;
-          const scrollTop = window.scrollY || document.documentElement.scrollTop;
-          const viewportH = window.innerHeight;
-          const docH = document.documentElement.scrollHeight;
-          if (docH - (scrollTop + viewportH) < thresholdPx) {
-            triggerLoadMore();
-          }
-        });
-      };
-
-      window.addEventListener('scroll', onScroll, { passive: true });
-      return () => {
-          window.removeEventListener('scroll', onScroll);
-          if (rafId !== null) cancelAnimationFrame(rafId);
-      };
-  }, [hasMore, triggerLoadMore]);
-
-  // 点击卡片处理
-  const handleCardClick = (card: any) => {
-    if (card.type === 'text' || card.type === 'image' || card.type === 'code' || card.type === 'diary' || card.type === 'drawing') {
-      router.push(`/book/${card.id}`);
-    } else if (card.type === 'article') {
-      router.push(`/book/${card.id}`);
-    } else if (card.type === 'book') {
+  const handleCardClick = useCallback((card: any) => {
+    if (card.type === 'book') {
       router.push(`/book/${card.mainArticleId}`);
+    } else {
+      router.push(`/book/${card.id}`);
     }
-  };
+  }, [router]);
+
+  // --- 卡片 span 计算 (与 archive 一致) ---
+  const getSpanForCard = useCallback((article: any): number => {
+    if (article.precomputedSpan != null) return article.precomputedSpan;
+    if (article.type === 'image' || article.type === 'drawing') return getImageCardSpan(article);
+    let cardType: CardType | null = null;
+    if (article.type === 'code' || article.codePreview) cardType = 'CODE_CARD';
+    else if (article.type === 'text' || article.type === 'article' || article.content) cardType = 'TEXT_CARD';
+    else if (article.type === 'diary' || article.excerpt) cardType = 'DIARY_CARD';
+    else if (article.type === 'book' || article.coverImage) cardType = 'BOOK_CARD';
+    const spanOrDynamic = cardType ? getCardSpan(cardType) : 18;
+    return typeof spanOrDynamic === 'number' ? spanOrDynamic : 18;
+  }, []);
 
   // 创建 box1Content
   const box1Content = useMemo(() => (
@@ -700,110 +592,39 @@ function BookcasePageContent() {
     </div>
   ), [isMobile, searchKeyword, selectedTags]);
 
-  // 设置页面配置
+  // --- Header 搜索区 (与 archive 一致) ---
   useEffect(() => {
-    setConfig((prev: any) => {
-        prevConfigRef.current = prev;
-        return {
-          ...prev,
-          box1Content,
-          // 移除 box2Style，让内容区域自然显示
-        };
-    });
-
-    return () => {
-        setConfig((prev: any) => {
-            if (prevConfigRef.current) {
-                return { ...prevConfigRef.current, box1Content: null };
-            }
-            return { ...prev, box1Content: null };
-        });
-        prevConfigRef.current = null;
-    };
+    setConfig((prev: any) => ({ ...prev, box1Content }));
+    return () => setConfig((prev: any) => ({ ...prev, box1Content: null }));
   }, [setConfig, box1Content]);
 
-  // 根据文章类型渲染对应的卡片（语义化 masonry：masonry + span/dynamic）
+  // --- 卡片渲染逻辑 (与 archive 一致：commonProps + span 由父级传入) ---
   const renderCard = useCallback((article: any, index: number) => {
-    const handleClick = () => handleCardClick(article);
-    const articleId = article.id;
-
-    let cardType: CardType | null = null;
-    if (article.type === 'book' || article.categoryType === 'bookcase' || article.coverImage) {
-      cardType = 'BOOK_CARD';
-    }
-
-    const spanOrDynamic = cardType ? getCardSpan(cardType) : 'dynamic';
-    const masonrySpan = spanOrDynamic === 'dynamic' ? undefined : spanOrDynamic;
+    const commonProps = {
+      card: article,
+      onClick: () => handleCardClick(article),
+      priority: index < 6,
+      masonry: true,
+      span: article.precomputedSpan ?? getSpanForCard(article),
+    };
 
     switch (article.type) {
-      case 'text':
-        return (
-          <ArticleCard
-            key={articleId}
-            card={article}
-            onClick={handleClick}
-            masonry
-            span={masonrySpan ?? 18}
-          />
-        );
       case 'image':
-        return (
-          <ImageCard
-            key={articleId}
-            card={article}
-            onClick={handleClick}
-            masonry
-            span={article.precomputedSpan ?? getImageCardSpan(article)}
-          />
-        );
+        return <ImageCard {...commonProps} />;
       case 'drawing':
-        return (
-          <ImageCard
-            key={articleId}
-            card={{
-              ...article,
-              description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '')
-            }}
-            onClick={handleClick}
-            masonry
-            span={article.precomputedSpan ?? getImageCardSpan(article)}
-          />
-        );
+        return <ImageCard {...commonProps} card={{ ...article, description: article.excerpt + (article.imageCount ? ` 🎨 ${article.imageCount} 张` : '') }} />;
       case 'code':
-        return (
-          <CodeCard
-            key={articleId}
-            card={article}
-            onClick={handleClick}
-            masonry
-            span={masonrySpan}
-          />
-        );
+        return <CodeCard {...commonProps} />;
       case 'diary':
-        return (
-          <DiaryCard
-            key={articleId}
-            card={article}
-            onClick={handleClick}
-            masonry
-            span={masonrySpan}
-          />
-        );
+        return <DiaryCard {...commonProps} />;
       case 'book':
         return (
           <BookCard
-            key={articleId}
-            card={article}
-            onClick={handleClick}
+            {...commonProps}
             showDeleteIcon={deleteMode}
-            masonry
-            span={masonrySpan}
             onDeleteSuccess={() => {
-              console.log('书籍删除成功，刷新页面和侧边栏');
               const bookCategoryId = (article as any).categoryId;
-              if (bookCategoryId) {
-                clearBookCache(bookCategoryId);
-              }
+              if (bookCategoryId) clearBookCache(bookCategoryId);
               setOffset(0);
               setHasMore(true);
               loadBookcaseArticles(0, false, categoryFromUrl);
@@ -813,71 +634,43 @@ function BookcasePageContent() {
           />
         );
       default:
-        return (
-          <ArticleCard
-            key={articleId}
-            card={article}
-            onClick={handleClick}
-            masonry
-            span={masonrySpan ?? 18}
-          />
-        );
+        return <ArticleCard {...commonProps} />;
     }
-  }, [handleCardClick, deleteMode, categoryFromUrl, loadBookcaseArticles]);
+  }, [handleCardClick, getSpanForCard, deleteMode, categoryFromUrl, loadBookcaseArticles]);
 
   return (
     <>
       <div style={{
         transform: isMobile ? 'none' : (sidebarExpanded ? 'translateX(280px)' : 'translateX(0)'),
         transition: 'transform 0.3s ease',
-        willChange: 'transform',
       }}>
-        <div style={{
-          maxWidth: '1400px',
-          margin: '0 auto',
-          width: '100%',
-          boxSizing: 'border-box',
-        }}>
-          {showLoading ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: '#999' }}>
-              {/* 加载中... */}
+        <div ref={contentContainerRef} style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          {loading && cards.length === 0 ? (
+            <div style={{ minHeight: '60vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <Spin tip=" " />
             </div>
-          ) : filteredCards.length === 0 ? (
-            <Empty
-              icon=" "
-              title=" "
-              description=" "
-            />
           ) : (
-            <>
-              <div style={{ minHeight: '400px' }}>
-                <MasonryGrid>
-                  {filteredCards.map((card, index) => renderCard(card, index))}
-                </MasonryGrid>
-              </div>
-
-              {/* IntersectionObserver 哨兵元素 */}
-              <div ref={loadMoreRef} style={{ height: 1 }} />
-
-              {/* 加载更多提示 */}
-              {loadingMore && (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px 0',
-                  color: '#999',
-                }}>
-                  <Spin size="small" />
-                  <div style={{ marginTop: '12px', fontSize: '14px' }}>
-                    加载更多...
+            <div style={{ minHeight: '100vh' }}>
+              <MasonryGrid
+                key={`masonry-${columnCount}`}
+                style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
+              >
+                {filteredCards.map((card, index) => (
+                  <div key={card.id} className="masonry-item animate" style={{ gridRow: `span ${getSpanForCard(card)}` }}>
+                    {renderCard(card, index)}
                   </div>
+                ))}
+              </MasonryGrid>
+
+              {hasMore && (
+                <div ref={sentinelRef} style={{ padding: '20px', textAlign: 'center' }}>
+                  <Spin size="small" />
                 </div>
               )}
 
-              {/* 没有更多数据提示 */}
-              {!hasMore && filteredCards.length > 0 && (
-                <LoadEnd />
-              )}
-            </>
+              {!hasMore && cards.length > 0 && <LoadEnd />}
+              {!loading && cards.length === 0 && <Empty description="暂无内容" />}
+            </div>
           )}
         </div>
       </div>

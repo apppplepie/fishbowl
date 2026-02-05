@@ -1,73 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { message } from 'antd';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
+import MasonryWall from '../components/layout/MasonryWall';
 import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
 import { apiGet } from '@/lib/apiClient';
+import { calculateGalleryCoverSpan } from '@/lib/masonry-server-utils';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
 
-// 样式注入
-if (typeof document !== 'undefined') {
-  const styleId = 'gallery-styles';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.innerHTML = `
-      @keyframes fadeIn { 
-        from { opacity: 0; } 
-        to { opacity: 1; } 
-      }
-      @keyframes scaleIn {
-        from { 
-          opacity: 0;
-          transform: scale(0.9);
-        }
-        to { 
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-      .gallery-masonry { 
-        column-count: 2; 
-        column-gap: 6px; 
-        width: 100%; 
-        max-width: 1400px;
-        margin: 0 auto;
-      }
-      @media (min-width: 768px) { 
-        .gallery-masonry { column-count: 3; } 
-      }
-      @media (min-width: 1200px) { 
-        .gallery-masonry { column-count: 4; } 
-      }
-      @media (min-width: 1400px) { 
-        .gallery-masonry { column-count: 5; } 
-      }
-      
-      .gallery-masonry-item {
-        break-inside: avoid;
-        page-break-inside: avoid;
-        margin-bottom: 12px;
-        display: block;
-        width: 100%;
-        background: #f6f6f6;
-        border-radius: 8px;
-        overflow: hidden;
-        cursor: pointer;
-        transition: transform 0.2s ease;
-      }
-      .gallery-masonry-item:hover { 
-        transform: translateY(-2px); 
-      }
-    `;
-    document.head.appendChild(style);
-  }
-}
+const MemoCard = memo(DrawingGalleryCard);
 
 export default function GalleryPage() {
   const router = useRouter();
@@ -83,66 +29,28 @@ export default function GalleryPage() {
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
 
   const ITEMS_PER_PAGE = 20;
-  
-  // 使用 Ref 保持最新状态，避免在 IntersectionObserver 闭包中拿到旧值
+
   const stateRef = useRef({ offset, loading, loadingMore, hasMore });
   useEffect(() => {
     stateRef.current = { offset, loading, loadingMore, hasMore };
   }, [offset, loading, loadingMore, hasMore]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null); // 用于触发无限滚动的哨兵
-  const isMountedRef = useRef(true);
-
-  // 组件挂载状态追踪 + 导航跳转保护
+  const loadingRef = useRef(false);
   useEffect(() => {
-    isMountedRef.current = true;
-    
-    // 监听页面卸载/导航跳转事件
-    const handleBeforeUnload = () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-    
-    // 监听 Next.js 路由变化（如果使用 next/router）
-    const handleRouteChange = () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      isMountedRef.current = false;
-      // 取消所有进行中的请求
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
+    loadingRef.current = loading || loadingMore;
+  }, [loading, loadingMore]);
 
-  // 数据请求逻辑优化
   const fetchDrawingArticles = useCallback(async (currentOffset: number, isAppend = false) => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
-      if (!isMountedRef.current) return;
-      
-      if (isAppend) {
-        setLoadingMore(true);
-      } else {
+      if (isAppend) setLoadingMore(true);
+      else {
         setLoading(true);
         setArticles([]);
-        setOffset(0);
-        setHasMore(true);
       }
 
       const res = await apiGet(`/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`, {
@@ -150,17 +58,8 @@ export default function GalleryPage() {
         signal: controller.signal
       });
       
-      if (controller.signal.aborted) return;
-
       const data = await res.json();
-
-      if (!isMountedRef.current) return;
-      if (controller.signal.aborted) return;
-
       if (data.success) {
-        // 再次检查组件状态，确保在更新前组件仍然挂载
-        if (!isMountedRef.current || controller.signal.aborted) return;
-        
         setArticles(prev => {
           if (!isAppend) return data.articles;
           const ids = new Set(prev.map(a => a.id));
@@ -168,88 +67,46 @@ export default function GalleryPage() {
         });
         setOffset(currentOffset + data.articles.length);
         setHasMore(data.articles.length === ITEMS_PER_PAGE);
-      } else {
-        if (isMountedRef.current && !controller.signal.aborted) {
-          message.error('获取作品失败');
-          setHasMore(false);
-        }
       }
     } catch (err: any) {
-      if (err.name === 'AbortError' || controller.signal.aborted) {
-        return;
-      }
-      console.error(err);
-      if (isMountedRef.current) {
-        message.error('获取作品失败');
-        setHasMore(false);
-      }
+      if (err.name !== 'AbortError') message.error('获取作品失败');
     } finally {
-      if (isMountedRef.current && !controller.signal.aborted) {
-        setLoading(false);
-        setLoadingMore(false);
-      }
+      setLoading(false);
+      setLoadingMore(false);
     }
   }, []);
-
-  // 1. 初始化与模式切换
+  
+  // 初始化与观察器
   useEffect(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    setOffset(0);
-    setHasMore(true);
     fetchDrawingArticles(0, false);
+    return () => abortControllerRef.current?.abort();
   }, [filterMode, fetchDrawingArticles]);
 
-  // 2. 【性能核心】使用 IntersectionObserver 代替 Scroll 监听
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !isMountedRef.current) return;
-
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node || loadingRef.current || !hasMore) return;
     const observer = new IntersectionObserver((entries) => {
-      // 检查组件是否仍然挂载
-      if (!isMountedRef.current) {
-        observer.disconnect();
-        return;
+      if (entries[0].isIntersecting && !loadingRef.current) {
+        const { offset: currentOffset, hasMore: more } = stateRef.current;
+        if (more) fetchDrawingArticles(currentOffset, true);
       }
-      
-      const target = entries[0];
-      const { loading, loadingMore, hasMore, offset } = stateRef.current;
-      
-      if (target.isIntersecting && !loading && !loadingMore && hasMore && isMountedRef.current) {
-        fetchDrawingArticles(offset, true);
-      }
-    }, { rootMargin: '400px' }); // 提前 400px 触发加载
+    }, { rootMargin: '600px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, fetchDrawingArticles]);
 
-    observer.observe(sentinel);
-    return () => {
-      observer.disconnect();
-    };
-  }, [fetchDrawingArticles]);
-
-  // 3. 权限过滤逻辑
-  const userMaxAccessLevel = useMemo(() => {
-    if (!isLoggedIn || !user) return 2;
-    return user.max_access_level ?? 2;
-  }, [isLoggedIn, user]);
-
+  // 过滤逻辑
   const filteredArticles = useMemo(() => {
+    const userLevel = (!isLoggedIn || !user) ? 2 : (user.max_access_level ?? 2);
     return articles.filter(article => {
-      const articleVisibleLevel = article.visible_access_level ?? article.visibleAccessLevel ?? article.max_access_level ?? article.maxAccessLevel ?? 1;
-      const articleFullLevel = article.full_access_level ?? article.fullAccessLevel ?? articleVisibleLevel;
-
-      if (filterMode === 'study') {
-        return articleFullLevel === 1;
-      } else if (filterMode === 'strict') {
-        return userMaxAccessLevel >= articleFullLevel;
-      } else if (filterMode === 'loose') {
-        return userMaxAccessLevel >= articleVisibleLevel;
-      }
-      return false;
+      const visibleLevel = article.visible_access_level ?? article.max_access_level ?? 1;
+      const fullLevel = article.full_access_level ?? visibleLevel;
+      if (filterMode === 'study') return fullLevel === 1;
+      if (filterMode === 'strict') return userLevel >= fullLevel;
+      return userLevel >= visibleLevel;
     });
-  }, [articles, filterMode, userMaxAccessLevel]);
+  }, [articles, filterMode, user, isLoggedIn]);
 
-  const handleImageClick = useCallback(async (article: any) => {
+  const handleImageClick = async (article: any) => {
     if (article.blocks?.length) {
       setSelectedArticle(article);
       return;
@@ -257,138 +114,61 @@ export default function GalleryPage() {
     try {
       const res = await apiGet(`/api/articles/${article.id}`, { requiresAuth: false });
       const data = await res.json();
-      
-      if (!isMountedRef.current) return;
-      
       if (data.success) {
-        const fullArticle = { ...article, blocks: data.article.blocks };
-        setArticles(prev => prev.map(a => a.id === article.id ? fullArticle : a));
-        setSelectedArticle(fullArticle);
-      } else {
-        message.error('获取作品详情失败');
+        const full = { ...article, blocks: data.article.blocks };
+        setArticles(prev => prev.map(a => a.id === article.id ? full : a));
+        setSelectedArticle(full);
       }
-    } catch (err) {
-      console.error(err);
-      if (isMountedRef.current) {
-        message.error('获取作品详情失败');
-      }
-    }
-  }, []);
-
-  const handleTitleClick = useCallback((article: any) => router.push(`/article/${article.id}`), [router]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedArticle(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  // 设置页面配置
-  useEffect(() => {
-    setConfig({
-      box1Content: null,
-      hideBox1: false,
-    });
-
-    return () => {
-      setConfig({ box1Content: null });
-    };
-  }, [setConfig]);
+    } catch (err) { console.error(err); }
+  };
 
   return (
-    <>
-      {/* 主内容 - 使用 CSS Column 瀑布流 */}
-      <div style={{ maxWidth: '100%', margin: '0 auto' }}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '100px 0' }}>
-            <Spin size="large" />
-          </div>
-        ) : filteredArticles.length === 0 ? (
-          <Empty
-            icon="🎨"
-            title="还没有作品"
-            description="快来发布你的第一件作品吧！"
-          />
-        ) : (
-          <>
-            <div className="gallery-masonry">
-              {filteredArticles.map((article) => (
-                <div key={article.id} className="gallery-masonry-item">
-                  <DrawingGalleryCard
-                    article={article}
-                    coverOnly
-                    coverWidth={article.cover_image?.width || 300}
-                    coverHeight={article.cover_image?.height || 400}
-                    coverThumbnail={article.cover_image?.blur_data_url}
-                    onClick={() => handleImageClick(article)}
-                  />
-                </div>
-              ))}
+    <div style={{ padding: '0 8px' }}>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '100px 0' }}><Spin size="large" /></div>
+      ) : filteredArticles.length === 0 ? (
+        <Empty icon=" " title="还没有作品" />
+      ) : (
+        <>
+          <MasonryWall>
+            {filteredArticles.map((article) => (
+              <div
+                key={article.id}
+                className="masonry-item"
+                style={{
+                  gridRowEnd: `span ${article.precomputedSpan ?? calculateGalleryCoverSpan(article)}`,
+                }}
+              >
+                <MemoCard
+                  article={article}
+                  coverOnly
+                  onClick={() => handleImageClick(article)}
+                />
+              </div>
+            ))}
+          </MasonryWall>
+          {hasMore && (
+            <div ref={sentinelRef} style={{ padding: '20px', textAlign: 'center' }}>
+              {loadingMore && <Spin size="small" />}
             </div>
-            
-            {/* 哨兵元素：出现在视口时触发加载更多 */}
-            <div ref={sentinelRef} style={{ height: '20px', margin: '20px 0' }}>
-              {loadingMore && (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: '#999' }}>
-                  <Spin size="large" />
-                  <div style={{ marginTop: 12, fontSize: 14 }}>加载更多作品...</div>
-                </div>
-              )}
-            </div>
+          )}
+          {!hasMore && filteredArticles.length > 0 && <LoadEnd message="没有更多作品了" />}
+        </>
+      )}
 
-            {!hasMore && filteredArticles.length > 0 && (
-              <LoadEnd message="没了" />
-            )}
-          </>
-        )}
-      </div>
-
-      {/* 模态框 */}
+      {/* 弹窗部分保持不变... */}
       {selectedArticle && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1500,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '20px',
-            animation: 'fadeIn 0.2s ease'
-          }}
+        <div 
+          style={{ position: 'fixed', inset: 0, zIndex: 1500, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}
           onClick={() => setSelectedArticle(null)}
         >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '900px',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              borderRadius: '12px',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              animation: 'scaleIn 0.3s ease'
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <DrawingGalleryCard
-              article={selectedArticle}
-              onTitleClick={() => handleTitleClick(selectedArticle)}
-            />
+          <div style={{ width: '100%', maxWidth: '900px' }} onClick={e => e.stopPropagation()}>
+            <MemoCard article={selectedArticle} onTitleClick={() => router.push(`/article/${selectedArticle.id}`)} />
           </div>
         </div>
       )}
 
-      {/* 浮动按钮 */}
-      <GalleryPublishFloat
-        onSuccess={() => {
-          setOffset(0);
-          setHasMore(true);
-          fetchDrawingArticles(0, false);
-        }}
-      />
-    </>
+      <GalleryPublishFloat onSuccess={() => fetchDrawingArticles(0, false)} />
+    </div>
   );
 }
