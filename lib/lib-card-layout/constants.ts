@@ -22,6 +22,7 @@ export const BLOCK_SPANS = {
   DIVIDER: 1,
   DATE: 2,
   TAGS: 3,
+  AUTHOR: 3,           /* 书籍卡作者行 */
   EMOJI_WEATHER: 3,   /* 日记地点块等 */
   CODE_BLOCK: 15,
   GAP: 1,

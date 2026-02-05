@@ -18,6 +18,7 @@ export type LayoutHint = {
   dividerSpan?: number;
   dateSpan?: number;
   tagsSpan?: number;
+  authorSpan?: number;
   emojiWeatherSpan?: number;
   codeBlockSpan?: number;
   imageHeightPx?: number;
@@ -102,6 +103,7 @@ const BOOK_PRESET: LayoutHint = {
   dividerSpan: 0,
   dateSpan: BLOCK_SPANS.DATE,
   tagsSpan: 0,
+  authorSpan: BLOCK_SPANS.AUTHOR,
   emojiWeatherSpan: 0,
   codeBlockSpan: 0,
   imageHeightPx: 280,
@@ -134,6 +136,7 @@ function computeSpanFromLayout(layout: LayoutHint): number {
   const dividerSpan = layout.dividerSpan ?? 0;
   const dateSpan = layout.dateSpan ?? 0;
   const tagsSpan = layout.tagsSpan ?? 0;
+  const authorSpan = layout.authorSpan ?? 0;
   const emojiSpan = layout.emojiWeatherSpan ?? 0;
   const codeSpan = layout.codeBlockSpan ?? 0;
   const blockCount =
@@ -143,6 +146,7 @@ function computeSpanFromLayout(layout: LayoutHint): number {
     (dividerSpan > 0 ? 1 : 0) +
     (dateSpan > 0 ? 1 : 0) +
     (tagsSpan > 0 ? 1 : 0) +
+    (authorSpan > 0 ? 1 : 0) +
     (emojiSpan > 0 ? 1 : 0) +
     (codeSpan > 0 ? 1 : 0);
   const internalGapSpan = Math.max(0, blockCount - 1) * INTERVAL_BLOCK_SPAN;
@@ -155,6 +159,7 @@ function computeSpanFromLayout(layout: LayoutHint): number {
     dividerSpan +
     dateSpan +
     tagsSpan +
+    authorSpan +
     emojiSpan +
     codeSpan +
     internalGapSpan +

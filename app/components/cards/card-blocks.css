@@ -12,6 +12,7 @@
   --divider-span: 1;          /* BLOCK_SPANS.DIVIDER */
   --date-span: 2;             /* BLOCK_SPANS.DATE */
   --tags-span: 3;             /* BLOCK_SPANS.TAGS */
+  --author-span: 3;           /* BLOCK_SPANS.AUTHOR 书籍卡作者行 */
   --emoji-weather-span: 3;    /* BLOCK_SPANS.EMOJI_WEATHER */
   --code-block-span: 15;       /* BLOCK_SPANS.CODE_BLOCK */
   --gap-span: 1;              /* BLOCK_SPANS.GAP / INTERVAL_BLOCK_SPAN */
@@ -47,6 +48,13 @@
 }
 .card-block--date {
   height: calc(var(--date-span) * var(--card-row));
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.card-block--author {
+  height: calc(var(--author-span) * var(--card-row));
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 .card-block--tags {
   height: calc(var(--tags-span) * var(--card-row));
@@ -145,14 +153,14 @@
   opacity: 0.8;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3; /* 默认上限，由 .card-block--excerpt-lines-N 覆盖 */
+  -webkit-line-clamp: 2; /* 默认上限，由 .card-block--excerpt-lines-N 覆盖 */
   overflow: hidden;
   white-space: normal;
   box-sizing: border-box;
   width: 100%;
 }
 
-/* 分割线 + 元信息区：日期/数字垂直居中 */
+/* 分割线 + 元信息区：日期/作者（书籍卡）共用，垂直居中 */
 .card-block-meta {
   display: flex;
   justify-content: space-between;
@@ -200,3 +208,4 @@
   padding: 4px 20px 4px 20px;
   box-sizing: border-box;
 }
+

@@ -202,7 +202,7 @@ export default function BookCard({
           <div className="card-block--gap" aria-hidden />
         </>
       ) : null}
-      <div className="card-block-meta card-block--date" style={{ borderTop: `1px solid ${colors.borderColor}`, color: colors.textColor, opacity: 0.7 }}>
+      <div className="card-block-meta card-block--author" style={{ borderTop: `1px solid ${colors.borderColor}`, color: colors.textColor, opacity: 0.7 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <UserOutlined />
           <span>{card.author}</span>
