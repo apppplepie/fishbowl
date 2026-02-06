@@ -1,12 +1,12 @@
 .masonry-wall {
     display: grid;
   
-    /* 列：横向铺开，最少两列（窄屏时每列最多占一半减去 gap） */
-    grid-template-columns: repeat(auto-fill, minmax(min(180px, calc((100% - 8px) / 2)), 1fr));
+    /* 列：横向铺开，最少约两列、最多 4 列（每列至少 max(180px, (100% - 3×8px)/4)） */
+    grid-template-columns: repeat(auto-fill, minmax(max(180px, calc((100% - 24px) / 4)), 1fr));
   
     /* 1 span = 1 row = 8px，无 row-gap，总高 = span×8px */
     grid-auto-rows: 8px;
-    row-gap: 0;
+    row-gap: 8px;
     column-gap: 8px;
   
     width: 100%;

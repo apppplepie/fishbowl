@@ -185,7 +185,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
         </SkySection>
       </div>
 
-      {/* 波浪分隔器 - 将 zIndex 降低，避免覆盖正文 */}
+      {/* 波浪分隔器 - zIndex 高于 box2，波浪不被正文遮住；侧边栏/遮罩用 Portal 挂 body 盖在波浪上 */}
       <div
         className="wave-section"
         style={{
@@ -195,13 +195,13 @@ function PageShell({ children }: { children: React.ReactNode }) {
           marginBottom: '-40px',
           pointerEvents: 'none',
           overflow: 'hidden',
-          zIndex: 10,
+          zIndex: 2,
         }}
       >
         <WaveSeparator colors={currentTheme.waveColors} />
       </div>
 
-      {/* Box2 - 直接渲染 children */}
+      {/* Box2 - zIndex 低于波浪，波浪可见；抽屉/弹窗通过 Portal 挂 body 在波浪之上 */}
       <div
         className="page-shell-box2"
         style={{

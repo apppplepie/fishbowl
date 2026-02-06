@@ -177,6 +177,7 @@ function BookcasePageContent() {
     if (w >= 800) return 3;
     return 2;
   }, [containerWidth]);
+  const cappedColumns = Math.min(columnCount, 4);
 
   // 目录抽屉状态（移动端）
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -537,7 +538,7 @@ function BookcasePageContent() {
   }, [router]);
 
   // --- 卡片 span：统一由 lib-card-layout 的 getSpanForCard 计算（优先 precomputedSpan / layoutHint.spanOverride） ---
-  const columnWidth = columnCount > 0 ? containerWidth / columnCount : undefined;
+  const columnWidth = cappedColumns > 0 ? containerWidth / cappedColumns : undefined;
   const getSpan = useCallback(
     (article: any) => getSpanForCard(article, columnWidth),
     [columnWidth]
@@ -648,8 +649,8 @@ function BookcasePageContent() {
           ) : (
             <div style={{ minHeight: '100vh' }}>
               <MasonryGrid
-                key={`masonry-${columnCount}`}
-                style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
+                key={`masonry-${cappedColumns}`}
+                style={{ gridTemplateColumns: `repeat(${cappedColumns}, 1fr)` }}
               >
                 {filteredCards.map((card, index) => (
                   <div key={card.id} className="masonry-item animate" style={{ gridRow: `span ${getSpan(card)}` }}>

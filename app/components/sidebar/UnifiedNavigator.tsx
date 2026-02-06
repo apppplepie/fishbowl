@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Drawer, Button } from 'antd';
 import { UnorderedListOutlined } from '@ant-design/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
@@ -123,8 +124,8 @@ function UnifiedNavigator({
     );
   }
 
-  // 桌面端：返回固定侧边栏（支持展开/收起）
-  return (
+  // 桌面端：固定侧边栏用 Portal 挂到 body，zIndex 高于波浪，不被波浪遮住
+  const desktopSidebar = (
     <div
       key={refreshKey}
       style={{
@@ -135,7 +136,7 @@ function UnifiedNavigator({
         width: isExpanded ? '280px' : '0',
         background: 'white',
         borderRight: isExpanded ? '1px solid #e8e8e8' : 'none',
-        zIndex: 999,
+        zIndex: 1500,
         overflowY: 'auto',
         overflowX: 'hidden',
         transition: 'width 0.3s ease, border-right 0.3s ease',
@@ -148,6 +149,9 @@ function UnifiedNavigator({
       )}
     </div>
   );
+  return typeof document !== 'undefined'
+    ? createPortal(desktopSidebar, document.body)
+    : desktopSidebar;
 }
 
 /**

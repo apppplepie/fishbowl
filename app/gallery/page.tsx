@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, startTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { message } from 'antd';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
@@ -158,16 +159,17 @@ export default function GalleryPage() {
         </>
       )}
 
-      {/* 弹窗部分保持不变... */}
-      {selectedArticle && (
-        <div 
-          style={{ position: 'fixed', inset: 0, zIndex: 1500, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}
+      {/* 弹窗用 Portal 挂到 body，避免被 PageShell/波浪的堆叠上下文盖住 */}
+      {selectedArticle && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}
           onClick={() => setSelectedArticle(null)}
         >
-          <div style={{ width: '100%', maxWidth: '900px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ width: '100%', maxWidth: '900px', position: 'relative', zIndex: 2001 }} onClick={e => e.stopPropagation()}>
             <MemoCard article={selectedArticle} onTitleClick={() => router.push(`/article/${selectedArticle.id}`)} />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <GalleryPublishFloat onSuccess={() => fetchDrawingArticles(0, false)} />

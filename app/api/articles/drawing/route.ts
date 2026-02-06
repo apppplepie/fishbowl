@@ -6,11 +6,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser, refreshAccessToken, TOKEN_EXPIRATION, verifyRefreshToken } from '@/lib/auth';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
-import { calculateGalleryCoverSpan } from '@/lib/masonry-server-utils';
+import {
+  calculateGalleryCoverSpan,
+  getColumnWidthFromContainerWidth,
+} from '@/lib/masonry-server-utils';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // 容器宽度（请求头）：与前端一致算列宽，再算封面 span
+    const containerWidthHeader = request.headers.get('X-Container-Width');
+    const containerWidth =
+      containerWidthHeader != null ? parseInt(containerWidthHeader, 10) : NaN;
+    const columnWidth =
+      Number.isFinite(containerWidth) && containerWidth > 0
+        ? getColumnWidthFromContainerWidth(containerWidth)
+        : undefined;
+
     // 支持 page 参数（用于横向瀑布流）和 offset 参数（用于纵向瀑布流）
     const page = searchParams.get('page');
     const offsetParam = searchParams.get('offset');
@@ -121,7 +134,10 @@ export async function GET(request: NextRequest) {
         cover_image_url: coverImage?.url || null,
         cover_is_placeholder: article.cover_is_placeholder || false,
       };
-      return { ...base, precomputedSpan: calculateGalleryCoverSpan(base) };
+      return {
+        ...base,
+        precomputedSpan: calculateGalleryCoverSpan(base, columnWidth),
+      };
     });
 
     // 获取每篇文章的标签

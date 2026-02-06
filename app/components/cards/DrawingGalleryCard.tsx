@@ -5,6 +5,9 @@ import { getImageSrc } from '@/lib/imageUrl';
 import { PlaceholderBlock } from '@/app/types/block';
 import PlaceholderDisplay from '@/app/components/blocks/PlaceholderDisplay';
 
+/** 已加载过的图片 URL（封面与内层共用），避免同一张图点进去再显示一次 loading */
+const loadedImageUrls = new Set<string>();
+
 const DEFAULT_ASPECT = 3 / 2;
 const toValidAspect = (value: number): number =>
   typeof value === "number" && Number.isFinite(value) && value > 0 ? value : DEFAULT_ASPECT;
@@ -137,27 +140,30 @@ export default function DrawingGalleryCard({
     const aspectRatio = toValidAspect(w / h);
     if (!coverUrl) {
       return (
-        <div onClick={onClick} style={{ position: 'relative', width: '100%', aspectRatio, overflow: 'hidden', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#999', ...style }}>
+        <div onClick={onClick} style={{ position: 'relative', width: '100%', aspectRatio, overflow: 'hidden', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#999', zIndex: 10, ...style }}>
           暂无封面
         </div>
       );
     }
     const blur = coverMedia?.blur_data_url ?? (coverMedia as any)?.blurDataUrl ?? propCoverThumbnail ?? undefined;
+    const resolvedCoverSrc = getImageSrc(coverUrl) ?? coverUrl ?? '';
+    const coverAlreadyLoaded = resolvedCoverSrc ? loadedImageUrls.has(resolvedCoverSrc) : false;
     return (
       <div
         onClick={onClick}
-        style={{ position: 'relative', width: '100%', aspectRatio, overflow: 'hidden', ...style }}
+        style={{ position: 'relative', width: '100%', aspectRatio, overflow: 'hidden', zIndex: 10, ...style }}
       >
         <Image
-          src={getImageSrc(coverUrl) ?? coverUrl}
+          src={resolvedCoverSrc || coverUrl}
           alt={article?.title ?? '作品封面'}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           style={{ objectFit: 'cover' }}
           loading="lazy"
-          placeholder={blur ? 'blur' : 'empty'}
-          blurDataURL={blur}
+          placeholder={!coverAlreadyLoaded && blur ? 'blur' : 'empty'}
+          blurDataURL={!coverAlreadyLoaded ? blur : undefined}
           draggable={false}
+          onLoad={() => { if (resolvedCoverSrc) loadedImageUrls.add(resolvedCoverSrc); }}
         />
       </div>
     );
@@ -165,14 +171,14 @@ export default function DrawingGalleryCard({
 
   if (!currentImage) {
     return (
-      <div style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, overflow: 'hidden', background: '#f6f6f6', ...style }} onClick={onClick}>
+      <div style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, overflow: 'hidden', background: '#f6f6f6', zIndex: 1100, ...style }} onClick={onClick}>
         <div style={{ color: '#888' }}>没有可显示的图片</div>
       </div>
     );
   }
 
   return (
-    <div role="button" tabIndex={0} onClick={onClick} style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', height: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: 12, overflow: 'hidden', background: 'transparent', touchAction: 'pan-y', ...style }} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+    <div role="button" tabIndex={0} onClick={onClick} style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', height: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: 12, overflow: 'hidden', background: 'transparent', touchAction: 'pan-y', zIndex: 1100, ...style }} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       <div onClick={handleTapOrClick} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
         {failedImages.has(currentIndex) ? (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
@@ -184,11 +190,27 @@ export default function DrawingGalleryCard({
           <div style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <PlaceholderDisplay block={currentImage.placeholderData} style={{ maxWidth: '100%', maxHeight: '100%' }} />
           </div>
-        ) : currentImage.url ? (
-          <div style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', aspectRatio: currentImage.aspectRatio, position: 'relative', contain: 'layout paint', background: 'transparent', overflow: 'hidden' }}>
-            <Image src={getImageSrc(currentImage.url) ?? currentImage.url} alt={article.title || 'image'} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 80vw, 90vw" style={{ objectFit: 'contain', transition: 'transform 0.28s ease, opacity 0.28s ease' }} onError={markFailed} loading="lazy" placeholder={currentImage.blur_data_url ? 'blur' : 'empty'} blurDataURL={currentImage.blur_data_url ?? undefined} draggable={false} />
-          </div>
-        ) : (
+        ) : currentImage.url ? (() => {
+          const resolvedSrc = getImageSrc(currentImage.url) ?? currentImage.url;
+          const alreadyLoaded = resolvedSrc ? loadedImageUrls.has(resolvedSrc) : false;
+          return (
+            <div style={{ width: '100%', maxWidth: '90vw', maxHeight: '90vh', aspectRatio: currentImage.aspectRatio, position: 'relative', contain: 'layout paint', background: 'transparent', overflow: 'hidden' }}>
+              <Image
+                src={resolvedSrc}
+                alt={article.title || 'image'}
+                fill
+                sizes="(max-width: 640px) 90vw, (max-width: 1024px) 80vw, 90vw"
+                style={{ objectFit: 'contain', transition: 'transform 0.28s ease, opacity 0.28s ease' }}
+                onError={markFailed}
+                onLoad={() => { if (resolvedSrc) loadedImageUrls.add(resolvedSrc); }}
+                loading="lazy"
+                placeholder={alreadyLoaded ? 'empty' : (currentImage.blur_data_url ? 'blur' : 'empty')}
+                blurDataURL={alreadyLoaded ? undefined : (currentImage.blur_data_url ?? undefined)}
+                draggable={false}
+              />
+            </div>
+          );
+        })() : (
           <div style={{ color: '#888' }}>图片不可用</div>
         )}
 

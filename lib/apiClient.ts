@@ -69,6 +69,12 @@ async function refreshAccessToken(): Promise<boolean> {
   return refreshPromise;
 }
 
+/** 由屏幕宽度推算父容器宽度，与后端 masonry 列宽计算一致（用于请求头） */
+function getContainerWidthForHeader(): number {
+  if (typeof window === 'undefined') return 1400;
+  return Math.min(1400, Math.max(0, window.innerWidth - 48));
+}
+
 /**
  * 统一的API请求函数
  * 使用 HttpOnly Cookie 进行认证，浏览器自动携带 cookie
@@ -81,6 +87,9 @@ export async function apiRequest(url: string, options: RequestOptions = {}): Pro
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+
+  // 携带容器宽度供后端算列宽 / precomputedSpan（屏幕宽 - 48，与前端一致）
+  requestHeaders['X-Container-Width'] = String(getContainerWidthForHeader());
 
   // 合并额外的headers
   Object.assign(requestHeaders, headers);

@@ -59,7 +59,7 @@ export default function ArticleCard({
     >
       <div className="card-block--pad-top" aria-hidden />
       <div className="card-block-title card-block--title">
-        <EditOutlined style={{ fontSize: '20px' }} />
+        {/* <EditOutlined style={{ fontSize: '20px' }} /> */}
         <h3 className="card-block-title__text" style={{ color: colors.textColor }}>
           {card.title}
         </h3>

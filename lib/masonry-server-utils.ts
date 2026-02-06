@@ -1,6 +1,8 @@
 /**
  * Masonry span / layout：服务端预算 span；非文章卡用 preset + layout 算 span。
  * 文章卡用 blocks + precomputedSpan（lib-card-layout buildBlocksFromArticle）。
+ *
+ * 容器/列宽：与前端一致，用屏幕宽度推算容器宽度，再算列数、列宽；请求头 X-Container-Width 传容器宽。
  */
 import {
   DEFAULT_COL_WIDTH_PX,
@@ -11,6 +13,35 @@ import {
   CARD_BOTTOM_GAP_SPAN,
 } from '@/lib/lib-card-layout/constants';
 import { computeSpanFromBlocks } from '@/lib/lib-card-layout';
+
+/** 屏幕宽度推算容器宽度时的左右占位（与前端 padding 一致） */
+export const CONTAINER_WIDTH_OFFSET_PX = 48;
+/** 容器最大宽度（与前端 maxWidth 一致） */
+export const CONTAINER_MAX_WIDTH_PX = 1400;
+
+/** 由屏幕宽度推算父容器宽度（前端同源逻辑） */
+export function getContainerWidthFromScreenWidth(screenWidth: number): number {
+  const w = Number(screenWidth);
+  if (!Number.isFinite(w) || w <= 0) return CONTAINER_MAX_WIDTH_PX;
+  return Math.min(CONTAINER_MAX_WIDTH_PX, Math.max(0, w - CONTAINER_WIDTH_OFFSET_PX));
+}
+
+/** 由容器宽度算列数（与 archive/bookcase 断点一致：1200→4，800→3，否则 2，最大 4） */
+export function getColumnCountFromContainerWidth(containerWidth: number): number {
+  const w = Number(containerWidth);
+  if (!Number.isFinite(w) || w <= 0) return 2;
+  if (w >= 1200) return 4;
+  if (w >= 800) return 3;
+  return 2;
+}
+
+/** 由容器宽度算列宽（与前端 columnWidth = containerWidth / cappedColumns 一致） */
+export function getColumnWidthFromContainerWidth(containerWidth: number): number {
+  const w = Number(containerWidth);
+  if (!Number.isFinite(w) || w <= 0) return DEFAULT_COL_WIDTH_PX;
+  const cols = Math.min(getColumnCountFromContainerWidth(w), 4);
+  return w / cols;
+}
 
 export type LayoutHint = {
   titleSpan?: number;
@@ -226,9 +257,10 @@ export function getSpanForCard(article: ArticleLike, columnWidth?: number): numb
   return getContentSpanForCard(article, columnWidth) + CARD_BOTTOM_GAP_SPAN;
 }
 
-/** 服务端计算 span 用，仅内容高度（不含 CARD_BOTTOM_GAP_SPAN），存为 precomputedSpan */
-export function calculateServerSpan(article: ArticleLike): number {
-  return getContentSpanForCard(article, DEFAULT_COL_WIDTH_PX);
+/** 服务端计算 span 用，仅内容高度（不含 CARD_BOTTOM_GAP_SPAN），存为 precomputedSpan；传入 columnWidth 时替代默认 180px */
+export function calculateServerSpan(article: ArticleLike, columnWidth?: number): number {
+  const colW = columnWidth != null && columnWidth > 0 ? columnWidth : DEFAULT_COL_WIDTH_PX;
+  return getContentSpanForCard(article, colW);
 }
 
 export function getAspectRatioFromArticle(article: {
@@ -246,10 +278,13 @@ export function getAspectRatioFromArticle(article: {
   return 3 / 2;
 }
 
+/** 画廊封面卡 span；传入 columnWidth 时替代默认 180px，与前端列宽一致 */
 export function calculateGalleryCoverSpan(
-  article: Parameters<typeof getAspectRatioFromArticle>[0]
+  article: Parameters<typeof getAspectRatioFromArticle>[0],
+  columnWidth?: number
 ): number {
+  const colW = columnWidth != null && columnWidth > 0 ? columnWidth : DEFAULT_COL_WIDTH_PX;
   const ar = getAspectRatioFromArticle(article);
-  const heightPx = DEFAULT_COL_WIDTH_PX / (Number.isFinite(ar) && ar > 0 ? ar : 3 / 2);
+  const heightPx = colW / (Number.isFinite(ar) && ar > 0 ? ar : 3 / 2);
   return Math.max(1, Math.ceil(heightPx / ROW_HEIGHT_PX));
 }

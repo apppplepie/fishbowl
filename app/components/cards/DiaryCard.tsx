@@ -131,7 +131,7 @@ export default function DiaryCard({
     >
       <div className="card-block--pad-top" aria-hidden />
       <div className="card-block-title card-block--title">
-        <InsertRowAboveOutlined style={{ fontSize: '20px' }} />
+        {/* <InsertRowAboveOutlined style={{ fontSize: '20px' }} /> */}
         <h3 className="card-block-title__text" style={{ color: colors.textColor }}>
           {formattedDate}
         </h3>

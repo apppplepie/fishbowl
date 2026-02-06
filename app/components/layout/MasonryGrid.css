@@ -19,9 +19,9 @@
     overflow: visible;
   }
   
-  /* 移除原有的 auto-fill 逻辑，只作为一个标识类 */
+  /* 移除原有的 auto-fill 逻辑，只作为一个标识类；列数由父级传入 style.gridTemplateColumns，建议最大 4 列 */
   .masonry-grid--min-2-cols {
-    /* 这里的列数现在由 JS 根据 containerWidth 动态计算为 2, 3 或 4 */
+    /* 列数由 JS 根据 containerWidth 动态计算，应限制为 2～4 列 */
   }
   
   /* ============================================================

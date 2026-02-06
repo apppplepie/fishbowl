@@ -119,7 +119,7 @@ export default function PageLayout({
                 bottom: '-40px', 
                 left: 0, 
                 right: 0, 
-                zIndex: 10,
+                zIndex: 1,
                 height: '80px',
                 pointerEvents: 'none'
               }}

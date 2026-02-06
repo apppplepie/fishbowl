@@ -6,7 +6,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
-import { calculateServerSpan, charCountToLinesForDiary } from '@/lib/masonry-server-utils';
+import {
+  calculateServerSpan,
+  charCountToLinesForDiary,
+  getColumnWidthFromContainerWidth,
+} from '@/lib/masonry-server-utils';
 import { buildBlocksFromArticle } from '@/lib/lib-card-layout';
 import type { ArticleBlock } from '@/lib/lib-card-layout';
 
@@ -158,6 +162,15 @@ function sortArticlesByDFS(
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // 容器宽度（请求头）：用于与前端一致地算列宽，再算 precomputedSpan
+    const containerWidthHeader = request.headers.get('X-Container-Width');
+    const containerWidth =
+      containerWidthHeader != null ? parseInt(containerWidthHeader, 10) : NaN;
+    const columnWidth =
+      Number.isFinite(containerWidth) && containerWidth > 0
+        ? getColumnWidthFromContainerWidth(containerWidth)
+        : undefined;
 
     // 获取当前用户权限
     const currentUser = getCurrentUser(request);
@@ -379,28 +392,34 @@ export async function GET(request: NextRequest) {
         return {
           ...base,
           layoutHint,
-          precomputedSpan: calculateServerSpan({
-            ...base,
-            type: 'diary',
-            layoutHint,
-            coverImage,
-            cover_image: coverImage,
-            mood: (article as any).mood,
-            weather: (article as any).weather,
-            location: (article as any).location,
-          }),
+          precomputedSpan: calculateServerSpan(
+            {
+              ...base,
+              type: 'diary',
+              layoutHint,
+              coverImage,
+              cover_image: coverImage,
+              mood: (article as any).mood,
+              weather: (article as any).weather,
+              location: (article as any).location,
+            },
+            columnWidth
+          ),
         };
       }
       return {
         ...base,
-        precomputedSpan: calculateServerSpan({
-          ...base,
-          type: article.type,
-          coverImage,
-          cover_image: coverImage,
-          imageWidth: coverImage?.width,
-          imageHeight: coverImage?.height,
-        }),
+        precomputedSpan: calculateServerSpan(
+          {
+            ...base,
+            type: article.type,
+            coverImage,
+            cover_image: coverImage,
+            imageWidth: coverImage?.width,
+            imageHeight: coverImage?.height,
+          },
+          columnWidth
+        ),
       };
     });
 

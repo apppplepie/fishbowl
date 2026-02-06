@@ -103,7 +103,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
 
   // UI 状态
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(true); // 默认展开（参考 bookcase 侧边栏）
+  const [sidebarExpanded, setSidebarExpanded] = useState(false); // 电脑上侧边栏默认收起
   const [isPending, startTransition] = useTransition();
 
   const { setLeftContent } = useHeader();
@@ -129,6 +129,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
     if (w >= 800) return 3;
     return 2;
   }, [containerWidth]);
+  const cappedColumns = Math.min(columnCount, 4);
 
   useLayoutEffect(() => {
     measureContainer(); // Mount 时测一次
@@ -260,7 +261,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
   }, [router]);
 
   // --- 卡片 span 与 layout：统一由 lib-card-layout 计算 ---
-  const columnWidth = columnCount > 0 ? containerWidth / columnCount : undefined;
+  const columnWidth = cappedColumns > 0 ? containerWidth / cappedColumns : undefined;
   const getSpan = useCallback(
     (article: any) => getSpanForCard(article, columnWidth),
     [columnWidth]
@@ -324,10 +325,10 @@ function ArchivePageContent(props?: ArchivePageProps) {
              </div>
           ) : (
             <div style={{ minHeight: '100vh' }}>
-              {/* Key 值加入 columnCount，只有列数变了才重绘 Masonry，防止无意义闪烁 */}
+              {/* Key 值加入 cappedColumns，只有列数变了才重绘 Masonry，防止无意义闪烁 */}
               <MasonryGrid
-                key={`masonry-${columnCount}`}
-                style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
+                key={`masonry-${cappedColumns}`}
+                style={{ gridTemplateColumns: `repeat(${cappedColumns}, 1fr)` }}
               >
                 {filteredCards.map((card, index) => (
                   <div key={card.id} className="masonry-item animate" style={{ gridRow: `span ${getSpan(card)}` }}>

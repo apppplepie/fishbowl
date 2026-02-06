@@ -186,7 +186,7 @@ export default function BookCard({
     >
       <div className="card-block--pad-top" aria-hidden />
       <div className="card-block-title card-block--title" style={{ margin: 0 }}>
-        <ReadOutlined style={{ fontSize: '20px' }} />
+        {/* <ReadOutlined style={{ fontSize: '20px' }} /> */}
         <h3 className="card-block-title__text" style={{ color: colors.textColor, margin: 0 }}>
           {card.title}
         </h3>

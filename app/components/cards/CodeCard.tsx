@@ -74,7 +74,7 @@ export default function CodeCard({
       <div className="card-block--pad-top" aria-hidden />
       <div className="card-block-title card-block-title--code card-block--title">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-          <CodeOutlined style={{ fontSize: '20px' }} />
+          {/* <CodeOutlined style={{ fontSize: '20px' }} /> */}
           <h3 className="card-block-title__text" style={{ color: colors.textColor }}>
             {card.title}
           </h3>
