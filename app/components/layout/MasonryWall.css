@@ -13,11 +13,13 @@
     box-sizing: border-box;
   }
 
-  .masonry-item {
+  /* 覆盖 MasonryGrid.css 对 .masonry-item 的 border-radius，照片墙卡片不做圆角 */
+  .masonry-wall .masonry-item {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
     overflow: hidden;
+    border-radius: 0;
   }
   
   .masonry-sentinel {
