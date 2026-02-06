@@ -49,7 +49,7 @@ export const publicNavigationItems: NavigationItem[] = [
   {
     key: 'fishbowl',
     label: '鱼缸',
-    icon: 'SunOutlined',
+    icon: 'IoFishOutline',
     path: '/fishbowl',
   },
 ];

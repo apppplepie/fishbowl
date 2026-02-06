@@ -5,6 +5,7 @@ import { Menu, Button, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
+import { IoFishOutline } from 'react-icons/io5';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import {
   HomeOutlined,
@@ -13,7 +14,6 @@ import {
   BookOutlined,
   UserOutlined,
   LoginOutlined,
-  SunOutlined,
 } from '@ant-design/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { theme } from '@/app/config/theme';
@@ -129,7 +129,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
       case 'PictureOutlined': return <PictureOutlined />;
       case 'FileTextOutlined': return <FileTextOutlined />;
       case 'BookOutlined': return <BookOutlined />;
-      case 'SunOutlined': return <SunOutlined />;
+      case 'IoFishOutline': return <IoFishOutline style={{ fontSize: 20 }} />;
       default: return null;
     }
   }, []);

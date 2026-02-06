@@ -16,12 +16,12 @@ import {
   UserOutlined,
   LogoutOutlined,
   DashboardOutlined,
-  SunOutlined,
 } from '@ant-design/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import UserMenu from './UserMenu';
 import LoginModal from './LoginModal';
+import { IoFishOutline } from 'react-icons/io5';
 import '../styles/navigation.css';
 
 interface NavigationDrawerProps {
@@ -64,7 +64,7 @@ function NavigationDrawer({
       case 'FormOutlined': return <FormOutlined />;
       case 'BookOutlined': return <BookOutlined />;
       case 'UserOutlined': return <UserOutlined />;
-      case 'SunOutlined': return <SunOutlined />;
+      case 'IoFishOutline': return <IoFishOutline style={{ fontSize: 18 }} />;
       default: return null;
     }
   };
