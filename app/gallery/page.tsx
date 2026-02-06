@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo, startTransition } from 'react';
 import { message } from 'antd';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
@@ -9,7 +9,6 @@ import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
 import MasonryWall from '../components/layout/MasonryWall';
 import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
 import { apiGet } from '@/lib/apiClient';
-import { calculateGalleryCoverSpan } from '@/lib/masonry-server-utils';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
 
@@ -60,13 +59,16 @@ export default function GalleryPage() {
       
       const data = await res.json();
       if (data.success) {
-        setArticles(prev => {
-          if (!isAppend) return data.articles;
-          const ids = new Set(prev.map(a => a.id));
-          return [...prev, ...data.articles.filter((a: any) => !ids.has(a.id))];
+        // 用 startTransition 标记为非紧急更新，避免阻塞导航等用户操作
+        startTransition(() => {
+          setArticles(prev => {
+            if (!isAppend) return data.articles;
+            const ids = new Set(prev.map(a => a.id));
+            return [...prev, ...data.articles.filter((a: any) => !ids.has(a.id))];
+          });
+          setOffset(currentOffset + data.articles.length);
+          setHasMore(data.articles.length === ITEMS_PER_PAGE);
         });
-        setOffset(currentOffset + data.articles.length);
-        setHasMore(data.articles.length === ITEMS_PER_PAGE);
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') message.error('获取作品失败');
@@ -136,7 +138,7 @@ export default function GalleryPage() {
                 key={article.id}
                 className="masonry-item"
                 style={{
-                  gridRowEnd: `span ${article.precomputedSpan ?? calculateGalleryCoverSpan(article)}`,
+                  gridRowEnd: `span ${article.precomputedSpan ?? 1}`,
                 }}
               >
                 <MemoCard

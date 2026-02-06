@@ -1,11 +1,12 @@
 /**
  * 绘画作品专用 API
- * 优化：直接在列表查询中返回封面图片，避免 N+1 查询
+ * 优化：直接在列表查询中返回封面图片，避免 N+1 查询；返回 precomputedSpan 供瀑布流布局使用。
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser, refreshAccessToken, TOKEN_EXPIRATION, verifyRefreshToken } from '@/lib/auth';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { calculateGalleryCoverSpan } from '@/lib/masonry-server-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -111,15 +112,16 @@ export async function GET(request: NextRequest) {
       return value;
     };
 
-    // 处理封面数据
+    // 处理封面数据并计算瀑布流 span（与 list 接口一致，前端直接使用不现场算）
     const processedArticles = articles.map(article => {
       const coverImage = normalizeCoverImage(article.cover_image);
-      return {
+      const base = {
         ...article,
         cover_image: coverImage,
-        cover_image_url: coverImage?.url || null, // 提取封面图片URL供前端使用
+        cover_image_url: coverImage?.url || null,
         cover_is_placeholder: article.cover_is_placeholder || false,
       };
+      return { ...base, precomputedSpan: calculateGalleryCoverSpan(base) };
     });
 
     // 获取每篇文章的标签
