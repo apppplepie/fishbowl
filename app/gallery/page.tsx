@@ -12,6 +12,11 @@ import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
 import { apiGet } from '@/lib/apiClient';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
+import {
+  getContainerWidthFromScreenWidth,
+  getColumnWidthFromContainerWidth,
+  getAspectRatioFromArticle,
+} from '@/lib/masonry-server-utils';
 
 const MemoCard = memo(DrawingGalleryCard);
 
@@ -27,6 +32,21 @@ export default function GalleryPage() {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
+
+  // 与请求头/后端一致：屏幕宽→容器宽→列宽，用于封面卡片占位与比例
+  const [containerWidth, setContainerWidth] = useState(() =>
+    typeof window !== 'undefined' ? getContainerWidthFromScreenWidth(window.innerWidth) : 1400
+  );
+  useEffect(() => {
+    const update = () => setContainerWidth(getContainerWidthFromScreenWidth(window.innerWidth));
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  const columnWidth = useMemo(
+    () => getColumnWidthFromContainerWidth(containerWidth),
+    [containerWidth]
+  );
 
   const ITEMS_PER_PAGE = 20;
 
@@ -134,21 +154,28 @@ export default function GalleryPage() {
       ) : (
         <>
           <MasonryWall>
-            {filteredArticles.map((article) => (
-              <div
-                key={article.id}
-                className="masonry-item"
-                style={{
-                  gridRowEnd: `span ${article.precomputedSpan ?? 1}`,
-                }}
-              >
-                <MemoCard
-                  article={article}
-                  coverOnly
-                  onClick={() => handleImageClick(article)}
-                />
-              </div>
-            ))}
+            {filteredArticles.map((article) => {
+              const ar = getAspectRatioFromArticle(article);
+              const coverWidth = columnWidth;
+              const coverHeight = columnWidth / (Number.isFinite(ar) && ar > 0 ? ar : 3 / 2);
+              return (
+                <div
+                  key={article.id}
+                  className="masonry-item"
+                  style={{
+                    gridRowEnd: `span ${article.precomputedSpan ?? 1}`,
+                  }}
+                >
+                  <MemoCard
+                    article={article}
+                    coverOnly
+                    coverWidth={coverWidth}
+                    coverHeight={coverHeight}
+                    onClick={() => handleImageClick(article)}
+                  />
+                </div>
+              );
+            })}
           </MasonryWall>
           {hasMore && (
             <div ref={sentinelRef} style={{ padding: '20px', textAlign: 'center' }}>

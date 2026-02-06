@@ -1,0 +1,302 @@
+/* ========== 主题变量（黑底白字） ========== */
+:root {
+  --sidebar-bg: #000000;
+  --sidebar-border: rgba(38, 38, 38, 0.8);
+  --sidebar-width: 280px;
+  --sidebar-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --menu-text-default: #a3a3a3;
+  --menu-text-hover: #e5e5e5;
+  --menu-text-active: #ffffff;
+
+  --menu-bg-hover: rgba(23, 23, 23, 0.6);
+  --menu-bg-active-start: #262626;
+  --menu-bg-active-end: #171717;
+
+  --scrollbar-thumb: #262626;
+  --scrollbar-thumb-hover: #404040;
+}
+
+/* ========== 移动端抽屉（无 antd） ========== */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  transition: opacity 0.3s var(--sidebar-ease);
+}
+
+.sidebar-drawer {
+  position: fixed;
+  top: 45px; /* 为 header 预留高度，与桌面端一致 */
+  bottom: 0;
+  left: 0;
+  z-index: 1500;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  box-shadow: 10px 0 30px -10px rgba(0, 0, 0, 0.5);
+  transform: translateX(-100%);
+  transition: transform 0.3s var(--sidebar-ease);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-drawer-open {
+  transform: translateX(0);
+}
+
+/* ========== 桌面端侧边栏 ========== */
+.unified-navigator-sidebar {
+  position: fixed;
+  left: 0;
+  top: 45px;
+  bottom: 0;
+  width: 0;
+  background-color: var(--sidebar-bg);
+  border-right: none;
+  z-index: 1500;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width 0.3s var(--sidebar-ease), border-right 0.3s var(--sidebar-ease);
+  /* 桌面端侧边栏也隐藏滚动条（实际滚动在内部树容器） */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.unified-navigator-sidebar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.unified-navigator-sidebar.is-expanded {
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--sidebar-border);
+}
+
+.unified-navigator-sidebar-inner {
+  width: var(--sidebar-width);
+  height: 100%;
+}
+
+.unified-navigator-drawer-wrap {
+  padding-top: 0;
+  background-color: var(--sidebar-bg);
+  color: var(--menu-text-default);
+  flex: 1;
+  min-height: 0; /* 关键：允许 flex 子项收缩，否则手机端无法形成固定高度导致滚不动 */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.unified-navigator-drawer-wrap.has-padding-top {
+  padding-top: 45px;
+}
+
+/* 手机端抽屉内：让树容器占满剩余高度并可滚动 */
+.unified-navigator-drawer-wrap .generic-index-tree-container,
+.unified-navigator-drawer-wrap .archive-category-container {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 确保手机端 flex 布局生效（archive 分类容器） */
+.unified-navigator-drawer-wrap .archive-category-container {
+  height: auto !important;
+}
+
+/* 兼容：drawer-wrap 内第一个直接子元素承担滚动 */
+.unified-navigator-drawer-wrap > div {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ========== 导航按钮（原生 button + lucide 图标） ========== */
+.unified-navigator-btn {
+  border: none;
+  background: transparent;
+  color: var(--menu-text-active);
+  cursor: pointer;
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unified-navigator-btn:hover {
+  color: var(--menu-text-hover);
+}
+
+.unified-navigator-btn svg {
+  display: block;
+}
+
+/* ========== 树/菜单容器（通用树 + 归档分类容器共用） ========== */
+.generic-index-tree-container,
+.archive-category-container {
+  flex: 1;
+  min-height: 0;
+  height: 100%; /* 桌面端 */
+  overflow-y: auto !important; /* 强制开启滚动 */
+  overflow-x: hidden;
+  background-color: var(--sidebar-bg);
+  color: var(--menu-text-default);
+  -webkit-overflow-scrolling: touch; /* iOS 顺滑滚动 */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.generic-index-tree-container::-webkit-scrollbar,
+.archive-category-container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* ========== 自定义树（无 antd Menu） ========== */
+.sidebar-loading {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.sidebar-empty {
+  padding: 40px 16px;
+  color: var(--menu-text-default);
+}
+
+.sidebar-empty .ui-empty,
+.sidebar-empty [class*="empty"] {
+  color: var(--menu-text-default) !important;
+}
+
+.sidebar-empty .ui-empty div,
+.sidebar-empty [class*="empty"] div {
+  color: var(--menu-text-default) !important;
+}
+
+.sidebar-tree {
+  padding: 12px 0;
+}
+
+.sidebar-tree-branch {
+  margin: 0;
+}
+
+.sidebar-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s var(--sidebar-ease);
+  color: var(--menu-text-default);
+  border: none;
+  background: none;
+  width: calc(100% - 16px);
+  text-align: left;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.sidebar-tree-node:hover {
+  background: var(--menu-bg-hover);
+  color: var(--menu-text-hover);
+}
+
+.sidebar-tree-node-category .sidebar-tree-label {
+  font-weight: 500;
+}
+
+.sidebar-tree-node-article.active {
+  background: linear-gradient(90deg, var(--menu-bg-active-start) 0%, var(--menu-bg-active-end) 100%);
+  color: var(--menu-text-active);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-tree-chevron {
+  flex-shrink: 0;
+  width: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #525252;
+}
+
+.sidebar-tree-chevron svg.expanded {
+  transform: rotate(90deg);
+}
+
+.sidebar-tree-chevron-placeholder {
+  display: inline-block;
+  width: 14px;
+}
+
+.sidebar-tree-icon {
+  flex-shrink: 0;
+  color: #737373;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sidebar-tree-node:hover .sidebar-tree-icon {
+  color: #d4d4d4;
+}
+
+.sidebar-tree-node-article.active .sidebar-tree-icon {
+  color: var(--menu-text-active);
+}
+
+.sidebar-tree-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-tree-count {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--menu-text-default);
+  font-weight: 400;
+}
+
+.sidebar-tree-node:hover .sidebar-tree-count {
+  color: var(--menu-text-hover);
+}
+
+.sidebar-tree-children {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s var(--sidebar-ease), opacity 0.2s var(--sidebar-ease);
+}
+
+.sidebar-tree-children.expanded {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+.sidebar-tree-children .sidebar-tree-node {
+  padding-left: 12px;
+}
+
+/* 空状态（项目 ui/Empty）在侧边栏内的文字颜色 */
+.generic-index-tree-container [class*="empty"],
+.generic-index-tree-container [class*="Empty"],
+.archive-category-container [class*="empty"],
+.archive-category-container [class*="Empty"] {
+  color: var(--menu-text-default) !important;
+}
