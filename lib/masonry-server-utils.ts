@@ -41,7 +41,7 @@ export type ArticleLike = {
 
 /** 按正文字符数得到行数档位（desktop），用于日记正文 span；上限 4 行 */
 export function charCountToLinesForDiary(charCount: number, maxLines = 4): number {
-  const thresholds = [15, 30, 90];
+  const thresholds = [10, 20, 50];
   for (let i = 0; i < thresholds.length; i++) {
     if (charCount <= thresholds[i]) return Math.min(i + 1, maxLines);
   }

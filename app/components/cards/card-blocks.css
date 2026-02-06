@@ -93,14 +93,15 @@
 
 .card-block-excerpt-wrap {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   margin: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .card-block.card-block-excerpt-wrap {
   padding-left: 4px;
 }
-/* 简介每行 span = --excerpt-span-per-line，N 行 = N×span×8px */
+/* 简介盒高由后端 span 决定，N 行 = N×--excerpt-span-per-line×8px；前端只往盒里放字，不限定行数，超出裁掉 */
 .card-block-excerpt-wrap.card-block--excerpt-lines-1 {
   height: calc(1 * var(--excerpt-span-per-line) * var(--card-row));
 }
@@ -113,12 +114,6 @@
 .card-block-excerpt-wrap.card-block--excerpt-lines-4 {
   height: calc(4 * var(--excerpt-span-per-line) * var(--card-row));
 }
-
-/* ExcerptText：最多 N 行，标准方案 -webkit-line-clamp，不设 height/max-height */
-.card-block--excerpt-lines-1 { -webkit-line-clamp: 1; }
-.card-block--excerpt-lines-2 { -webkit-line-clamp: 2; }
-.card-block--excerpt-lines-3 { -webkit-line-clamp: 3; }
-.card-block--excerpt-lines-4 { -webkit-line-clamp: 4; }
 
 /* 标题区：布局 + 标题文字 */
 .card-block-title {
@@ -144,20 +139,18 @@
   -webkit-box-orient: vertical;
 }
 
-/* 简介内层：line-height ≤ 16px（2 span/行）否则会多塞行 */
+/* 简介内层：行高与盒一致，不限定行数，由外层盒高 + overflow 裁切 */
 .card-block-excerpt {
   margin: 0;
   padding: 0;
   font-size: 14px;
-  line-height: var(--excerpt-line-cap); /* 与 --excerpt-span-per-line 同步 */
+  line-height: var(--excerpt-line-cap);
   opacity: 0.8;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2; /* 默认上限，由 .card-block--excerpt-lines-N 覆盖 */
   overflow: hidden;
   white-space: normal;
   box-sizing: border-box;
   width: 100%;
+  min-height: 0;
 }
 
 /* 分割线 + 元信息区：日期/作者（书籍卡）共用，垂直居中 */
