@@ -1007,6 +1007,16 @@ export default function BookPage() {
     };
   }, [setConfig, box1Content]);
 
+  // 同步侧边栏状态到 PageShell，让 box1+box2 在电脑端被侧边栏挤压
+  useEffect(() => {
+    setConfig((prev: any) => ({
+      ...prev,
+      sidebarExpanded: !isMobile ? sidebarExpanded : false,
+      sidebarWidth: 280,
+    }));
+    return () => setConfig((prev: any) => ({ ...prev, sidebarExpanded: false, sidebarWidth: 0 }));
+  }, [setConfig, isMobile, sidebarExpanded]);
+
   // 显示加载状态（所有 Hook 必须在早期返回之前）
   if (!book || contentLoadingState === 'loading') {
     return null;
@@ -1058,9 +1068,8 @@ export default function BookPage() {
 
 
       <div style={{ 
-        transform: isMobile ? 'translateX(0)' : (sidebarExpanded ? 'translateX(280px)' : 'translateX(0)'),
         opacity: contentVisible ? 1 : 0,
-        transition: 'transform 0.3s ease, opacity 0.2s ease',
+        transition: 'opacity 0.2s ease',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -1202,12 +1211,12 @@ export default function BookPage() {
             )}
           </div>
 
-          {/* 互动按钮 */}
+          {/* 互动按钮和评论区：minWidth 0 以便侧边栏展开时随容器一起被挤压 */}
           <div
             style={{
               width: '100%',
               maxWidth: '800px',
-              minWidth: isMobile ? 'auto' : '800px',
+              minWidth: 0,
               margin: '0 auto',
               padding: isMobile ? '0px' : '0px',
               boxSizing: 'border-box',

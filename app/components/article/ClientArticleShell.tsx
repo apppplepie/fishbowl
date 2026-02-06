@@ -241,12 +241,12 @@ export default function ClientArticleShell({
         )}
       </div>
 
-      {/* 互动按钮区域 */}
+      {/* 互动按钮区域（含评论区）：minWidth 0 以便侧边栏展开时随容器一起被挤压） */}
       <div
         style={{
           width: '100%',
           maxWidth: '800px',
-          minWidth: isMobile ? 'auto' : '800px',
+          minWidth: 0,
           margin: '0 auto',
           padding: isMobile ? '0px' : '0px',
           boxSizing: 'border-box',

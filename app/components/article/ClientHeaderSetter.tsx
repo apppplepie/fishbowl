@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import { message, Modal } from '@/app/components/ui';
 import { useHeader } from '@/app/contexts/HeaderContext';
+import { usePageShell } from '@/app/contexts/PageShellContext';
+import { useResponsive } from '@/app/hooks/useResponsive';
 import { UnifiedNavigatorButton, UnifiedNavigatorProps } from '@/app/components/sidebar/UnifiedNavigator';
 import { useRouter } from 'next/navigation';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
@@ -19,10 +21,22 @@ interface ClientHeaderSetterProps {
 
 export default function ClientHeaderSetter({ articleId, editMode = 'view' }: ClientHeaderSetterProps) {
   const { setLeftContent } = useHeader();
+  const { setConfig } = usePageShell();
+  const { isMobile } = useResponsive();
   const router = useRouter();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [shouldLoadNavigator, setShouldLoadNavigator] = useState(false);
+
+  // 同步侧边栏状态到 PageShell，让 box1+box2 在电脑端被侧边栏挤压
+  useEffect(() => {
+    setConfig((prev: any) => ({
+      ...prev,
+      sidebarExpanded: !isMobile ? sidebarExpanded : false,
+      sidebarWidth: 280,
+    }));
+    return () => setConfig((prev: any) => ({ ...prev, sidebarExpanded: false, sidebarWidth: 0 }));
+  }, [setConfig, isMobile, sidebarExpanded]);
 
   // 配置消息提示位置，避免被 header 遮挡
   useEffect(() => {
