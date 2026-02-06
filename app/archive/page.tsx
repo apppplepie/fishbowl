@@ -137,6 +137,11 @@ function ArchivePageContent(props?: ArchivePageProps) {
     return () => window.removeEventListener('resize', measureContainer);
   }, [measureContainer]);
 
+  // 侧边栏展开/收起时重新测量，否则瀑布流父容器宽度不会更新（之前用 translateX 只位移不缩宽度）
+  useLayoutEffect(() => {
+    measureContainer();
+  }, [sidebarExpanded, measureContainer]);
+
 
   // --- 导航栏逻辑 ---
   useEffect(() => {
@@ -149,6 +154,16 @@ function ArchivePageContent(props?: ArchivePageProps) {
     );
     return () => setLeftContent(null);
   }, [setLeftContent, sidebarExpanded]);
+
+  // 同步侧边栏状态到 PageShell，让 box1 也随侧边栏右移
+  useEffect(() => {
+    setConfig((prev: any) => ({
+      ...prev,
+      sidebarExpanded: !isMobile ? sidebarExpanded : false,
+      sidebarWidth: 280,
+    }));
+    return () => setConfig((prev: any) => ({ ...prev, sidebarExpanded: false, sidebarWidth: 0 }));
+  }, [setConfig, isMobile, sidebarExpanded]);
 
 
   // --- 数据加载核心逻辑 ---
@@ -312,10 +327,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
   // --- Render ---
   return (
     <>
-      <div style={{ 
-          transform: isMobile ? 'none' : (sidebarExpanded ? 'translateX(280px)' : 'translateX(0)'),
-          transition: 'transform 0.3s ease'
-      }}>
+      <div>
         <div ref={contentContainerRef} style={{ maxWidth: '1400px', margin: '0 auto' }}>
           
           {/* 简化后的 Loading 状态判断 */}

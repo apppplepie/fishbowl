@@ -73,14 +73,14 @@ function PageShell({ children }: { children: React.ReactNode }) {
     }
   }, [config, currentFishbowlTheme]);
 
-  // container fallback background（确保首屏至少有背景）
+  // container：侧边栏展开时整体右移并缩宽，box1 + 波浪 + box2 一起被推
   const containerStyle = useMemo(() => ({
     position: 'relative' as const,
-    width: '100%',
+    width: sidebarOffset ? `calc(100% - ${sidebarOffset}px)` : '100%',
     minHeight: '100vh',
     paddingTop: '45px',
     marginLeft: sidebarOffset,
-    transition: 'margin-left 0.3s ease',
+    transition: 'width 0.3s ease, margin-left 0.3s ease',
     background: currentTheme?.skyGradient || DEFAULT_THEME.skyGradient,
   }), [sidebarOffset, currentTheme]);
 

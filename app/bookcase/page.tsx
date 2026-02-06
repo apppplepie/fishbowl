@@ -212,6 +212,16 @@ function BookcasePageContent() {
     return () => setLeftContent(null);
   }, [setLeftContent, sidebarExpanded]);
 
+  // 同步侧边栏状态到 PageShell，让 box1 也随侧边栏右移
+  useEffect(() => {
+    setConfig((prev: any) => ({
+      ...prev,
+      sidebarExpanded: !isMobile ? sidebarExpanded : false,
+      sidebarWidth: 280,
+    }));
+    return () => setConfig((prev: any) => ({ ...prev, sidebarExpanded: false, sidebarWidth: 0 }));
+  }, [setConfig, isMobile, sidebarExpanded]);
+
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
   // 加载所有可用标签和预缓存书籍文章列表
@@ -637,10 +647,7 @@ function BookcasePageContent() {
 
   return (
     <>
-      <div style={{
-        transform: isMobile ? 'none' : (sidebarExpanded ? 'translateX(280px)' : 'translateX(0)'),
-        transition: 'transform 0.3s ease',
-      }}>
+      <div>
         <div ref={contentContainerRef} style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {loading && cards.length === 0 ? (
             <div style={{ minHeight: '60vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
