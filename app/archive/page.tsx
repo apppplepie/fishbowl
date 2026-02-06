@@ -20,6 +20,48 @@ import DiaryCard from '@/app/components/cards/DiaryCard';
 
 import '../styles/articles-filter.css';
 
+// --- 归档页搜索框与 box1 解耦：box1 只设一次，搜索框通过 store 与页面 state 同步，避免每次输入触发 setConfig 导致重挂载 ---
+const archiveSearchStore = {
+  value: '',
+  setValue: null as ((v: string) => void) | null,
+  listeners: new Set<() => void>(),
+  subscribe(f: () => void) {
+    this.listeners.add(f);
+    return () => this.listeners.delete(f);
+  },
+  set(v: string) {
+    this.value = v;
+    this.setValue?.(v);
+    this.listeners.forEach((f) => f());
+  },
+  notify() {
+    this.listeners.forEach((f) => f());
+  },
+};
+
+function ArchiveSearchBox({ isMobile }: { isMobile: boolean }) {
+  const [value, setValue] = useState(archiveSearchStore.value);
+  useEffect(() => {
+    const unsub = archiveSearchStore.subscribe(() => setValue(archiveSearchStore.value));
+    return () => {
+      unsub();
+    };
+  }, []);
+  return (
+    <div style={{ padding: '16px 24px' }}>
+      <div style={{ maxWidth: isMobile ? '100%' : '320px' }}>
+        <Input.Search
+          placeholder="搜索标题或摘要..."
+          value={value}
+          onChange={(e) => archiveSearchStore.set(e.target.value)}
+          allowClear
+          className="search-input-transparent"
+        />
+      </div>
+    </div>
+  );
+}
+
 // --- 动态组件 ---
 const UnifiedNavigator = dynamic(() => import('@/app/components/sidebar/UnifiedNavigator'), { ssr: false });
 const UnifiedNavigatorButton = dynamic(
@@ -244,25 +286,26 @@ function ArchivePageContent(props?: ArchivePageProps) {
   }, [handleCardClick, getSpan]);
 
 
-  // --- Header Search Bar（稳定 key 避免每次输入重挂载导致失焦）---
+  // --- 绑定页面 state 与 store：搜索关键词由 store 驱动，页面用 searchKeyword 驱动请求与瀑布流重渲染 ---
+  useEffect(() => {
+    archiveSearchStore.setValue = setSearchKeyword;
+    return () => {
+      archiveSearchStore.setValue = null;
+    };
+  }, []);
+  useEffect(() => {
+    archiveSearchStore.value = searchKeyword;
+    archiveSearchStore.notify();
+  }, [searchKeyword]);
+
+  // --- Header Search Bar：只依赖 isMobile，box1 只设一次不随输入重挂载；瀑布流随 searchKeyword 重渲染即可 ---
   useEffect(() => {
     setConfig((prev: any) => ({
       ...prev,
-      box1Content: (
-        <div key="archive-search" style={{ padding: '16px 24px' }}>
-          <div style={{ maxWidth: isMobile ? '100%' : '320px' }}>
-            <Input.Search
-              placeholder="搜索标题或摘要..."
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              allowClear
-              className="search-input-transparent"
-            />
-          </div>
-        </div>
-      )
+      box1Content: <ArchiveSearchBox isMobile={isMobile} />,
     }));
-  }, [setConfig, searchKeyword, isMobile]);
+    return () => setConfig((prev: any) => ({ ...prev, box1Content: null }));
+  }, [setConfig, isMobile]);
 
 
   // --- Render ---
