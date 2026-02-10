@@ -381,7 +381,7 @@ export default function AdminDashboardPage() {
             <div style={{ marginTop: '20px' }}>
               {loading ? (
                 <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                  <Spin size="large" />
+                  <Spin size="middle" />
                   <div style={{ marginTop: '16px', color: '#666' }}>
                     加载用户数据中...
                   </div>

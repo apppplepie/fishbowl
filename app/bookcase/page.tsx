@@ -668,7 +668,7 @@ function BookcasePageContent() {
 
               {hasMore && (
                 <div ref={sentinelRef} style={{ padding: '20px', textAlign: 'center' }}>
-                  <Spin size="small" />
+                  <Spin size="middle" />
                 </div>
               )}
 
@@ -727,7 +727,7 @@ function BookcasePageContent() {
 
 export default function BookcasePage() {
   return (
-    <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>}>
+    <Suspense fallback={<div style={{ height: '100vh' }}><Spin size="middle"/></div>}>
       <BookcasePageContent />
     </Suspense>
   );

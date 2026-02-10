@@ -415,7 +415,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
           <div style={{ padding: '16px 0', maxHeight: '400px', overflowY: 'auto' }}>
             {selectBookLoading ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <Spin size="large" />
+                <Spin size="middle" />
                 <div style={{ marginTop: '16px', color: '#666' }}>加载书籍列表...</div>
               </div>
             ) : booksList.length === 0 ? (

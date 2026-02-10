@@ -933,7 +933,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 0' }}>
-              <Spin size="large"><div style={{ minHeight: 100 }} /></Spin>
+              <Spin size="middle" />
             </div>
           ) : treeData.length > 0 ? (
             <DndContext
