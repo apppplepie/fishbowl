@@ -889,7 +889,7 @@ export default function Home() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
               }}
             >
-              植物长的慢就说明你需要买新手机了
+              hi
             </p>
             <Button
               type="primary"
