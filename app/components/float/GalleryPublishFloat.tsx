@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, message } from '@/app/components/ui';
-import { Form, Input, Upload, Button, Segmented } from 'antd'; // 暂时保留，后续实现
+import { FloatButton, Modal, message, Input, Button } from '@/app/components/ui';
+import { Form, Upload } from 'antd';
 import { Plus, CloudUpload } from 'lucide-react';
 import type { UploadFile, UploadProps } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -233,49 +233,41 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
               borderRadius: '8px',
               backgroundColor: '#fafafa'
             }}>
-              <Segmented<string>
-                size="large"
-                options={ACCESS_LEVELS.map(level => ({
-                  label: (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontWeight: 500
-                    }}>
-                      <div style={{
-                        width: '12px',
-                        height: '12px',
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {ACCESS_LEVELS.map(level => (
+                  <Button
+                    key={level.value}
+                    type={accessLevel === level.value ? 'primary' : 'default'}
+                    size="middle"
+                    onClick={() => setAccessLevel(level.value)}
+                    style={
+                      accessLevel === level.value
+                        ? {
+                            borderColor: level.color,
+                            backgroundColor: level.color,
+                            color: '#fff'
+                          }
+                        : {
+                            border: `2px solid ${level.color}`,
+                            color: level.color,
+                            backgroundColor: 'rgba(255,255,255,0.8)'
+                          }
+                    }
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
+                      <span style={{
+                        width: 12,
+                        height: 12,
                         borderRadius: '50%',
                         backgroundColor: level.color,
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                         border: '2px solid rgba(255,255,255,0.8)'
                       }} />
                       {level.label}
-                    </div>
-                  ),
-                  value: level.label,
-                  style: {
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                    border: `2px solid ${level.color}`,
-                    color: level.color,
-                    fontWeight: 600,
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                    backdropFilter: 'blur(4px)',
-                    margin: '2px'
-                  }
-                }))}
-                value={ACCESS_LEVELS.find(level => level.value === accessLevel)?.label || 'G'}
-                onChange={(value) => {
-                  const level = ACCESS_LEVELS.find(l => l.label === value);
-                  if (level) setAccessLevel(level.value);
-                }}
-                style={{
-                  backgroundColor: 'transparent',
-                  padding: '4px'
-                }}
-              />
+                    </span>
+                  </Button>
+                ))}
+              </div>
               <div style={{
                 marginTop: '12px',
                 padding: '8px',
@@ -370,7 +362,8 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Button 
+            <Button
+              type="default"
               onClick={() => {
                 setOpen(false);
                 form.resetFields();

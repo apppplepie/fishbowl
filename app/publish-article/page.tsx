@@ -37,6 +37,7 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { apiPostJson } from '@/lib/apiClient';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
+import { getContentAreaWrapperStyle, contentCardBorderRadius, contentCardBoxShadow } from '@/app/styles/contentArea';
 
 const { Option } = Select;
 
@@ -416,10 +417,7 @@ export default function PublishArticlePage() {
 
   return (
     <>
-        <div style={{ 
-          maxWidth: '1200px', 
-          margin: '0 auto',
-        }}>
+        <div style={getContentAreaWrapperStyle()}>
           <Form
             form={form}
             layout="vertical"
@@ -430,8 +428,8 @@ export default function PublishArticlePage() {
           >
             <Card
               style={{
-                borderRadius: isMobile ? '8px' : '12px',
-                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                borderRadius: contentCardBorderRadius,
+                boxShadow: contentCardBoxShadow,
                 marginBottom: isMobile ? '12px' : '24px',
               }}
               styles={{ body: { padding: isMobile ? '12px' : '24px' } }}
@@ -489,8 +487,8 @@ export default function PublishArticlePage() {
 
             <Card
               style={{
-                borderRadius: isMobile ? '8px' : '12px',
-                boxShadow: isMobile ? '0 1px 3px rgba(0,0,0,0.08)' : '0 2px 8px rgba(0,0,0,0.08)',
+                borderRadius: contentCardBorderRadius,
+                boxShadow: contentCardBoxShadow,
                 marginBottom: isMobile ? '60px' : '24px', // 移动端为浮动按钮留空间
               }}
               styles={{ body: { padding: isMobile ? '8px' : '24px' } }}
@@ -528,10 +526,11 @@ export default function PublishArticlePage() {
               {isPreviewMode ? (
                 // 预览模式：只显示内容，不可编辑
                 <div style={{
-                  padding: '20px',
-                  background: 'white',
-                  borderRadius: '8px',
+                  padding: isMobile ? '20px' : '40px',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderRadius: contentCardBorderRadius,
                   minHeight: '400px',
+                  boxShadow: contentCardBoxShadow,
                 }}>
                   <h1 style={{
                     fontSize: '32px',

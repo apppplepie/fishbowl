@@ -16,8 +16,7 @@ import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { useBookStore } from '@/app/stores/useBookStore';
-import TextBlock from '@/app/components/blocks/TextBlock';
-import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
+import ArticleContentClient from '@/app/components/article/ArticleContent.client';
 import type { EditMode } from '@/app/components/float/ArticleEditFloat';
 import { exportArticleAsImage } from '@/app/components/article/exportLongImage';
 
@@ -54,20 +53,13 @@ const UnifiedNavigatorButton = dynamic(
   { ssr: false }
 ) as React.ComponentType<{ onClick?: () => void; expanded?: boolean; onToggle?: () => void }>;
 
-// 代码块和图片块懒加载（非首屏内容）
-const CodeBlock = dynamic(() => import('@/app/components/blocks/CodeBlock'), { 
-  ssr: false 
-});
-
-const ImageBlock = dynamic(() => import('@/app/components/blocks/ImageBlock'), { 
-  ssr: false 
-});
 import {
   getArticleWithBlocks,
   type ImageBlockContent} from '@/app/data/mockDatabase';
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 import { getChapterLabel } from '@/app/utils/chapterNumbering';
 import { apiGet, apiPutJson, apiDeleteJson, apiPostJson } from '@/lib/apiClient';
+import { getContentAreaWrapperStyle, getContentCardStyle, CONTENT_AREA_MAX_WIDTH } from '@/app/styles/contentArea';
 
 /**
  * 书籍详情页面
@@ -1075,26 +1067,22 @@ export default function BookPage() {
         flexDirection: 'column',
         alignItems: 'center',
       }}>
-          {/* 书籍内容 */}
+          {/* ========== 书籍页主题内容区（book [id]）==========
+              样式来自 @/app/styles/contentArea，与文章页统一。 */}
           <div
-            style={{
-              width: '100%',
-              maxWidth: '800px',
-              minWidth: isMobile ? 'auto' : '600px',
-              minHeight: '50vh',
-              padding: isMobile ? '20px' : '40px',
-              background: 'rgba(255, 255, 255, 0.9)',
-              backdropFilter: 'blur(8px)',
-              borderRadius: '12px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-              boxSizing: 'border-box',
+            style={getContentCardStyle(isMobile, {
+              maxWidth: CONTENT_AREA_MAX_WIDTH,
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              minWidth: isMobile ? undefined : '600px',
+              marginBottom: 0,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-            }}
+            })}
             data-content-area
           >
-            {/* 书籍内容区域 */}
+            {/* 书籍内容区域：查看模式复用 ArticleContentClient，与文章页统一布局与排版 */}
             <div style={{ flex: 1 }}>
               {editMode === 'edit' ? (
                 <BlockEditor
@@ -1102,47 +1090,7 @@ export default function BookPage() {
                   onChange={(blocks) => setBook({ ...book, blocks })}
                 />
               ) : (
-                // 渲染书籍内容（简化动画，移除延迟，提升性能）
-                <div>
-                  {book.blocks && book.blocks.map((block: any, index: number) => {
-                    const blockStyle = {
-                      marginBottom: block.type === 'text' ? (isMobile ? '16px' : '24px') : '24px',
-                    };
-
-                    switch (block.type) {
-                      case 'text':
-                        return (
-                          <div key={block.id || index} className="book-content-block" style={blockStyle}>
-                            <TextBlock block={block} mode="view" />
-                          </div>
-                        );
-
-                      case 'image':
-                        return (
-                          <div key={block.id || index} className="book-content-block" style={blockStyle}>
-                            <ImageBlock block={block} mode="view" />
-                          </div>
-                        );
-
-                      case 'code':
-                        return (
-                          <div key={block.id || index} className="book-content-block" style={blockStyle}>
-                            <CodeBlock block={block} mode="view" />
-                          </div>
-                        );
-
-                      case 'placeholder':
-                        return (
-                          <div key={block.id || index} className="book-content-block" style={blockStyle}>
-                            <PlaceholderBlock block={block as any} />
-                          </div>
-                        );
-
-                      default:
-                        return null;
-                    }
-                  })}
-                </div>
+                <ArticleContentClient article={book} noCard />
               )}
             </div>
 
@@ -1211,26 +1159,18 @@ export default function BookPage() {
             )}
           </div>
 
-          {/* 互动按钮和评论区：minWidth 0 以便侧边栏展开时随容器一起被挤压 */}
+          {/* 书籍页：互动区+评论区容器（与上方主题内容区同宽） */}
           <div
-            style={{
-              width: '100%',
-              maxWidth: '800px',
-              minWidth: 0,
-              margin: '0 auto',
-              padding: isMobile ? '0px' : '0px',
-              boxSizing: 'border-box',
-            }}
+            style={getContentAreaWrapperStyle({ minWidth: 0 })}
             data-export-hide
           >
             {/* Part 3: 互动按钮和评论区 */}
             <div
               style={{
+                ...getContentCardStyle(isMobile),
                 background: 'white',
-                padding: isMobile ? '20px' : '40px',
-                borderRadius: '12px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                marginTop: '20px'
+                marginBottom: 0,
+                marginTop: '20px',
               }}
               data-export-hide
             >

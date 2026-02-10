@@ -14,6 +14,7 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { BreadcrumbBox1, TitleBox1, TagBox1 } from '@/app/components/box1';
 import { message } from '@/app/components/ui';
 import { apiGet, apiDeleteJson } from '@/lib/apiClient';
+import { getContentAreaWrapperStyle, getContentCardStyle } from '@/app/styles/contentArea';
 
 const CommentSection = dynamic(
   () => import('@/app/components/CommentSection').catch(() => () => null),
@@ -204,21 +205,18 @@ export default function ClientArticleShell({
     <>
       <ClientHeaderSetter articleId={articleId} editMode={editMode} />
 
-      {/* 内容区：单一入口 */}
+      {/* ========== 文章页主题内容区（article [id]）==========
+          样式来自 @/app/styles/contentArea，修改该文件即可统一文章/书籍/发布页。 */}
       <div
         data-content-area
-        style={{ width: '100%', maxWidth: 800, margin: '0 auto', padding: '0 0px', boxSizing: 'border-box' }}>
+        style={getContentAreaWrapperStyle()}>
         {editMode === 'view' ? (
           article ? (
             <ArticleContentClient article={article} />
           ) : (
             <div
               style={{
-                background: 'rgba(255, 255, 255, 0.9)',
-                padding: '24px',
-                borderRadius: '12px',
-                marginBottom: '40px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                ...getContentCardStyle(isMobile),
                 color: '#666',
               }}
             >
@@ -241,24 +239,16 @@ export default function ClientArticleShell({
         )}
       </div>
 
-      {/* 互动按钮区域（含评论区）：minWidth 0 以便侧边栏展开时随容器一起被挤压） */}
+      {/* 文章页：互动区+评论区容器（与上方主题内容区同宽） */}
       <div
-        style={{
-          width: '100%',
-          maxWidth: '800px',
-          minWidth: 0,
-          margin: '0 auto',
-          padding: isMobile ? '0px' : '0px',
-          boxSizing: 'border-box',
-        }}
+        style={getContentAreaWrapperStyle({ minWidth: 0 })}
         data-export-hide
       >
         <div
           style={{
+            ...getContentCardStyle(isMobile),
             background: 'white',
-            padding: isMobile ? '20px' : '40px',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            marginBottom: 0,
           }}
           data-export-hide
         >
