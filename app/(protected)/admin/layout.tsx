@@ -67,7 +67,7 @@ export default function AdminLayout({
         background: '#f5f5f5',
       }}>
         <div style={{ textAlign: 'center' }}>
-          <Spin size="large" />
+          <Spin size="middle" />
           <div style={{ marginTop: '16px', color: '#666' }}>
             验证权限中...
           </div>
@@ -87,7 +87,7 @@ export default function AdminLayout({
         background: '#f5f5f5',
       }}>
         <div style={{ textAlign: 'center' }}>
-          <Spin size="large" />
+          <Spin size="middle" />
           <div style={{ marginTop: '16px', color: '#666' }}>
             请先登录...
           </div>
@@ -107,7 +107,7 @@ export default function AdminLayout({
         background: '#f5f5f5',
       }}>
         <div style={{ textAlign: 'center' }}>
-          <Spin size="large" />
+          <Spin size="middle" />
           <div style={{ marginTop: '16px', color: '#666' }}>
             无权限访问...
           </div>

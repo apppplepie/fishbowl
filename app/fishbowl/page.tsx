@@ -557,11 +557,11 @@ export default function FishbowlPage() {
   // Theme Controller Component
   const ThemeController: React.FC = () => {
     return (
-      <div className="bg-white/40 backdrop-blur-xl border border-white/40 shadow-xl rounded-2xl p-6 flex flex-col gap-4 transition-all duration-300 w-[320px]">
+      <div className="bg-white/40 backdrop-blur-xl border border-white/40 shadow-xl rounded-2xl p-6 flex flex-col gap-4 transition-all duration-300 w-[320px] lg:w-[400px]">
         <h3 className="text-sm font-semibold text-gray-800 text-center mb-2">鱼缸主题</h3>
 
-        {/* --- 主题预设列表 --- */}
-        <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-3 justify-items-center">
+        {/* --- 主题预设列表：列数随容器宽度固定，避免 10 列挤在 320px 里导致圆圈被压成一行半并缩起 --- */}
+        <div className="grid grid-cols-6 lg:grid-cols-8 gap-3 justify-items-center">
           {fishbowlThemes.map((theme) => (
             <button
               key={theme.id}
