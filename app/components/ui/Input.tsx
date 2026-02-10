@@ -37,8 +37,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       onKeyDown?.(e);
     };
     const hasPrefix = !!prefix;
-    const hasSuffix = !!suffix || (allowClear && value);
-    const showClear = allowClear && value && !restProps.disabled;
+    const safeValue = value ?? '';
+    const hasSuffix = !!suffix || (allowClear && safeValue);
+    const showClear = allowClear && safeValue && !restProps.disabled;
 
     const inputClasses = [
       'ui-input',
@@ -73,7 +74,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           className="ui-input-inner"
-          value={value}
+          value={safeValue}
           onChange={onChange}
           onKeyDown={handleKeyDown}
           {...inputProps}
@@ -194,8 +195,9 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
       }
     };
 
-    const currentLength = typeof value === 'string' ? value.length : 0;
-    const showClearIcon = allowClear && value && !restProps.disabled;
+    const safeValue = value ?? '';
+    const currentLength = typeof safeValue === 'string' ? safeValue.length : 0;
+    const showClearIcon = allowClear && safeValue && !restProps.disabled;
 
     const textareaClasses = [
       'ui-textarea',
@@ -211,7 +213,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
         <textarea
           ref={combinedRef}
           className="ui-textarea-inner"
-          value={value}
+          value={safeValue}
           onChange={onChange}
           maxLength={maxLength}
           {...restProps}

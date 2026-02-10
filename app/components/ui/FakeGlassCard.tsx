@@ -24,7 +24,7 @@ export const FakeGlassCard: React.FC<FakeGlassCardProps> = ({
         ${className}
       `}
     >
-      {/* 顶部高光 */}
+      {/* 顶部高光 - profile 页用 .profile-glass-effect 在 CSS 中隐藏 */}
       <div className="pointer-events-none absolute inset-0 rounded-3xl
         bg-gradient-to-b from-white/40 via-white/10 to-transparent" />
 

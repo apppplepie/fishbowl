@@ -706,6 +706,19 @@ export default function Home() {
     const style = document.createElement('style');
     style.id = styleId;
     style.innerHTML = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(100vw) translateY(-50%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(-50%) translateY(0);
+          opacity: 1;
+        }
+      }
+      .crow-entrance-animation {
+        animation: slideIn 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      }
       .crow-container {
         width: 90vw; /* 手机上默认 90vw */
       }
@@ -923,18 +936,16 @@ export default function Home() {
           {/* Crow 组件 - 覆盖在画布上，根据脚部位置动态定位，根据屏幕宽度等比例缩放 */}
           <div
             ref={crowContainerRef}
-            className="crow-container"
+            className={`crow-container ${crowVisible ? 'crow-entrance-animation' : ''}`}
             style={{
               position: 'absolute',
               top: `calc(${crowTop} - 80vh)`,
               left: '70%',
-              transform: 'translateX(-50%)',
               zIndex: 999,
               pointerEvents: 'auto',
-              opacity: crowVisible ? 1 : 0,
-              transition: 'opacity 1.2s ease-in-out',
+              opacity: crowVisible ? undefined : 0,
+              // 入场时由 .crow-entrance-animation 的 slideIn 控制位移与透明度
               // SVG viewBox 是 1300x1400，宽高比 = 1400/1300 ≈ 1.077
-              // 使用 aspect-ratio 保持宽高比，高度会自动计算
               // 宽度通过 CSS 类控制（响应式）
             }}
           >

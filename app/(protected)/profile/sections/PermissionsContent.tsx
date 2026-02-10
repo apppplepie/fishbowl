@@ -38,7 +38,7 @@ export const PermissionsContent: React.FC<PermissionsContentProps> = ({ user }) 
 
   return (
     <div className="space-y-6 pt-4 h-full flex flex-col justify-center">
-      <div
+      {/* <div
         className="p-6 rounded-2xl flex items-center justify-between"
         style={{
           backgroundColor: theme.background.selectedWarning,
@@ -52,7 +52,7 @@ export const PermissionsContent: React.FC<PermissionsContentProps> = ({ user }) 
           </p>
         </div>
         <ShieldCheck size={24} style={{ color: '#000000' }} />
-      </div>
+      </div> */}
 
       {/* 文章权限过滤器 */}
       <div

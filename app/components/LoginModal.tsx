@@ -160,12 +160,6 @@ export default function LoginModal({ open, onClose, onLoginSuccess }: LoginModal
             </a>
           </Form.Item>
         </Form>
-
-        <div style={{ marginTop: '24px', padding: '12px', background: '#f0f5ff', borderRadius: '4px', fontSize: '12px', color: '#666' }}>
-          💡 测试账号：<br />
-          管理员 - 用户名: <strong>admin</strong> 密码: <strong>admin123456</strong><br />
-          普通用户 - 用户名: <strong>testuser</strong> 密码: <strong>test123456</strong>
-        </div>
       </div>
     </Modal>
   );
