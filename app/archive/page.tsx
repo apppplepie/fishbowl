@@ -352,7 +352,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
               {/* Load More Trigger */}
               {hasMore && (
                  <div ref={sentinelRef} style={{ padding: '20px', textAlign: 'center' }}>
-                   <Spin size="small" />
+                   <Spin size="middle" />
                  </div>
               )}
               
@@ -397,7 +397,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
 
 export default function ArchivePage(props?: ArchivePageProps) {
   return (
-    <Suspense fallback={<div style={{height: '100vh'}}><Spin/></div>}>
+    <Suspense fallback={<div style={{height: '100vh'}}><Spin size="middle"/></div>}>
       <ArchivePageContent {...props} />
     </Suspense>
   );
