@@ -74,7 +74,7 @@ export default function ImageBlock({
     });
   };
 
-  // 浏览模式渲染：使用 Next/Image + getImageSrc + 可选 media（blur_data_url、宽高），与 ImageCard 一致，加载更快
+  // 浏览模式渲染：按原比例显示；有 media 宽高时用 width/height 避免拉伸，无宽高时用固定比例容器；unoptimized 使用稳定 URL 便于浏览器缓存（封面等同源同 URL 可复用）
   if (mode === 'view') {
     const pc = block.parsedContent as { url?: string; title?: string; description?: string } | undefined;
     const media = (block as any).media as { width?: number; height?: number; aspect_ratio?: number | string; blur_data_url?: string } | undefined;
@@ -87,6 +87,9 @@ export default function ImageBlock({
       ? toValidAspect(Number(media.width) / Number(media.height))
       : null;
     const aspectRatio = apiAspect ?? sizeAspect ?? DEFAULT_ASPECT;
+    const hasIntrinsicSize = media?.width != null && media?.height != null && Number(media.width) > 0 && Number(media.height) > 0;
+    const w = hasIntrinsicSize ? Number(media!.width) : 800;
+    const h = hasIntrinsicSize ? Number(media!.height) : Math.round(800 / aspectRatio);
 
     return (
       <div style={{
@@ -124,10 +127,10 @@ export default function ImageBlock({
             transition: 'transform 0.2s',
             position: 'relative',
             width: '100%',
-            aspectRatio,
             overflow: 'hidden',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            ...(hasIntrinsicSize ? {} : { aspectRatio: String(aspectRatio) }),
           }}
           onClick={() => setShowModal(true)}
           onMouseEnter={(e) => {
@@ -141,10 +144,14 @@ export default function ImageBlock({
             <Image
               src={resolvedSrc}
               alt={pc?.title ?? '图片'}
-              fill
+              width={w}
+              height={h}
+              unoptimized
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 800px"
               style={{
-                objectFit: 'contain',
+                width: '100%',
+                height: 'auto',
+                display: 'block',
                 transition: 'transform 0.3s ease',
               }}
               loading="lazy"
@@ -155,7 +162,7 @@ export default function ImageBlock({
               }}
             />
           ) : (
-            <div style={{ width: '100%', height: '100%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+            <div style={{ width: '100%', height: hasIntrinsicSize ? undefined : '100%', minHeight: 120, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
               图片地址为空
             </div>
           )}

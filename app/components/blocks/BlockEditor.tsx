@@ -43,6 +43,8 @@ import type { Block, TextBlock as TextBlockType, ImageBlock as ImageBlockType, C
 import { applyFormat, type FormatOption } from '@/app/utils/textFormatter';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { uploadFileWithProgress } from '@/lib/uploadClient';
+import { apiGetJson } from '@/lib/apiClient';
+import { Spin } from '@/app/components/ui';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -250,6 +252,15 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string>(''); // 预览 URL
   const [insertPosition, setInsertPosition] = useState<number>(-1); // 记录要插入的位置，-1表示末尾
+  // 引用块选择器：先选再插入，不创建空引用块
+  const [quotePickerVisible, setQuotePickerVisible] = useState(false);
+  const [pickerBlocks, setPickerBlocks] = useState<any[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerPage, setPickerPage] = useState(1);
+  const [pickerTotal, setPickerTotal] = useState(0);
+  const [pickerSearchQuery, setPickerSearchQuery] = useState('');
+  const [pickerInputValue, setPickerInputValue] = useState('');
+  const pickerPageSize = 10;
 
   // 清理预览 URL（组件卸载时）
   useEffect(() => {
@@ -357,35 +368,104 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     setInsertPosition(-1);
   };
 
-  // 添加引用块
-  const addQuoteBlock = () => {
-    const newBlock: QuoteBlockType = {
-      id: generateId(),
-      type: 'quote',
-      order: 0, // 临时值，后面会重新排序
-      title: '内容引用',
-      description: '点击查看所有内容块引用',
-    };
+  // 获取引用块列表（选择后插入，不创建空引用块）
+  const fetchPickerBlocks = async (page: number = 1, query: string = pickerSearchQuery) => {
+    setPickerLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pickerPageSize.toString(),
+      });
+      if (query.trim()) params.append('search', query.trim());
+      const data = await apiGetJson<{ success: boolean; data: { blocks: any[]; total: number }; error?: string }>(`/api/blocks?${params}`);
+      if (data.success) {
+        setPickerBlocks(data.data.blocks);
+        setPickerTotal(data.data.total);
+      }
+    } catch (e) {
+      console.error('获取内容块列表失败', e);
+    } finally {
+      setPickerLoading(false);
+    }
+  };
 
-    // 在指定位置插入
+  useEffect(() => {
+    if (quotePickerVisible) {
+      fetchPickerBlocks(pickerPage, pickerSearchQuery);
+    }
+  }, [quotePickerVisible, pickerPage, pickerSearchQuery]);
+
+  // 从 API 块数据构建编辑器块（与 QuoteBlock 一致）
+  const buildBlockFromPreview = (blockData: any): Block | null => {
+    const { type, content } = blockData;
+    const parsedContent = blockData.parsedContent;
+    let newBlock: any = null;
+
+    if (type === 'image') {
+      let imageUrl = '';
+      let imageTitle = '';
+      if (parsedContent) {
+        imageUrl = parsedContent.url || parsedContent.imageUrl || '';
+        imageTitle = parsedContent.title || '';
+      } else {
+        try {
+          const imageContent = typeof content === 'string' ? JSON.parse(content) : content;
+          imageUrl = imageContent?.imageUrl || imageContent?.url || '';
+          imageTitle = imageContent?.title || '';
+        } catch {
+          imageUrl = typeof content === 'string' ? content : '';
+        }
+      }
+      if (imageUrl) {
+        newBlock = { id: generateId(), type: 'image', order: 0, imageUrl, title: imageTitle || undefined };
+      }
+    } else if (type === 'text') {
+      const textContent = parsedContent?.content || (typeof content === 'string' ? content : '');
+      if (textContent) {
+        newBlock = { id: generateId(), type: 'text', order: 0, content: textContent };
+      }
+    } else if (type === 'code') {
+      let codeContent = '';
+      let codeLanguage = 'javascript';
+      let codeTitle = '';
+      if (parsedContent) {
+        codeContent = parsedContent.code || '';
+        codeLanguage = parsedContent.language || 'javascript';
+        codeTitle = parsedContent.title || '';
+      } else {
+        try {
+          const codeData = typeof content === 'string' ? JSON.parse(content) : content;
+          codeContent = codeData?.code || '';
+          codeLanguage = codeData?.language || 'javascript';
+          codeTitle = codeData?.title || '';
+        } catch {
+          codeContent = typeof content === 'string' ? content : '';
+        }
+      }
+      if (codeContent) {
+        newBlock = { id: generateId(), type: 'code', order: 0, code: codeContent, language: codeLanguage, title: codeTitle || undefined };
+      }
+    }
+    return newBlock;
+  };
+
+  const insertBlockFromPreview = (blockData: any) => {
+    const newBlock = buildBlockFromPreview(blockData);
+    if (!newBlock) return;
     const newBlocks = [...blocks];
     if (insertPosition === -1) {
-      // 添加到末尾
       newBlocks.push(newBlock);
     } else {
-      // 在指定位置后面插入
       newBlocks.splice(insertPosition + 1, 0, newBlock);
     }
-
-    // 重新排序
-    const reorderedBlocks = newBlocks.map((block, i) => ({
-      ...block,
-      order: i,
-    }));
-
+    const reorderedBlocks = newBlocks.map((b, i) => ({ ...b, order: i }));
     onChange(reorderedBlocks);
+    setQuotePickerVisible(false);
     setAddBlockModalVisible(false);
     setInsertPosition(-1);
+    setPickerPage(1);
+    setPickerSearchQuery('');
+    setPickerInputValue('');
   };
 
   // 添加图片块
@@ -663,36 +743,38 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
                   canDelete={blocks.length > 1}
                 />
 
-                {/* 块之间的添加按钮 - 移动端简化 */}
-                <div
-                  style={{
-                    textAlign: 'center',
-                    marginTop: isMobile ? '8px' : '8px',
-                    marginBottom: isMobile ? '8px' : '0',
-                    opacity: isMobile ? 0.7 : 0.5,
-                    transition: 'opacity 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = isMobile ? '0.7' : '0.5';
-                  }}
-                >
-                  <Button
-                    type="dashed"
-                    size="small"
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      setInsertPosition(index); // 记录要在这个块后面插入
-                      setAddBlockModalVisible(true);
-                    }}
+                {/* 块之间的添加按钮：引用块未选择引用时不显示 */}
+                {block.type !== 'quote' && (
+                  <div
                     style={{
-                      fontSize: isMobile ? '12px' : '14px',
+                      textAlign: 'center',
+                      marginTop: isMobile ? '8px' : '8px',
+                      marginBottom: isMobile ? '8px' : '0',
+                      opacity: isMobile ? 0.7 : 0.5,
+                      transition: 'opacity 0.2s',
                     }}
-                  >添加新块
-                  </Button>
-                </div>
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = isMobile ? '0.7' : '0.5';
+                    }}
+                  >
+                    <Button
+                      type="dashed"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => {
+                        setInsertPosition(index);
+                        setAddBlockModalVisible(true);
+                      }}
+                      style={{
+                        fontSize: isMobile ? '12px' : '14px',
+                      }}
+                    >添加新块
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </SortableContext>
@@ -760,16 +842,111 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
             type="default"
             size="large"
             icon={<LinkOutlined />}
-            onClick={addQuoteBlock}
+            onClick={() => {
+              setAddBlockModalVisible(false);
+              setQuotePickerVisible(true);
+            }}
             block
             style={{ height: '60px', fontSize: '16px' }}
           >
             <div>
               <div>引用块</div>
-              <div style={{ fontSize: '12px', color: '#999' }}>引用其他内容块，支持分页浏览</div>
+              <div style={{ fontSize: '12px', color: '#999' }}>选择已有内容块插入，选后才创建</div>
             </div>
           </Button>
         </Space>
+      </Modal>
+
+      {/* 引用块选择器：选中的块会插入到当前插入位置，不创建空引用块 */}
+      <Modal
+        title={
+          <span>
+            <LinkOutlined style={{ marginRight: '8px' }} />
+            {insertPosition === -1 ? '选择要引用的内容块' : `在第 ${insertPosition + 1} 个块后插入`}
+          </span>
+        }
+        open={quotePickerVisible}
+        onCancel={() => {
+          setQuotePickerVisible(false);
+          setInsertPosition(-1);
+          setPickerPage(1);
+          setPickerSearchQuery('');
+          setPickerInputValue('');
+        }}
+        footer={null}
+        width="80%"
+        styles={{ body: { maxHeight: '70vh', overflow: 'auto' } }}
+      >
+        {pickerLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <Spin size="large" />
+            <div style={{ marginTop: '16px', color: '#666' }}>加载内容中...</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: '16px' }}>
+              <Input.Search
+                placeholder="搜索内容块..."
+                value={pickerInputValue}
+                onChange={(e) => setPickerInputValue(e.target.value)}
+                onSearch={(q) => {
+                  setPickerSearchQuery(q);
+                  setPickerPage(1);
+                }}
+                allowClear
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div style={{ marginBottom: '12px', fontSize: '12px', color: '#999' }}>
+              共 {pickerTotal} 个内容块，点击一项即可插入
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              {pickerBlocks.map((item: any) => {
+                const typeLabel = item.type === 'text' ? '文字' : item.type === 'image' ? '图片' : item.type === 'code' ? '代码' : '内容';
+                const preview = item.type === 'text'
+                  ? (item.parsedContent?.content || item.content || '').replace(/<[^>]+>/g, '').slice(0, 60)
+                  : item.type === 'code'
+                    ? (item.parsedContent?.code || (typeof item.content === 'string' ? '' : item.content?.code) || '').slice(0, 60)
+                    : item.type === 'image' ? '图片块' : '内容块';
+                return (
+                  <div
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => insertBlockFromPreview(item)}
+                    onKeyDown={(e) => e.key === 'Enter' && insertBlockFromPreview(item)}
+                    style={{
+                      padding: '12px',
+                      marginBottom: '8px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, marginRight: '8px' }}>{typeLabel}</span>
+                    <span style={{ color: '#666', fontSize: '13px' }}>{preview}{preview.length >= 60 ? '…' : ''}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {pickerTotal > pickerPageSize && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                <Button
+                  disabled={pickerPage <= 1}
+                  onClick={() => setPickerPage((p) => p - 1)}
+                >
+                  上一页
+                </Button>
+                <Button
+                  disabled={pickerPage >= Math.ceil(pickerTotal / pickerPageSize)}
+                  onClick={() => setPickerPage((p) => p + 1)}
+                >
+                  下一页
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </Modal>
 
       {/* 添加图片弹窗 */}

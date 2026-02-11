@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, Modal, Typography, Pagination, Divider, Input } from 'antd';
+import { Card, Modal, Typography, Divider, Input, Button } from 'antd';
 import { LinkOutlined, PictureOutlined } from '@ant-design/icons';
 import { Image as AntImage } from 'antd';
 import type { QuoteBlock as QuoteBlockType } from '@/app/types/block';
@@ -514,16 +514,19 @@ const QuoteBlock: React.FC<QuoteBlockProps> = ({
             {total > pageSize && (
               <>
                 <Divider />
-                <div style={{ textAlign: 'center' }}>
-                  <Pagination
-                    current={currentPage}
-                    total={total}
-                    pageSize={pageSize}
-                    onChange={handlePageChange}
-                    showSizeChanger={false}
-                    showQuickJumper
-                    showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
-                  />
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                  <Button
+                    disabled={currentPage <= 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                  >
+                    上一页
+                  </Button>
+                  <Button
+                    disabled={currentPage >= Math.ceil(total / pageSize)}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                  >
+                    下一页
+                  </Button>
                 </div>
               </>
             )}
