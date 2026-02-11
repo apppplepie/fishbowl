@@ -239,38 +239,40 @@ export default function ClientArticleShell({
         )}
       </div>
 
-      {/* 文章页：互动区+评论区容器（与上方主题内容区同宽） */}
-      <div
-        style={getContentAreaWrapperStyle({ minWidth: 0 })}
-        data-export-hide
-      >
+      {/* 文章页：互动区+评论区容器（编辑模式下不显示） */}
+      {editMode !== 'edit' && (
         <div
-          style={{
-            ...getContentCardStyle(isMobile),
-            background: 'white',
-            marginBottom: 0,
-          }}
+          style={getContentAreaWrapperStyle({ minWidth: 0 })}
           data-export-hide
         >
-          <ClientArticleActions
-            articleId={articleId}
-            initialLikes={likes}
-            initialComments={comments}
-            articleTitle={article?.title}
-          />
+          <div
+            style={{
+              ...getContentCardStyle(isMobile),
+              background: 'white',
+              marginBottom: 0,
+            }}
+            data-export-hide
+          >
+            <ClientArticleActions
+              articleId={articleId}
+              initialLikes={likes}
+              initialComments={comments}
+              articleTitle={article?.title}
+            />
 
-          {/* 评论区 - 延迟加载 */}
-          <CommentSection
-            articleId={articleId}
-            currentUser={user ? {
-              username: user.username,
-              avatar: user.avatar_base64 as string,
-              role: user.role
-            } : null}
-            isLoggedIn={isLoggedIn}
-          />
+            {/* 评论区 - 延迟加载 */}
+            <CommentSection
+              articleId={articleId}
+              currentUser={user ? {
+                username: user.username,
+                avatar: user.avatar_base64 as string,
+                role: user.role
+              } : null}
+              isLoggedIn={isLoggedIn}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 浮动遥控器：只负责切换 editMode 与触发保存等 */}
       <ArticleEditFloat

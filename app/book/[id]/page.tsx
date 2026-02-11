@@ -1159,72 +1159,74 @@ export default function BookPage() {
             )}
           </div>
 
-          {/* 书籍页：互动区+评论区容器（与上方主题内容区同宽） */}
-          <div
-            style={getContentAreaWrapperStyle({ minWidth: 0 })}
-            data-export-hide
-          >
-            {/* Part 3: 互动按钮和评论区 */}
+          {/* 书籍页：互动区+评论区容器（编辑模式下不显示） */}
+          {editMode !== 'edit' && (
             <div
-              style={{
-                ...getContentCardStyle(isMobile),
-                background: 'white',
-                marginBottom: 0,
-                marginTop: '20px',
-              }}
+              style={getContentAreaWrapperStyle({ minWidth: 0 })}
               data-export-hide
             >
-              {/* 互动按钮 */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '16px',
-                paddingBottom: '32px',
-                borderBottom: '1px solid #e8e8e8',
-              }}>
-                <Button
-                  icon={<LikeOutlined />}
-                  size="large"
-                  style={{
-                    minWidth: isMobile ? '48px' : '120px',
-                    color: isLiked ? '#1890ff' : undefined,
-                    borderColor: isLiked ? '#1890ff' : undefined,
-                  }}
-                  onClick={handleLike}
-                  loading={isLiking}
-                >
-                  {!isMobile && <>{isLiked ? '已点赞' : '点赞'} {likesCount}</>}
-                </Button>
-                <Button
-                  icon={<ShareAltOutlined />}
-                  size="large"
-                  style={{ minWidth: isMobile ? '48px' : '120px' }}
-                  onClick={handleShare}
-                >
-                  {!isMobile && '分享链接'}
-                </Button>
-                <Button
-                  icon={<CameraOutlined />}
-                  size="large"
-                  style={{ minWidth: isMobile ? '48px' : '120px' }}
-                  onClick={handleExportAsImage}
-                >
-                  {!isMobile && '保存为图片'}
-                </Button>
-              </div>
+              {/* Part 3: 互动按钮和评论区 */}
+              <div
+                style={{
+                  ...getContentCardStyle(isMobile),
+                  background: 'white',
+                  marginBottom: 0,
+                  marginTop: '20px',
+                }}
+                data-export-hide
+              >
+                {/* 互动按钮 */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '16px',
+                  paddingBottom: '32px',
+                  borderBottom: '1px solid #e8e8e8',
+                }}>
+                  <Button
+                    icon={<LikeOutlined />}
+                    size="large"
+                    style={{
+                      minWidth: isMobile ? '48px' : '120px',
+                      color: isLiked ? '#1890ff' : undefined,
+                      borderColor: isLiked ? '#1890ff' : undefined,
+                    }}
+                    onClick={handleLike}
+                    loading={isLiking}
+                  >
+                    {!isMobile && <>{isLiked ? '已点赞' : '点赞'} {likesCount}</>}
+                  </Button>
+                  <Button
+                    icon={<ShareAltOutlined />}
+                    size="large"
+                    style={{ minWidth: isMobile ? '48px' : '120px' }}
+                    onClick={handleShare}
+                  >
+                    {!isMobile && '分享链接'}
+                  </Button>
+                  <Button
+                    icon={<CameraOutlined />}
+                    size="large"
+                    style={{ minWidth: isMobile ? '48px' : '120px' }}
+                    onClick={handleExportAsImage}
+                  >
+                    {!isMobile && '保存为图片'}
+                  </Button>
+                </div>
 
-              {/* 评论区 */}
-              {/* 评论区 - 懒加载 */}
-              {shouldLoadInteractions && (
-                <CommentSection
-                  articleId={currentArticleId}
-                  isLoggedIn={isLoggedIn}
-                  currentUser={user}
-                  onCommentCountChange={setCommentsCount}
-                />
-              )}
+                {/* 评论区 */}
+                {/* 评论区 - 懒加载 */}
+                {shouldLoadInteractions && (
+                  <CommentSection
+                    articleId={currentArticleId}
+                    isLoggedIn={isLoggedIn}
+                    currentUser={user}
+                    onCommentCountChange={setCommentsCount}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          )}
       </div>
 
       {/* 图片模态框 */}
