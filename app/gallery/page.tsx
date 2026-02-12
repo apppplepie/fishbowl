@@ -34,15 +34,27 @@ export default function GalleryPage() {
   const [offset, setOffset] = useState(0);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
 
-  // 与请求头/后端一致：屏幕宽→容器宽→列宽，用于封面卡片占位与比例
+  // 瀑布流容器宽度：用真实 DOM 测量，避免从 book 等页导航过来时父级尚未布局导致列宽异常变窄
+  const masonryWrapRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(() =>
     typeof window !== 'undefined' ? getContainerWidthFromScreenWidth(window.innerWidth) : 1400
   );
   useEffect(() => {
-    const update = () => setContainerWidth(getContainerWidthFromScreenWidth(window.innerWidth));
+    const el = masonryWrapRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.getBoundingClientRect().width;
+      if (Number.isFinite(w) && w > 0) setContainerWidth(w);
+    };
     update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    // 导航进入时首帧可能为 0，延迟再测一次
+    const t = setTimeout(update, 100);
+    return () => {
+      ro.disconnect();
+      clearTimeout(t);
+    };
   }, []);
   const columnWidth = useMemo(
     () => getColumnWidthFromContainerWidth(containerWidth),
@@ -147,7 +159,7 @@ export default function GalleryPage() {
   };
 
   return (
-    <div style={{ padding: '0 8px' }}>
+    <div ref={masonryWrapRef} style={{ padding: '0 8px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {loading ? (
         <div style={{ textAlign: 'center', padding: '100px 0' }}><Spin size="large" /></div>
       ) : filteredArticles.length === 0 ? (

@@ -82,8 +82,9 @@ export default function Home() {
   const typewriterRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleCrowDoubleTap = useCallback(() => {
+    if (!isLoggedIn) return;
     router.push('/chat');
-  }, [router]);
+  }, [router, isLoggedIn]);
 
   const handleCrowTouchEnd = useCallback(
     (e: React.TouchEvent) => {
@@ -950,7 +951,7 @@ export default function Home() {
               className="text-xl mb-8 max-w-2xl mx-auto min-h-[3rem] flex items-center justify-center" 
               style={{ 
                 fontSize: '1.25rem',
-                fontWeight: 400,
+                fontWeight: 500,
                 letterSpacing: '0.01em',
                 lineHeight: '1.6',
                 textShadow: '0 2px 4px rgba(0,0,0,0.15)', 
