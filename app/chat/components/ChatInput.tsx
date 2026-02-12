@@ -5,9 +5,11 @@ import { cn } from '../utils/cn';
 interface ChatInputProps {
   onSend: (message: string) => void;
   isLoading: boolean;
+  /** 侧边栏展开时的左边距（用于 fixed 与内容区对齐） */
+  leftOffset?: number;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSend, isLoading }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({ onSend, isLoading, leftOffset = 0 }) => {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -41,42 +43,50 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, isLoading }) => {
   };
 
   return (
-    <div className="border-t border-slate-100 bg-white/80 backdrop-blur-md p-4 pb-6 sm:p-6 z-10 sticky bottom-0">
-      <div className="max-w-4xl mx-auto relative">
-        <div className="relative flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-2 py-1.5 shadow-sm">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, 3000))}
-            onKeyDown={handleKeyDown}
-            placeholder="输入框（3000 字以内）"
-            maxLength={3000}
-            className="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-slate-800 placeholder:text-slate-400 resize-none py-2 pl-2 max-h-[120px] min-h-[32px] text-base leading-relaxed"
-            rows={1}
-            disabled={isLoading}
-          />
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className={cn(
-              "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-transparent transition-colors",
-              input.trim() && !isLoading
-                ? "text-primary hover:text-primary/80 cursor-pointer"
-                : "text-slate-400 cursor-not-allowed"
-            )}
-          >
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-slate-300 border-t-primary rounded-full animate-spin" />
-            ) : (
-              <Send size={18} className={input.trim() ? "ml-0.5" : ""} />
-            )}
-          </button>
-        </div>
-        <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-0 transition-opacity duration-300 pointer-events-none">
-            {/* Optional helper hint if needed in future */}
-        </div>
-      </div>
+<div
+  className="bg-black p-4 pb-6 sm:p-6 z-10"
+  style={{
+    position: 'fixed',
+    bottom: 0,
+    left: leftOffset,
+    right: 0,
+  }}
+>
+  <div className="max-w-4xl mx-auto relative">
+    <div className="relative flex items-center gap-2 bg-white border border-slate-200/80 rounded-xl px-2 py-1.5 shadow-lg">
+    <textarea
+        ref={textareaRef}
+        value={input}
+        onChange={(e) => setInput(e.target.value.slice(0, 3000))}
+        onKeyDown={handleKeyDown}
+        placeholder="输入框（3000 字以内）"
+        maxLength={3000}
+        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-slate-900 placeholder:text-slate-500 resize-none py-2 pl-2 max-h-[120px] min-h-[32px] text-base leading-relaxed"
+        rows={1}
+        disabled={isLoading}
+      />
+      <button
+        type="button"
+        onClick={handleSend}
+        disabled={!input.trim() || isLoading}
+        className={cn(
+          "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-transparent transition-colors",
+          input.trim() && !isLoading
+            ? "text-slate-900 hover:text-slate-700 cursor-pointer"
+            : "text-slate-400 cursor-not-allowed"
+        )}
+      >
+        {isLoading ? (
+          <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin" />
+        ) : (
+          <Send size={18} className={input.trim() ? "ml-0.5" : ""} />
+        )}
+      </button>
     </div>
+    <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-0 transition-opacity duration-300 pointer-events-none">
+        {/* Optional helper hint if needed in future */}
+    </div>
+  </div>
+</div>
   );
 };

@@ -300,3 +300,64 @@
 .archive-category-container [class*="Empty"] {
   color: var(--menu-text-default) !important;
 }
+
+/* ========== Chat 侧边栏 ========== */
+.chat-sidebar-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-sidebar-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.chat-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 2px 8px;
+  border-radius: 6px;
+  cursor: default;
+  transition: all 0.2s var(--sidebar-ease);
+  color: var(--menu-text-default);
+  background: none;
+  width: calc(100% - 16px);
+  font-size: 14px;
+  border: none;
+}
+
+.chat-sidebar-item:hover {
+  background: var(--menu-bg-hover);
+  color: var(--menu-text-hover);
+}
+
+.chat-sidebar-item.active {
+  background: linear-gradient(90deg, var(--menu-bg-active-start) 0%, var(--menu-bg-active-end) 100%);
+  color: var(--menu-text-active);
+}
+
+.chat-sidebar-delete {
+  flex-shrink: 0;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--menu-text-default);
+  cursor: pointer;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-sidebar-delete:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.15);
+}

@@ -2,11 +2,11 @@ import OpenAI from "openai";
 
 export const DEFAULT_SYSTEM = "你是人";
 
-export const SUMMARY_SYSTEM = `你是一个对话总结助手。根据下面的对话内容（以及已有的总结），生成一段更新后的简洁总结。
+export const SUMMARY_SYSTEM = `根据总结和对话记录，生成一段更新后的简洁总结，着重关注用户提出的重要设定和先后顺序。
 要求：只输出总结正文，不要任何解释、前缀或引号。总结不超过 5000 字。`;
 
-export const NAME_SYSTEM = `你是一个对话标题助手。根据用户的第一条消息和助手的回复，生成一条极短的对话标题。
-要求：只用中文或英文，10 字以内。只输出标题文字，不要引号或解释。`;
+export const NAME_SYSTEM = `根据用户的第一条消息和助手的回复，生成一条极短的对话标题。
+要求：只用中文或英文，10 字以内。`;
 
 export type ChatMessage = OpenAI.Chat.ChatCompletionMessageParam;
 
