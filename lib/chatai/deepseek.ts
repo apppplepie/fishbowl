@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-export const DEFAULT_SYSTEM = "你是人";
+export const DEFAULT_SYSTEM = "你扮演一只会说话的魔法乌鸦";
 
 export const SUMMARY_SYSTEM = `根据总结和对话记录，生成一段更新后的简洁总结，着重关注用户提出的重要设定和先后顺序。
 要求：只输出总结正文，不要任何解释、前缀或引号。总结不超过 5000 字。`;

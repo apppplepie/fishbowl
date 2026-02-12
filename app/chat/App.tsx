@@ -196,7 +196,7 @@ function App() {
       />
 
       <main className="flex-1 flex flex-col min-h-0 w-full">
-        <MessageList messages={messages} isLoading={isLoading} userAvatar={user?.avatar_base64} />
+        <MessageList messages={messages} isLoading={isLoading} />
         <ChatInput
           onSend={handleSendMessage}
           isLoading={isLoading}
