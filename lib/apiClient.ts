@@ -1,9 +1,11 @@
 /**
  * API客户端工具
  * 使用 HttpOnly Cookie 进行认证，所有请求自动携带 cookie
+ * 未登录时可选携带游客身份请求头（X-Guest-Name, X-Guest-Access-Level）
  */
 
 import { authFetch } from './authFetch';
+import { getGuestHeaders } from './guestIdentity';
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
@@ -90,6 +92,9 @@ export async function apiRequest(url: string, options: RequestOptions = {}): Pro
 
   // 携带容器宽度供后端算列宽 / precomputedSpan（屏幕宽 - 48，与前端一致）
   requestHeaders['X-Container-Width'] = String(getContainerWidthForHeader());
+
+  // 游客身份：仅存本地，请求时带上供未登录场景使用
+  Object.assign(requestHeaders, getGuestHeaders());
 
   // 合并额外的headers
   Object.assign(requestHeaders, headers);

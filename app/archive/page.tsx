@@ -10,6 +10,7 @@ import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
+import { getGuestIdentity } from '@/lib/guestIdentity';
 import { getSpanForCard, getLayoutForCard } from '@/lib/masonry-server-utils';
 
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
@@ -258,16 +259,20 @@ function ArchivePageContent(props?: ArchivePageProps) {
   }, [hasMore, offset, categoryParam, searchKeyword, fetchData]);
 
 
-  // --- 权限过滤与跳转 (保持原样) ---
-  const userMaxAccessLevel = useMemo(() => (!isLoggedIn || !user) ? 2 : (user.max_access_level ?? 2), [isLoggedIn, user]);
+  // 用户权限等级：登录用 user，游客用本地 getGuestIdentity().access_level（学习模式=1，否则=2）；依赖 filterMode 以便弹窗切换后重新取 guest
+  const userMaxAccessLevel = useMemo(() => {
+    if (isLoggedIn && user) return user.max_access_level ?? 2;
+    return getGuestIdentity()?.access_level ?? 2;
+  }, [isLoggedIn, user, filterMode]);
 
+  // 前端过滤：学习模式 = full_access_level===1；宽松 = visible_access_level<=userLevel（游客 2）；严格 = full<=userLevel
   const filteredCards = useMemo(() => {
     return cards.filter(article => {
-      const level = article.full_access_level ?? article.max_access_level ?? 1;
-      // 简化逻辑：如果是严格模式，必须满足权限
-      const accessOk = filterMode === 'strict' ? userMaxAccessLevel >= level : true; 
-      // 这里你可以把原来复杂的 loose/study 逻辑加回来，为了代码简洁我先略写，需要完全一样请告诉我
-      return accessOk;
+      const visibleLevel = article.visible_access_level ?? article.visibleAccessLevel ?? article.max_access_level ?? article.maxAccessLevel ?? 1;
+      const fullLevel = article.full_access_level ?? article.fullAccessLevel ?? visibleLevel;
+      if (filterMode === 'study') return fullLevel === 1;
+      if (filterMode === 'strict') return userMaxAccessLevel >= fullLevel;
+      return userMaxAccessLevel >= visibleLevel;
     });
   }, [cards, filterMode, userMaxAccessLevel]);
 

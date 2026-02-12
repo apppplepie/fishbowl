@@ -20,7 +20,7 @@ import {
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import UserMenu from './UserMenu';
-import LoginModal from './LoginModal';
+import GlassLoginModal from './GlassLoginModal';
 import { IoFishOutline } from 'react-icons/io5';
 import '../styles/navigation.css';
 
@@ -327,7 +327,7 @@ function NavigationDrawer({
       </Modal>
 
       {/* 登录弹窗 */}
-      <LoginModal
+      <GlassLoginModal
         open={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onLoginSuccess={(username) => {

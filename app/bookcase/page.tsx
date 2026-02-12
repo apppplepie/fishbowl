@@ -32,6 +32,7 @@ import '../styles/articles-filter.css';
 import { useHeader } from '../contexts/HeaderContext';
 import { apiGet } from '@/lib/apiClient';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
+import { getGuestIdentity } from '@/lib/guestIdentity';
 import { useAuth } from '@/app/hooks/useAuth';
 import { getSpanForCard, getLayoutForCard } from '@/lib/masonry-server-utils';
 
@@ -482,11 +483,11 @@ function BookcasePageContent() {
     router.replace(newUrl);
   }, [searchParams, pathname, router, categoryFromUrl, loadBookcaseArticles]);
 
-  // 获取用户权限等级（未登录用户默认为2）
+  // 获取用户权限等级：登录用 user，游客用本地保存的 access_level（学习模式=1，否则=2）；依赖 filterMode 以便弹窗切换学习模式后重新取 guest
   const userMaxAccessLevel = useMemo(() => {
-    if (!isLoggedIn || !user) return 2; // 未登录用户默认2级
-    return user.max_access_level ?? 2;
-  }, [isLoggedIn, user]);
+    if (isLoggedIn && user) return user.max_access_level ?? 2;
+    return getGuestIdentity()?.access_level ?? 2;
+  }, [isLoggedIn, user, filterMode]);
 
   // 过滤文章
   const filteredCards = useMemo(() => {

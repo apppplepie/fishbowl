@@ -12,6 +12,7 @@ import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
 import { apiGet } from '@/lib/apiClient';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
+import { getGuestIdentity } from '@/lib/guestIdentity';
 import {
   getContainerWidthFromScreenWidth,
   getColumnWidthFromContainerWidth,
@@ -117,9 +118,9 @@ export default function GalleryPage() {
     return () => observer.disconnect();
   }, [hasMore, fetchDrawingArticles]);
 
-  // 过滤逻辑
+  // 前端过滤：学习模式 = full_access_level===1；未开学习模式 = visible_access_level<=2（即 userLevel>=visibleLevel，游客默认 2）
+  const userLevel = useMemo(() => (isLoggedIn && user) ? (user.max_access_level ?? 2) : (getGuestIdentity()?.access_level ?? 2), [isLoggedIn, user, filterMode]);
   const filteredArticles = useMemo(() => {
-    const userLevel = (!isLoggedIn || !user) ? 2 : (user.max_access_level ?? 2);
     return articles.filter(article => {
       const visibleLevel = article.visible_access_level ?? article.max_access_level ?? 1;
       const fullLevel = article.full_access_level ?? visibleLevel;
@@ -127,7 +128,7 @@ export default function GalleryPage() {
       if (filterMode === 'strict') return userLevel >= fullLevel;
       return userLevel >= visibleLevel;
     });
-  }, [articles, filterMode, user, isLoggedIn]);
+  }, [articles, filterMode, userLevel]);
 
   const handleImageClick = async (article: any) => {
     if (article.blocks?.length) {

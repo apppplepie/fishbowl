@@ -17,7 +17,7 @@ import {
 } from '@ant-design/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { theme } from '@/app/config/theme';
-import LoginModal from './LoginModal';
+import GlassLoginModal from './GlassLoginModal';
 import { apiGetJson } from '@/lib/apiClient';
 import '../styles/navigation.css';
 
@@ -338,7 +338,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
         </header>
       </div>
 
-      <LoginModal
+      <GlassLoginModal
         open={loginModalOpen}
         onClose={closeLoginModal}
         onLoginSuccess={() => {
