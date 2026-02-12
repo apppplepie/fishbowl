@@ -22,6 +22,18 @@ import Goldfish, { FishBounds } from './components/fish/Goldfish';
 import { FishConfig } from './components/fish/Sidebar';
 import { Crow } from './components/Crow';
 
+// 首屏标语列表（可随意增删改，随机展示，打字机效果，5s 切换）
+const HERO_SLOGANS = [
+  'next.js 搭建的个人博客',
+  '不要给鱼喂太多食物！',
+  '这里很难找到学习资料，但有很多奇怪的文字。',
+  '她叫雷梅黛丝，那条鱼',
+  '哦，这里有一只乌鸦',
+  '一般来说植物全部长出来需要3s，如果多于3s，那是就说明你要换新手机了',
+  '我是这里的主人，是的，就是你看到的这只乌鸦',
+  '想跟我聊天吗？双击试试',
+];
+
 // 根系数据类型
 interface RootData {
   id: string;
@@ -62,6 +74,12 @@ export default function Home() {
   const lastCrowTapRef = useRef(0); // 手机端双触：上次触摸结束时间
   const [crowTop, setCrowTop] = useState<string>('60vh'); // 默认值，会在 useEffect 中动态计算
   const [crowVisible, setCrowVisible] = useState(false); // 控制乌鸦渐显
+
+  // 首屏打字机标语：当前标语全文、已打出字符、5s 切换
+  const [sloganText, setSloganText] = useState('');
+  const [typedSlogan, setTypedSlogan] = useState('');
+  const sloganSwitchRef = useRef<NodeJS.Timeout | null>(null);
+  const typewriterRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleCrowDoubleTap = useCallback(() => {
     router.push('/chat');
@@ -375,6 +393,38 @@ export default function Home() {
       clearTimeout(timer);
     };
   }, []);
+
+  // 首屏标语：每 5s 随机换一条
+  useEffect(() => {
+    const pickNext = () => {
+      const next = HERO_SLOGANS[Math.floor(Math.random() * HERO_SLOGANS.length)];
+      setSloganText(next);
+      setTypedSlogan('');
+    };
+    pickNext();
+    sloganSwitchRef.current = setInterval(pickNext, 7000);
+    return () => {
+      if (sloganSwitchRef.current) clearInterval(sloganSwitchRef.current);
+    };
+  }, []);
+
+  // 打字机效果：按字逐字显示当前标语
+  useEffect(() => {
+    if (!sloganText) return;
+    const CHAR_DELAY = 80;
+    typewriterRef.current = setInterval(() => {
+      setTypedSlogan((prev) => {
+        if (prev.length >= sloganText.length) {
+          if (typewriterRef.current) clearInterval(typewriterRef.current);
+          return prev;
+        }
+        return sloganText.slice(0, prev.length + 1);
+      });
+    }, CHAR_DELAY);
+    return () => {
+      if (typewriterRef.current) clearInterval(typewriterRef.current);
+    };
+  }, [sloganText]);
 
   // 计算鱼缸区域边界（用于限制鱼的活动范围）
   useEffect(() => {
@@ -885,7 +935,7 @@ export default function Home() {
             <h1 
               className="mb-6" 
               style={{ 
-                fontSize: '5rem', // 增大标题字体
+                fontSize: '5rem',
                 fontWeight: 700,
                 letterSpacing: '-0.02em',
                 lineHeight: '1.1',
@@ -897,7 +947,7 @@ export default function Home() {
               Fishbowl
             </h1>
             <p 
-              className="text-xl mb-8 max-w-2xl mx-auto" 
+              className="text-xl mb-8 max-w-2xl mx-auto min-h-[3rem] flex items-center justify-center" 
               style={{ 
                 fontSize: '1.25rem',
                 fontWeight: 400,
@@ -908,7 +958,8 @@ export default function Home() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
               }}
             >
-              hi
+              {typedSlogan}
+              <span className="animate-pulse" style={{ marginLeft: '2px' }}>|</span>
             </p>
             <Button
               type="primary"
