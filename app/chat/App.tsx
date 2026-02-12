@@ -105,7 +105,7 @@ function App() {
              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center">
                 <Sparkles size={18} fill="currentColor" />
              </div>
-             Lumina
+             Chat
            </div>
            <button 
              onClick={() => setIsSidebarOpen(false)}

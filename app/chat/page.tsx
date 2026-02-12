@@ -1,5 +1,5 @@
 import App from './App';
 
-export default function LuminaChatPage() {
+export default function ChatPage() {
   return <App />;
 }
