@@ -30,8 +30,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, isLoading }) => {
   };
 
   const handleSend = () => {
-    if (input.trim() && !isLoading) {
-      onSend(input);
+    const text = input.trim().slice(0, 3000);
+    if (text && !isLoading) {
+      onSend(text);
       setInput('');
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -46,9 +47,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSend, isLoading }) => {
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value.slice(0, 3000))}
             onKeyDown={handleKeyDown}
-            placeholder="输入框"
+            placeholder="输入框（3000 字以内）"
+            maxLength={3000}
             className="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-slate-800 placeholder:text-slate-400 resize-none py-2 pl-2 max-h-[120px] min-h-[32px] text-base leading-relaxed"
             rows={1}
             disabled={isLoading}

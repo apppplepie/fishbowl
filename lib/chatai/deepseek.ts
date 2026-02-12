@@ -1,7 +1,12 @@
 import OpenAI from "openai";
 
-const DEFAULT_SYSTEM =
-  "你是人";
+export const DEFAULT_SYSTEM = "你是人";
+
+export const SUMMARY_SYSTEM = `你是一个对话总结助手。根据下面的对话内容（以及已有的总结），生成一段更新后的简洁总结。
+要求：只输出总结正文，不要任何解释、前缀或引号。总结不超过 5000 字。`;
+
+export const NAME_SYSTEM = `你是一个对话标题助手。根据用户的第一条消息和助手的回复，生成一条极短的对话标题。
+要求：只用中文或英文，10 字以内。只输出标题文字，不要引号或解释。`;
 
 export type ChatMessage = OpenAI.Chat.ChatCompletionMessageParam;
 
@@ -18,7 +23,7 @@ function getClient(): OpenAI {
 
 /**
  * Stream chat completion from DeepSeek. Yields content deltas.
- * Use from server only (API route / Server Action) so DEEPSEEK_API_KEY is not exposed.
+ * Caller must pass full messages including system (e.g. [system, ...history, user]).
  */
 export async function streamChat(
   messages: ChatMessage[]
@@ -26,10 +31,7 @@ export async function streamChat(
   const openai = getClient();
   const stream = await openai.chat.completions.create({
     model: "deepseek-chat",
-    messages: [
-      { role: "system", content: DEFAULT_SYSTEM },
-      ...messages,
-    ],
+    messages,
     stream: true,
   });
 
@@ -41,4 +43,39 @@ export async function streamChat(
       }
     }
   })();
+}
+
+/**
+ * Non-streaming completion for summary generation. Returns only the summary text.
+ */
+export async function generateSummary(messages: ChatMessage[]): Promise<string> {
+  const openai = getClient();
+  const completion = await openai.chat.completions.create({
+    model: "deepseek-chat",
+    messages,
+    stream: false,
+  });
+  const content = completion.choices[0]?.message?.content;
+  return typeof content === "string" ? content.trim() : "";
+}
+
+/**
+ * Generate a short conversation name (≤10 chars) from first exchange.
+ */
+export async function generateConversationName(
+  firstUserMessage: string,
+  firstAssistantContent: string
+): Promise<string> {
+  const openai = getClient();
+  const completion = await openai.chat.completions.create({
+    model: "deepseek-chat",
+    messages: [
+      { role: "system", content: NAME_SYSTEM },
+      { role: "user", content: `用户说：${firstUserMessage.slice(0, 200)}\n\n助手回复：${firstAssistantContent.slice(0, 200)}` },
+    ],
+    stream: false,
+  });
+  const content = completion.choices[0]?.message?.content;
+  const raw = typeof content === "string" ? content.trim() : "";
+  return raw.slice(0, 10);
 }
