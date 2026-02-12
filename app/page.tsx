@@ -59,8 +59,27 @@ export default function Home() {
 
   // 乌鸦位置相关
   const crowContainerRef = useRef<HTMLDivElement>(null);
+  const lastCrowTapRef = useRef(0); // 手机端双触：上次触摸结束时间
   const [crowTop, setCrowTop] = useState<string>('60vh'); // 默认值，会在 useEffect 中动态计算
   const [crowVisible, setCrowVisible] = useState(false); // 控制乌鸦渐显
+
+  const handleCrowDoubleTap = useCallback(() => {
+    router.push('/chat');
+  }, [router]);
+
+  const handleCrowTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const now = Date.now();
+      if (now - lastCrowTapRef.current < 400) {
+        lastCrowTapRef.current = 0;
+        e.preventDefault();
+        handleCrowDoubleTap();
+        return;
+      }
+      lastCrowTapRef.current = now;
+    },
+    [handleCrowDoubleTap]
+  );
   // Crow SVG 的 viewBox 是 "0 0 1300 1400"，脚部 y 坐标是 902
   // 脚部在 SVG 中的相对位置：902 / 1400 ≈ 0.644 (64.4%)
   const CROW_FOOT_POSITION_RATIO = 902 / 1400; // 脚部在 SVG 中的相对位置
@@ -936,7 +955,10 @@ export default function Home() {
           {/* Crow 组件 - 覆盖在画布上，根据脚部位置动态定位，根据屏幕宽度等比例缩放 */}
           <div
             ref={crowContainerRef}
-            className={`crow-container ${crowVisible ? 'crow-entrance-animation' : ''}`}
+            role="button"
+            tabIndex={0}
+            title="跟我聊天？"
+            className={`crow-container cursor-pointer ${crowVisible ? 'crow-entrance-animation' : ''}`}
             style={{
               position: 'absolute',
               top: `calc(${crowTop} - 80vh)`,
@@ -948,6 +970,8 @@ export default function Home() {
               // SVG viewBox 是 1300x1400，宽高比 = 1400/1300 ≈ 1.077
               // 宽度通过 CSS 类控制（响应式）
             }}
+            onDoubleClick={handleCrowDoubleTap}
+            onTouchEnd={handleCrowTouchEnd}
           >
             <Crow className="w-full h-full" />
           </div>
