@@ -321,10 +321,16 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
                 type="text"
                 icon={<LoginOutlined />}
                 onClick={openLoginModal}
+                onTouchEnd={() => {
+                  // iOS：手指抬起时立即打开，避免被滚动容器“抢”掉 click
+                  openLoginModal();
+                }}
                 style={{
                   color: '#ffffff',
                   border: 'none',
-                  padding: isMobile ? '4px 8px' : '4px 12px',
+                  padding: isMobile ? '12px 16px' : '4px 12px',
+                  minHeight: isMobile ? 44 : undefined,
+                  minWidth: isMobile ? 44 : undefined,
                   height: 'auto',
                   display: 'flex',
                   alignItems: 'center',

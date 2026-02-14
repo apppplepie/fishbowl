@@ -217,3 +217,29 @@ textarea,
 }
 
 /* 骨架屏样式已移除 - 加载时保持空白透明 */
+
+/* 首屏/底部 CTA 按钮：内部文字悬停时不要出现白底（覆盖 .ui-button-text:hover） */
+.hero-cta-btn .ui-button-text:hover,
+.glass-cta-btn .ui-button-text:hover {
+  background: transparent !important;
+}
+
+/* 45px 导航栏横条：左右两侧向上的黑色小矩形 */
+.sticky-nav-bar {
+  position: relative;
+}
+.sticky-nav-bar::before,
+.sticky-nav-bar::after {
+  content: '';
+  position: absolute;
+  width: 90px;
+  height: 25px;
+  background: #000;
+  bottom: calc(100% - 5px);
+}
+.sticky-nav-bar::before {
+  left: 0;
+}
+.sticky-nav-bar::after {
+  right: 0;
+}

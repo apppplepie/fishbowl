@@ -356,7 +356,7 @@ export const Crow: React.FC<CrowProps> = ({ className }) => {
                                 cx="450" 
                                 cy="294" 
                                 r="24" 
-                                fill="#000000" 
+                                fill="#1a1a1a" 
                                 style={{ 
                                 transform: `translate(${eyeOffset.x}px, ${eyeOffset.y}px)`,
                                 transition: 'transform 0.1s ease-out'

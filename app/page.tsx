@@ -963,10 +963,10 @@ export default function Home() {
               <span className="animate-pulse" style={{ marginLeft: '2px' }}>|</span>
             </p>
             <Button
-              type="primary"
+              type="default"
               size="large"
               icon={<ChevronDown size={18} />}
-              className="animate-bounce"
+              className="animate-bounce hero-cta-btn"
               style={{
                 height: '50px',
                 fontSize: '18px',
@@ -976,7 +976,7 @@ export default function Home() {
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 color: 'black',
-                marginTop: '20px',
+                zIndex: 100,
               }}
               onClick={() => {
                 const snapPoint = window.innerHeight * 0.8;
@@ -1015,7 +1015,7 @@ export default function Home() {
               position: 'absolute',
               top: `calc(${crowTop} - 80vh)`,
               left: '70%',
-              zIndex: 999,
+              zIndex: 99,
               pointerEvents: 'auto',
               opacity: crowVisible ? undefined : 0,
               // 入场时由 .crow-entrance-animation 的 slideIn 控制位移与透明度
@@ -1030,6 +1030,7 @@ export default function Home() {
 
           {/* 45px导航栏区域 */}
           <div
+            className="sticky-nav-bar"
             style={{
               height: '45px',
               width: 'calc(100% + 12px)',
@@ -1040,7 +1041,7 @@ export default function Home() {
               top: 0,
               zIndex: 1000,
               transition: 'background-color 0.3s ease',
-              overflow: 'hidden',
+              overflow: 'visible',
             }}
           >
             <div 
@@ -1134,8 +1135,9 @@ export default function Home() {
 
               <div style={{ textAlign: 'center', marginTop: '400px', paddingBottom: '20px' }}>
                 <Button
-                  type="primary"
+                  type="default"
                   size="large"
+                  className="glass-cta-btn"
                   onClick={() => router.push('/archive')}
                   style={{
                     height: '50px',

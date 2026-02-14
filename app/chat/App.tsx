@@ -94,21 +94,30 @@ function App() {
         setMessages((prev) => [...prev, botMessage]);
 
         let accumulatedText = '';
+        let lastFlush = 0;
+        const FLUSH_MS = 80; // 节流：减少流式期间的 setState 频率，避免手机发烫
 
         for await (const chunk of stream) {
           accumulatedText += chunk;
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === botMessageId
-                ? { ...msg, content: accumulatedText }
-                : msg
-            )
-          );
+          const now = Date.now();
+          if (now - lastFlush >= FLUSH_MS) {
+            lastFlush = now;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === botMessageId
+                  ? { ...msg, content: accumulatedText }
+                  : msg
+              )
+            );
+          }
         }
 
+        // 最后一次内容 + 结束流式
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === botMessageId ? { ...msg, isStreaming: false } : msg
+            msg.id === botMessageId
+              ? { ...msg, content: accumulatedText, isStreaming: false }
+              : msg
           )
         );
 
