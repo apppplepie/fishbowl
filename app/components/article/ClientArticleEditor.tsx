@@ -64,9 +64,39 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
   useEffect(() => {
     if (isEditing && article) {
       const editorBlocks = (article.blocks || []).map((b: any, idx: number) => {
-        if (b.type === 'text') return { id: b.id, type: 'text', order: idx, content: b.parsedContent?.content || b.content || '', access_level: b.access_level || 1 };
-        if (b.type === 'image') return { id: b.id, type: 'image', order: idx, imageUrl: b.parsedContent?.url || b.url || '', title: b.title || '', access_level: b.access_level || 1 };
-        if (b.type === 'code') return { id: b.id, type: 'code', order: idx, code: b.parsedContent?.code || b.code || '', access_level: b.access_level || 1 };
+        if (b.type === 'text') {
+          return {
+            id: b.id,
+            type: 'text',
+            order: idx,
+            content: b.parsedContent?.content || b.content || '',
+            access_level: b.access_level || 1,
+          };
+        }
+        if (b.type === 'image') {
+          return {
+            id: b.id,
+            type: 'image',
+            order: idx,
+            imageUrl: b.parsedContent?.url || b.url || '',
+            title: b.parsedContent?.title || b.title || '',
+            description: b.parsedContent?.description || b.description || '',
+            access_level: b.access_level || 1,
+            media_id: b.media_id ?? null,
+            media: b.media ?? undefined,
+          };
+        }
+        if (b.type === 'code') {
+          return {
+            id: b.id,
+            type: 'code',
+            order: idx,
+            code: b.parsedContent?.code || b.code || '',
+            language: b.parsedContent?.language || b.language || 'javascript',
+            title: b.parsedContent?.title || b.title || '',
+            access_level: b.access_level || 1,
+          };
+        }
         return { ...b, access_level: b.access_level || 1 };
       }).filter(Boolean);
 
