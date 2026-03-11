@@ -172,6 +172,12 @@ function BookcasePageContent() {
     return () => ro.disconnect();
   }, []);
 
+  // 默认进入时页面停留在 15vh 位置（仅首次进入）
+  useLayoutEffect(() => {
+    const top = Math.round(window.innerHeight * 0.15);
+    window.scrollTo({ top, behavior: 'auto' });
+  }, []);
+
   const columnCount = useMemo(() => {
     const w = containerWidth || 0;
     if (w >= 1200) return 4;
@@ -465,7 +471,7 @@ function BookcasePageContent() {
     setCards([]);
     setOffset(0);
     setHasMore(true);
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    window.scrollTo({ top: Math.round(window.innerHeight * 0.15), behavior: 'auto' });
     loadBookcaseArticles(0, false, categoryFromUrl);
   }, [categoryFromUrl, loadBookcaseArticles]);
 
@@ -683,9 +689,9 @@ function BookcasePageContent() {
           onExpandedChange={setSidebarExpanded}
           onCategorySelect={(categoryId) => {
             if (categoryId) {
-              router.push(`/bookcase?category=${categoryId}`);
+              router.push(`/bookcase?category=${categoryId}`, { scroll: false });
             } else {
-              router.push('/bookcase');
+              router.push('/bookcase', { scroll: false });
             }
           }}
           drawerPaddingTop={true}

@@ -320,11 +320,10 @@ type TagSearchPickerWithTagsProps = {
 export function TagSearchPickerWithTags({
     value,
     onChange,
-    placeholder = '输入以搜索标签',
+    placeholder = '按标签筛选…',
     className,
 }: TagSearchPickerWithTagsProps) {
     const [options, setOptions] = useState<Option[]>([]);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let cancelled = false;
@@ -339,8 +338,6 @@ export function TagSearchPickerWithTags({
                 }
             } catch (e) {
                 if (!cancelled) console.error('加载标签失败:', e);
-            } finally {
-                if (!cancelled) setLoading(false);
             }
         })();
         return () => {
@@ -372,19 +369,6 @@ export function TagSearchPickerWithTags({
         const names = ids.map((id) => idToName[id] ?? id);
         onChange(names);
     };
-
-    if (loading) {
-        return (
-            <div
-                className={
-                    'relative pl-3 pr-3 py-2 bg-slate-50 border border-transparent rounded-lg min-h-[40px] flex items-center text-slate-400 text-sm ' +
-                    (className ?? '')
-                }
-            >
-                加载标签…
-            </div>
-        );
-    }
 
     return (
         <TagSearchPicker

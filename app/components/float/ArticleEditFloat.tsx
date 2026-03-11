@@ -21,6 +21,8 @@ interface ArticleEditFloatProps {
   articleAuthor?: string;
   currentUser?: string;
   userRole?: 'admin' | 'moderator' | 'user'; // 新增：用户角色
+  /** 是否显示「编辑」按钮（如虚拟翻页后不显示，避免保存错章节）；发布新章节等不受影响，可一直显示 */
+  showEditButton?: boolean;
 }
 
 /**
@@ -42,6 +44,7 @@ export default function ArticleEditFloat({
   articleAuthor,
   currentUser,
   userRole,
+  showEditButton = true,
 }: ArticleEditFloatProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -131,11 +134,13 @@ export default function ArticleEditFloat({
           tooltip={tooltipProp('操作')}
           type="primary"
         >
-          <FloatButton
-            icon={<Edit size={20} />}
-            tooltip={tooltipProp('编辑文章')}
-            onClick={onEdit}
-          />
+          {showEditButton && (
+            <FloatButton
+              icon={<Edit size={20} />}
+              tooltip={tooltipProp('编辑文章')}
+              onClick={onEdit}
+            />
+          )}
           {isBookPage && (
             <FloatButton
               icon={<FileText size={20} />}
@@ -157,7 +162,7 @@ export default function ArticleEditFloat({
               onClick={handlePublishArticle}
             />
           )}
-          {onDelete && (
+          {showEditButton && onDelete && (
             <FloatButton
               icon={<Trash2 size={20} />}
               tooltip={tooltipProp('删除文章')}

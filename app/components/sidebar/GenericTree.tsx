@@ -129,7 +129,7 @@ function TreeNodes({
     e.stopPropagation();
     onCategoryClick?.();
     if (categoryNavigationPattern) {
-      router.push(categoryNavigationPattern.replace('{categoryId}', categoryId));
+      router.push(categoryNavigationPattern.replace('{categoryId}', categoryId), { scroll: false });
     }
   };
 

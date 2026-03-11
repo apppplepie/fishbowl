@@ -204,21 +204,39 @@ export default function TagBox1({
         }
 
         return (
-            <div style={{ marginTop: '12px', ...style }}>
-                <Space wrap>
+            <div
+                style={{
+                    padding: '0 24px 16px 24px',
+                    overflow: 'hidden',
+                    minWidth: 0,
+                    ...style,
+                }}
+            >
+                <div
+                    style={{
+                        display: 'flex',
+                        flexWrap: 'nowrap',
+                        alignItems: 'center',
+                        gap: 8,
+                        overflow: 'hidden',
+                        minWidth: 0,
+                    }}
+                >
                     {tags.map((tag, index) => (
-                        <Tag
-                            key={index}
-                            id={tag}
-                            style={{
-                                padding: '4px 12px',
-                                fontWeight: 500,
-                            }}
-                        >
-                            {tag}
-                        </Tag>
+                        <span key={index} style={{ flexShrink: 0 }}>
+                            <Tag
+                                id={tag}
+                                style={{
+                                    padding: '2px 8px',
+                                    fontWeight: 500,
+                                    fontSize: 12,
+                                }}
+                            >
+                                {tag}
+                            </Tag>
+                        </span>
                     ))}
-                </Space>
+                </div>
             </div>
         );
     }

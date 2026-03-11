@@ -721,6 +721,18 @@
   color: var(--ui-color-text-disabled);
 }
 
+/* 单行面包屑（box1 统一布局用）：整行省略 */
+.ui-breadcrumb-single-line .ui-breadcrumb-list {
+  display: inline;
+  flex-wrap: unset;
+}
+.ui-breadcrumb-single-line .ui-breadcrumb-item-wrapper {
+  display: inline;
+}
+.ui-breadcrumb-single-line .ui-breadcrumb-separator {
+  display: inline;
+}
+
 /* ==================== Message ==================== */
 .ui-message-container {
   position: fixed;

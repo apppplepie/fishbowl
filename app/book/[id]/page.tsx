@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Button, Input, Modal, Tag, Divider, Space, Breadcrumb, message } from '@/app/components/ui';
+import { Button, Input, Modal, Divider, Space, Breadcrumb, message } from '@/app/components/ui';
+import { TitleBox1, TagBox1 } from '@/app/components/box1';
 import { Select, Dropdown } from 'antd'; // 暂时保留，后续实现
 const { Option } = Select;
 import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CameraOutlined } from '@ant-design/icons';
@@ -689,9 +690,19 @@ export default function BookPage() {
     }
   };
 
-  // 编辑模式处理
+  // 是否处于「真实路由」：URL 的 articleId 与当前展示的 currentArticleId 一致（虚拟翻页后 replaceState 不会更新 useParams，此时不显示编辑）
+  const isRealRoute = articleId === currentArticleId;
+
+  // 编辑模式处理：点编辑时先跳到真实路由再进入编辑，保证保存用对 articleId
   const handleEditModeChange = (mode: EditMode) => {
-    setEditMode(mode);
+    if (mode === 'edit' && isRealRoute) {
+      const category = bookCategoryId || urlCategory;
+      const path = category ? `/book/${currentArticleId}?category=${category}` : `/book/${currentArticleId}`;
+      router.replace(path);
+      setEditMode('edit');
+    } else {
+      setEditMode(mode);
+    }
   };
 
   // 保存编辑
@@ -843,142 +854,103 @@ export default function BookPage() {
     };
   }, [setLeftContent, leftContentElement]);
 
-  // 创建 box1Content（需要响应状态变化）- 必须在所有早期返回之前
+  // 创建 box1Content（与 article 统一：面包屑 / 标题 / 标签 各一行，省略号，框定在父容器内）
   const box1Content = useMemo(() => {
     if (!book) return null;
-    
+
     return (
-      <div style={{ padding: '16px 24px' }}>
-        {/* 面包屑导航 */}
-        <Breadcrumb
-          items={[
-            // 书橱
-            {
-              title: (
-                <a
-                  style={{
-                    color: '#000',
-                    textDecoration: 'none',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    transition: 'color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                  onClick={() => router.push('/bookcase')}
-                >
-                  书橱
-                </a>
-              ),
-            },
-            // 从当前文章追溯父级到 cat_bookcase 根目录
-            ...categoryPath
-              .filter(cat => cat.id !== 'root' && cat.id !== 'cat_bookcase')
-              .map((category, index) => {
-                // 优先从缓存获取章节标签，没有则用 API 返回的 depth + chapter_index 计算
-                let chapterLabel = chapterLabelCache.getLabel(category.id);
-                if (!chapterLabel && category.depth && category.chapter_index) {
-                  chapterLabel = getChapterLabel(category.depth, category.chapter_index);
-                }
-                
-                // 组合显示：章节标签 + 名称（如 "第1卷 起始篇"）
-                const displayName = chapterLabel 
-                  ? `${chapterLabel} ${category.name}`
-                  : category.name;
-                
-                return {
-                  title: (
-                    <a
-                      key={category.id}
-                      style={{
-                        color: '#000',
-                        textDecoration: 'none',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        padding: 0,
-                        transition: 'color 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                      onClick={() => router.push(`/bookcase?category=${category.id}`)}
-                    >
-                      {displayName}
-                    </a>
-                  ),
-                };
-              }),
-            // 当前书籍标题
-            {
-              title: <span style={{ color: '#000' }}>{book.title}</span>,
-            },
-          ]}
-          separator={<span style={{ color: '#000' }}>/</span>}
+      <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+        {/* 面包屑：单行省略（与 BreadcrumbBox1 一致的 padding） */}
+        <div
           style={{
-            color: '#000',
-            fontSize: '14px',
-            marginBottom: '16px',
+            padding: '16px 24px 0 24px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: 0,
           }}
-        />
-
-        {/* 书籍标题和操作区 */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: '16px',
-        }}>
-          <div style={{ flex: 1 }}>
-            {/* 书籍标题 */}
-            {editMode === 'edit' ? (
-              <Input
-                value={book.title}
-                onChange={(e) => setBook({ ...book, title: e.target.value })}
-                style={{
-                  fontSize: '28px',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#000',
-                  padding: 0,
-                  marginBottom: '8px',
-                }}
-                placeholder="请输入书籍标题"
-              />
-            ) : (
-              <h1 style={{
-                fontSize: '28px',
-                fontWeight: 'bold',
-                color: '#000',
-                margin: '0 0 8px 0',
-                lineHeight: '1.2',
-              }}>
-                {book.title}
-              </h1>
-            )}
-
-            {/* 标签 */}
-            {book.tags && book.tags.length > 0 && (
-              <div style={{ marginTop: '12px' }}>
-                <Space wrap>
-                  {book.tags.map((tag: string, index: number) => (
-                    <Tag
-                      key={index}
-                      id={tag}
-                      style={{
-                        padding: '4px 12px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {tag}
-                    </Tag>
-                  ))}
-                </Space>
-              </div>
-            )}
-          </div>
+        >
+          <Breadcrumb
+            className="ui-breadcrumb-single-line"
+            items={[
+              {
+                title: (
+                  <a
+                    style={{
+                      color: '#000',
+                      textDecoration: 'none',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      transition: 'color 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
+                    onClick={() => router.push('/bookcase')}
+                  >
+                    书橱
+                  </a>
+                ),
+              },
+              ...categoryPath
+                .filter((cat) => cat.id !== 'root' && cat.id !== 'cat_bookcase')
+                .map((category) => {
+                  let chapterLabel = chapterLabelCache.getLabel(category.id);
+                  if (!chapterLabel && category.depth != null && category.chapter_index != null) {
+                    chapterLabel = getChapterLabel(category.depth, category.chapter_index);
+                  }
+                  const displayName = chapterLabel ? `${chapterLabel} ${category.name}` : category.name;
+                  return {
+                    title: (
+                      <a
+                        key={category.id}
+                        style={{
+                          color: '#000',
+                          textDecoration: 'none',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          transition: 'color 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
+                        onClick={() => router.push(`/bookcase?category=${category.id}`)}
+                      >
+                        {displayName}
+                      </a>
+                    ),
+                  };
+                }),
+              { title: <span style={{ color: '#000' }}>{book.title}</span> },
+            ]}
+            separator={<span style={{ color: '#000' }}>/</span>}
+            style={{ color: '#000', fontSize: '14px', marginBottom: '8px' }}
+          />
         </div>
+
+        {/* 标题：单行省略，小字号 */}
+        {editMode === 'edit' ? (
+          <div style={{ padding: '0 0 8px 0', minWidth: 0 }}>
+            <Input
+              value={book.title}
+              onChange={(e) => setBook({ ...book, title: e.target.value })}
+              style={{
+                fontSize: '18px',
+                fontWeight: 600,
+                border: 'none',
+                background: 'transparent',
+                color: '#000',
+                padding: 0,
+              }}
+              placeholder="请输入书籍标题"
+            />
+          </div>
+        ) : (
+          <TitleBox1 title={book.title} />
+        )}
+
+        {/* 标签：单行 */}
+        {book.tags && book.tags.length > 0 && <TagBox1 tags={book.tags} editMode={false} maxTags={10} />}
       </div>
     );
   }, [isMobile, categoryPath, book, editMode, chapterLabelCache, router]);
@@ -1236,7 +1208,7 @@ export default function BookPage() {
         imageUrl={selectedImage?.url || ''}
       />
 
-      {/* 编辑悬浮按钮 - 使用后端API统一判断权限，延迟加载 */}
+      {/* 编辑悬浮按钮 - 发布新章节始终显示；编辑/删除仅在真实路由显示，点编辑时先跳真实路由再编辑 */}
       {shouldLoadEditFloat && isLoggedIn && user && book && canEditArticle && (
         <ArticleEditFloat
           mode={editMode}
@@ -1252,6 +1224,7 @@ export default function BookPage() {
           articleAuthor={book?.author}
           currentUser={user?.username}
           userRole={user.role}
+          showEditButton={isRealRoute}
         />
       )}
     </>

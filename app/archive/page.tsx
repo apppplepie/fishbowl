@@ -143,6 +143,11 @@ function ArchivePageContent(props?: ArchivePageProps) {
     measureContainer();
   }, [sidebarExpanded, measureContainer]);
 
+  // 默认进入时页面停留在 15vh 位置（仅首次进入）
+  useLayoutEffect(() => {
+    const top = Math.round(window.innerHeight * 0.15);
+    window.scrollTo({ top, behavior: 'auto' });
+  }, []);
 
   // --- 导航栏逻辑 ---
   useEffect(() => {
@@ -234,7 +239,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
       setCards([]); 
       setOffset(0);
       setHasMore(true);
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: Math.round(window.innerHeight * 0.15), behavior: 'auto' });
       
       // 发起全新请求
       fetchData(false, 0, categoryParam, searchKeyword);
@@ -391,7 +396,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
         onExpandedChange={setSidebarExpanded}
         selectedCategoryId={categoryParam}
         onCategorySelect={(id) => {
-          router.push(id ? `/archive?category=${id}` : '/archive');
+          router.push(id ? `/archive?category=${id}` : '/archive', { scroll: false });
           if (isMobile) setDrawerVisible(false);
         }}
         treeConfig={{

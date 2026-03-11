@@ -45,7 +45,7 @@ export default function BreadcrumbBox1({
   }, [router]);
 
   const handleBookcaseClick = useCallback(() => {
-    router.push('/bookcase');
+    router.push('/bookcase', { scroll: false });
   }, [router]);
 
   // 使用 useMemo 缓存 breadcrumbItems，避免不必要的重新创建
@@ -105,7 +105,7 @@ export default function BreadcrumbBox1({
               }}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
-              onClick={() => router.push(`/archive?category=${category.id}`)}
+              onClick={() => router.push(`/archive?category=${category.id}`, { scroll: false })}
             >
               {category.name}
             </a>
@@ -147,7 +147,7 @@ export default function BreadcrumbBox1({
               }}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
-              onClick={() => router.push(`/bookcase?category=${category.id}`)}
+              onClick={() => router.push(`/bookcase?category=${category.id}`, { scroll: false })}
             >
               {category.name}
             </a>
@@ -161,14 +161,24 @@ export default function BreadcrumbBox1({
   }, [type, articleId, categoryPath, customItems, router, handleMouseEnter, handleMouseLeave, handleHomeClick, handleBookcaseClick]);
 
   return (
-    <div style={{ padding: '16px 24px 0 24px', ...style }}>
+    <div
+      style={{
+        padding: '16px 24px 0 24px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        minWidth: 0,
+        ...style,
+      }}
+    >
       <Breadcrumb
+        className="ui-breadcrumb-single-line"
         items={breadcrumbItems}
         separator={<span style={{ color: '#000' }}>/</span>}
         style={{
           color: '#000',
           fontSize: '14px',
-          marginBottom: '16px',
+          marginBottom: '8px',
         }}
       />
     </div>

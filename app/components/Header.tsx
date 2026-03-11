@@ -142,7 +142,12 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
   const handleMenuClick = useCallback((info: { key: string }) => {
     const key = info?.key;
     if (key && key !== pathname) {
-      router.push(key);
+      const shouldDisableAutoScroll = key === '/bookcase' || key === '/archive';
+      if (shouldDisableAutoScroll) {
+        router.push(key, { scroll: false });
+      } else {
+        router.push(key);
+      }
     }
   }, [router, pathname]);
 

@@ -150,19 +150,15 @@ export default function ClientArticleShell({
       // 有文章数据时，直接设置完整内容
       setConfig({
         box1Content: (
-          <div>
+          <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
             <BreadcrumbBox1
               type="article"
               articleId={articleId}
               categoryPath={categoryPathState}
             />
-            <TitleBox1
-              title={article.title}
-            />
+            <TitleBox1 title={article.title} />
             {article.tags && article.tags.length > 0 && (
-              <div style={{ padding: '0 24px 16px' }}>
-                <TagBox1 tags={article.tags} editMode={false} maxTags={10} />
-              </div>
+              <TagBox1 tags={article.tags} editMode={false} maxTags={10} />
             )}
           </div>
         ),
