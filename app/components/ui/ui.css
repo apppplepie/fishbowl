@@ -699,9 +699,7 @@
   cursor: default;
 }
 
-.ui-breadcrumb-item-wrapper:last-child .ui-breadcrumb-separator {
-  display: none;
-}
+/* 最后一项前也要显示 /（如：分类 / 文章标题），不隐藏 */
 
 .ui-breadcrumb-item,
 .ui-breadcrumb-link {

@@ -555,48 +555,20 @@ function BookcasePageContent() {
     [columnWidth]
   );
 
-  // 创建 box1Content
+  // 创建 box1Content（与 archive 一致）
   const box1Content = useMemo(() => (
     <div style={{ padding: '16px 24px' }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: '12px',
-        alignItems: isMobile ? 'stretch' : 'flex-end',
-        justifyContent: isMobile ? 'flex-start' : 'space-between',
-      }}>
-        <div style={{ width: isMobile ? '100%' : '320px' }}>
-          <Input.Search
-            className="search-input-transparent"
-            placeholder="搜索标题、作者、摘要..."
-            value={searchKeyword}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchKeyword(e.target.value)}
-            onSearch={(value: string) => setSearchKeyword(value)}
-            size="large"
-            enterButton={true}
-            allowClear
-            style={{ width: '100%' }}
-          />
-        </div>
+      <div style={{ maxWidth: isMobile ? '100%' : '320px' }}>
+        <Input.Search
+          placeholder="搜索标题或摘要..."
+          value={searchKeyword}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchKeyword(e.target.value)}
+          allowClear
+          className="search-input-transparent"
+        />
       </div>
-
-      {(selectedTags.length > 0 || searchKeyword) && (
-        <div style={{
-          marginTop: '12px',
-          fontSize: '13px',
-          color: 'rgba(0, 0, 0, 0.9)',
-        }}>
-          {selectedTags.length > 0 && (
-            <span>已选 <strong>{selectedTags.length}</strong> 个标签</span>
-          )}
-          {selectedTags.length > 0 && searchKeyword && <span> · </span>}
-          {searchKeyword && (
-            <span>搜索 "<strong>{searchKeyword}</strong>"</span>
-          )}
-        </div>
-      )}
     </div>
-  ), [isMobile, searchKeyword, selectedTags]);
+  ), [isMobile, searchKeyword]);
 
   // --- Header 搜索区 (与 archive 一致) ---
   useEffect(() => {

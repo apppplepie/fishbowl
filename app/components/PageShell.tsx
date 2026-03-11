@@ -35,7 +35,7 @@ const DEFAULT_THEME = {
   }
 };
 
-/** box1 默认固定高度，壳层常驻时无需根据内容测量 */
+/** box1 默认高度：页面未传 box1Height 时用此值；页面可通过 setConfig({ box1Height: '18vh' }) 等覆盖 */
 const DEFAULT_BOX1_HEIGHT = '20vh';
 
 function PageShell({ children }: { children: React.ReactNode }) {
@@ -228,14 +228,14 @@ function PageShell({ children }: { children: React.ReactNode }) {
         </SkySection>
       </div>
 
-      {/* 波浪分隔器 - zIndex 高于 box2，波浪不被正文遮住；侧边栏/遮罩用 Portal 挂 body 盖在波浪上 */}
+      {/* 波浪分隔器 - 负外边距与 box1/box2 重叠 41px，避免交界处露出细线；zIndex 高于 box2 */}
       <div
         className="wave-section"
         style={{
           position: 'relative',
           height: '80px',
-          marginTop: '-40px',
-          marginBottom: '-40px',
+          marginTop: '-41px',
+          marginBottom: '-41px',
           pointerEvents: 'none',
           overflow: 'hidden',
           zIndex: 2,

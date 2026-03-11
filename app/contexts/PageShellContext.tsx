@@ -13,7 +13,7 @@ export const DEFAULT_SCROLL_SNAP_VH = 15;
 export interface PageShellConfig {
   box1Content: ReactNode | null;
   hideBox1?: boolean;
-  /** box1 固定高度，如 '80vh'、'400px'，由整体布局单独定义，与 scrollSnapVh 无关 */
+  /** box1 固定高度，如 '18vh'、'400px'；不传则用 PageShell 内 DEFAULT_BOX1_HEIGHT（20vh） */
   box1Height?: string;
   box1Style?: CSSProperties;
   box2Style?: CSSProperties;
