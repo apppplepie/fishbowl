@@ -6,7 +6,7 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { apiGet } from '@/lib/apiClient';
-import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
+import { Empty, LoadEnd, Spin, TagSearchPickerWithTags, TransparentSearchInput } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -40,7 +40,7 @@ const archiveSearchStore = {
   },
 };
 
-function ArchiveSearchBox({ isMobile }: { isMobile: boolean }) {
+function ArchiveSearchBox({ isMobile, noPadding }: { isMobile: boolean; noPadding?: boolean }) {
   const [value, setValue] = useState(archiveSearchStore.value);
   useEffect(() => {
     const unsub = archiveSearchStore.subscribe(() => setValue(archiveSearchStore.value));
@@ -48,19 +48,18 @@ function ArchiveSearchBox({ isMobile }: { isMobile: boolean }) {
       unsub();
     };
   }, []);
-  return (
-    <div style={{ padding: '16px 24px' }}>
-      <div style={{ maxWidth: isMobile ? '100%' : '320px' }}>
-        <Input.Search
-          placeholder="搜索标题或摘要..."
-          value={value}
-          onChange={(e) => archiveSearchStore.set(e.target.value)}
-          allowClear
-          className="search-input-transparent"
-        />
-      </div>
+  const inner = (
+    <div style={{ maxWidth: isMobile ? '100%' : '320px' }}>
+      <TransparentSearchInput
+        placeholder="标题或摘要..."
+        value={value}
+        onChange={(e) => archiveSearchStore.set(e.target.value)}
+        allowClear
+      />
     </div>
   );
+  if (noPadding) return inner;
+  return <div style={{ padding: '16px 24px' }}>{inner}</div>;
 }
 
 // --- 动态组件 ---
@@ -97,7 +96,8 @@ function ArchivePageContent(props?: ArchivePageProps) {
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [offset, setOffset] = useState(initialArticles.length);
   const [searchKeyword, setSearchKeyword] = useState('');
-  
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); // 标签筛选，与 bookcase 一致
+
   // Ref 保持闭包中的最新状态，防止闭包陷阱
   const loadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -265,16 +265,19 @@ function ArchivePageContent(props?: ArchivePageProps) {
     return getGuestIdentity()?.access_level ?? 2;
   }, [isLoggedIn, user, filterMode]);
 
-  // 前端过滤：学习模式 = full_access_level===1；宽松 = visible_access_level<=userLevel（游客 2）；严格 = full<=userLevel
+  // 前端过滤：权限 + 标签（与 bookcase 一致）
   const filteredCards = useMemo(() => {
     return cards.filter(article => {
       const visibleLevel = article.visible_access_level ?? article.visibleAccessLevel ?? article.max_access_level ?? article.maxAccessLevel ?? 1;
       const fullLevel = article.full_access_level ?? article.fullAccessLevel ?? visibleLevel;
-      if (filterMode === 'study') return fullLevel === 1;
-      if (filterMode === 'strict') return userMaxAccessLevel >= fullLevel;
-      return userMaxAccessLevel >= visibleLevel;
+      let matchAccessLevel = false;
+      if (filterMode === 'study') matchAccessLevel = fullLevel === 1;
+      else if (filterMode === 'strict') matchAccessLevel = userMaxAccessLevel >= fullLevel;
+      else matchAccessLevel = userMaxAccessLevel >= visibleLevel;
+      const matchTags = selectedTags.length === 0 || article.tags?.some((tag: string) => selectedTags.includes(tag));
+      return matchAccessLevel && matchTags;
     });
-  }, [cards, filterMode, userMaxAccessLevel]);
+  }, [cards, filterMode, userMaxAccessLevel, selectedTags]);
 
   const handleCardClick = useCallback((card: any) => {
      router.push(`/article/${card.id}`);
@@ -319,14 +322,27 @@ function ArchivePageContent(props?: ArchivePageProps) {
     archiveSearchStore.notify();
   }, [searchKeyword]);
 
-  // --- Header Search Bar：只依赖 isMobile，box1 只设一次不随输入重挂载；瀑布流随 searchKeyword 重渲染即可 ---
+  // --- box1：搜索框 + 标签筛选（与 bookcase 一致，半透明样式） ---
+  const box1Content = useMemo(() => (
+    <div style={{ padding: '16px 24px' }}>
+      <div style={{ maxWidth: isMobile ? '100%' : '320px', marginBottom: 12 }}>
+        <ArchiveSearchBox isMobile={isMobile} noPadding />
+      </div>
+      <div style={{ maxWidth: isMobile ? '100%' : '400px' }}>
+        <TagSearchPickerWithTags
+          value={selectedTags}
+          onChange={setSelectedTags}
+          placeholder="按标签筛选…"
+          className="tag-search-picker-transparent"
+        />
+      </div>
+    </div>
+  ), [isMobile, selectedTags]);
+
   useEffect(() => {
-    setConfig((prev: any) => ({
-      ...prev,
-      box1Content: <ArchiveSearchBox isMobile={isMobile} />,
-    }));
+    setConfig((prev: any) => ({ ...prev, box1Content }));
     return () => setConfig((prev: any) => ({ ...prev, box1Content: null }));
-  }, [setConfig, isMobile]);
+  }, [setConfig, box1Content]);
 
 
   // --- Render ---

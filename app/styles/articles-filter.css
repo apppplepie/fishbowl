@@ -39,7 +39,12 @@
   color: rgba(255, 255, 255, 0.8) !important;
 }
 
-/* ==================== 搜索框样式 ==================== */
+/* ==================== 自定义透明搜索框（无 antd，与标签搜索框统一） ==================== */
+.transparent-search-input-inner::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* ==================== 搜索框样式（antd，可能被覆盖） ==================== */
 .search-input-transparent .ant-input-affix-wrapper,
 .search-input-transparent .ant-input-affix-wrapper:hover,
 .search-input-transparent .ant-input-affix-wrapper:focus,
@@ -59,6 +64,7 @@
 .search-input-transparent .ant-input-affix-wrapper input {
   background: transparent !important;
   color: black !important;
+  font-weight: 600 !important;
 }
 
 .search-input-transparent .ant-input::placeholder,
@@ -97,6 +103,88 @@
 .search-input-transparent button.ant-btn:not(:disabled):not(.ant-btn-disabled):hover {
   background: rgba(255, 255, 255, 0.4) !important;
   background-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* ==================== 标签搜索框透明样式（与搜索框一致） ==================== */
+.tag-search-picker-transparent {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  min-height: 40px !important;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.tag-search-picker-transparent:focus-within,
+.tag-search-picker-transparent.focus-within {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tag-search-picker-transparent input {
+  background: transparent !important;
+  color: black !important;
+}
+
+.tag-search-picker-transparent input::placeholder {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+/* 已选标签小胶囊 - 半透明白底，深色字 */
+.tag-search-picker-transparent .tag-search-picker-pill {
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.tag-search-picker-transparent .tag-search-picker-pill:hover {
+  background: rgba(255, 255, 255, 0.8) !important;
+}
+
+.tag-search-picker-transparent .tag-search-picker-pill-close {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* 高亮中的标签 */
+.tag-search-picker-transparent .tag-search-picker-pill.ring-2 {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+/* ==================== 标签搜索框下拉（半透明 + 隐藏滚动条） ==================== */
+.tag-search-picker-dropdown-list {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.tag-search-picker-dropdown-list::-webkit-scrollbar {
+  display: none;
+}
+
+.tag-search-picker-dropdown-transparent .tag-search-picker-dropdown-list {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.tag-search-picker-dropdown-transparent .tag-search-picker-dropdown-list li {
+  color: inherit;
+}
+
+.tag-search-picker-dropdown-transparent .tag-search-picker-dropdown-list li:hover {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* 无匹配项文字 */
+.tag-search-picker-dropdown-transparent .tag-search-picker-dropdown-list li.select-none {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* 默认下拉（非透明时）保留白底，仅隐藏滚动条 */
+.tag-search-picker-dropdown:not(.tag-search-picker-dropdown-transparent) .tag-search-picker-dropdown-list {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* ==================== 标签云样式 ==================== */

@@ -6,7 +6,7 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
-import { Empty, LoadEnd, Input, Spin } from '@/app/components/ui';
+import { Empty, LoadEnd, Spin, TagSearchPickerWithTags, TransparentSearchInput } from '@/app/components/ui';
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
 
 // 卡片组件 - 首屏直接加载（启用 SSR）
@@ -555,20 +555,27 @@ function BookcasePageContent() {
     [columnWidth]
   );
 
-  // 创建 box1Content（与 archive 一致）
+  // 创建 box1Content：搜索框 + 标签筛选（与 archive 一致，并增加标签选择）
   const box1Content = useMemo(() => (
     <div style={{ padding: '16px 24px' }}>
-      <div style={{ maxWidth: isMobile ? '100%' : '320px' }}>
-        <Input.Search
-          placeholder="搜索标题或摘要..."
+      <div style={{ maxWidth: isMobile ? '100%' : '320px', marginBottom: 12 }}>
+        <TransparentSearchInput
+          placeholder="标题或摘要..."
           value={searchKeyword}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchKeyword(e.target.value)}
+          onChange={(e) => setSearchKeyword(e.target.value)}
           allowClear
-          className="search-input-transparent"
+        />
+      </div>
+      <div style={{ maxWidth: isMobile ? '100%' : '400px' }}>
+        <TagSearchPickerWithTags
+          value={selectedTags}
+          onChange={setSelectedTags}
+          placeholder="按标签筛选…"
+          className="tag-search-picker-transparent"
         />
       </div>
     </div>
-  ), [isMobile, searchKeyword]);
+  ), [isMobile, searchKeyword, selectedTags]);
 
   // --- Header 搜索区 (与 archive 一致) ---
   useEffect(() => {

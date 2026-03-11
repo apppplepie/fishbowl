@@ -39,3 +39,9 @@ export type { CardProps } from './Card';
 export { FakeGlassCard } from './FakeGlassCard';
 export type { FakeGlassCardProps } from './FakeGlassCard';
 
+export { default as TagSearchPicker, TagSearchPickerWithTags, getOptionsFromMap } from './TagSearchPicker';
+export type { Option } from './TagSearchPicker';
+
+export { default as TransparentSearchInput } from './TransparentSearchInput';
+export type { TransparentSearchInputProps } from './TransparentSearchInput';
+
