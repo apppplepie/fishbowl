@@ -694,7 +694,7 @@ function BookcasePageContent() {
               router.push('/bookcase', { scroll: false });
             }
           }}
-          drawerPaddingTop={true}
+          drawerPaddingTop={false}
         />
       )}
 

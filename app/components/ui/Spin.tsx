@@ -72,7 +72,7 @@ const Empty: React.FC<EmptyProps> = ({
 };
 
 const LoadEnd: React.FC<LoadEndProps> = ({
-  message = '没了',
+  message = ' ',
   delay = 500,
   className = '',
   style,
