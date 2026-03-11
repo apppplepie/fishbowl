@@ -355,9 +355,9 @@ export default function TextBlock({
     },
   ];
 
-  // 浏览模式渲染
+  // 浏览模式渲染（保存后切回 view 时块可能只有 content 没有 parsedContent，做兜底）
   if (mode === 'view') {
-    const textContent = block.parsedContent as any;
+    const displayContent = block.parsedContent?.content ?? block.content ?? '';
     return (
       <div style={{
         width: '100%',
@@ -397,7 +397,7 @@ export default function TextBlock({
           userSelect: 'text',
           WebkitUserSelect: 'text',
         }}>
-          {(textContent as any).content}
+          {displayContent}
         </div>
       </div>
     );
