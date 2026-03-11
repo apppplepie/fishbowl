@@ -219,6 +219,31 @@
   font-weight: 500;
 }
 
+/* 单路径展开：当前文章所在路径上的分类节点，左侧一条白色竖线 */
+.sidebar-tree-node-category.on-current-path {
+  position: relative;               /* 为伪元素提供定位参考 */
+  border-left: none;                /* 移除可能存在的左边框 */
+}
+
+.sidebar-tree-node-category.on-current-path::before {
+  content: '';
+  position: absolute;
+  left: 0;                          /* 紧贴节点左侧边缘（背景内） */
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #ffffff9d;           /* 纯白竖线 */
+  pointer-events: none;             /* 避免遮挡点击事件 */
+  z-index: 1;                       /* 确保竖线在背景之上（如果背景不透明也无妨） */
+}
+
+.sidebar-tree-node-category.on-current-path .sidebar-tree-icon {
+  color: var(--menu-text-hover);    /* 图标颜色保持不变 */
+}
+.sidebar-tree-node-category.on-current-path .sidebar-tree-icon {
+  color: var(--menu-text-hover);
+}
+
 .sidebar-tree-node-article.active {
   background: linear-gradient(90deg, var(--menu-bg-active-start) 0%, var(--menu-bg-active-end) 100%);
   color: var(--menu-text-active);

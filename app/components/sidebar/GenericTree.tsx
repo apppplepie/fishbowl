@@ -95,6 +95,7 @@ function TreeNodes({
   openKeys,
   setOpenKeys,
   currentArticleId,
+  currentPathKeys,
   onCategoryClick,
   onArticleClick,
   categoryNavigationPattern,
@@ -108,6 +109,7 @@ function TreeNodes({
   openKeys: string[];
   setOpenKeys: (keys: string[] | ((prev: string[]) => string[])) => void;
   currentArticleId?: string;
+  currentPathKeys?: string[];
   onCategoryClick?: () => void;
   onArticleClick?: (articleId: string) => void;
   categoryNavigationPattern?: string;
@@ -147,10 +149,12 @@ function TreeNodes({
         if (node.type === 'category') {
           const isOpen = openKeys.includes(node.key);
           const hasChildren = node.children && node.children.length > 0;
+          const onCurrentPath = currentPathKeys?.includes(node.key);
           return (
             <div key={node.key} className="sidebar-tree-branch">
               <div
-                className={`sidebar-tree-node sidebar-tree-node-category ${hasChildren ? 'has-children' : ''}`}
+                className={`sidebar-tree-node sidebar-tree-node-category ${hasChildren ? 'has-children' : ''} ${onCurrentPath ? 'on-current-path' : ''}`}
+                data-on-current-path={onCurrentPath ? 'true' : undefined}
                 role="button"
                 tabIndex={0}
                 onClick={() => hasChildren && toggleOpen(node.key)}
@@ -190,6 +194,7 @@ function TreeNodes({
                     openKeys={openKeys}
                     setOpenKeys={setOpenKeys}
                     currentArticleId={currentArticleId}
+                    currentPathKeys={currentPathKeys}
                     onCategoryClick={onCategoryClick}
                     onArticleClick={onArticleClick}
                     categoryNavigationPattern={categoryNavigationPattern}
@@ -404,9 +409,7 @@ function GenericIndexTree({
       if (dataLoadedRef.current && categories.length > 0) {
         if (currentArticleId) {
           const path = findArticleAncestorKeys(categories, currentArticleId);
-          if (path.length > 0) {
-            setOpenKeys(prev => Array.from(new Set([...prev, ...path])));
-          }
+          if (path.length > 0) setOpenKeys(path);
         }
         return;
       }
@@ -488,13 +491,7 @@ function GenericIndexTree({
     }
     lastProcessedArticleIdRef.current = currentArticleId;
     const path = findArticleAncestorKeys(categories, currentArticleId);
-    if (path.length > 0) {
-      setOpenKeys(prev => {
-        const next = Array.from(new Set([...prev, ...path]));
-        if (JSON.stringify(next.sort()) === JSON.stringify(prev.sort())) return prev;
-        return next;
-      });
-    }
+    if (path.length > 0) setOpenKeys(path);
     const t = setTimeout(() => {
       const el = document.querySelector(`[data-article-id="${currentArticleId}"]`) as HTMLElement;
       if (el) {
@@ -505,6 +502,7 @@ function GenericIndexTree({
   }, [currentArticleId, categories]);
 
   const rootKeys = forceOpenRootKeys ? getRootCategoryKeys(categories) : [];
+  const currentPathKeys = currentArticleId ? findArticleAncestorKeys(categories, currentArticleId) : [];
 
   return (
     <div className={`${stylePrefix}-container`}>
@@ -517,6 +515,7 @@ function GenericIndexTree({
             openKeys={openKeys}
             setOpenKeys={setOpenKeys}
             currentArticleId={currentArticleId}
+            currentPathKeys={currentPathKeys}
             onCategoryClick={onCategoryClick}
             onArticleClick={onArticleClick}
             categoryNavigationPattern={categoryNavigationPattern}
