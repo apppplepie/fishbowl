@@ -40,6 +40,22 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 隐藏滚动条，保留滚动能力 */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+html::-webkit-scrollbar {
+  display: none; /* Chrome / Safari / 新 Edge */
+}
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+body::-webkit-scrollbar {
+  display: none;
+}
+
 /* 全局可点击元素处理 */
 button,
 a,

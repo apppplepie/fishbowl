@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import { message } from 'antd';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
-import { usePageShell } from '@/app/contexts/PageShellContext';
+import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
+import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
 import DrawingGalleryCard from '../components/cards/DrawingGalleryCard';
 import MasonryWall from '../components/layout/MasonryWall';
 import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
@@ -39,6 +40,14 @@ export default function GalleryPage() {
   const [containerWidth, setContainerWidth] = useState(() =>
     typeof window !== 'undefined' ? getContainerWidthFromScreenWidth(window.innerWidth) : 1400
   );
+  // 一键配置整页 15vh 吸附（box1 高度、进入滚动、接近吸附 都由 scrollSnapVh 统一控制）
+  useEffect(() => {
+    setConfig((prev) => ({ ...prev, scrollSnapVh: DEFAULT_SCROLL_SNAP_VH }));
+    return () => setConfig((prev) => ({ ...prev, scrollSnapVh: undefined }));
+  }, [setConfig]);
+
+  useScrollSnapAtTop();
+
   useEffect(() => {
     const el = masonryWrapRef.current;
     if (!el) return;

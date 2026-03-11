@@ -3,6 +3,9 @@
 import React, { createContext, useContext, useState, ReactNode, useMemo, useCallback, CSSProperties } from 'react';
 import { Theme } from '@/app/types/background';
 
+/** 父容器内吸附的滚动位置（scrollTop = 该 vh），改这一处即可全局生效；与 box1 高度无关 */
+export const DEFAULT_SCROLL_SNAP_VH = 15;
+
 /**
  * PageShell 配置接口
  * 包含页面特定的配置选项（不包含主题，主题从 AppThemeContext 读取）
@@ -10,10 +13,18 @@ import { Theme } from '@/app/types/background';
 export interface PageShellConfig {
   box1Content: ReactNode | null;
   hideBox1?: boolean;
+  /** box1 固定高度，如 '80vh'、'400px'，由整体布局单独定义，与 scrollSnapVh 无关 */
+  box1Height?: string;
   box1Style?: CSSProperties;
   box2Style?: CSSProperties;
   themeOverride?: Theme; // 可选：覆盖全局主题（特殊场景使用）
-  
+
+  /**
+   * 父容器内吸附的滚动位置（单位 vh）：进入页与松手时 scrollTo(scrollSnapVh)，使「整页从上往下该 vh 的那根线」贴住视口顶部。
+   * 与 box1 高度无关。建议使用 DEFAULT_SCROLL_SNAP_VH。
+   */
+  scrollSnapVh?: number;
+
   // 侧边栏配置
   sidebarWidth?: number;      // 侧边栏宽度（默认 0，表示无侧边栏）
   sidebarExpanded?: boolean;  // 侧边栏是否展开
@@ -39,6 +50,7 @@ const defaultConfig: PageShellConfig = {
   box1Style: undefined,
   box2Style: undefined,
   themeOverride: undefined,
+  scrollSnapVh: undefined,
   sidebarWidth: 0,
   sidebarExpanded: false,
 };
@@ -82,6 +94,7 @@ export function PageShellProvider({ children }: { children: ReactNode }) {
           hasBox1Style: !!updated.box1Style,
           hasBox2Style: !!updated.box2Style,
           hasThemeOverride: !!updated.themeOverride,
+          scrollSnapVh: updated.scrollSnapVh,
           sidebarWidth: updated.sidebarWidth,
           sidebarExpanded: updated.sidebarExpanded,
         });

@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Tab } from '../types';
-import { usePageShell } from '@/app/contexts/PageShellContext';
+import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useAuth } from '@/app/hooks/useAuth';
+import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
 import { theme } from '@/app/config/theme';
 import { ContentArea } from './ContentArea';
 import { apiGetJson } from '@/lib/apiClient';
@@ -16,17 +17,17 @@ export default function ProfilePage() {
   const { user: authUser, isLoggedIn } = useAuth();
   const [notificationCount, setNotificationCount] = useState(0);
 
-  // 设置页面配置
+  // 设置页面配置 + 一键 15vh 吸附（与 gallery 同款）
   useEffect(() => {
     setConfig({
       box1Content: null,
+      scrollSnapVh: DEFAULT_SCROLL_SNAP_VH,
       box2Style: { padding: isMobile ? '40px 12px' : '40px 24px' },
     });
-
-    return () => {
-      setConfig({ box1Content: null });
-    };
+    return () => setConfig({ box1Content: null, scrollSnapVh: undefined });
   }, [setConfig, isMobile]);
+
+  useScrollSnapAtTop();
 
   // 加载通知数量
   useEffect(() => {
