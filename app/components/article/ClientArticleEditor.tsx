@@ -289,7 +289,7 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
       </div>
 
       {/* 编辑块区域 */}
-      <div style={{ background: 'rgba(255,255,255,0.95)', padding: 40, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+      <div style={{ background: 'rgba(255,255,255,0.95)', padding: 8, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
             {editedArticle?.editorBlocks && (

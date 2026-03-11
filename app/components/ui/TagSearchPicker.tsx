@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiGetJson } from '@/lib/apiClient';
+import Tag from './Tag';
 
 export type Option = { id: string; name: string };
 
@@ -220,6 +221,7 @@ export default function TagSearchPicker({
             >
                 {selectedIds.map((id, index) => {
                     const isActive = activeIndex === index;
+                    const displayName = optionsMap?.[id] ?? options?.find((o) => o.id === id)?.name ?? id;
                     return (
                         <span
                             key={id}
@@ -227,10 +229,8 @@ export default function TagSearchPicker({
                                 tagRefs.current[index] = el;
                             }}
                             className={
-                                'tag-search-picker-pill inline-flex items-center gap-1 shrink-0 px-2 py-0.5 rounded text-xs font-medium select-none cursor-pointer transition-all ' +
-                                (isActive
-                                    ? 'bg-primary text-white ring-2 ring-primary/40 '
-                                    : 'bg-slate-200 text-slate-700 hover:bg-slate-300 ')
+                                'inline-flex shrink-0 select-none cursor-pointer transition-all ' +
+                                (isActive ? 'ring-2 ring-primary/40 rounded-md' : '')
                             }
                             onMouseDown={(e) => {
                                 e.preventDefault();
@@ -238,26 +238,16 @@ export default function TagSearchPicker({
                                 inputRef.current?.focus();
                             }}
                         >
-                            {/* 如果提供 optionsMap，优先使用名称，否则显示 id */}
-                            {optionsMap?.[id] ?? options?.find((o) => o.id === id)?.name ?? id}
-                            <span
-                                tabIndex={-1}
-                                className={
-                                    'tag-search-picker-pill-close ml-0.5 leading-none opacity-60 hover:opacity-100 focus:outline-none ' +
-                                    (isActive ? 'text-white' : 'text-slate-500')
-                                }
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
+                            <Tag
+                                id={displayName}
+                                closable
+                                onClose={() => {
                                     removeTag(id);
                                     inputRef.current?.focus();
                                 }}
                             >
-                                ×
-                            </span>
+                                {displayName}
+                            </Tag>
                         </span>
                     );
                 })}
