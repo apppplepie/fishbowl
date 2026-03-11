@@ -23,7 +23,8 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
-import { usePageShell } from '@/app/contexts/PageShellContext';
+import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
+import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
@@ -52,19 +53,15 @@ export default function PublishArticlePage() {
   const { currentFishbowlTheme } = useAppTheme();
   const { isMobile } = useResponsive();
   const { setConfig } = usePageShell();
-  // 设置页面配置
+
+  useScrollSnapAtTop();
+  // 设置页面配置（含 15vh 吸附）
   useEffect(() => {
-    setConfig({
+    setConfig((prev) => ({
+      ...prev,
+      scrollSnapVh: DEFAULT_SCROLL_SNAP_VH,
       box1Content: (
         <div style={{ padding: '16px 24px' }}>
-          <h2 style={{
-            margin: 0,
-            color: 'white',
-            fontSize: '20px',
-            fontWeight: 600,
-          }}>
-            ✍️ 创作文章
-          </h2>
           {!isLoggedIn && (
             <div style={{
               marginTop: '12px',
@@ -81,10 +78,10 @@ export default function PublishArticlePage() {
         </div>
       ),
       box2Style: { padding: isMobile ? '40px 12px' : '40px 24px' },
-    });
+    }));
 
     return () => {
-      setConfig({ box1Content: null });
+      setConfig((prev) => ({ ...prev, box1Content: null, scrollSnapVh: undefined }));
     };
   }, [setConfig, isLoggedIn, isMobile]);
 

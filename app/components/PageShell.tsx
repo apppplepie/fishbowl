@@ -36,7 +36,7 @@ const DEFAULT_THEME = {
 };
 
 /** box1 默认固定高度，壳层常驻时无需根据内容测量 */
-const DEFAULT_BOX1_HEIGHT = '18vh';
+const DEFAULT_BOX1_HEIGHT = '20vh';
 
 function PageShell({ children }: { children: React.ReactNode }) {
   const { config } = usePageShell();
