@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Upload, Dropdown } from 'antd';
 import { Button, Space, Modal, Input, message } from '@/app/components/ui';
 import type { MenuProps } from 'antd';
@@ -46,21 +46,22 @@ import { uploadFileWithProgress } from '@/lib/uploadClient';
 import { apiGetJson } from '@/lib/apiClient';
 import { Spin } from '@/app/components/ui';
 
+export type BlocksUpdater = (prev: Block[]) => Block[];
+
 interface BlockEditorProps {
   blocks: Block[];
-  onChange: (blocks: Block[]) => void;
-  showAddButton?: boolean; // 是否显示底部的添加新块按钮
+  onChange: (blocks: Block[] | BlocksUpdater) => void;
+  showAddButton?: boolean;
 }
 
 interface SortableItemProps {
   id: string;
   index: number;
   block: Block;
-  blocks: Block[];
-  onChange: (blocks: Block[]) => void;
-  onDelete: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  onBlockChange: (index: number, updatedBlock: Block) => void;
+  deleteBlock: (index: number) => void;
+  moveBlockUp: (index: number) => void;
+  moveBlockDown: (index: number) => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
   canDelete: boolean;
@@ -71,15 +72,14 @@ interface SortableHandleProps {
   attributes: any;
 }
 
-function SortableItem({
+const SortableItem = React.memo(function SortableItem({
   id,
   index,
   block,
-  blocks,
-  onChange,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
+  onBlockChange,
+  deleteBlock,
+  moveBlockUp,
+  moveBlockDown,
   canMoveUp,
   canMoveDown,
   canDelete,
@@ -93,27 +93,22 @@ function SortableItem({
     isDragging,
   } = useSortable({ id });
 
+  const handleBlockChange = useCallback((updatedBlock: Block) => {
+    onBlockChange(index, updatedBlock);
+  }, [index, onBlockChange]);
+
   const commonProps = {
-    onMoveUp,
-    onMoveDown,
+    onMoveUp: () => moveBlockUp(index),
+    onMoveDown: () => moveBlockDown(index),
     canMoveUp,
     canMoveDown,
     canDelete,
     isDragging,
   };
 
-  const sortableHandleProps = {
-    ...attributes,
-    ...listeners,
-  };
+  const sortableHandleProps = useMemo(() => ({ ...attributes, ...listeners }), [attributes, listeners]);
 
   const renderBlock = () => {
-    const handleBlockChange = (updatedBlock: Block) => {
-      const newBlocks = [...blocks];
-      newBlocks[index] = updatedBlock;
-      onChange(newBlocks);
-    };
-
     switch (block.type) {
       case 'text':
         return (
@@ -122,7 +117,7 @@ function SortableItem({
             block={block}
             mode="edit"
             onChange={handleBlockChange}
-            onDelete={onDelete}
+            onDelete={() => deleteBlock(index)}
             sortableHandleProps={sortableHandleProps}
             {...commonProps}
           />
@@ -134,7 +129,7 @@ function SortableItem({
             block={block}
             mode="edit"
             onChange={handleBlockChange}
-            onDelete={onDelete}
+            onDelete={() => deleteBlock(index)}
             sortableHandleProps={sortableHandleProps}
             {...commonProps}
           />
@@ -146,7 +141,7 @@ function SortableItem({
             block={block}
             mode="edit"
             onChange={handleBlockChange}
-            onDelete={onDelete}
+            onDelete={() => deleteBlock(index)}
             sortableHandleProps={sortableHandleProps}
             {...commonProps}
           />
@@ -163,15 +158,10 @@ function SortableItem({
           <QuoteBlock
             key={block.id}
             block={block as QuoteBlockType}
-            onReplaceWithBlock={(newBlock) => {
-              // 用新块替换当前的引用块
-              const newBlocks = [...blocks];
-              newBlocks[index] = newBlock;
-              onChange(newBlocks);
-            }}
+            onReplaceWithBlock={(newBlock) => onBlockChange(index, newBlock)}
             onChange={handleBlockChange}
             isEditing={true}
-            onDelete={onDelete}
+            onDelete={() => deleteBlock(index)}
             sortableHandleProps={sortableHandleProps}
             {...commonProps}
           />
@@ -189,7 +179,7 @@ function SortableItem({
       {renderBlock()}
     </div>
   );
-}
+});
 
 // 图片压缩工具函数
 function compressImage(file: File, maxWidth: number = 1920, maxHeight: number = 1920, quality: number = 0.8): Promise<File> {
@@ -244,15 +234,21 @@ function compressImage(file: File, maxWidth: number = 1920, maxHeight: number = 
   });
 }
 
+// DnD 传感器配置提到模块级，避免每次渲染新对象导致 useSensors 不稳定
+const pointerConstraint = { distance: 8, delay: 100, tolerance: 5 };
+const touchConstraint = { delay: 100, tolerance: 5 };
+
 export default function BlockEditor({ blocks, onChange, showAddButton = true }: BlockEditorProps) {
   const { isMobile } = useResponsive();
+  const blocksRef = useRef(blocks);
+  blocksRef.current = blocks;
+
   const [addBlockModalVisible, setAddBlockModalVisible] = useState(false);
   const [addImageModalVisible, setAddImageModalVisible] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [previewUrl, setPreviewUrl] = useState<string>(''); // 预览 URL
-  const [insertPosition, setInsertPosition] = useState<number>(-1); // 记录要插入的位置，-1表示末尾
-  // 引用块选择器：先选再插入，不创建空引用块
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [insertPosition, setInsertPosition] = useState<number>(-1);
   const [quotePickerVisible, setQuotePickerVisible] = useState(false);
   const [pickerBlocks, setPickerBlocks] = useState<any[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
@@ -262,45 +258,62 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
   const [pickerInputValue, setPickerInputValue] = useState('');
   const pickerPageSize = 10;
 
-  // 清理预览 URL（组件卸载时）
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-        delay: 100,
-        tolerance: 5,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 100,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: pointerConstraint }),
+    useSensor(TouchSensor, { activationConstraint: touchConstraint }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleBlockChange = useCallback((index: number, updatedBlock: Block) => {
+    onChange((prev) => {
+      const next = [...prev];
+      next[index] = updatedBlock;
+      return next;
+    });
+  }, [onChange]);
 
-    if (over && active.id !== over.id) {
-      const oldIndex = blocks.findIndex((block) => block.id === active.id);
-      const newIndex = blocks.findIndex((block) => block.id === over.id);
-
-      const reorderedBlocks = arrayMove(blocks, oldIndex, newIndex);
-      onChange(reorderedBlocks);
+  const deleteBlock = useCallback((index: number) => {
+    const prev = blocksRef.current;
+    if (prev.length <= 1) {
+      message.warning('至少需要保留一个内容块');
+      return;
     }
-  };
+    const next = prev.filter((_, i) => i !== index).map((b, i) => ({ ...b, order: i }));
+    onChange(next);
+  }, [onChange]);
+
+  const moveBlockUp = useCallback((index: number) => {
+    if (index <= 0) return;
+    const prev = blocksRef.current;
+    const next = [...prev];
+    [next[index - 1], next[index]] = [next[index], next[index - 1]];
+    onChange(next.map((b, i) => ({ ...b, order: i })));
+  }, [onChange]);
+
+  const moveBlockDown = useCallback((index: number) => {
+    const prev = blocksRef.current;
+    if (index >= prev.length - 1) return;
+    const next = [...prev];
+    [next[index], next[index + 1]] = [next[index + 1], next[index]];
+    onChange(next.map((b, i) => ({ ...b, order: i })));
+  }, [onChange]);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const prev = blocksRef.current;
+    const oldIndex = prev.findIndex((b) => b.id === active.id);
+    const newIndex = prev.findIndex((b) => b.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(prev, oldIndex, newIndex);
+    onChange(reordered.map((b, i) => ({ ...b, order: i })));
+  }, [onChange]);
 
   // 生成唯一ID
   const generateId = () => {
@@ -394,6 +407,19 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       fetchPickerBlocks(pickerPage, pickerSearchQuery);
     }
   }, [quotePickerVisible, pickerPage, pickerSearchQuery]);
+
+  // 引用块选择器：输入防抖后再触发请求，避免每键请求风暴
+  const pickerInputRef = useRef(pickerInputValue);
+  pickerInputRef.current = pickerInputValue;
+  useEffect(() => {
+    if (!quotePickerVisible) return;
+    const t = window.setTimeout(() => {
+      const v = pickerInputRef.current;
+      setPickerSearchQuery(v);
+      setPickerPage(1);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [quotePickerVisible, pickerInputValue]);
 
   // 从 API 块数据构建编辑器块（与 QuoteBlock 一致）
   const buildBlockFromPreview = (blockData: any): Block | null => {
@@ -575,61 +601,11 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     setInsertPosition(-1);
   };
 
-  // 更新块
-  const updateBlock = (index: number, updatedBlock: Block) => {
-    const newBlocks = [...blocks];
-    newBlocks[index] = updatedBlock;
-    onChange(newBlocks);
-  };
-
-  // 删除块
-  const deleteBlock = (index: number) => {
-    // 如果只剩一个块，不允许删除
-    if (blocks.length <= 1) {
-      message.warning('至少需要保留一个内容块');
-      return;
-    }
-
-    const newBlocks = blocks.filter((_, i) => i !== index);
-    // 重新排序
-    const reorderedBlocks = newBlocks.map((block, i) => ({
-      ...block,
-      order: i,
-    }));
-    onChange(reorderedBlocks);
-  };
-
-  // 上移块
-  const moveBlockUp = (index: number) => {
-    if (index === 0) return;
-    const newBlocks = [...blocks];
-    [newBlocks[index - 1], newBlocks[index]] = [newBlocks[index], newBlocks[index - 1]];
-    // 重新排序
-    const reorderedBlocks = newBlocks.map((block, i) => ({
-      ...block,
-      order: i,
-    }));
-    onChange(reorderedBlocks);
-  };
-
-  // 下移块
-  const moveBlockDown = (index: number) => {
-    if (index === blocks.length - 1) return;
-    const newBlocks = [...blocks];
-    [newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]];
-    // 重新排序
-    const reorderedBlocks = newBlocks.map((block, i) => ({
-      ...block,
-      order: i,
-    }));
-    onChange(reorderedBlocks);
-  };
-
-
-  // 批量格式化所有文字块
+  // 批量格式化所有文字块（读当前 blocks）
   const batchFormat = (option: FormatOption) => {
+    const prev = blocksRef.current;
     let count = 0;
-    const newBlocks = blocks.map(block => {
+    const newBlocks = prev.map(block => {
       if (block.type === 'text') {
         count++;
         return {
@@ -744,11 +720,10 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
                   id={block.id}
                   index={index}
                   block={block}
-                  blocks={blocks}
-                  onChange={onChange}
-                  onDelete={() => deleteBlock(index)}
-                  onMoveUp={() => moveBlockUp(index)}
-                  onMoveDown={() => moveBlockDown(index)}
+                  onBlockChange={handleBlockChange}
+                  deleteBlock={deleteBlock}
+                  moveBlockUp={moveBlockUp}
+                  moveBlockDown={moveBlockDown}
                   canMoveUp={index > 0}
                   canMoveDown={index < blocks.length - 1}
                   canDelete={blocks.length > 1}

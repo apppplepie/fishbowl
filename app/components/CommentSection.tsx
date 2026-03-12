@@ -269,7 +269,8 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
                 </Button>
               )}
               <Button
-                type="primary"
+                type="default"
+                className="ui-comment-submit-trigger"
                 onClick={handleSubmitComment}
                 loading={isSubmitting}
                 disabled={!isLoggedIn || !commentText.trim()}

@@ -147,6 +147,34 @@
   align-items: center;
 }
 
+/* 下拉触发器 / 发表按钮：点击后不保留背景高亮，且不变成白底 */
+.format-trigger-wrap .ui-button:focus,
+.ui-comment-submit-trigger.ui-button:focus {
+  outline: none;
+  box-shadow: none;
+  background: var(--ui-color-bg);
+}
+.format-trigger-wrap .ui-button:focus-visible,
+.ui-comment-submit-trigger.ui-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+  background: var(--ui-color-bg);
+}
+.format-trigger-wrap .ui-button:active:not(:disabled) {
+  background: var(--ui-color-bg);
+}
+.ui-comment-submit-trigger.ui-button:active:not(:disabled) {
+  background: var(--ui-color-bg);
+}
+/* 格式按钮内“格式”两字不单独高亮，避免点击后文字区域变白（覆盖 .ui-button-text 的 hover/active） */
+.format-trigger-wrap .ui-button .ui-button-text,
+.format-trigger-wrap .ui-button .ui-button-text:hover,
+.format-trigger-wrap .ui-button .ui-button-text:active,
+.format-trigger-wrap .ui-button:focus .ui-button-text,
+.format-trigger-wrap .ui-button:active .ui-button-text {
+  background: transparent !important;
+}
+
 .ui-button-text {
   display: inline-block;
 }
@@ -461,6 +489,30 @@
 
 .ui-tag-close:hover {
   color: var(--ui-color-text);
+}
+
+/* Tag 预设颜色（与编辑块一致：文字=蓝、图片=绿、代码=紫） */
+.ui-tag-blue {
+  background: rgba(24, 144, 255, 0.12);
+  border-color: rgba(24, 144, 255, 0.4);
+  color: #096dd9;
+}
+.ui-tag-green {
+  background: rgba(82, 196, 26, 0.12);
+  border-color: rgba(82, 196, 26, 0.4);
+  color: #389e0d;
+}
+.ui-tag-purple {
+  background: rgba(114, 46, 209, 0.12);
+  border-color: rgba(114, 46, 209, 0.4);
+  color: #531dab;
+}
+
+/* 默认标签：纯色无渐变，与编辑模式统一 */
+.ui-tag-default {
+  background: var(--ui-color-bg-secondary);
+  border-color: var(--ui-color-border);
+  color: var(--ui-color-text-secondary);
 }
 
 /* ==================== Divider ==================== */

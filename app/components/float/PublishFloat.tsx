@@ -18,6 +18,7 @@ export interface FloatingActionsProps {
   blocks: Array<any>
   isPreviewMode: boolean
   setIsPreviewMode: (v: boolean) => void
+  isSubmitting?: boolean // 发布中时禁用发布按钮，防止重复提交
   onExit?: () => void
   exitPath?: string // 退出时跳转的路径，如果提供则优先使用
   minWidth?: number | string
@@ -39,6 +40,7 @@ export default function FloatingActions({
   blocks,
   isPreviewMode,
   setIsPreviewMode,
+  isSubmitting = false,
   onExit,
   exitPath,
   position,
@@ -168,8 +170,10 @@ export default function FloatingActions({
     >
       <FloatButton
         icon={<Check size={20} />}
-        tooltip={tooltipProp('发布文章')}
-        onClick={onPublish}
+        tooltip={tooltipProp(isSubmitting ? '发布中...' : '发布文章')}
+        onClick={() => {
+          if (!isSubmitting) onPublish();
+        }}
       />
       {/* {blocks.length > 0 ? (
         <FloatButton

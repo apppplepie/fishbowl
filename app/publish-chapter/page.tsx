@@ -1,27 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react';
-import {
-  Form,
-  Input,
-  Button,
-  Upload,
-  Select,
-  Card,
-  Space,
-  message,
-  Divider,
-  Tag,
-  Dropdown,
-} from 'antd';
+import { Form, Input, Upload, Select, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import {
-  PlusOutlined,
-  SaveOutlined,
-  EyeOutlined,
-  UploadOutlined,
-  ThunderboltOutlined,
-} from '@ant-design/icons';
+import { Button, Card, Space, Divider, Tag, message } from '@/app/components/ui';
+import { SaveOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
 import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
@@ -117,13 +100,13 @@ function PublishChapterContent() {
   ]);
 
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [nextOrderInCategory, setNextOrderInCategory] = useState(1);
   const [categoryName, setCategoryName] = useState<string>('');
 
-  // 自动保存相关 - 脏标志 + 防抖
   const saveTimeoutRef = useRef<number | null>(null);
-  const dirtyRef = useRef(false);
-  const lastSavedBlocksRef = useRef<string>('');
+  const blocksRef = useRef(blocks);
+  blocksRef.current = blocks;
 
   // 获取下一个order_index值
   // 使用工具函数计算，同时考虑子分类和文章的最大 order 值
@@ -153,6 +136,9 @@ function PublishChapterContent() {
 
   // 表单提交
   const onFinish = async (values: any) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     // 检查是否有实际内容
     const hasContent = blocks.some(block => {
       if (block.type === 'text') return (block as any).content?.trim();
@@ -163,12 +149,14 @@ function PublishChapterContent() {
 
     if (!hasContent) {
       message.warning('请至少添加一些内容');
+      setIsSubmitting(false);
       return;
     }
 
     // 检查是否有关联的目录
     if (!categoryFromUrl) {
       message.error('缺少目录参数，无法发布章节');
+      setIsSubmitting(false);
       return;
     }
 
@@ -236,13 +224,16 @@ function PublishChapterContent() {
     } catch (error) {
       console.error('发布章节失败:', error);
       message.error('发布失败，请检查网络连接');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // 保存草稿
+  // 保存草稿：先立即提示用户，再异步写入 localStorage
   const saveDraft = () => {
     const values = form.getFieldsValue();
     const author = user?.username || '匿名';
+    const latestBlocks = blocksRef.current;
     const draft = {
       id: `draft-${Date.now()}`,
       title: values.title || '未命名草稿',
@@ -250,7 +241,7 @@ function PublishChapterContent() {
       tags: values.tags || [],
       category_id: categoryFromUrl,
       order_index: nextOrderInCategory,
-      blocks: blocks,
+      blocks: latestBlocks,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -259,22 +250,19 @@ function PublishChapterContent() {
       console.log('保存章节草稿:', draft);
     }
 
-    // 将写操作安排在空闲时段执行，避免打断主渲染
+    message.success('草稿已保存到本地');
     const doWrite = () => {
       try {
         localStorage.setItem('chapter-draft', JSON.stringify(draft));
-        lastSavedBlocksRef.current = JSON.stringify(blocks);
-        dirtyRef.current = false;
-        message.success('草稿已保存到本地');
       } catch (e) {
         console.warn('保存草稿失败', e);
+        message.error('保存草稿失败');
       }
     };
 
-    if ('requestIdleCallback' in window) {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
     } else {
-      // fallback：短延迟异步写
       setTimeout(doWrite, 0);
     }
   };
@@ -307,15 +295,12 @@ function PublishChapterContent() {
     }
   };
 
-  // 标记为脏（在 blocks 变化时触发）
+  // 防抖草稿：定时器回调从 ref 读最新 blocks，避免每键执行重逻辑
   useEffect(() => {
-    dirtyRef.current = true;
-
-    // 防抖：编辑停止 10s 后触发保存
     if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
-      if (!dirtyRef.current) return;
       const values = form.getFieldsValue();
+      const latestBlocks = blocksRef.current;
       const draft = {
         id: `draft-${Date.now()}`,
         title: values.title || '未命名草稿',
@@ -323,30 +308,23 @@ function PublishChapterContent() {
         tags: values.tags || [],
         category_id: categoryFromUrl,
         order_index: nextOrderInCategory,
-        blocks,
+        blocks: latestBlocks,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-
-      // 将写操作安排在空闲时段执行，避免打断主渲染
       const doWrite = () => {
         try {
           localStorage.setItem('chapter-draft', JSON.stringify(draft));
-          lastSavedBlocksRef.current = JSON.stringify(blocks);
-          dirtyRef.current = false;
         } catch (e) {
           console.warn('保存草稿失败', e);
         }
       };
-
-      if ('requestIdleCallback' in window) {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
       } else {
-        // fallback：短延迟异步写
         setTimeout(doWrite, 0);
       }
     }, 10000);
-
     return () => {
       if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
     };
@@ -368,7 +346,7 @@ function PublishChapterContent() {
     };
   }, [blocks]);
 
-  // 批量格式化所有文字块 - 使用 requestIdleCallback 避免阻塞主线程
+  // 批量格式化所有文字块 - 从 blocksRef 读取最新 blocks，避免 requestIdleCallback 延迟导致闭包过期
   const batchFormat = (option: FormatOption) => {
     const messages: Record<FormatOption, string> = {
       indent: '首行缩进',
@@ -381,10 +359,10 @@ function PublishChapterContent() {
 
     message.loading({ content: `正在应用【${messages[option]}】...`, key: 'format', duration: 0 });
 
-    // 将耗时文本处理移到空闲时段执行
     const doFormat = () => {
+      const prev = blocksRef.current;
       let count = 0;
-      const newBlocks = blocks.map(block => {
+      const newBlocks = prev.map(block => {
         if (block.type === 'text') {
           count++;
           return {
@@ -399,10 +377,9 @@ function PublishChapterContent() {
       message.success({ content: `已对 ${count} 个文字块应用【${messages[option]}】`, key: 'format' });
     };
 
-    if ('requestIdleCallback' in window) {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       (window as any).requestIdleCallback(doFormat, { timeout: 3000 });
     } else {
-      // fallback：短延迟异步执行
       setTimeout(doFormat, 0);
     }
   };
@@ -464,17 +441,18 @@ function PublishChapterContent() {
                 borderRadius: contentCardBorderRadius,
                 boxShadow: contentCardBoxShadow,
                 marginBottom: isMobile ? '12px' : '24px',
-                padding: isMobile ? '12px' : '24px',
+                background: 'var(--ui-color-bg, #fff)',
+                borderColor: 'var(--ui-color-border, #eee)',
               }}
-              styles={{ body: { padding: isMobile ? '0' : '24px' } }}
+              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
             >
               {/* 移动端隐藏标题和草稿按钮 */}
               {!isMobile && (
                 <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ margin: 0, fontSize: '18px' }}>📝 章节信息</h3>
-                  <Space>
-                    <Button onClick={loadDraft}>加载草稿</Button>
-                    <Button icon={<SaveOutlined />} onClick={saveDraft}>
+                  <Space size="middle">
+                    <Button type="default" onClick={loadDraft}>加载草稿</Button>
+                    <Button type="default" icon={<SaveOutlined />} onClick={saveDraft}>
                       保存草稿
                     </Button>
                   </Space>
@@ -529,10 +507,11 @@ function PublishChapterContent() {
               style={{
                 borderRadius: contentCardBorderRadius,
                 boxShadow: contentCardBoxShadow,
-                marginBottom: isMobile ? '60px' : '24px', // 移动端为浮动按钮留空间
-                padding: isMobile ? '8px' : '24px',
+                marginBottom: isMobile ? '60px' : '24px',
+                background: 'var(--ui-color-bg, #fff)',
+                borderColor: 'var(--ui-color-border, #eee)',
               }}
-              styles={{ body: { padding: isMobile ? '0' : '24px' } }}
+              bodyStyle={{ padding: isMobile ? '0' : '24px' }}
             >
               <div style={{ 
                 marginBottom: isMobile ? '8px' : '16px', 
@@ -542,21 +521,18 @@ function PublishChapterContent() {
                 flexWrap: isMobile ? 'wrap' : 'nowrap',
                 gap: isMobile ? '8px' : '0',
               }}>
-                <Space wrap>
-                  <Tag color="green">{stats.textBlocks} 文字</Tag>
-                  <Tag color="orange">{stats.imageBlocks} 图片</Tag>
+                <Space size="small" wrap>
+                  <Tag color="blue">{stats.textBlocks} 文字</Tag>
+                  <Tag color="green">{stats.imageBlocks} 图片</Tag>
                   <Tag color="purple">{stats.codeBlocks} 代码</Tag>
-                  <Tag>{stats.totalChars} 字</Tag>
-
+                  <Tag color="default">{stats.totalChars} 字</Tag>
                   {stats.textBlocks > 0 && !isPreviewMode && (
                     <Dropdown menu={{ items: batchFormatMenuItems }} placement="bottomRight">
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<ThunderboltOutlined />}
-                      >
-                        {isMobile ? '格式' : '格式化'}
-                      </Button>
+                      <span className="format-trigger-wrap">
+                        <Button type="default" size="small" icon={<ThunderboltOutlined />}>
+                          {isMobile ? '格式' : '格式化'}
+                        </Button>
+                      </span>
                     </Dropdown>
                   )}
                 </Space>
@@ -696,6 +672,7 @@ function PublishChapterContent() {
         blocks={blocks}
         isPreviewMode={isPreviewMode}
         setIsPreviewMode={setIsPreviewMode}
+        isSubmitting={isSubmitting}
         exitPath="/bookcase"
       />
     </>

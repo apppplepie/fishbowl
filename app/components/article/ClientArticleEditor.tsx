@@ -7,6 +7,7 @@ import React, {
   useImperativeHandle,
   forwardRef,
   useRef,
+  useMemo,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { message, Modal, Input, Tag } from '@/app/components/ui';
@@ -22,6 +23,68 @@ import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
 
 const { Option } = Select;
+
+type EditMeta = { title: string; type: string; category_id: string | null; tags: string[]; order_index?: number };
+
+/** 编辑区顶部 meta（标题、类型、目录、标签），与 blocks 解耦，避免块输入时重渲染 */
+const ArticleEditMetaSection = React.memo(function ArticleEditMetaSection(props: {
+  meta: EditMeta;
+  setMeta: React.Dispatch<React.SetStateAction<EditMeta | null>>;
+  fetchCategoryPath: (categoryId: string) => void;
+  isMobile: boolean;
+}) {
+  const { meta, setMeta, fetchCategoryPath, isMobile } = props;
+  const onTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setMeta((prev) => (prev ? { ...prev, title: e.target.value } : null));
+  }, [setMeta]);
+  const onTypeChange = useCallback((v: string) => {
+    setMeta((prev) => (prev ? { ...prev, type: v } : null));
+  }, [setMeta]);
+  const onCategoryChange = useCallback((value: string | null) => {
+    setMeta((prev) => (prev ? { ...prev, category_id: value ?? null } : null));
+    if (value) {
+      fetchCategoryPath(value);
+      getNextOrderIndex(value).then((n) => setMeta((prev) => (prev ? { ...prev, order_index: n } : null))).catch(() => {});
+    }
+  }, [setMeta, fetchCategoryPath]);
+  const onTagsChange = useCallback((tags: string[]) => {
+    setMeta((prev) => (prev ? { ...prev, tags } : null));
+  }, [setMeta]);
+  return (
+    <div style={{
+      background: 'white',
+      padding: isMobile ? '16px 12px' : '40px',
+      borderRadius: '8px',
+      marginBottom: '24px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      maxWidth: 800,
+      margin: '0 auto 24px',
+    }}>
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#666' }}>文章标题</label>
+        <Input value={meta.title} onChange={onTitleChange} placeholder="请输入文章标题" size="large" style={{ width: '100%' }} />
+      </div>
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#666' }}>文章类型</label>
+        <Select value={meta.type} onChange={onTypeChange} size="large" style={{ width: 300 }}>
+          <Option value="text">📝 普通文章</Option>
+          <Option value="image">📷 图片内容</Option>
+          <Option value="drawing">🎨 绘画作品</Option>
+          <Option value="code">💻 代码片段</Option>
+          <Option value="diary">📔 日志</Option>
+        </Select>
+      </div>
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#666' }}>文章目录</label>
+        <CategoryTreeSelect value={meta.category_id ?? undefined} onChange={onCategoryChange} placeholder="选择文章所属目录（可选）" />
+      </div>
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#666' }}>文章标签</label>
+        <TagInput value={meta.tags} onChange={onTagsChange} placeholder="输入标签" maxTags={10} />
+      </div>
+    </div>
+  );
+});
 
 export type ArticleEditorHandle = {
   save: () => Promise<void> | void;
@@ -48,22 +111,24 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
 
   // Keep state hooks always present (hook order stable)
   const [article, setArticle] = useState<any>(initialArticle);
-  const [editedArticle, setEditedArticle] = useState<any>(null);
   const [categoryPath, setCategoryPath] = useState<Array<{ id: string; name: string }>>([]);
-
-  // A ref to avoid stale closures if needed
-  const editedRef = useRef<any>(null);
-  useEffect(() => { editedRef.current = editedArticle; }, [editedArticle]);
+  // 拆开 meta 与 editorBlocks，块输入时只更新 editorBlocks，meta 区不重渲染
+  const [meta, setMeta] = useState<{ title: string; type: string; category_id: string | null; tags: string[]; order_index?: number } | null>(null);
+  const [editorBlocks, setEditorBlocks] = useState<any[]>([]);
+  const metaRef = useRef(meta);
+  const blocksRef = useRef(editorBlocks);
+  metaRef.current = meta;
+  blocksRef.current = editorBlocks;
 
   // Sync initialArticle -> article state
   useEffect(() => {
     setArticle(initialArticle);
   }, [initialArticle]);
 
-  // Initialize/cleanup editedArticle when isEditing toggles
+  // Initialize/cleanup meta + editorBlocks when isEditing toggles
   useEffect(() => {
     if (isEditing && article) {
-      const editorBlocks = (article.blocks || []).map((b: any, idx: number) => {
+      const blocks = (article.blocks || []).map((b: any, idx: number) => {
         if (b.type === 'text') {
           return {
             id: b.id,
@@ -102,10 +167,18 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
         return { ...b, access_level: b.access_level || 1 };
       }).filter(Boolean);
 
-      setEditedArticle({ ...article, editorBlocks });
+      setMeta({
+        title: article.title || '',
+        type: article.type || 'text',
+        category_id: article.category_id ?? null,
+        tags: article.tags || [],
+        order_index: article.order_index,
+      });
+      setEditorBlocks(blocks);
       onEditModeChange?.('edit');
     } else {
-      setEditedArticle(null);
+      setMeta(null);
+      setEditorBlocks([]);
       if (!isEditing) onEditModeChange?.('view');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,45 +195,41 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
     }
   }, []);
 
-  // Save (useCallback so ref/setImperativeHandle stable)
+  // Save：从 ref 取最新 meta + editorBlocks，避免闭包陈旧
   const doSave = useCallback(async () => {
-    const current = editedRef.current ?? editedArticle;
-    if (!current) return;
-    if (!current.title?.trim()) {
+    const m = metaRef.current;
+    const blks = blocksRef.current;
+    if (!m) return;
+    if (!m.title?.trim()) {
       message.warning('请输入文章标题');
       return;
     }
 
-    // validations (same rules as original)
-    if ((current.type === 'drawing' || current.type === 'image') && !(current.editorBlocks || []).some((b: any) => b.type === 'image')) {
+    if ((m.type === 'drawing' || m.type === 'image') && !(blks || []).some((b: any) => b.type === 'image')) {
       message.warning('图片/绘画类型必须包含至少一张图片');
       return;
     }
-    if (current.type === 'code' && !(current.editorBlocks || []).some((b: any) => b.type === 'code')) {
+    if (m.type === 'code' && !(blks || []).some((b: any) => b.type === 'code')) {
       message.warning('代码类型必须包含至少一个代码块');
       return;
     }
 
     try {
       message.loading({ content: '正在保存...', key: 'save' });
-      const updatedExcerpt = generateExcerptFromBlocks(current.editorBlocks || []);
-      
-      // 计算 visible_access_level（所有 blocks 的最小值）和 full_access_level（所有 blocks 的最大值）
+      const updatedExcerpt = generateExcerptFromBlocks(blks || []);
+
       let visibleAccessLevel: number;
       let fullAccessLevel: number;
-      
-      if ((current.editorBlocks || []).length > 0) {
-        const accessLevels = (current.editorBlocks || []).map((block: any) => block.access_level || 1);
+      if ((blks || []).length > 0) {
+        const accessLevels = (blks || []).map((block: any) => block.access_level || 1);
         visibleAccessLevel = Math.min(...accessLevels);
         fullAccessLevel = Math.max(...accessLevels);
       } else {
-        // 如果没有 blocks，使用现有值或默认值
-        visibleAccessLevel = current.visible_access_level ?? current.max_access_level ?? current.maxAccessLevel ?? 1;
-        fullAccessLevel = current.full_access_level ?? current.max_access_level ?? current.maxAccessLevel ?? 1;
+        visibleAccessLevel = article?.visible_access_level ?? article?.max_access_level ?? 1;
+        fullAccessLevel = article?.full_access_level ?? article?.max_access_level ?? 1;
       }
-      
-      // 确保每个 image block 都带上 media_id，供列表/瀑布流封面比例 JOIN media 用
-      const blocksForSave = (current.editorBlocks || []).map((block: any) => {
+
+      const blocksForSave = (blks || []).map((block: any) => {
         if (block.type === 'image') {
           const mid = block.media_id ?? block.mediaId ?? null;
           return { ...block, media_id: mid, mediaId: mid ?? undefined };
@@ -169,25 +238,23 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
       });
 
       const payload: any = {
-        title: current.title,
-        type: current.type || 'text',
-        category_id: current.category_id || null,
-        tags: current.tags || [],
+        title: m.title,
+        type: m.type || 'text',
+        category_id: m.category_id || null,
+        tags: m.tags || [],
         blocks: blocksForSave,
         excerpt: updatedExcerpt,
         visible_access_level: visibleAccessLevel,
         full_access_level: fullAccessLevel,
       };
 
-      // category order logic preserved
       const oldCat = String(article?.category_id ?? '');
-      const newCat = String(current.category_id ?? '');
-      const categoryChanged = newCat !== oldCat;
-      if (categoryChanged) {
-        let candidate = current.order_index;
-        if (candidate === '' || candidate === null) candidate = undefined;
+      const newCat = String(m.category_id ?? '');
+      if (newCat !== oldCat) {
+        let candidate: number | undefined = m.order_index as number | undefined;
+        if (candidate == null || Number.isNaN(Number(candidate))) candidate = undefined;
         if (candidate === undefined) {
-          try { candidate = await getNextOrderIndex(current.category_id); } catch (e) { candidate = 1; }
+          try { candidate = await getNextOrderIndex(m.category_id!); } catch (e) { candidate = 1; }
         }
         if (candidate !== undefined && candidate !== null && !Number.isNaN(Number(candidate))) payload.order_index = Number(candidate);
       }
@@ -195,19 +262,15 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
       const res = await apiPutJson(`/api/articles/${articleId}`, payload);
       message.success({ content: '保存成功！', key: 'save' });
 
-      // update local + notify parent
       const updatedArticle = res || { ...article, ...payload, blocks: payload.blocks };
       setArticle(updatedArticle);
       onArticleUpdate?.(updatedArticle);
-      // Refresh route to update server-rendered content
       router.refresh();
       onEditModeChange?.('view');
     } catch (err: any) {
       console.error('保存失败', err);
       message.error({ content: '保存失败: ' + (err?.message || '未知错误'), key: 'save' });
     }
-  // include dependencies used inside
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [articleId, article, onArticleUpdate, onEditModeChange]);
 
   // Delete (useCallback)
@@ -240,81 +303,33 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
     delete: doDelete,
   }), [doSave, doDelete]);
 
+  const handleBlocksChange = useCallback((arg: any[] | ((prev: any[]) => any[])) => {
+    setEditorBlocks(arg as any);
+  }, []);
+
   // Permission guard / early return for UI only (hooks above always run)
   if (!isLoggedIn || !canEdit || !currentUser) {
     return null;
   }
 
-  // If not editing, don't render editor UI (but hooks are still wired)
-  if (!isEditing) {
+  if (!isEditing || !meta) {
     return null;
   }
 
-  // --- Render edit UI (same as before, using editedArticle state) ---
   return (
     <>
-      {/* Top meta editing */}
-      <div style={{
-        background: 'white',
-        padding: isMobile ? '16px 12px' : '40px',
-        borderRadius: '8px',
-        marginBottom: '24px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        maxWidth: 800,
-        margin: '0 auto 24px',
-      }}>
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#666' }}>文章标题</label>
-          <Input value={editedArticle?.title || ''} onChange={(e) => setEditedArticle({ ...editedArticle, title: e.target.value })} placeholder="请输入文章标题" size="large" style={{ width: '100%' }} />
-        </div>
-
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#666' }}>文章类型</label>
-          <Select value={editedArticle?.type || 'text'} onChange={(v) => setEditedArticle({ ...editedArticle, type: v })} size="large" style={{ width: 300 }}>
-            <Option value="text">📝 普通文章</Option>
-            <Option value="image">📷 图片内容</Option>
-            <Option value="drawing">🎨 绘画作品</Option>
-            <Option value="code">💻 代码片段</Option>
-            <Option value="diary">📔 日志</Option>
-          </Select>
-        </div>
-
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#666' }}>文章目录</label>
-          <CategoryTreeSelect value={editedArticle?.category_id} onChange={async (value) => {
-            if (editedArticle) {
-              let newOrderIndex = editedArticle.order_index;
-              if (value && value !== editedArticle.category_id) {
-                try { newOrderIndex = await getNextOrderIndex(value); } catch (e) { newOrderIndex = editedArticle.order_index; }
-              }
-              setEditedArticle({ ...editedArticle, category_id: value, order_index: newOrderIndex });
-              if (value) fetchCategoryPath(value); else setCategoryPath([]);
-            }
-          }} placeholder="选择文章所属目录（可选）" />
-        </div>
-
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: '#666' }}>文章标签</label>
-          <TagInput value={editedArticle?.tags || []} onChange={(tags) => setEditedArticle({ ...editedArticle, tags })} placeholder="输入标签" maxTags={10} />
-        </div>
-      </div>
-
-      {/* 编辑块区域 */}
+      <ArticleEditMetaSection meta={meta} setMeta={setMeta} fetchCategoryPath={fetchCategoryPath} isMobile={isMobile} />
       <div style={{ background: 'rgba(255,255,255,0.95)', padding: 8, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
-            {editedArticle?.editorBlocks && (
-              <>
-                <Tag>{editedArticle.editorBlocks.length} 个块</Tag>
-                <Tag>{editedArticle.editorBlocks.filter((b: any)=> b.type === 'text').length} 文字</Tag>
-                <Tag>{editedArticle.editorBlocks.filter((b: any)=> b.type === 'image').length} 图片</Tag>
-                <Tag>{editedArticle.editorBlocks.filter((b: any)=> b.type === 'code').length} 代码</Tag>
-              </>
-            )}
+            <Tag color="default">{editorBlocks.length} 个块</Tag>
+            <Tag color="blue">{editorBlocks.filter((b: any) => b.type === 'text').length} 文字</Tag>
+            <Tag color="green">{editorBlocks.filter((b: any) => b.type === 'image').length} 图片</Tag>
+            <Tag color="purple">{editorBlocks.filter((b: any) => b.type === 'code').length} 代码</Tag>
           </Space>
         </div>
         <Divider />
-        <BlockEditor blocks={editedArticle?.editorBlocks || []} onChange={(blocks) => setEditedArticle({ ...editedArticle, editorBlocks: blocks })} showAddButton={false} />
+        <BlockEditor blocks={editorBlocks} onChange={handleBlocksChange} showAddButton={false} />
       </div>
     </>
   );

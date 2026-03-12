@@ -1,28 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Form, 
-  Input, 
-  Button, 
-  Upload, 
-  Select, 
-  Card,
-  Space,
-  message,
-  Divider,
-  Tag,
-  Dropdown,
-} from 'antd';
+import { Form, Input, Upload, Select, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { 
-  PlusOutlined, 
-  SaveOutlined,
-  EyeOutlined,
-  UploadOutlined,
-  ThunderboltOutlined,
-} from '@ant-design/icons';
 import type { UploadFile } from 'antd';
+import { Button, Card, Space, Divider, Tag, message } from '@/app/components/ui';
+import { SaveOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
 import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
@@ -116,57 +99,50 @@ export default function PublishArticlePage() {
   ]);
   
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  // 自动保存相关 - 脏标志 + 防抖
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const saveTimeoutRef = useRef<number | null>(null);
-  const dirtyRef = useRef(false);
-  const lastSavedBlocksRef = useRef<string>('');
+  const blocksRef = useRef(blocks);
+  blocksRef.current = blocks;
 
-  // 标记为脏（在 blocks 变化时触发）
+  // 防抖草稿：仅重置 10s 定时器，回调里从 ref 读最新 blocks，避免每键执行重逻辑
   useEffect(() => {
-    dirtyRef.current = true;
-
-    // 防抖：编辑停止 10s 后触发保存
     if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
-      if (!dirtyRef.current) return;
       const values = form.getFieldsValue();
+      const latestBlocks = blocksRef.current;
       const draft = {
         id: `draft-${Date.now()}`,
         title: values.title || '未命名草稿',
         author: user?.username || '匿名',
         tags: values.tags || [],
         category_id: values.category_id || null,
-        blocks,
+        blocks: latestBlocks,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-
-      // 将写操作安排在空闲时段执行，避免打断主渲染
       const doWrite = () => {
         try {
           localStorage.setItem('article-draft', JSON.stringify(draft));
-          lastSavedBlocksRef.current = JSON.stringify(blocks);
-          dirtyRef.current = false;
         } catch (e) {
           console.warn('保存草稿失败', e);
         }
       };
-
-      if ('requestIdleCallback' in window) {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
       } else {
-        // fallback：短延迟异步写
         setTimeout(doWrite, 0);
       }
     }, 10000);
-
     return () => {
       if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
     };
-  }, [blocks, form, user?.username]); // 仅在 blocks 变化时触发
+  }, [blocks, form, user?.username]);
 
   // 表单提交
   const onFinish = async (values: any) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     // 检查是否有实际内容
     const hasContent = blocks.some(block => {
       if (block.type === 'text') return (block as any).content?.trim();
@@ -177,6 +153,7 @@ export default function PublishArticlePage() {
     
     if (!hasContent) {
       message.warning('请至少添加一些内容');
+      setIsSubmitting(false);
       return;
     }
 
@@ -246,20 +223,23 @@ export default function PublishArticlePage() {
     } catch (error) {
       console.error('❌ 发布文章异常:', error);
       message.error('发布失败，请检查网络连接');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // 保存草稿
+  // 保存草稿：先立即提示用户，再异步写入 localStorage
   const saveDraft = () => {
     const values = form.getFieldsValue();
     const author = user?.username || '匿名';
+    const latestBlocks = blocksRef.current;
     const draft = {
       id: `draft-${Date.now()}`,
       title: values.title || '未命名草稿',
       author: author,
       tags: values.tags || [],
       category_id: values.category_id || null,
-      blocks: blocks,
+      blocks: latestBlocks,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -267,23 +247,20 @@ export default function PublishArticlePage() {
     if (process.env.NODE_ENV === 'development') {
       console.log('保存草稿:', draft);
     }
-    
-    // 将写操作安排在空闲时段执行，避免打断主渲染
+
+    message.success('草稿已保存到本地');
     const doWrite = () => {
       try {
         localStorage.setItem('article-draft', JSON.stringify(draft));
-        lastSavedBlocksRef.current = JSON.stringify(blocks);
-        dirtyRef.current = false;
-        message.success('草稿已保存到本地');
       } catch (e) {
         console.warn('保存草稿失败', e);
+        message.error('保存草稿失败');
       }
     };
 
-    if ('requestIdleCallback' in window) {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
     } else {
-      // fallback：短延迟异步写
       setTimeout(doWrite, 0);
     }
   };
@@ -332,7 +309,7 @@ export default function PublishArticlePage() {
     };
   }, [blocks]);
 
-  // 批量格式化所有文字块 - 使用 requestIdleCallback 避免阻塞主线程
+  // 批量格式化所有文字块 - 从 blocksRef 读取最新 blocks，避免 requestIdleCallback 延迟导致闭包过期
   const batchFormat = (option: FormatOption) => {
     const messages: Record<FormatOption, string> = {
       indent: '首行缩进',
@@ -345,10 +322,10 @@ export default function PublishArticlePage() {
 
     message.loading({ content: `正在应用【${messages[option]}】...`, key: 'format', duration: 0 });
 
-    // 将耗时文本处理移到空闲时段执行
     const doFormat = () => {
+      const prev = blocksRef.current;
       let count = 0;
-      const newBlocks = blocks.map(block => {
+      const newBlocks = prev.map(block => {
         if (block.type === 'text') {
           count++;
           return {
@@ -363,10 +340,9 @@ export default function PublishArticlePage() {
       message.success({ content: `已对 ${count} 个文字块应用【${messages[option]}】`, key: 'format' });
     };
 
-    if ('requestIdleCallback' in window) {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       (window as any).requestIdleCallback(doFormat, { timeout: 3000 });
     } else {
-      // fallback：短延迟异步执行
       setTimeout(doFormat, 0);
     }
   };
@@ -428,15 +404,17 @@ export default function PublishArticlePage() {
                 borderRadius: contentCardBorderRadius,
                 boxShadow: contentCardBoxShadow,
                 marginBottom: isMobile ? '12px' : '24px',
+                background: 'var(--ui-color-bg, #fff)',
+                borderColor: 'var(--ui-color-border, #eee)',
               }}
-              styles={{ body: { padding: isMobile ? '12px' : '24px' } }}
+              bodyStyle={{ padding: isMobile ? '12px' : '24px' }}
             >
               {/* 移动端隐藏草稿按钮，使用浮动按钮代替 */}
               {!isMobile && (
                 <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Space>
-                    <Button onClick={loadDraft}>加载草稿</Button>
-                    <Button icon={<SaveOutlined />} onClick={saveDraft}>
+                  <Space size="middle">
+                    <Button type="default" onClick={loadDraft}>加载草稿</Button>
+                    <Button type="default" icon={<SaveOutlined />} onClick={saveDraft}>
                       保存草稿
                     </Button>
                   </Space>
@@ -486,9 +464,11 @@ export default function PublishArticlePage() {
               style={{
                 borderRadius: contentCardBorderRadius,
                 boxShadow: contentCardBoxShadow,
-                marginBottom: isMobile ? '60px' : '24px', // 移动端为浮动按钮留空间
+                marginBottom: isMobile ? '60px' : '24px',
+                background: 'var(--ui-color-bg, #fff)',
+                borderColor: 'var(--ui-color-border, #eee)',
               }}
-              styles={{ body: { padding: isMobile ? '8px' : '24px' } }}
+              bodyStyle={{ padding: isMobile ? '8px' : '24px' }}
             >
               <div style={{ 
                 marginBottom: isMobile ? '8px' : '16px', 
@@ -498,21 +478,18 @@ export default function PublishArticlePage() {
                 flexWrap: isMobile ? 'wrap' : 'nowrap',
                 gap: isMobile ? '8px' : '0',
               }}>
-                <Space wrap>
-                  <Tag color="green">{stats.textBlocks} 文字</Tag>
-                  <Tag color="orange">{stats.imageBlocks} 图片</Tag>
+                <Space size="small" wrap>
+                  <Tag color="blue">{stats.textBlocks} 文字</Tag>
+                  <Tag color="green">{stats.imageBlocks} 图片</Tag>
                   <Tag color="purple">{stats.codeBlocks} 代码</Tag>
-                  <Tag>{stats.totalChars} 字</Tag>
-                  
+                  <Tag color="default">{stats.totalChars} 字</Tag>
                   {stats.textBlocks > 0 && !isPreviewMode && (
                     <Dropdown menu={{ items: batchFormatMenuItems }} placement="bottomRight">
-                      <Button 
-                        type="primary" 
-                        size="small"
-                        icon={<ThunderboltOutlined />}
-                      >
-                        {isMobile ? '格式' : '格式化'}
-                      </Button>
+                      <span className="format-trigger-wrap">
+                        <Button type="default" size="small" icon={<ThunderboltOutlined />}>
+                          {isMobile ? '格式' : '格式化'}
+                        </Button>
+                      </span>
                     </Dropdown>
                   )}
                 </Space>
@@ -719,6 +696,7 @@ export default function PublishArticlePage() {
         blocks={blocks}
         isPreviewMode={isPreviewMode}
         setIsPreviewMode={setIsPreviewMode}
+        isSubmitting={isSubmitting}
         exitPath="/archive"
       />
     </>

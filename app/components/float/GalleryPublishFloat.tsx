@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, message, Input, Button } from '@/app/components/ui';
-import { Form, Upload } from 'antd';
+import { FloatButton, Modal, message, Input } from '@/app/components/ui';
+import { Form, Upload, Space, Button } from 'antd';
 import { Plus, CloudUpload } from 'lucide-react';
 import type { UploadFile, UploadProps } from 'antd';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -233,80 +233,27 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
               borderRadius: '8px',
               backgroundColor: '#fafafa'
             }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <Space.Compact style={{ flexWrap: 'wrap' }}>
                 {ACCESS_LEVELS.map(level => (
                   <Button
                     key={level.value}
+                    size="small"
                     type={accessLevel === level.value ? 'primary' : 'default'}
-                    size="middle"
+                    variant={accessLevel === level.value ? 'solid' : 'filled'}
+                    style={{
+                      backgroundColor: accessLevel === level.value ? level.color : undefined,
+                      borderColor: level.color,
+                      color: accessLevel === level.value ? 'white' : level.color,
+                      fontSize: '12px',
+                      padding: '0 8px',
+                      height: '28px',
+                    }}
                     onClick={() => setAccessLevel(level.value)}
-                    style={
-                      accessLevel === level.value
-                        ? {
-                            borderColor: level.color,
-                            backgroundColor: level.color,
-                            color: '#fff'
-                          }
-                        : {
-                            border: `2px solid ${level.color}`,
-                            color: level.color,
-                            backgroundColor: 'rgba(255,255,255,0.8)'
-                          }
-                    }
                   >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
-                      <span style={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: '50%',
-                        backgroundColor: level.color,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        border: '2px solid rgba(255,255,255,0.8)'
-                      }} />
-                      {level.label}
-                    </span>
+                    {level.label}
                   </Button>
                 ))}
-              </div>
-              <div style={{
-                marginTop: '12px',
-                padding: '8px',
-                backgroundColor: 'white',
-                borderRadius: '6px',
-                border: `2px solid ${ACCESS_LEVELS.find(level => level.value === accessLevel)?.color || '#1890ff'}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              }}>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  backgroundColor: ACCESS_LEVELS.find(level => level.value === accessLevel)?.color || '#1890ff',
-                  boxShadow: '0 3px 6px rgba(0,0,0,0.2)',
-                  border: '2px solid rgba(255,255,255,0.9)'
-                }} />
-                <div>
-                  <div style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: ACCESS_LEVELS.find(level => level.value === accessLevel)?.color || '#1890ff'
-                  }}>
-                    {ACCESS_LEVELS.find(level => level.value === accessLevel)?.label}级权限
-                  </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: '#666',
-                    marginTop: '2px'
-                  }}>
-                    {ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#52c41a' ? '游客可查看' :
-                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#1890ff' ? '游客可查看（含个人日常）' :
-                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#faad14' ? '仅注册用户可查看' :
-                     ACCESS_LEVELS.find(level => level.value === accessLevel)?.color === '#f5222d' ? '仅成人验证用户可查看' : '仅管理员可查看'}
-                  </div>
-                </div>
-              </div>
+              </Space.Compact>
             </div>
           </Form.Item>
 

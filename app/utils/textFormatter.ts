@@ -82,24 +82,33 @@ export function cleanSpaces(text: string): string {
 
 /**
  * 统一标点为全角（中文标点）
+ * 仅替换「非英文/数字语境」下的标点，避免破坏 URL、小数、英文句子
  */
 export function unifyPunctuation(text: string): string {
   let result = text;
-  
-  // 替换常用标点为中文全角
-  const punctuationMap: Record<string, string> = {
-    ',': '，',
-    '.': '。',
-    ';': '；',
-    ':': '：',
-    '?': '？',
-    '!': '！',
-    '(': '（',
-    ')': '）',
-  };
+  const punctMap: [string, string][] = [
+    [',', '，'],
+    ['.', '。'],
+    [';', '；'],
+    [':', '：'],
+    ['?', '？'],
+    ['!', '！'],
+    ['(', '（'],
+    [')', '）'],
+  ];
 
-  for (const [half, full] of Object.entries(punctuationMap)) {
-    result = result.replace(new RegExp('\\' + half, 'g'), full);
+  for (const [half, full] of punctMap) {
+    const re = new RegExp('\\' + half, 'g');
+    result = result.replace(re, (match, offset, str) => {
+      const prev = str[offset - 1];
+      const next = str[offset + 1];
+      // 不替换：前后紧邻字母或数字（保留 URL、小数、英文）
+      if (prev !== undefined && /[a-zA-Z0-9]/.test(prev)) return match;
+      if (next !== undefined && /[a-zA-Z0-9]/.test(next)) return match;
+      // 不替换：冒号在 :// 中（URL 协议）
+      if (half === ':' && next === '/' && str[offset + 2] === '/') return match;
+      return full;
+    });
   }
 
   return result;

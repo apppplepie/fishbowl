@@ -356,17 +356,26 @@ export async function GET(request: NextRequest) {
       params
     );
 
-    // 获取每篇文章的标签
-    for (const article of articles) {
-      const tags = await query<any[]>(
-        `SELECT t.id, t.name 
-         FROM tags t
-         JOIN article_tags at ON t.id = at.tag_id
-         WHERE at.article_id = ?
-         ORDER BY t.name ASC`,
-        [article.id]
+    // 批量获取所有文章的标签（避免 N+1）
+    const articleIds = articles.map((a: any) => a.id);
+    let tagsByArticleId: Record<string, string[]> = {};
+    if (articleIds.length > 0) {
+      const placeholders = articleIds.map(() => '?').join(',');
+      const tagRows = await query<any[]>(
+        `SELECT at.article_id, t.name
+         FROM article_tags at
+         JOIN tags t ON t.id = at.tag_id
+         WHERE at.article_id IN (${placeholders})
+         ORDER BY at.article_id, t.name ASC`,
+        articleIds
       );
-      article.tags = tags.map((t: any) => t.name);
+      for (const row of tagRows) {
+        if (!tagsByArticleId[row.article_id]) tagsByArticleId[row.article_id] = [];
+        tagsByArticleId[row.article_id].push(row.name);
+      }
+    }
+    for (const article of articles) {
+      article.tags = tagsByArticleId[article.id] || [];
     }
 
     return NextResponse.json({
