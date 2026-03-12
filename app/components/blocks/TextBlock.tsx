@@ -22,6 +22,8 @@ import type { TextBlock as TextBlockType } from '@/app/types/block';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { applyFormat, type FormatOption, findReplace } from '@/app/utils/textFormatter';
 import { useResponsive } from '@/app/hooks/useResponsive';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const { TextArea } = Input;
 const { confirm } = Modal;
@@ -355,7 +357,7 @@ export default function TextBlock({
     },
   ];
 
-  // 浏览模式渲染（保存后切回 view 时块可能只有 content 没有 parsedContent，做兜底）
+  // 浏览模式渲染（支持 Markdown：粘贴的 Markdown 按格式显示）
   if (mode === 'view') {
     const displayContent = block.parsedContent?.content ?? block.content ?? '';
     return (
@@ -363,6 +365,27 @@ export default function TextBlock({
         width: '100%',
         boxSizing: 'border-box',
       }}>
+        <style>{`
+          .text-block-markdown { line-height: 1.8; font-size: 16px; color: #333; max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; user-select: text; }
+          .text-block-markdown h1 { font-size: 1.75em; font-weight: 700; margin: 0.67em 0; }
+          .text-block-markdown h2 { font-size: 1.5em; font-weight: 600; margin: 0.75em 0; }
+          .text-block-markdown h3 { font-size: 1.25em; font-weight: 600; margin: 0.83em 0; }
+          .text-block-markdown h4, .text-block-markdown h5, .text-block-markdown h6 { font-size: 1em; font-weight: 600; margin: 0.5em 0; }
+          .text-block-markdown p { margin: 0.5em 0; }
+          .text-block-markdown ul, .text-block-markdown ol { margin: 0.5em 0; padding-left: 1.5em; }
+          .text-block-markdown li { margin: 0.25em 0; }
+          .text-block-markdown code { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.9em; color: #476582; background: #f1f5f9; padding: 0.18em 0.5em; border-radius: 6px; border: 1px solid #e2e8f0; font-weight: 500; }
+          .text-block-markdown pre { background: #f6f8fa; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 0.5em 0; border: 1px solid #e8e8e8; }
+          .text-block-markdown pre code { background: none; padding: 0; color: #333; border: none; font-weight: normal; }
+          .text-block-markdown blockquote { border-left: 4px solid #d9d9d9; margin: 0.5em 0; padding-left: 1em; color: #666; }
+          .text-block-markdown a { color: #1890ff; text-decoration: none; }
+          .text-block-markdown a:hover { text-decoration: underline; }
+          .text-block-markdown strong { font-weight: 700; }
+          .text-block-markdown-table-wrapper { max-width: 100%; overflow-x: auto; margin: 0.5em 0; -webkit-overflow-scrolling: touch; }
+          .text-block-markdown table { border-collapse: collapse; width: 100%; margin: 0; min-width: 200px; }
+          .text-block-markdown th, .text-block-markdown td { border: 1px solid #d9d9d9; padding: 6px 10px; text-align: left; word-break: break-word; }
+          .text-block-markdown th { font-weight: 600; background: #fafafa; }
+        `}</style>
         {/* Access Level 显示 */}
         <div style={{
           position: 'relative',
@@ -385,19 +408,19 @@ export default function TextBlock({
             {ACCESS_LEVELS.find(level => level.value === (block.access_level || 1))?.label || 'P'}
           </div>
         </div>
-        <div style={{
-          whiteSpace: 'pre-wrap',
-          wordWrap: 'break-word',
-          wordBreak: 'break-word',
-          overflowWrap: 'break-word',
-          lineHeight: '1.8',
-          fontSize: '16px',
-          color: '#333',
-          maxWidth: '100%',
-          userSelect: 'text',
-          WebkitUserSelect: 'text',
-        }}>
-          {displayContent}
+        <div className="text-block-markdown" style={{ maxWidth: '100%', overflow: 'hidden' }}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              table: ({ node, ...props }) => (
+                <div className="text-block-markdown-table-wrapper">
+                  <table {...props} />
+                </div>
+              ),
+            }}
+          >
+            {displayContent}
+          </ReactMarkdown>
         </div>
       </div>
     );
