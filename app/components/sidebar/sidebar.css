@@ -232,7 +232,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: #ffffff9d;           /* 纯白竖线 */
+  background-color: #fffffff1;           /* 纯白竖线 */
   pointer-events: none;             /* 避免遮挡点击事件 */
   z-index: 1;                       /* 确保竖线在背景之上（如果背景不透明也无妨） */
 }

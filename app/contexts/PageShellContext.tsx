@@ -55,54 +55,53 @@ const defaultConfig: PageShellConfig = {
   sidebarExpanded: false,
 };
 
+/** 浅比较两个 config 是否等价，避免无意义的状态更新与重渲染 */
+function isConfigEqual(a: PageShellConfig, b: PageShellConfig): boolean {
+  return (
+    a.box1Content === b.box1Content &&
+    a.hideBox1 === b.hideBox1 &&
+    a.box1Height === b.box1Height &&
+    a.scrollSnapVh === b.scrollSnapVh &&
+    a.sidebarWidth === b.sidebarWidth &&
+    a.sidebarExpanded === b.sidebarExpanded &&
+    a.themeOverride === b.themeOverride &&
+    shallowEqualStyles(a.box1Style, b.box1Style) &&
+    shallowEqualStyles(a.box2Style, b.box2Style)
+  );
+}
+
+function shallowEqualStyles(
+  a: CSSProperties | undefined,
+  b: CSSProperties | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return !a && !b;
+  const keysA = Object.keys(a) as (keyof CSSProperties)[];
+  const keysB = Object.keys(b) as (keyof CSSProperties)[];
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((k) => (a as Record<string, unknown>)[k as string] === (b as Record<string, unknown>)[k as string]);
+}
+
 /**
  * PageShellProvider - 全局 PageShell 配置提供者
  */
 export function PageShellProvider({ children }: { children: ReactNode }) {
   const [config, setConfigState] = useState<PageShellConfig>(defaultConfig);
 
-  // 固定 setConfig 引用
-  // ✅ 使用函数式更新避免闭包问题，不需要依赖 config
+  // 固定 setConfig 引用；仅当合并后的 config 与 prev 不同时才更新状态，减少无效重渲染
   const setConfig = useCallback((newConfig: Partial<PageShellConfig> | ((prev: PageShellConfig) => Partial<PageShellConfig>)) => {
     setConfigState((prev) => {
-      // 在函数式更新内部计算 actualConfig，使用 prev 而不是外部的 config
       const actualConfig = typeof newConfig === 'function' ? newConfig(prev) : newConfig;
-
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[PageShellProvider] setConfig 被调用:', {
-          newConfig: {
-            hasBox1Content: !!actualConfig.box1Content,
-            hideBox1: actualConfig.hideBox1,
-            hasBox1Style: !!actualConfig.box1Style,
-            hasBox2Style: !!actualConfig.box2Style,
-            hasThemeOverride: !!actualConfig.themeOverride,
-            sidebarWidth: actualConfig.sidebarWidth,
-            sidebarExpanded: actualConfig.sidebarExpanded,
-          }
-        });
-      }
-
-      const updated = {
+      const updated: PageShellConfig = {
         ...prev,
         ...actualConfig,
       };
-
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[PageShellProvider] config 状态更新:', {
-          hasBox1Content: !!updated.box1Content,
-          hideBox1: updated.hideBox1,
-          hasBox1Style: !!updated.box1Style,
-          hasBox2Style: !!updated.box2Style,
-          hasThemeOverride: !!updated.themeOverride,
-          scrollSnapVh: updated.scrollSnapVh,
-          sidebarWidth: updated.sidebarWidth,
-          sidebarExpanded: updated.sidebarExpanded,
-        });
+      if (isConfigEqual(prev, updated)) {
+        return prev;
       }
-
       return updated;
     });
-  }, []); // ✅ 依赖项可以是空数组，因为使用了函数式更新
+  }, []);
 
   // 固定 resetConfig 引用
   const resetConfig = useCallback(() => {

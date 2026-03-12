@@ -404,6 +404,7 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
     if (type === 'image') {
       let imageUrl = '';
       let imageTitle = '';
+      const mediaId = blockData.media_id ?? blockData.mediaId ?? null;
       if (parsedContent) {
         imageUrl = parsedContent.url || parsedContent.imageUrl || '';
         imageTitle = parsedContent.title || '';
@@ -417,7 +418,14 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
         }
       }
       if (imageUrl) {
-        newBlock = { id: generateId(), type: 'image', order: 0, imageUrl, title: imageTitle || undefined };
+        newBlock = {
+          id: generateId(),
+          type: 'image',
+          order: 0,
+          imageUrl,
+          title: imageTitle || undefined,
+          ...(mediaId != null && { media_id: mediaId, mediaId }),
+        };
       }
     } else if (type === 'text') {
       const textContent = parsedContent?.content || (typeof content === 'string' ? content : '');
@@ -528,12 +536,15 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
       return;
     }
 
-    const newBlock: ImageBlockType & { mediaId?: string | null } = {
+    const newBlock: ImageBlockType = {
       id: generateId(),
       type: 'image',
       order: 0, // 临时值，后面会重新排序
       imageUrl: finalImageUrl,
-      ...(lastUploadMediaId != null && { mediaId: lastUploadMediaId }),
+      ...(lastUploadMediaId != null && {
+        media_id: lastUploadMediaId,
+        mediaId: lastUploadMediaId,
+      }),
     };
 
     // 在指定位置插入
@@ -907,7 +918,8 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
                   ? (item.parsedContent?.content || item.content || '').replace(/<[^>]+>/g, '').slice(0, 60)
                   : item.type === 'code'
                     ? (item.parsedContent?.code || (typeof item.content === 'string' ? '' : item.content?.code) || '').slice(0, 60)
-                    : item.type === 'image' ? '图片块' : '内容块';
+                    : item.type === 'image' ? (item.parsedContent?.title || '图片块') : '内容块';
+                const imageUrl = item.type === 'image' ? (item.parsedContent?.imageUrl || item.imageUrl) : null;
                 return (
                   <div
                     key={item.id}
@@ -921,10 +933,29 @@ export default function BlockEditor({ blocks, onChange, showAddButton = true }: 
                       border: '1px solid #d9d9d9',
                       borderRadius: '8px',
                       cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: imageUrl ? 'column' : 'row',
+                      alignItems: imageUrl ? 'stretch' : 'center',
+                      gap: '12px',
                     }}
                   >
-                    <span style={{ fontWeight: 600, marginRight: '8px' }}>{typeLabel}</span>
-                    <span style={{ color: '#666', fontSize: '13px' }}>{preview}{preview.length >= 60 ? '…' : ''}</span>
+                    {imageUrl && (
+                      <img
+                        src={imageUrl}
+                        alt=""
+                        style={{
+                          width: '100%',
+                          maxHeight: 400,
+                          objectFit: 'contain',
+                          borderRadius: 6,
+                          display: 'block',
+                        }}
+                      />
+                    )}
+                    <div style={{ flex: imageUrl ? undefined : 1, minWidth: 0 }}>
+                      <span style={{ fontWeight: 600, marginRight: '8px' }}>{typeLabel}</span>
+                      <span style={{ color: '#666', fontSize: '13px' }}>{preview}{preview.length >= 60 ? '…' : ''}</span>
+                    </div>
                   </div>
                 );
               })}

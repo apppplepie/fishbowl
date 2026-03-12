@@ -82,16 +82,15 @@ export async function PUT(
 
         // 如果是同分类移动且指定了新顺序
         if (isSameCategory && newOrder !== oldOrder && body.order_index !== undefined) {
-          // 先将当前文章的顺序设为临时值
+          // 先将当前文章的顺序设为临时值（仅排序，不更新 updated_at）
           await query(
-            'UPDATE articles SET order_index = -1 WHERE id = ?',
+            'UPDATE articles SET order_index = -1, updated_at = updated_at WHERE id = ?',
             [articleId]
           );
 
-          // 调整所有同级节点的顺序（包括分类和文章）
+          // 调整所有同级节点的顺序（仅排序，不更新 updated_at）
           if (newOrder < oldOrder) {
             // 向前移动：将 [newOrder, oldOrder) 区间的所有节点都 +1
-            // 更新分类
             await query(
               `UPDATE categories 
                SET order_index = order_index + 1 
@@ -101,16 +100,14 @@ export async function PUT(
                 ? [newCategoryId, newOrder, oldOrder]
                 : [newOrder, oldOrder]
             );
-            // 更新文章
             await query(
               `UPDATE articles 
-               SET order_index = order_index + 1 
+               SET order_index = order_index + 1, updated_at = updated_at 
                WHERE category_id = ? AND order_index >= ? AND order_index < ? AND id != ?`,
               [newCategoryId, newOrder, oldOrder, articleId]
             );
           } else {
             // 向后移动：将 (oldOrder, newOrder] 区间的所有节点都 -1
-            // 更新分类
             await query(
               `UPDATE categories 
                SET order_index = order_index - 1 
@@ -120,17 +117,15 @@ export async function PUT(
                 ? [newCategoryId, oldOrder, newOrder]
                 : [oldOrder, newOrder]
             );
-            // 更新文章
             await query(
               `UPDATE articles 
-               SET order_index = order_index - 1 
+               SET order_index = order_index - 1, updated_at = updated_at 
                WHERE category_id = ? AND order_index > ? AND order_index <= ? AND id != ?`,
               [newCategoryId, oldOrder, newOrder, articleId]
             );
           }
         } else if (!isSameCategory && body.order_index !== undefined) {
-          // 不同分类移动：在目标分类中为所有节点（分类和文章）腾出空间
-          // 更新分类
+          // 不同分类移动：在目标分类中为所有节点腾出空间（仅排序，不更新 updated_at）
           await query(
             `UPDATE categories 
              SET order_index = order_index + 1 
@@ -138,10 +133,9 @@ export async function PUT(
              AND order_index >= ?`,
             newCategoryId ? [newCategoryId, newOrder] : [newOrder]
           );
-          // 更新文章
           await query(
             `UPDATE articles 
-             SET order_index = order_index + 1 
+             SET order_index = order_index + 1, updated_at = updated_at 
              WHERE category_id = ? AND order_index >= ? AND id != ?`,
             [newCategoryId, newOrder, articleId]
           );
@@ -222,6 +216,20 @@ export async function PUT(
       updateValues.push(body.max_access_level);
     }
 
+    // 仅排序（只改了 order_index / category_id）时保持 updated_at 不变；内容编辑则正常更新
+    const hasContentUpdate =
+      body.title !== undefined ||
+      body.type !== undefined ||
+      (body.blocks !== undefined && Array.isArray(body.blocks)) ||
+      body.excerpt !== undefined ||
+      body.tags !== undefined ||
+      body.cover_image !== undefined ||
+      body.cover_access_level !== undefined;
+    const hasOrderChange = body.order_index !== undefined || body.category_id !== undefined;
+    if (hasOrderChange && !hasContentUpdate) {
+      updateFields.push('updated_at = updated_at');
+    }
+
     // 确保至少有一个字段要更新
     if (updateFields.length === 0) {
       return NextResponse.json(
@@ -259,10 +267,12 @@ export async function PUT(
             content: block.content || '',
           };
         } else if (block.type === 'image') {
+          const mediaId = block.media_id ?? block.mediaId ?? null;
           blockContent = {
             url: block.imageUrl || '',
             title: block.title || '',
             description: block.description || '',
+            ...(mediaId != null && { media_id: mediaId }),
           };
         } else if (block.type === 'code') {
           blockContent = {

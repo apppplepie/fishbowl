@@ -40,7 +40,8 @@ export default function ArticleCard({
 
   const hasTags = card.tags && card.tags.length > 0;
   const hasExcerpt = !!card.excerpt;
-  const hasDate = card.updatedAt != null || card.publishedAt != null || card.createdAt != null;
+  const parentName = card.categoryName ?? (card as any).category_name ?? '';
+  const hasMeta = !!parentName || card.updatedAt != null || card.publishedAt != null || card.createdAt != null;
 
   return (
     <Card
@@ -89,7 +90,7 @@ export default function ArticleCard({
           <div className="card-block--gap" aria-hidden />
         </>
       )}
-      {hasDate && (
+      {hasMeta && (
         <>
           <div
             className="card-block--divider"
@@ -99,7 +100,7 @@ export default function ArticleCard({
           <div className="card-block--gap" aria-hidden />
           <div className="card-block-meta card-block--date">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: colors.textColor }}>
-              <span>{formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}</span>
+              <span>{parentName || formatRelativeTime(card.updatedAt || card.publishedAt || card.createdAt)}</span>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               {card.readTime && <span><ClockCircleOutlined /> {card.readTime}min</span>}

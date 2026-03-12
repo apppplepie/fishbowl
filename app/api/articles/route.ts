@@ -212,10 +212,12 @@ export async function POST(request: NextRequest) {
           content: block.content || '',
         };
       } else if (block.type === 'image') {
+        const mediaId = block.media_id ?? block.mediaId ?? null;
         blockContent = {
           url: block.imageUrl || '',
           title: block.title || '',
           description: block.description || '',
+          ...(mediaId != null && { media_id: mediaId }),
         };
         console.log(`API: 处理图片块 ${i}`, {
           blockId,

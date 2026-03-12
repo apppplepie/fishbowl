@@ -51,26 +51,6 @@ function PageShell({ children }: { children: React.ReactNode }) {
     return config.themeOverride || currentFishbowlTheme || DEFAULT_THEME;
   }, [config.themeOverride, currentFishbowlTheme]);
 
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[PageShell] config 或主题发生变化:', {
-        globalTheme: currentFishbowlTheme ? {
-          id: currentFishbowlTheme.id,
-          name: currentFishbowlTheme.name,
-        } : null,
-        config: {
-          hideBox1: config.hideBox1,
-          hasBox1Content: !!config.box1Content,
-          hasBox1Style: !!config.box1Style,
-          hasBox2Style: !!config.box2Style,
-          hasThemeOverride: !!config.themeOverride,
-          sidebarWidth: config.sidebarWidth,
-          sidebarExpanded: config.sidebarExpanded,
-        },
-      });
-    }
-  }, [config, currentFishbowlTheme]);
-
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const useScrollContainer = config.scrollSnapVh != null && !config.hideBox1;
 

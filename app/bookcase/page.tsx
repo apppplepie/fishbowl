@@ -563,7 +563,7 @@ function BookcasePageContent() {
 
   // 创建 box1Content：搜索框 + 标签筛选（与 archive 一致，并增加标签选择）
   const box1Content = useMemo(() => (
-    <div style={{ padding: '16px 24px' }}>
+    <div style={{ padding: '4px 24px 16px' }}>
       <div style={{ maxWidth: isMobile ? '100%' : '320px', marginBottom: 12 }}>
         <TransparentSearchInput
           placeholder="标题或摘要..."

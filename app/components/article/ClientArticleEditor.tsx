@@ -74,6 +74,7 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
           };
         }
         if (b.type === 'image') {
+          const mid = b.media_id ?? b.mediaId ?? null;
           return {
             id: b.id,
             type: 'image',
@@ -82,7 +83,8 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
             title: b.parsedContent?.title || b.title || '',
             description: b.parsedContent?.description || b.description || '',
             access_level: b.access_level || 1,
-            media_id: b.media_id ?? null,
+            media_id: mid,
+            mediaId: mid ?? undefined,
             media: b.media ?? undefined,
           };
         }
@@ -157,12 +159,21 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
         fullAccessLevel = current.full_access_level ?? current.max_access_level ?? current.maxAccessLevel ?? 1;
       }
       
+      // 确保每个 image block 都带上 media_id，供列表/瀑布流封面比例 JOIN media 用
+      const blocksForSave = (current.editorBlocks || []).map((block: any) => {
+        if (block.type === 'image') {
+          const mid = block.media_id ?? block.mediaId ?? null;
+          return { ...block, media_id: mid, mediaId: mid ?? undefined };
+        }
+        return block;
+      });
+
       const payload: any = {
         title: current.title,
         type: current.type || 'text',
         category_id: current.category_id || null,
         tags: current.tags || [],
-        blocks: current.editorBlocks || [],
+        blocks: blocksForSave,
         excerpt: updatedExcerpt,
         visible_access_level: visibleAccessLevel,
         full_access_level: fullAccessLevel,

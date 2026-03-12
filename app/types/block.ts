@@ -28,13 +28,16 @@ export interface TextBlock extends BaseBlock {
   content: string;
 }
 
-// 图片块
+// 图片块（media_id 供列表/瀑布流封面比例 JOIN media 用，保存时必须保留）
 export interface ImageBlock extends BaseBlock {
   type: 'image';
   imageUrl: string;
   title?: string;
   description?: string;
   author?: string;
+  /** 媒体表 id，用于封面比例等；保存时勿丢 */
+  media_id?: string | null;
+  mediaId?: string | null;
 }
 
 // 代码块

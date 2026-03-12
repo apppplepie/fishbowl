@@ -329,7 +329,7 @@ function ArchivePageContent(props?: ArchivePageProps) {
 
   // --- box1：搜索框 + 标签筛选（与 bookcase 一致，半透明样式） ---
   const box1Content = useMemo(() => (
-    <div style={{ padding: '16px 24px' }}>
+    <div style={{ padding: '4px 24px 16px' }}>
       <div style={{ maxWidth: isMobile ? '100%' : '320px', marginBottom: 12 }}>
         <ArchiveSearchBox isMobile={isMobile} noPadding />
       </div>

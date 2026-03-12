@@ -46,6 +46,8 @@ export default function ImageBlock({
     onChange({
       ...block,
       description: e.target.value,
+      media_id: block.media_id ?? block.mediaId ?? undefined,
+      mediaId: block.mediaId ?? block.media_id ?? undefined,
     });
   };
 
@@ -55,6 +57,8 @@ export default function ImageBlock({
       onChange({
         ...block,
         access_level: level.value,
+        media_id: block.media_id ?? block.mediaId ?? undefined,
+        mediaId: block.mediaId ?? block.media_id ?? undefined,
       });
     }
   };

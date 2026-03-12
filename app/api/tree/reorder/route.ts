@@ -145,9 +145,9 @@ export async function POST(request: NextRequest) {
             // 更新分类的 order_index 和 path
             await updateNodeAndChildren(connection, child.id, parent_id, child.order_index);
           } else if (child.type === 'article') {
-            // 更新文章的 order_index
+            // 仅排序：只更新 order_index，不改变 updated_at
             await connection.execute(
-              'UPDATE articles SET order_index = ? WHERE id = ? AND category_id = ?',
+              'UPDATE articles SET order_index = ?, updated_at = updated_at WHERE id = ? AND category_id = ?',
               [child.order_index, child.id, parent_id]
             );
           }
@@ -169,9 +169,9 @@ export async function POST(request: NextRequest) {
           const categoryOrderIndex = targetMove?.children.find(c => c.id === moved.id)?.order_index || 0;
           await updateNodeAndChildren(connection, moved.id, moved.new_parent_id, categoryOrderIndex);
         } else {
-          // 是 article，只需要更新 category_id
+          // 是 article，只移动分类，不改变 updated_at
           await connection.execute(
-            'UPDATE articles SET category_id = ? WHERE id = ?',
+            'UPDATE articles SET category_id = ?, updated_at = updated_at WHERE id = ?',
             [moved.new_parent_id, moved.id]
           );
         }

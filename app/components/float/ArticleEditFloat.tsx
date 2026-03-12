@@ -90,19 +90,6 @@ export default function ArticleEditFloat({
   const handlePublishArticle = () => {
     router.push('/publish-article');
   };
-  
-  // 调试信息
-  console.log('ArticleEditFloat 权限检查:', {
-    articleAuthor,
-    currentUser,
-    userRole,
-    isAdmin,
-    isModerator,
-    canEdit,
-    hasOnDelete: !!onDelete,
-    hasOnAdjustCategory: !!onAdjustCategory,
-    mode,
-  });
 
   // 删除确认
   const handleDelete = () => {
@@ -197,10 +184,7 @@ export default function ArticleEditFloat({
         <FloatButton
           icon={<Save size={20} />}
           tooltip={tooltipProp('保存')}
-          onClick={() => {
-            console.log('💾 点击保存按钮');
-            onSave();
-          }}
+          onClick={onSave}
         />
         <FloatButton
           icon={<Eye size={20} />}
@@ -229,10 +213,7 @@ export default function ArticleEditFloat({
         <FloatButton
           icon={<Save size={20} />}
           tooltip={tooltipProp('保存')}
-          onClick={() => {
-            console.log('💾 点击保存按钮');
-            onSave();
-          }}
+          onClick={onSave}
         />
         <FloatButton
           icon={<Edit size={20} />}
