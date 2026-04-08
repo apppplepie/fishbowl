@@ -24,6 +24,7 @@ import { applyFormat, type FormatOption, findReplace } from '@/app/utils/textFor
 import { useResponsive } from '@/app/hooks/useResponsive';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 const { TextArea } = Input;
 const { confirm } = Modal;
@@ -410,7 +411,7 @@ export default function TextBlock({
         </div>
         <div className="text-block-markdown" style={{ maxWidth: '100%', overflow: 'hidden' }}>
           <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
+            remarkPlugins={[remarkGfm, remarkBreaks]}
             components={{
               table: ({ node, ...props }) => (
                 <div className="text-block-markdown-table-wrapper">
