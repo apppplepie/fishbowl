@@ -54,20 +54,20 @@ export default function ClientArticleShell({
   const [editMode, setEditMode] = useState<'view' | 'edit' | 'preview'>('view');
   const editorRef = useRef<ArticleEditorHandle | null>(null);
 
-  // expose for debug
   useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
     (window as any).__debug_article = article;
     console.log('[ClientArticleShell] article', article, 'editMode', editMode);
   }, [article, editMode]);
 
   // 同步外部 article 更新
   useEffect(() => {
-    if (initialArticle && initialArticle !== article) {
+    if (initialArticle) {
       setArticle(initialArticle);
       setLikes(initialArticle.likes || initialLikes || 0);
       setComments(initialArticle.comments || initialComments || 0);
     }
-  }, [initialArticle, initialLikes, initialComments, article]);
+  }, [initialArticle, initialLikes, initialComments]);
 
   // 客户端加载文章内容（避免进入页面前阻塞）
   useEffect(() => {
@@ -224,7 +224,7 @@ export default function ClientArticleShell({
             ref={editorRef}
             articleId={articleId}
             initialArticle={article}
-            isEditing={editMode === 'edit'}
+            mode={editMode === 'preview' ? 'preview' : 'edit'}
             onArticleUpdate={handleArticleUpdate}
             onEditModeChange={(m) => setEditMode(m)}
             // 传权限与用户信息
@@ -236,7 +236,7 @@ export default function ClientArticleShell({
       </div>
 
       {/* 文章页：互动区+评论区容器（编辑模式下不显示） */}
-      {editMode !== 'edit' && (
+      {editMode === 'view' && (
         <div
           style={getContentAreaWrapperStyle({ minWidth: 0 })}
           data-export-hide
@@ -273,11 +273,15 @@ export default function ClientArticleShell({
       {/* 浮动遥控器：只负责切换 editMode 与触发保存等 */}
       <ArticleEditFloat
         mode={editMode}
-        onEdit={() => setEditMode('edit')}
+        onEdit={() => {
+          if (canEditBool) setEditMode('edit');
+        }}
         onPreview={() => setEditMode('preview')}
         onSave={() => editorRef.current?.save()}
         onCancel={() => setEditMode('view')}
+        onBackToEdit={() => setEditMode('edit')}
         onDelete={handleDelete}
+        canEditCurrentArticle={canEditBool}
         categoryId={article?.category_id}
         articleAuthor={article?.author}
         currentUser={user?.username}

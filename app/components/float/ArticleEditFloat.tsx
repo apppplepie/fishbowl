@@ -15,11 +15,13 @@ interface ArticleEditFloatProps {
   onPreview: () => void;
   onSave: () => void;
   onCancel: () => void;
+  onBackToEdit?: () => void;
   onDelete?: () => void;
   onAdjustCategory?: () => void; // 新增：调整章节
   categoryId?: string;
   articleAuthor?: string;
   currentUser?: string;
+  canEditCurrentArticle?: boolean;
   userRole?: 'admin' | 'moderator' | 'user'; // 新增：用户角色
   /** 是否显示「编辑」按钮（如虚拟翻页后不显示，避免保存错章节）；发布新章节等不受影响，可一直显示 */
   showEditButton?: boolean;
@@ -38,11 +40,13 @@ export default function ArticleEditFloat({
   onPreview,
   onSave,
   onCancel,
+  onBackToEdit,
   onDelete,
   onAdjustCategory,
   categoryId,
   articleAuthor,
   currentUser,
+  canEditCurrentArticle,
   userRole,
   showEditButton = true,
 }: ArticleEditFloatProps) {
@@ -65,10 +69,11 @@ export default function ArticleEditFloat({
   // 注意：这里不再允许作者本人编辑，只有管理员和版主可以编辑
   const isAdmin = userRole === 'admin';
   const isModerator = userRole === 'moderator';
-  const canEdit = isAdmin || isModerator;
+  const canModerate = isAdmin || isModerator;
+  const canEditArticle = canEditCurrentArticle ?? canModerate;
 
   // 如果没有权限，不显示任何按钮
-  if (!canEdit) {
+  if (!canModerate && !canEditArticle) {
     return null;
   }
 
@@ -108,11 +113,7 @@ export default function ArticleEditFloat({
 
   // 浏览模式：显示编辑按钮（如果有权限，显示按钮组）
   if (mode === 'view') {
-    if (canEdit) {
-      function onChapterManageSuccess(): void {
-        throw new Error('Function not implemented.');
-      }
-
+    if (canModerate || canEditArticle) {
       return (
         <FloatButton.Group
           trigger="click"
@@ -121,7 +122,7 @@ export default function ArticleEditFloat({
           tooltip={tooltipProp('操作')}
           type="primary"
         >
-          {showEditButton && (
+          {showEditButton && canEditArticle && (
             <FloatButton
               icon={<Edit size={20} />}
               tooltip={tooltipProp('编辑文章')}
@@ -149,7 +150,7 @@ export default function ArticleEditFloat({
               onClick={handlePublishArticle}
             />
           )}
-          {showEditButton && onDelete && (
+          {showEditButton && canEditArticle && onDelete && (
             <FloatButton
               icon={<Trash2 size={20} />}
               tooltip={tooltipProp('删除文章')}
@@ -172,6 +173,10 @@ export default function ArticleEditFloat({
   }
 
   // 编辑模式：显示保存、预览和取消按钮组
+  if (!canEditArticle) {
+    return null;
+  }
+
   if (mode === 'edit') {
     return (
       <FloatButton.Group
@@ -218,7 +223,7 @@ export default function ArticleEditFloat({
         <FloatButton
           icon={<Edit size={20} />}
           tooltip={tooltipProp('继续编辑')}
-          onClick={() => onCancel()} // 返回编辑模式
+          onClick={onBackToEdit || onCancel}
         />
       </FloatButton.Group>
     );

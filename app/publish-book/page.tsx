@@ -1,26 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import {
-  Form,
-  Input,
-  Button,
-  Upload,
-  Select,
-  Card,
-  Space,
-  message,
-  Divider,
-  Tag,
-} from 'antd';
-import {
-  PlusOutlined,
-  SaveOutlined,
-  EyeOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
-import type { UploadFile } from 'antd'; 
-import { usePageShell } from '@/app/contexts/PageShellContext';
+import { Form, Input, Upload } from 'antd';
+import { Card, Tag, message } from '@/app/components/ui';
+import { PlusOutlined } from '@ant-design/icons';
+import type { UploadFile } from 'antd';
+import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
+import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
+import { useResponsive } from '@/app/hooks/useResponsive';
+import { getContentAreaWrapperStyle, contentCardBorderRadius, contentCardBoxShadow } from '@/app/styles/contentArea';
 import TagInput from '@/app/components/TagInput';
 import type { Block } from '@/app/types/block';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -37,40 +25,46 @@ function PublishBookPage() {
   const [form] = Form.useForm();
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
+  const { isMobile } = useResponsive();
   const { setConfig } = usePageShell();
 
   // 封面图片状态
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  // 设置页面配置
+
+  useScrollSnapAtTop();
+
+  // 与发布文章/章节一致：合并 config、吸附滚动；标题放在 box2，避免 box1 两行截断把版式裁坏
   useEffect(() => {
-    setConfig({
+    setConfig((prev) => ({
+      ...prev,
+      scrollSnapVh: DEFAULT_SCROLL_SNAP_VH,
       box1Content: (
         <div style={{ padding: '16px 24px' }}>
-          <h2 style={{
-            margin: 0,
-            color: 'white',
-            fontSize: '20px',
-            fontWeight: 600,
-          }}>
-            📚 发布新书
-          </h2>
-          <p style={{
-            margin: '8px 0 0 0',
-            color: 'rgba(255,255,255,0.8)',
-            fontSize: '14px',
-          }}>
-            为你的书架添加一本新书
-          </p>
+          {!isLoggedIn && (
+            <div
+              style={{
+                marginTop: '12px',
+                padding: '8px 12px',
+                background: 'rgba(255,100,100,0.3)',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: 'white',
+                fontWeight: 500,
+              }}
+            >
+              ⚠️ 未登录状态 - 请先登录
+            </div>
+          )}
         </div>
       ),
-      box2Style: { padding: '40px 20px' },
-    });
+      box2Style: { padding: isMobile ? '40px 12px' : '40px 24px' },
+    }));
 
     return () => {
-      setConfig({ box1Content: null });
+      setConfig((prev) => ({ ...prev, box1Content: null, scrollSnapVh: undefined }));
     };
-  }, [setConfig]);
+  }, [setConfig, isLoggedIn, isMobile]);
 
   // 组件挂载时尝试加载草稿
   useEffect(() => {
@@ -407,12 +401,37 @@ function PublishBookPage() {
     },
   };
 
+  const cardSurfaceStyle: React.CSSProperties = {
+    borderRadius: contentCardBorderRadius,
+    boxShadow: contentCardBoxShadow,
+    background: 'var(--ui-color-bg, #fff)',
+    borderColor: 'var(--ui-color-border, #eee)',
+  };
+
   return (
     <>
-        <div style={{
-          maxWidth: '800px',
-          margin: '0 auto',
-        }}>
+        <div style={getContentAreaWrapperStyle()}>
+          <div
+            style={{
+              marginBottom: isMobile ? 16 : 24,
+              padding: '0 4px',
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: isMobile ? 18 : 22,
+                fontWeight: 600,
+                color: '#1a1a1a',
+              }}
+            >
+              📚 发布新书
+            </h2>
+            <p style={{ margin: '8px 0 0', color: '#666', fontSize: 14, lineHeight: 1.5 }}>
+              为你的书架添加一本新书
+            </p>
+          </div>
+
           <Form
             form={form}
             layout="vertical"
@@ -423,66 +442,68 @@ function PublishBookPage() {
           >
             <Card
               style={{
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                marginBottom: '24px',
+                ...cardSurfaceStyle,
+                marginBottom: isMobile ? 12 : 24,
               }}
+              bodyStyle={{ padding: isMobile ? 12 : 24 }}
             >
-              {/* <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>📖 书籍信息</h3>
-              </div> */}
-
               <Form.Item
-                // label="书名"
+                label={isMobile ? undefined : '书名'}
                 name="title"
                 rules={[{ required: true, message: '请输入书名' }]}
+                style={{ marginBottom: isMobile ? 12 : 24 }}
               >
                 <Input
                   placeholder="输入书籍名称..."
-                  size="large"
-                  style={{ fontSize: '18px', fontWeight: 500 }}
+                  size={isMobile ? 'middle' : 'large'}
+                  style={{ fontSize: isMobile ? 16 : 18, fontWeight: 500 }}
                 />
               </Form.Item>
 
               <Form.Item
-                // label="标签（可选）"
+                label={isMobile ? undefined : '标签（可选）'}
                 name="tags"
-              // tooltip="添加标签可以帮助读者更好地找到你的书籍"
+                tooltip={isMobile ? undefined : '添加标签可以帮助读者更好地找到你的书籍'}
+                style={{ marginBottom: isMobile ? 12 : 24 }}
               >
-                <TagInput placeholder="输入标签，按空格或回车添加" maxTags={10} />
+                <TagInput
+                  placeholder={isMobile ? '标签（空格/回车）' : '输入标签，按空格或回车添加'}
+                  maxTags={10}
+                />
               </Form.Item>
 
-              <Upload {...coverUploadProps}>
-                {coverFileList.length === 0 && (
-                  <div>
-                    <PlusOutlined />
-                    <div style={{ marginTop: 8 }}>上传封面</div>
-                  </div>
-                )}
-              </Upload>
+              <Form.Item
+                label={isMobile ? undefined : '封面（可选）'}
+                extra={isMobile ? undefined : 'JPG / PNG，不超过 2MB；不上传则使用默认封面'}
+                style={{ marginBottom: 0 }}
+              >
+                <Upload {...coverUploadProps}>
+                  {coverFileList.length === 0 && (
+                    <div>
+                      <PlusOutlined />
+                      <div style={{ marginTop: 8 }}>上传封面</div>
+                    </div>
+                  )}
+                </Upload>
+              </Form.Item>
             </Card>
 
             <Card
               style={{
-                borderRadius: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                marginBottom: '24px',
+                ...cardSurfaceStyle,
+                marginBottom: isMobile ? 60 : 24,
               }}
+              bodyStyle={{ padding: isMobile ? 12 : 24 }}
             >
-              {/* <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>🖼️ 封面图片（可选）</h3>
-                <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: '14px' }}>
-                  上传书籍封面图片，没有的话会使用默认封面
-                </p>
-              </div> */}
               <Form.Item
-                // label="书籍简介"
+                label={isMobile ? undefined : '书籍简介'}
                 name="description"
                 rules={[{ required: true, message: '请输入书籍简介' }]}
+                style={{ marginBottom: 0 }}
               >
                 <TextArea
                   placeholder="简要介绍这本书的内容、特点等..."
-                  rows={10}
+                  rows={isMobile ? 8 : 10}
                 />
               </Form.Item>
             </Card>
@@ -490,10 +511,10 @@ function PublishBookPage() {
             {isPreviewMode && (
               <Card
                 style={{
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  marginBottom: '24px',
+                  ...cardSurfaceStyle,
+                  marginBottom: isMobile ? 24 : 24,
                 }}
+                bodyStyle={{ padding: isMobile ? 12 : 24 }}
               >
                 <div style={{ marginBottom: '16px' }}>
                   <h3 style={{ margin: 0, fontSize: '18px' }}>👀 预览效果</h3>

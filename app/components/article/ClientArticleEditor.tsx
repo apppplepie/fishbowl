@@ -18,9 +18,10 @@ import TagInput from '@/app/components/TagInput';
 import { Select, Divider, Space } from 'antd';
 // 权限信息现在从props传入，不再需要内部hooks
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { apiPutJson, apiDeleteJson } from '@/lib/apiClient';
+import { apiPutJson, apiDeleteJson, apiGetJson } from '@/lib/apiClient';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
+import ArticleContentClient from './ArticleContent.client';
 
 const { Option } = Select;
 
@@ -94,7 +95,7 @@ export type ArticleEditorHandle = {
 interface Props {
   articleId: string;
   initialArticle: any;
-  isEditing?: boolean;
+  mode?: 'edit' | 'preview';
   onArticleUpdate?: (updatedArticle: any) => void;
   onEditModeChange?: (editMode: 'view' | 'edit' | 'preview') => void;
   canEdit?: boolean;
@@ -103,7 +104,7 @@ interface Props {
 }
 
 const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function ClientArticleEditor(
-  { articleId, initialArticle, isEditing = false, onArticleUpdate, onEditModeChange, canEdit = true, currentUser, isLoggedIn = false },
+  { articleId, initialArticle, mode = 'edit', onArticleUpdate, onEditModeChange, canEdit = true, currentUser, isLoggedIn = false },
   ref
 ) {
   const router = useRouter();
@@ -125,64 +126,60 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
     setArticle(initialArticle);
   }, [initialArticle]);
 
-  // Initialize/cleanup meta + editorBlocks when isEditing toggles
+  // Initialize meta + editorBlocks when entering the editor. Keep this stable
+  // across edit/preview switches so preview can render unsaved changes.
   useEffect(() => {
-    if (isEditing && article) {
-      const blocks = (article.blocks || []).map((b: any, idx: number) => {
-        if (b.type === 'text') {
-          return {
-            id: b.id,
-            type: 'text',
-            order: idx,
-            content: b.parsedContent?.content || b.content || '',
-            access_level: b.access_level || 1,
-          };
-        }
-        if (b.type === 'image') {
-          const mid = b.media_id ?? b.mediaId ?? null;
-          return {
-            id: b.id,
-            type: 'image',
-            order: idx,
-            imageUrl: b.parsedContent?.url || b.url || '',
-            title: b.parsedContent?.title || b.title || '',
-            description: b.parsedContent?.description || b.description || '',
-            access_level: b.access_level || 1,
-            media_id: mid,
-            mediaId: mid ?? undefined,
-            media: b.media ?? undefined,
-          };
-        }
-        if (b.type === 'code') {
-          return {
-            id: b.id,
-            type: 'code',
-            order: idx,
-            code: b.parsedContent?.code || b.code || '',
-            language: b.parsedContent?.language || b.language || 'javascript',
-            title: b.parsedContent?.title || b.title || '',
-            access_level: b.access_level || 1,
-          };
-        }
-        return { ...b, access_level: b.access_level || 1 };
-      }).filter(Boolean);
+    if (!article || metaRef.current) return;
 
-      setMeta({
-        title: article.title || '',
-        type: article.type || 'text',
-        category_id: article.category_id ?? null,
-        tags: article.tags || [],
-        order_index: article.order_index,
-      });
-      setEditorBlocks(blocks);
-      onEditModeChange?.('edit');
-    } else {
-      setMeta(null);
-      setEditorBlocks([]);
-      if (!isEditing) onEditModeChange?.('view');
-    }
+    const blocks = (article.blocks || []).map((b: any, idx: number) => {
+      if (b.type === 'text') {
+        return {
+          id: b.id,
+          type: 'text',
+          order: idx,
+          content: b.parsedContent?.content || b.content || '',
+          access_level: b.access_level || 1,
+        };
+      }
+      if (b.type === 'image') {
+        const mid = b.media_id ?? b.mediaId ?? null;
+        return {
+          id: b.id,
+          type: 'image',
+          order: idx,
+          imageUrl: b.parsedContent?.url || b.url || b.imageUrl || '',
+          title: b.parsedContent?.title || b.title || '',
+          description: b.parsedContent?.description || b.description || '',
+          access_level: b.access_level || 1,
+          media_id: mid,
+          mediaId: mid ?? undefined,
+          media: b.media ?? undefined,
+        };
+      }
+      if (b.type === 'code') {
+        return {
+          id: b.id,
+          type: 'code',
+          order: idx,
+          code: b.parsedContent?.code || b.code || '',
+          language: b.parsedContent?.language || b.language || 'javascript',
+          title: b.parsedContent?.title || b.title || '',
+          access_level: b.access_level || 1,
+        };
+      }
+      return { ...b, access_level: b.access_level || 1 };
+    }).filter(Boolean);
+
+    setMeta({
+      title: article.title || '',
+      type: article.type || 'text',
+      category_id: article.category_id ?? null,
+      tags: article.tags || [],
+      order_index: article.order_index,
+    });
+    setEditorBlocks(blocks);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, article]);
+  }, [article?.id]);
 
   // fetch category path function (kept stable)
   const fetchCategoryPath = useCallback(async (categoryId: string) => {
@@ -259,10 +256,18 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
         if (candidate !== undefined && candidate !== null && !Number.isNaN(Number(candidate))) payload.order_index = Number(candidate);
       }
 
-      const res = await apiPutJson(`/api/articles/${articleId}`, payload);
+      await apiPutJson(`/api/articles/${articleId}`, payload);
       message.success({ content: '保存成功！', key: 'save' });
 
-      const updatedArticle = res || { ...article, ...payload, blocks: payload.blocks };
+      const refreshed = await apiGetJson<{ success: boolean; article?: any; error?: string }>(
+        `/api/articles/${articleId}`,
+        { requiresAuth: false }
+      );
+      if (!refreshed.success || !refreshed.article) {
+        throw new Error(refreshed.error || 'Saved, but failed to refresh the article');
+      }
+
+      const updatedArticle = refreshed.article;
       setArticle(updatedArticle);
       onArticleUpdate?.(updatedArticle);
       router.refresh();
@@ -307,13 +312,66 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
     setEditorBlocks(arg as any);
   }, []);
 
+  const previewArticle = useMemo(() => {
+    if (!meta) return null;
+
+    const previewBlocks = (editorBlocks || []).map((block: any, index: number) => {
+      if (block.type === 'text') {
+        return {
+          ...block,
+          order: index,
+          parsedContent: { content: block.content || '' },
+        };
+      }
+
+      if (block.type === 'image') {
+        return {
+          ...block,
+          order: index,
+          parsedContent: {
+            url: block.imageUrl || block.url || '',
+            title: block.title || '',
+            description: block.description || '',
+          },
+        };
+      }
+
+      if (block.type === 'code') {
+        return {
+          ...block,
+          order: index,
+          parsedContent: {
+            code: block.code || '',
+            language: block.language || 'javascript',
+            title: block.title || '',
+          },
+        };
+      }
+
+      return { ...block, order: index };
+    });
+
+    return {
+      ...article,
+      title: meta.title,
+      type: meta.type || 'text',
+      category_id: meta.category_id,
+      tags: meta.tags || [],
+      blocks: previewBlocks,
+    };
+  }, [article, editorBlocks, meta]);
+
   // Permission guard / early return for UI only (hooks above always run)
   if (!isLoggedIn || !canEdit || !currentUser) {
     return null;
   }
 
-  if (!isEditing || !meta) {
+  if (!meta) {
     return null;
+  }
+
+  if (mode === 'preview') {
+    return previewArticle ? <ArticleContentClient article={previewArticle} /> : null;
   }
 
   return (

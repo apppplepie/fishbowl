@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentUser, canModerate, canEditArticle } from '@/lib/auth';
+import { shiftSiblings, makeSpaceForInsertion } from '@/lib/ordering';
 
 // 权限检查函数
 function checkAccess(userAccessLevel: number, blockAccessLevel: number): boolean {
@@ -88,57 +89,11 @@ export async function PUT(
             [articleId]
           );
 
-          // 调整所有同级节点的顺序（仅排序，不更新 updated_at）
-          if (newOrder < oldOrder) {
-            // 向前移动：将 [newOrder, oldOrder) 区间的所有节点都 +1
-            await query(
-              `UPDATE categories 
-               SET order_index = order_index + 1 
-               WHERE ${newCategoryId ? 'parent_id = ?' : 'parent_id IS NULL'}
-               AND order_index >= ? AND order_index < ?`,
-              newCategoryId 
-                ? [newCategoryId, newOrder, oldOrder]
-                : [newOrder, oldOrder]
-            );
-            await query(
-              `UPDATE articles 
-               SET order_index = order_index + 1, updated_at = updated_at 
-               WHERE category_id = ? AND order_index >= ? AND order_index < ? AND id != ?`,
-              [newCategoryId, newOrder, oldOrder, articleId]
-            );
-          } else {
-            // 向后移动：将 (oldOrder, newOrder] 区间的所有节点都 -1
-            await query(
-              `UPDATE categories 
-               SET order_index = order_index - 1 
-               WHERE ${newCategoryId ? 'parent_id = ?' : 'parent_id IS NULL'}
-               AND order_index > ? AND order_index <= ?`,
-              newCategoryId 
-                ? [newCategoryId, oldOrder, newOrder]
-                : [oldOrder, newOrder]
-            );
-            await query(
-              `UPDATE articles 
-               SET order_index = order_index - 1, updated_at = updated_at 
-               WHERE category_id = ? AND order_index > ? AND order_index <= ? AND id != ?`,
-              [newCategoryId, oldOrder, newOrder, articleId]
-            );
-          }
+          // 调整所有同级节点的顺序（分类 + 文章共享序列）
+          await shiftSiblings(newCategoryId, oldOrder, newOrder, false, articleId);
         } else if (!isSameCategory && body.order_index !== undefined) {
-          // 不同分类移动：在目标分类中为所有节点腾出空间（仅排序，不更新 updated_at）
-          await query(
-            `UPDATE categories 
-             SET order_index = order_index + 1 
-             WHERE ${newCategoryId ? 'parent_id = ?' : 'parent_id IS NULL'}
-             AND order_index >= ?`,
-            newCategoryId ? [newCategoryId, newOrder] : [newOrder]
-          );
-          await query(
-            `UPDATE articles 
-             SET order_index = order_index + 1, updated_at = updated_at 
-             WHERE category_id = ? AND order_index >= ? AND id != ?`,
-            [newCategoryId, newOrder, articleId]
-          );
+          // 不同分类移动：在目标分类中为所有节点腾出空间
+          await makeSpaceForInsertion(newCategoryId, newOrder);
         }
       }
     }

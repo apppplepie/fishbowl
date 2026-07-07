@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiGet } from '@/lib/apiClient';
 
 interface User {
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   // 清除认证数据（只清除用户信息，token 在 cookie 中由后端管理）
   const clearAuthData = useCallback(() => {
@@ -163,11 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 触发自定义事件通知状态变化
     window.dispatchEvent(new Event('loginStatusChanged'));
 
-    // 安全起见：退出后强制整页跳转（刷新）到首页，避免残留敏感 UI/缓存数据
-    if (typeof window !== 'undefined') {
-      window.location.replace('/');
-    }
-  }, [clearAuthData]);
+    // 跳回首页：clearAuthData 已清空用户态并派发事件，用客户端导航即可，无需整页刷新
+    router.replace('/');
+  }, [clearAuthData, router]);
 
   // 获取 Token（已废弃：token 存储在 HttpOnly cookie 中，前端无法访问）
   // 保留此函数以兼容旧代码，但始终返回 null

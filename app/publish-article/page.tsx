@@ -77,6 +77,7 @@ export default function PublishArticlePage() {
         form.setFieldsValue({
           title: draft.title,
           tags: draft.tags,
+          category_id: draft.category_id ?? undefined,
         });
         setBlocks(draft.blocks || []);
         if (process.env.NODE_ENV === 'development') {
@@ -100,43 +101,56 @@ export default function PublishArticlePage() {
   
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formDraftVersion, setFormDraftVersion] = useState(0);
   const saveTimeoutRef = useRef<number | null>(null);
+  const draftWritesEnabledRef = useRef(true);
   const blocksRef = useRef(blocks);
   blocksRef.current = blocks;
+
+  const buildDraft = React.useCallback((): Article => {
+    const values = form.getFieldsValue();
+    return {
+      id: `draft-${Date.now()}`,
+      title: values.title || 'Untitled draft',
+      author: user?.username || 'Anonymous',
+      tags: values.tags || [],
+      category_id: values.category_id || null,
+      blocks: blocksRef.current,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }, [form, user?.username]);
+
+  const writeDraft = React.useCallback((draft: Article, idle = false): boolean => {
+    const doWrite = () => {
+      if (!draftWritesEnabledRef.current) return true;
+      try {
+        localStorage.setItem('article-draft', JSON.stringify(draft));
+        return true;
+      } catch (e) {
+        console.warn('淇濆瓨鑽夌澶辫触', e);
+        return false;
+      }
+    };
+
+    if (idle && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
+      return true;
+    }
+
+    return doWrite();
+  }, []);
 
   // 防抖草稿：仅重置 10s 定时器，回调里从 ref 读最新 blocks，避免每键执行重逻辑
   useEffect(() => {
     if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
-      const values = form.getFieldsValue();
-      const latestBlocks = blocksRef.current;
-      const draft = {
-        id: `draft-${Date.now()}`,
-        title: values.title || '未命名草稿',
-        author: user?.username || '匿名',
-        tags: values.tags || [],
-        category_id: values.category_id || null,
-        blocks: latestBlocks,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      const doWrite = () => {
-        try {
-          localStorage.setItem('article-draft', JSON.stringify(draft));
-        } catch (e) {
-          console.warn('保存草稿失败', e);
-        }
-      };
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
-      } else {
-        setTimeout(doWrite, 0);
-      }
+      writeDraft(buildDraft(), true);
     }, 10000);
     return () => {
       if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
     };
-  }, [blocks, form, user?.username]);
+  }, [blocks, formDraftVersion, buildDraft, writeDraft]);
 
   // 表单提交
   const onFinish = async (values: any) => {
@@ -211,6 +225,11 @@ export default function PublishArticlePage() {
           order: 0,
           content: '',
         }]);
+        draftWritesEnabledRef.current = false;
+        if (saveTimeoutRef.current) {
+          window.clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
         // 清除草稿
         localStorage.removeItem('article-draft');
         // 跳转到归档页（带 refresh 参数强制客户端刷新列表）
@@ -228,40 +247,18 @@ export default function PublishArticlePage() {
     }
   };
 
-  // 保存草稿：先立即提示用户，再异步写入 localStorage
+  // 保存草稿：手动保存需要立即写入，避免退出前丢字段。
   const saveDraft = () => {
-    const values = form.getFieldsValue();
-    const author = user?.username || '匿名';
-    const latestBlocks = blocksRef.current;
-    const draft = {
-      id: `draft-${Date.now()}`,
-      title: values.title || '未命名草稿',
-      author: author,
-      tags: values.tags || [],
-      category_id: values.category_id || null,
-      blocks: latestBlocks,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const draft = buildDraft();
 
     if (process.env.NODE_ENV === 'development') {
       console.log('保存草稿:', draft);
     }
 
-    message.success('草稿已保存到本地');
-    const doWrite = () => {
-      try {
-        localStorage.setItem('article-draft', JSON.stringify(draft));
-      } catch (e) {
-        console.warn('保存草稿失败', e);
-        message.error('保存草稿失败');
-      }
-    };
-
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(doWrite, { timeout: 2000 });
+    if (writeDraft(draft)) {
+      message.success('草稿已保存到本地');
     } else {
-      setTimeout(doWrite, 0);
+      message.error('保存草稿失败');
     }
   };
 
@@ -274,6 +271,7 @@ export default function PublishArticlePage() {
           form.setFieldsValue({
             title: draft.title,
             tags: draft.tags,
+            category_id: draft.category_id ?? undefined,
           });
           setBlocks(draft.blocks || []);
           message.success('草稿已加载');
@@ -395,6 +393,7 @@ export default function PublishArticlePage() {
             form={form}
             layout="vertical"
             onFinish={onFinish}
+            onValuesChange={() => setFormDraftVersion((version) => version + 1)}
             initialValues={{
               tags: [],
             }}

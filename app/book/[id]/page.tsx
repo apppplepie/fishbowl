@@ -2,35 +2,24 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Button, Input, Modal, Divider, Space, Breadcrumb, message } from '@/app/components/ui';
+import { Button, Breadcrumb, message } from '@/app/components/ui';
 import { TitleBox1, TagBox1 } from '@/app/components/box1';
-import { Select, Dropdown } from 'antd'; // 暂时保留，后续实现
-const { Option } = Select;
-import { LikeOutlined, ShareAltOutlined, ExclamationCircleOutlined, LeftOutlined, RightOutlined, CameraOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, LeftOutlined, RightOutlined, CameraOutlined } from '@ant-design/icons';
 import { useAppTheme } from '@/app/contexts/AppThemeContext';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useHeader } from '@/app/contexts/HeaderContext';
 // import ArticleCategoryModal from '@/app/components/ArticleCategoryModal'; // 功能开发中
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { useBookStore } from '@/app/stores/useBookStore';
 import ArticleContentClient from '@/app/components/article/ArticleContent.client';
-import type { EditMode } from '@/app/components/float/ArticleEditFloat';
 import { exportArticleAsImage } from '@/app/components/article/exportLongImage';
 
-// 重型组件懒加载 - 减少首屏 JS 体积
-// 编辑器只有在编辑模式才需要
-const BlockEditor = dynamic(() => import('@/app/components/blocks/BlockEditor'), { 
+// 悬浮操作（书籍页仅保留「发布章节」等，不提供正文编辑）
+const ArticleEditFloat = dynamic(() => import('@/app/components/float/ArticleEditFloat'), {
   ssr: false,
-  loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>加载编辑器...</div>
-});
-
-// 编辑悬浮按钮（包含权限判断）懒加载
-const ArticleEditFloat = dynamic(() => import('@/app/components/float/ArticleEditFloat'), { 
-  ssr: false 
 });
 
 // 评论区（通常很重）懒加载，且非首屏可延迟加载
@@ -59,7 +48,7 @@ import {
   type ImageBlockContent} from '@/app/data/mockDatabase';
 import { useChapterLabelCacheOptional } from '@/app/contexts/ChapterLabelContext';
 import { getChapterLabel } from '@/app/utils/chapterNumbering';
-import { apiGet, apiPutJson, apiDeleteJson, apiPostJson } from '@/lib/apiClient';
+import { apiGet, apiDeleteJson, apiPostJson } from '@/lib/apiClient';
 import { getContentAreaWrapperStyle, getContentCardStyle, CONTENT_AREA_MAX_WIDTH } from '@/app/styles/contentArea';
 
 /**
@@ -92,14 +81,10 @@ export default function BookPage() {
     goToNext,
     goToPrev,
     getArticleCategory,
-    clearCache,
   } = useBookStore();
 
   // 使用 Store 的 currentArticleId，如果没有则使用 URL 中的 articleId
   const currentArticleId = storeCurrentArticleId || articleId;
-
-  // 编辑模式状态
-  const [editMode, setEditMode] = useState<EditMode>('view');
 
   // 配置消息提示位置，避免被 header 遮挡（防止重复执行）
   const messageConfigInited = useRef(false);
@@ -112,22 +97,6 @@ export default function BookPage() {
       maxCount: 3,
     });
   }, []);
-
-  // 监听编辑模式，防止意外离开页面导致数据丢失
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (editMode === 'edit') {
-        e.preventDefault();
-        e.returnValue = '你还有未保存的更改，确定要离开吗？';
-        return e.returnValue;
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [editMode]);
 
   // UI状态（翻页时保持不变）
   const [categoryPath, setCategoryPath] = useState<Array<{ id: string; name: string; depth?: number; chapter_index?: number }>>([]);
@@ -166,7 +135,7 @@ export default function BookPage() {
   // 延迟加载导航按钮（上一页/下一页）
   const [shouldLoadNavigation, setShouldLoadNavigation] = useState(false);
 
-  // 延迟加载编辑功能
+  // 延迟加载悬浮操作（仅发布章节等，无正文编辑）
   const [shouldLoadEditFloat, setShouldLoadEditFloat] = useState(false);
 
   // 内容渐显状态（等待 box1 加载完成）
@@ -520,12 +489,12 @@ export default function BookPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // 延迟加载编辑功能（1秒后加载）
+  // 延迟加载悬浮操作（1秒后加载）
   useEffect(() => {
     const timer = setTimeout(() => {
       setShouldLoadEditFloat(true);
     }, 1000);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -670,149 +639,8 @@ export default function BookPage() {
     }
   };
 
-  // 处理书籍目录中的文章点击 - 编辑模式下需要确认
   const handleArticleClick = (newArticleId: string) => {
-    if (editMode === 'edit') {
-      Modal.confirm({
-        title: '确认离开当前书籍？',
-        icon: <ExclamationCircleOutlined />,
-        content: '你还有未保存的更改，确定要放弃这些更改并跳转到其他文章吗？',
-        okText: '确定离开',
-        cancelText: '继续编辑',
-        okType: 'danger',
-        onOk() {
-          setEditMode('view');
-          router.push(`/book/${newArticleId}`);
-        },
-      });
-    } else {
-      router.push(`/book/${newArticleId}`);
-    }
-  };
-
-  // 是否处于「真实路由」：URL 的 articleId 与当前展示的 currentArticleId 一致（虚拟翻页后 replaceState 不会更新 useParams，此时不显示编辑）
-  const isRealRoute = articleId === currentArticleId;
-
-  // 编辑模式处理：点编辑时先跳到真实路由再进入编辑，保证保存用对 articleId
-  const handleEditModeChange = (mode: EditMode) => {
-    if (mode === 'edit' && isRealRoute) {
-      const category = bookCategoryId || urlCategory;
-      const path = category ? `/book/${currentArticleId}?category=${category}` : `/book/${currentArticleId}`;
-      router.replace(path);
-      setEditMode('edit');
-    } else {
-      setEditMode(mode);
-    }
-  };
-
-  // 保存编辑
-  const handleSave = async () => {
-    if (!book) return;
-
-    try {
-      // 根据当前blocks重新生成excerpt
-      const updatedExcerpt = generateExcerptFromBlocks(book.blocks) || '暂无简介';
-
-      // 计算 visible_access_level（所有 blocks 的最小值）和 full_access_level（所有 blocks 的最大值）
-      let visibleAccessLevel: number;
-      let fullAccessLevel: number;
-      
-      if ((book.blocks || []).length > 0) {
-        const accessLevels = (book.blocks || []).map((block: any) => block.access_level || 1);
-        visibleAccessLevel = Math.min(...accessLevels);
-        fullAccessLevel = Math.max(...accessLevels);
-      } else {
-        // 如果没有 blocks，使用现有值或默认值
-        visibleAccessLevel = book.visible_access_level ?? book.max_access_level ?? book.maxAccessLevel ?? 1;
-        fullAccessLevel = book.full_access_level ?? book.max_access_level ?? book.maxAccessLevel ?? 1;
-      }
-
-      const updateData = {
-        title: book.title,
-        author: book.author,
-        excerpt: updatedExcerpt, // 使用重新生成的excerpt
-        category_id: book.category_id,
-        blocks: book.blocks,
-        tags: book.tags,
-        visible_access_level: visibleAccessLevel,
-        full_access_level: fullAccessLevel,
-        // 封面图片由后端自动计算，无需前端提供
-      };
-
-      console.log('Book save - Sending data:', JSON.stringify(updateData, null, 2));
-
-      const result = await apiPutJson<{ success: boolean; error?: string }>(`/api/articles/${articleId}`, updateData);
-
-      if (result.success) {
-        message.success('保存成功');
-        setEditMode('view');
-
-        // 清除相关书籍的缓存，因为文章内容可能发生变化
-        const articleCategoryId = getArticleCategory(articleId);
-        if (articleCategoryId) {
-          clearCache(articleCategoryId);
-          console.log('已清除文章所属书籍的缓存:', articleCategoryId);
-        }
-
-        // 重新加载数据
-        loadBook(articleId);
-        
-        // 如果当前文章有分类，跳转到书橱页并刷新（显示最新数据）
-        if (book.category_id) {
-          setTimeout(() => {
-            router.push(`/bookcase?category=${book.category_id}&t=${Date.now()}`);
-          }, 1000);
-        }
-      } else {
-        message.error(result.error || '保存失败');
-      }
-    } catch (error: any) {
-      console.error('保存失败:', error);
-      // 401错误会被apiClient自动处理，这里只处理其他错误
-      if (!error.message?.includes('401')) {
-        message.error('保存失败');
-      }
-    }
-  };
-
-  // 删除处理
-  const handleDelete = () => {
-    Modal.confirm({
-      title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
-      content: '删除后无法恢复，确定要删除这本书籍吗？',
-      okText: '确定',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const result = await apiDeleteJson<{ success: boolean; error?: string }>(`/api/articles/${articleId}`);
-
-          if (result.success) {
-            message.success('删除成功');
-
-            // 清除相关书籍的缓存，因为文章被删除了
-            const articleCategoryId = getArticleCategory(articleId);
-            if (articleCategoryId) {
-              clearCache(articleCategoryId);
-              console.log('已清除文章所属书籍的缓存:', articleCategoryId);
-            }
-
-            // 跳转到书橱页，并添加时间戳参数强制刷新
-            setTimeout(() => {
-              router.push(`/bookcase?t=${Date.now()}`);
-            }, 1000);
-          } else {
-            message.error(result.error || '删除失败');
-          }
-        } catch (error: any) {
-          console.error('删除失败:', error);
-          // 401错误会被apiClient自动处理，这里只处理其他错误
-          if (!error.message?.includes('401')) {
-            message.error('删除失败');
-          }
-        }
-      },
-    });
+    router.push(`/book/${newArticleId}`);
   };
 
   // 图片点击处理 - 使用 useCallback 固定引用
@@ -929,31 +757,13 @@ export default function BookPage() {
         </div>
 
         {/* 标题：单行省略，小字号 */}
-        {editMode === 'edit' ? (
-          <div style={{ padding: '0 0 8px 0', minWidth: 0 }}>
-            <Input
-              value={book.title}
-              onChange={(e) => setBook({ ...book, title: e.target.value })}
-              style={{
-                fontSize: '18px',
-                fontWeight: 600,
-                border: 'none',
-                background: 'transparent',
-                color: '#000',
-                padding: 0,
-              }}
-              placeholder="请输入书籍标题"
-            />
-          </div>
-        ) : (
-          <TitleBox1 title={book.title} />
-        )}
+        <TitleBox1 title={book.title} />
 
         {/* 标签：单行 */}
         {book.tags && book.tags.length > 0 && <TagBox1 tags={book.tags} editMode={false} maxTags={10} />}
       </div>
     );
-  }, [isMobile, categoryPath, book, editMode, chapterLabelCache, router]);
+  }, [isMobile, categoryPath, book, chapterLabelCache, router]);
 
   // 设置页面配置 - 必须在所有早期返回之前
   useEffect(() => {
@@ -1054,16 +864,9 @@ export default function BookPage() {
             })}
             data-content-area
           >
-            {/* 书籍内容区域：查看模式复用 ArticleContentClient，与文章页统一布局与排版 */}
+            {/* 书籍内容区域：仅阅读，与文章页统一布局与排版 */}
             <div style={{ flex: 1 }}>
-              {editMode === 'edit' ? (
-                <BlockEditor
-                  blocks={book.blocks || []}
-                  onChange={(blocks) => setBook({ ...book, blocks })}
-                />
-              ) : (
-                <ArticleContentClient article={book} noCard />
-              )}
+              <ArticleContentClient article={book} noCard />
             </div>
 
             {/* 文章导航 - 延迟加载 */}
@@ -1131,12 +934,11 @@ export default function BookPage() {
             )}
           </div>
 
-          {/* 书籍页：互动区+评论区容器（编辑模式下不显示） */}
-          {editMode !== 'edit' && (
-            <div
-              style={getContentAreaWrapperStyle({ minWidth: 0 })}
-              data-export-hide
-            >
+          {/* 书籍页：互动区+评论区容器 */}
+          <div
+            style={getContentAreaWrapperStyle({ minWidth: 0 })}
+            data-export-hide
+          >
               {/* Part 3: 互动按钮和评论区 */}
               <div
                 style={{
@@ -1198,7 +1000,6 @@ export default function BookPage() {
                 )}
               </div>
             </div>
-          )}
       </div>
 
       {/* 图片模态框 */}
@@ -1208,23 +1009,19 @@ export default function BookPage() {
         imageUrl={selectedImage?.url || ''}
       />
 
-      {/* 编辑悬浮按钮 - 发布新章节始终显示；编辑/删除仅在真实路由显示，点编辑时先跳真实路由再编辑 */}
+      {/* 悬浮操作：书籍页不提供正文编辑/删除，仅保留「发布章节」等（由 ArticleEditFloat 内部权限控制） */}
       {shouldLoadEditFloat && isLoggedIn && user && book && canEditArticle && (
         <ArticleEditFloat
-          mode={editMode}
-          onEdit={() => handleEditModeChange('edit')}
-          onPreview={() => handleEditModeChange('preview')}
-          onSave={handleSave}
-          onCancel={() => {
-            setEditMode('view');
-            loadBook(articleId);
-          }}
-          onDelete={handleDelete}
+          mode="view"
+          onEdit={() => {}}
+          onPreview={() => {}}
+          onSave={() => {}}
+          onCancel={() => {}}
           categoryId={bookCategoryId || undefined}
           articleAuthor={book?.author}
           currentUser={user?.username}
           userRole={user.role}
-          showEditButton={isRealRoute}
+          showEditButton={false}
         />
       )}
     </>

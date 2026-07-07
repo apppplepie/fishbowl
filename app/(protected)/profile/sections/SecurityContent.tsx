@@ -8,7 +8,7 @@ import { message, Input } from '@/app/components/ui';
 import '@/app/styles/profile.css';
 
 export const SecurityContent: React.FC = () => {
-  const { logout, user } = useAuth();
+  const { logout, user, refreshUser } = useAuth();
   const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -82,8 +82,8 @@ export const SecurityContent: React.FC = () => {
       if (response.ok && data.success) {
         message.success('显示名更新成功！');
         setIsEditingDisplayName(false);
-        // 刷新页面以更新用户信息
-        window.location.reload();
+        // 仅刷新用户信息（拉 /api/auth/me 更新 Context），无需整页刷新
+        await refreshUser();
       } else {
         message.error(data.error || '更新失败');
       }
