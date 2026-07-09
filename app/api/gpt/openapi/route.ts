@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
+  console.log("[GPT ping] /openapi", {
+    time: new Date().toISOString(),
+    ua: request.headers.get("user-agent"),
+    ip: request.headers.get("x-forwarded-for") || (request as any).ip || "unknown",
+  });
+
   const host = request.headers.get('host') || 'localhost';
   const proto = request.headers.get('x-forwarded-proto') || 'https';
   const baseUrl = `${proto}://${host}/api/gpt`;
@@ -91,10 +97,7 @@ components:
           description: Server-maintained sorting path. Do not calculate this.
         breadcrumb:
           type: string
-          description: Human-readable category path. Choose category_id by this field.
-        selectable:
-          type: boolean
-          description: Prefer true categories when choosing where to publish.
+          description: Human-readable category path. Choose category_id by this field. Omit category_id if uncertain.
     CategoriesResponse:
       type: object
       properties:

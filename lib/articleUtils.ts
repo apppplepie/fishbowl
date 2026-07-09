@@ -54,14 +54,54 @@ function calculateAccessLevels(blocks: BlockData[]): {
 }
 
 /**
+ * 清理 Markdown 格式符号，生成纯文本摘要
+ * 去掉：标题、粗体、斜体、代码、删除线、链接、图片、引用、列表标记
+ */
+export function cleanMarkdownForExcerpt(text: unknown): string {
+  let result = (typeof text === 'string' ? text : '') || '';
+
+  // 1. 移除图片：![alt](url)
+  result = result.replace(/!\[.*?\]\(.*?\)/g, '');
+
+  // 2. 保留链接文字，移除链接标记：[text](url) → text
+  result = result.replace(/\[([^\]]*?)\]\(.*?\)/g, '$1');
+
+  // 3. 移除代码块标记 ```
+  result = result.replace(/```[\s\S]*?```/g, '');
+
+  // 4. 移除行内代码标记，保留代码内容：`code` → code
+  result = result.replace(/`([^`]+)`/g, '$1');
+
+  // 5. 移除标题标记：#  ##  ###  etc.
+  result = result.replace(/^#{1,6}\s+/gm, '');
+
+  // 6. 移除引用标记：>
+  result = result.replace(/^>\s*/gm, '');
+
+  // 7. 移除无序列表标记：- + *
+  result = result.replace(/^[-+*]\s+/gm, '');
+
+  // 8. 移除有序列表标记：1.  2.  etc.
+  result = result.replace(/^\d+\.\s+/gm, '');
+
+  // 9. 移除粗体、斜体、删除线标记：** __ * _ ~~
+  result = result.replace(/(\*\*|__|\*|_|~~)/g, '');
+
+  // 10. 压缩多个空白为单个空格
+  result = result.replace(/\s+/g, ' ').trim();
+
+  return result;
+}
+
+/**
  * 根据文章类型自动生成摘要
  */
 function generateExcerpt(blocks: BlockData[], articleType: string): string {
   if (articleType === 'drawing') {
     const firstTextBlock = blocks.find(b => b.type === 'text' && b.content);
     if (firstTextBlock?.content) {
-      return firstTextBlock.content.substring(0, 150).replace(/\n/g, ' ') +
-        (firstTextBlock.content.length > 150 ? '...' : '');
+      const plain = cleanMarkdownForExcerpt(firstTextBlock.content);
+      return plain.length > 150 ? `${plain.slice(0, 150)}...` : plain;
     }
     const imageCount = blocks.filter(b => b.type === 'image').length;
     return `一组绘画作品（${imageCount} 张）`;
@@ -69,16 +109,16 @@ function generateExcerpt(blocks: BlockData[], articleType: string): string {
 
   if (articleType === 'image') {
     const firstImageBlock = blocks.find(b => b.type === 'image');
-    if (firstImageBlock?.description) return firstImageBlock.description;
-    if (firstImageBlock?.title) return firstImageBlock.title;
+    if (firstImageBlock?.description) return cleanMarkdownForExcerpt(firstImageBlock.description);
+    if (firstImageBlock?.title) return cleanMarkdownForExcerpt(firstImageBlock.title);
     return '一组图片分享';
   }
 
   if (articleType === 'code') {
     const firstTextBlock = blocks.find(b => b.type === 'text' && b.content);
     if (firstTextBlock?.content) {
-      return firstTextBlock.content.substring(0, 150).replace(/\n/g, ' ') +
-        (firstTextBlock.content.length > 150 ? '...' : '');
+      const plain = cleanMarkdownForExcerpt(firstTextBlock.content);
+      return plain.length > 150 ? `${plain.slice(0, 150)}...` : plain;
     }
     const codeCount = blocks.filter(b => b.type === 'code').length;
     return `包含 ${codeCount} 个代码示例的技术文章`;
@@ -87,8 +127,8 @@ function generateExcerpt(blocks: BlockData[], articleType: string): string {
   // 默认 text 类型
   const firstTextBlock = blocks.find(b => b.type === 'text' && b.content);
   if (firstTextBlock?.content) {
-    return firstTextBlock.content.substring(0, 150).replace(/\n/g, ' ') +
-      (firstTextBlock.content.length > 150 ? '...' : '');
+    const plain = cleanMarkdownForExcerpt(firstTextBlock.content);
+    return plain.length > 150 ? `${plain.slice(0, 150)}...` : plain;
   }
 
   return '';

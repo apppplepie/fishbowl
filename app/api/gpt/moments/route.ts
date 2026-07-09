@@ -17,6 +17,13 @@ interface MomentCreateRequest {
 }
 
 export async function POST(request: NextRequest) {
+  console.log("[GPT ping] /moments", {
+    time: new Date().toISOString(),
+    ua: request.headers.get("user-agent"),
+    authPrefix: request.headers.get("authorization")?.slice(0, 25),
+    ip: request.headers.get("x-forwarded-for") || (request as any).ip || "unknown",
+  });
+
   try {
     const auth = authenticateGptRequest(request);
     if (!auth.success) {

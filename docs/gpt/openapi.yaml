@@ -1,71 +1,117 @@
 openapi: 3.1.0
 info:
   title: Fishbowl GPT Publish API
-  version: 3.0.0
-  description: |
-    ChatGPT publishes organized conversation summaries to Fishbowl.
-    Use getCategories first, then saveConversationMoment with ordered blocks.
+  version: 1.0.0
+  description: API for ChatGPT Actions to publish summarized conversation moments as articles.
+
 servers:
   - url: https://creepender.top/api/gpt
+
 security:
   - BearerAuth: []
+
 paths:
   /categories:
     get:
       operationId: getCategories
-      summary: Get selectable existing category branches.
+      summary: Get available article categories.
+      description: Get available categories. Use only selectable=true categories. If this fails or no category fits, use cat_uncategorized.
       responses:
         "200":
-          description: OK
+          description: Categories returned successfully.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CategoriesResponse"
+        "401":
+          description: Unauthorized.
+        "500":
+          description: Server error.
+
   /moments:
     post:
       operationId: saveConversationMoment
-      summary: Save a summarized conversation page as an article with blocks.
+      summary: Save an AI-generated article summary.
+      description: Create an article from a summarized conversation. Generate title, summary, category_id, tags, and blocks before calling.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/MomentCreateRequest"
+            examples:
+              simpleTextMoment:
+                summary: Simple text article
+                value:
+                  title: "Docker 部署知识总结"
+                  moment_type: "dev_note"
+                  article_type: "text"
+                  summary: "这篇文章总结了 Docker 部署中基础设施服务和业务服务拆分的原因。"
+                  excerpt: "基础设施服务追求稳定，业务服务追求隔离和灵活发布。"
+                  category_id: "cat_uncategorized"
+                  tags:
+                    - "Docker"
+                    - "部署"
+                    - "服务器"
+                  blocks:
+                    - type: "text"
+                      content: "基础设施服务和业务服务最好分层管理。MySQL、Redis、Nginx 更关注稳定性，后端业务服务更关注灵活发布。"
       responses:
         "200":
-          description: Saved successfully
+          description: Saved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MomentCreateResponse"
+        "201":
+          description: Created successfully.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MomentCreateResponse"
         "400":
-          description: Invalid request
+          description: Invalid request.
         "401":
-          description: Unauthorized
+          description: Unauthorized.
+        "500":
+          description: Server error.
+
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
+      bearerFormat: GPT_API_KEY
+      description: Use pure GPT API key as Bearer token. Do not include user id after colon.
+
   schemas:
     CategoryOption:
       type: object
       properties:
         id:
           type: string
+          description: Category ID to use.
         name:
           type: string
+          description: Category display name.
         parent_id:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
+          description: Parent category id.
         depth:
           type: integer
+          description: Category depth in tree.
         path:
           type: string
+          description: Category tree path.
         breadcrumb:
           type: string
-        selectable:
-          type: boolean
+          description: Human-readable category path. Use this to choose category_id.
+      required:
+        - id
+        - name
+
     CategoriesResponse:
       type: object
       properties:
@@ -77,52 +123,110 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CategoryOption"
+        hint:
+          type: string
+      required:
+        - success
+        - categories
+
     MomentCreateRequest:
       type: object
-      required: [title, moment_type, article_type, summary, blocks]
+      required:
+        - title
+        - moment_type
+        - article_type
+        - summary
+        - category_id
+        - blocks
       properties:
         title:
           type: string
           maxLength: 255
+          description: Clear article title.
+
         moment_type:
           type: string
-          enum: [brainwave, knowledge, story_seed, dev_note, debug_note, life_note, quote, mixed]
+          description: Semantic type of this moment.
+          default: knowledge
+          enum:
+            - brainwave
+            - knowledge
+            - story_seed
+            - dev_note
+            - debug_note
+            - life_note
+            - quote
+            - mixed
+
         article_type:
           type: string
-          enum: [default, text, image, code, diary, drawing]
+          description: Article type. Use text for normal articles.
+          default: text
+          enum:
+            - default
+            - text
+            - image
+            - code
+            - diary
+            - drawing
+
         summary:
           type: string
+          description: Short summary of the article.
+
         excerpt:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
+          description: Short preview excerpt.
+
         category_id:
           type: string
-          nullable: true
+          description: Existing category id. Prefer selectable categories. If uncertain, use cat_uncategorized.
+          default: cat_uncategorized
+
         tags:
           type: array
+          description: Short article tags.
           items:
             type: string
           maxItems: 10
+          default: []
+
         blocks:
           type: array
           minItems: 1
+          description: Structured article content blocks.
           items:
             $ref: "#/components/schemas/ContentBlockInput"
+
     ContentBlockInput:
       type: object
-      required: [type]
+      required:
+        - type
+        - content
       properties:
         type:
           type: string
-          enum: [text, code, image]
+          description: Content block type.
+          enum:
+            - text
+            - code
+            - image
+
         content:
           type: string
-          nullable: true
+          description: Text, code, or image caption content.
+
         language:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
+          description: Optional programming language for code blocks.
+
         image:
           $ref: "#/components/schemas/ImageInput"
+
     ImageInput:
       type: object
       properties:
@@ -132,8 +236,10 @@ components:
         name:
           type: string
         description:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
+
     MomentCreateResponse:
       type: object
       properties:
@@ -145,15 +251,5 @@ components:
           type: string
         message:
           type: string
-        category_id:
-          type: string
-        article_type:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        blockCount:
-          type: integer
-        imageCount:
-          type: integer
+      required:
+        - success

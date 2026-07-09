@@ -29,6 +29,13 @@ function buildBreadcrumb(category: CategoryRow, byId: Map<string, CategoryRow>):
 }
 
 export async function GET(request: NextRequest) {
+  console.log("[GPT ping] /categories", {
+    time: new Date().toISOString(),
+    ua: request.headers.get("user-agent"),
+    authPrefix: request.headers.get("authorization")?.slice(0, 25),
+    ip: request.headers.get("x-forwarded-for") || (request as any).ip || "unknown",
+  });
+
   try {
     const auth = authenticateGptRequest(request);
     if (!auth.success) {
@@ -45,7 +52,6 @@ export async function GET(request: NextRequest) {
     );
 
     const byId = new Map(categories.map(category => [category.id, category]));
-    const parentIds = new Set(categories.map(category => category.parent_id).filter(Boolean) as string[]);
 
     const options = categories.map(category => ({
       id: category.id,
@@ -54,14 +60,13 @@ export async function GET(request: NextRequest) {
       depth: category.depth ?? (category.path ? category.path.split('-').length : 1),
       path: category.path || '',
       breadcrumb: buildBreadcrumb(category, byId),
-      selectable: !parentIds.has(category.id),
     }));
 
     return NextResponse.json({
       success: true,
       count: options.length,
       categories: options,
-      hint: 'Choose category_id by breadcrumb. Do not calculate path or depth yourself.',
+      hint: 'Choose category_id by breadcrumb. Omit category_id if uncertain - article goes to default category.',
     });
   } catch (error: any) {
     console.error('[GPT Categories] fetch failed:', error);

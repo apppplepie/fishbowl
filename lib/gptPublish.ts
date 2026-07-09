@@ -1,4 +1,5 @@
 import { query } from '@/lib/db';
+import { cleanMarkdownForExcerpt } from '@/lib/articleUtils';
 import { generateBlurDataURL } from '@/lib/blur';
 import crypto from 'crypto';
 import fs from 'fs/promises';
@@ -224,12 +225,12 @@ async function downloadImage(imageUrl: string): Promise<{
 }
 
 function buildExcerpt(summary: string | undefined, excerpt: string | null | undefined, blocks: GptBlockInput[]): string {
-  const explicit = cleanString(excerpt) || cleanString(summary);
+  const explicit = cleanMarkdownForExcerpt(excerpt || summary || '');
   if (explicit) return explicit.slice(0, 500);
 
   const firstText = blocks.find(block => block.type === 'text' && cleanString(block.content));
   if (!firstText) return '';
-  const plain = cleanString(firstText.content).replace(/[#*`[\]]/g, '').replace(/\s+/g, ' ');
+  const plain = cleanMarkdownForExcerpt(firstText.content);
   return plain.length > 150 ? `${plain.slice(0, 150)}...` : plain;
 }
 
