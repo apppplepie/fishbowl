@@ -1,0 +1,159 @@
+openapi: 3.1.0
+info:
+  title: Fishbowl GPT Publish API
+  version: 3.0.0
+  description: |
+    ChatGPT publishes organized conversation summaries to Fishbowl.
+    Use getCategories first, then saveConversationMoment with ordered blocks.
+servers:
+  - url: https://creepender.top/api/gpt
+security:
+  - BearerAuth: []
+paths:
+  /categories:
+    get:
+      operationId: getCategories
+      summary: Get selectable existing category branches.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoriesResponse"
+  /moments:
+    post:
+      operationId: saveConversationMoment
+      summary: Save a summarized conversation page as an article with blocks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MomentCreateRequest"
+      responses:
+        "200":
+          description: Saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MomentCreateResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    CategoryOption:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        parent_id:
+          type: string
+          nullable: true
+        depth:
+          type: integer
+        path:
+          type: string
+        breadcrumb:
+          type: string
+        selectable:
+          type: boolean
+    CategoriesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        count:
+          type: integer
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryOption"
+    MomentCreateRequest:
+      type: object
+      required: [title, moment_type, article_type, summary, blocks]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        moment_type:
+          type: string
+          enum: [brainwave, knowledge, story_seed, dev_note, debug_note, life_note, quote, mixed]
+        article_type:
+          type: string
+          enum: [default, text, image, code, diary, drawing]
+        summary:
+          type: string
+        excerpt:
+          type: string
+          nullable: true
+        category_id:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+        blocks:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ContentBlockInput"
+    ContentBlockInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [text, code, image]
+        content:
+          type: string
+          nullable: true
+        language:
+          type: string
+          nullable: true
+        image:
+          $ref: "#/components/schemas/ImageInput"
+    ImageInput:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+    MomentCreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        article_id:
+          type: string
+        url:
+          type: string
+        message:
+          type: string
+        category_id:
+          type: string
+        article_type:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        blockCount:
+          type: integer
+        imageCount:
+          type: integer

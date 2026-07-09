@@ -1,0 +1,83 @@
+openapi: 3.1.0
+info:
+  title: Fishbowl GPT Conversation Moment API
+  version: 3.0.0
+  description: Save GPT-organized conversation summaries as Fishbowl articles with ordered blocks.
+servers:
+  - url: https://creepender.top/api/gpt
+security:
+  - BearerAuth: []
+paths:
+  /moments:
+    post:
+      operationId: saveConversationMoment
+      summary: Save a summarized conversation page as an article with blocks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, moment_type, article_type, summary, blocks]
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                moment_type:
+                  type: string
+                  enum: [brainwave, knowledge, story_seed, dev_note, debug_note, life_note, quote, mixed]
+                article_type:
+                  type: string
+                  enum: [default, text, image, code, diary, drawing]
+                summary:
+                  type: string
+                excerpt:
+                  type: string
+                  nullable: true
+                category_id:
+                  type: string
+                  nullable: true
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 10
+                blocks:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [type]
+                    properties:
+                      type:
+                        type: string
+                        enum: [text, code, image]
+                      content:
+                        type: string
+                        nullable: true
+                      language:
+                        type: string
+                        nullable: true
+                      image:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                            format: uri
+                          name:
+                            type: string
+                          description:
+                            type: string
+                            nullable: true
+      responses:
+        "200":
+          description: Saved successfully
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer

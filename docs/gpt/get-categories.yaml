@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: Fishbowl GPT Categories API
+  version: 3.0.0
+  description: Get flat category options with breadcrumbs for GPT category selection.
+servers:
+  - url: https://creepender.top/api/gpt
+security:
+  - BearerAuth: []
+paths:
+  /categories:
+    get:
+      operationId: getCategories
+      summary: Get selectable existing category branches.
+      description: Use breadcrumb to choose category_id. Do not calculate path or depth.
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        parent_id:
+                          type: string
+                          nullable: true
+                        depth:
+                          type: integer
+                        path:
+                          type: string
+                        breadcrumb:
+                          type: string
+                        selectable:
+                          type: boolean
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
