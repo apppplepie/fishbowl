@@ -5,8 +5,8 @@ import { Modal, Input, Button, message } from '@/app/components/ui';
 import { Lock, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
-import { Checkbox } from 'antd';
-import { Form } from 'antd';
+import { Checkbox } from '@/app/components/ui/compat';
+import { Form } from '@/app/components/ui/compat';
 
 interface LoginModalProps {
   open: boolean;

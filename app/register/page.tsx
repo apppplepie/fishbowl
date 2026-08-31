@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, message } from '@/app/components/ui/compat';
+import { UserOutlined, LockOutlined, MailOutlined } from '@/app/components/ui/icons';
 import { useRouter } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 

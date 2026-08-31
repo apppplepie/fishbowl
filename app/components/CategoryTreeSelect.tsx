@@ -7,7 +7,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TreeSelect } from 'antd';
+import { TreeSelect } from '@/app/components/ui/compat';
 import { Plus } from 'lucide-react';
 import { Input, Modal, message, Button } from '@/app/components/ui';
 import { apiGetJson, apiPostJson } from '@/lib/apiClient';
@@ -53,7 +53,7 @@ export default function CategoryTreeSelect({
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const data = await apiGetJson<{ success: boolean; categories?: Category[] }>('/api/categories?format=tree', { requiresAuth: false });
+      const data = await apiGetJson<{ success: boolean; categories?: Category[] }>('/api/categories?format=tree');
 
       if (data.success) {
         let tree = data.categories || [];

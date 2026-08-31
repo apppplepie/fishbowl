@@ -1,8 +1,8 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { Input, Select, Space } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Input, Select, Space } from '@/app/components/ui/compat';
+import { SearchOutlined } from '@/app/components/ui/icons';
 
 const { Option } = Select;
 

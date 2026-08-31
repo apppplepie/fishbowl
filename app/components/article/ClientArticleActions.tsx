@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui';
-import { LikeOutlined, ShareAltOutlined, CameraOutlined } from '@ant-design/icons';
+import { LikeOutlined, ShareAltOutlined, CameraOutlined } from '@/app/components/ui/icons';
 import { message } from '@/app/components/ui';
 import { apiGet } from '@/lib/apiClient';
 import { useResponsive } from '@/app/hooks/useResponsive';

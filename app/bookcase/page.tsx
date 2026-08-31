@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import BookcaseActionFloat from '@/app/components/float/BookcaseActionFloat';
 import { Empty, LoadEnd, Spin, TagSearchPickerWithTags, TransparentSearchInput } from '@/app/components/ui';
@@ -27,95 +27,12 @@ const UnifiedNavigatorButton = dynamic(
 ) as React.ComponentType<{ onClick?: () => void; expanded?: boolean; onToggle?: () => void }>;
 
 import { mockBookCards } from '@/app/utils/bookMocks';
-import { cacheArticleList, getCachedArticleList, clearBookCache } from '@/app/utils/bookCache';
 import '../styles/articles-filter.css';
 import { useHeader } from '../contexts/HeaderContext';
 import { apiGet } from '@/lib/apiClient';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
-import { getGuestIdentity } from '@/lib/guestIdentity';
 import { useAuth } from '@/app/hooks/useAuth';
 import { getSpanForCard, getLayoutForCard } from '@/lib/masonry-server-utils';
-
-// 预缓存所有书籍的文章列表
-const preloadAllBookArticleLists = async () => {
-  try {
-    console.log('开始预缓存所有书籍的文章列表...');
-
-    // 获取所有书籍分类（不包括根分类）
-    const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: true });
-    const result = await response.json();
-
-    if (!result.success || !result.books) {
-      console.warn('获取书籍列表失败，无法预缓存');
-      return;
-    }
-
-    const books = result.books;
-    console.log(`发现 ${books.length} 本书籍，开始后台预缓存...`);
-
-    // 限制并发数量，避免同时请求太多
-    const BATCH_SIZE = 3;
-    for (let i = 0; i < books.length; i += BATCH_SIZE) {
-      const batch = books.slice(i, i + BATCH_SIZE);
-
-      // 并行处理一批书籍
-      const promises = batch.map(async (book: any) => {
-        try {
-          const categoryId = book.categoryId;
-
-          // 检查是否已经缓存且未过期
-          const existing = getCachedArticleList(categoryId);
-          if (existing && existing.articleIds && existing.articleIds.length > 0) {
-            console.log(`书籍 ${categoryId} 已缓存，跳过`);
-            return;
-          }
-
-          // 获取该书籍的所有文章
-          const params = new URLSearchParams({
-            status: 'published',
-            limit: '1000',
-            offset: '0',
-            categoryId: categoryId,
-            orderByPath: 'true',
-          });
-
-          const articleResponse = await apiGet(`/api/articles/list?${params.toString()}`, { requiresAuth: false });
-          const articleResult = await articleResponse.json();
-
-          if (articleResponse.ok && articleResult.success && articleResult.articles) {
-            // 后端已排序，直接使用
-            const articles = articleResult.articles;
-            const articleIds = articles.map((article: any) => article.id.toString());
-            
-            // 创建文章到分类的映射
-            const articleCategoryMap = new Map<string, string>();
-            articles.forEach((article: any) => {
-              articleCategoryMap.set(article.id.toString(), article.categoryId || categoryId);
-            });
-
-            // 缓存
-            cacheArticleList(categoryId, articleIds, articleCategoryMap);
-            console.log(`预缓存完成：书籍 ${categoryId}，${articleIds.length} 篇文章`);
-          }
-        } catch (error) {
-          console.error(`预缓存书籍失败:`, error);
-        }
-      });
-
-      // 等待这一批完成
-      await Promise.all(promises);
-
-      // 小延迟避免请求过于频繁
-      if (i + BATCH_SIZE < books.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
-    console.log('所有书籍文章列表预缓存完成！');
-  } catch (error) {
-    console.error('预缓存过程中出错:', error);
-  }
-};
 
 // 注意：此函数仅在本文件内部使用，不需要导出
 // Next.js App Router 的页面文件不应该有命名导出（除了 metadata、generateStaticParams 等特定配置）
@@ -145,13 +62,11 @@ function BookcasePageContent() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // 过滤条件状态
-  const [allTags, setAllTags] = useState<string[]>([]); // 所有可用标签
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 选中的标签
   const [searchKeyword, setSearchKeyword] = useState(''); // 搜索关键词
 
   // 从 URL 获取状态 (Source of Truth)
   const categoryFromUrl = searchParams.get('category');
-  const pathname = usePathname();
 
   // --- 瀑布流布局计算：用 ResizeObserver 在容器真实尺寸就绪时再测，避免从别的页面回来时测到 0 或错误时机 ---
   const contentContainerRef = useRef<HTMLDivElement | null>(null);
@@ -231,58 +146,6 @@ function BookcasePageContent() {
 
   const ITEMS_PER_PAGE = 15; // 每页加载15篇
 
-  // 加载所有可用标签和预缓存书籍文章列表
-  useEffect(() => {
-    const abortController = new AbortController();
-    let preloadTimer: NodeJS.Timeout | null = null;
-    
-    async function loadTags() {
-      try {
-        const response = await apiGet('/api/tags', { 
-          requiresAuth: false,
-          signal: abortController.signal 
-        });
-        
-        // 检查是否返回了 HTML（错误页面）
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          console.error('API 返回了非 JSON 响应');
-          return;
-        }
-        
-        const result = await response.json();
-
-        if (result.success) {
-          setAllTags(result.tags.map((tag: any) => tag.name));
-        }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.log('加载标签请求已取消');
-          return;
-        }
-        console.error('加载标签失败:', error);
-      }
-    }
-
-    loadTags();
-
-    // 后台预缓存所有书籍的文章列表，提升用户体验
-    // 使用 setTimeout 避免阻塞页面初次加载
-    preloadTimer = setTimeout(() => {
-      if (!abortController.signal.aborted) {
-        preloadAllBookArticleLists();
-      }
-    }, 2000); // 2秒后开始预缓存，给页面加载让路
-    
-    return () => {
-      abortController.abort();
-      if (preloadTimer) {
-        clearTimeout(preloadTimer);
-      }
-    };
-  }, []);
-
-
   // --- 数据加载核心逻辑 (与 archive 一致：loadingRef 防重入) ---
   const loadBookcaseArticles = useCallback(async (currentOffset: number, append: boolean = false, categoryId?: string | null) => {
     if (loadingRef.current) return;
@@ -296,16 +159,13 @@ function BookcasePageContent() {
 
     try {
 
-      let articles: any[] = [];
-
       // 使用传入的 categoryId 或当前的 categoryFromUrl
       const targetCategory = categoryId !== undefined ? categoryId : categoryFromUrl;
 
       // 根据是否有category参数决定加载逻辑
       if (!targetCategory || targetCategory === 'cat_bookcase') {
         // 书橱根目录：一次性获取所有书籍分类及其第一篇文章
-        const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', { 
-          requiresAuth: true,
+        const response = await apiGet('/api/categories/book-previews?parentId=cat_bookcase', {
           signal: controller.signal
         });
         
@@ -379,14 +239,13 @@ function BookcasePageContent() {
         // 直接调用API，让API自己处理递归获取所有子分类的文章
         const params = new URLSearchParams({
           status: 'published',
-          limit: '1000', // 获取该分类及其所有子分类的所有文章
-          offset: '0',
+          limit: ITEMS_PER_PAGE.toString(),
+          offset: currentOffset.toString(),
           categoryId: targetCategory,
           orderByPath: 'true', // 按path和order_index排序
         });
 
-        const response = await apiGet(`/api/articles/list?${params.toString()}`, { 
-          requiresAuth: false,
+        const response = await apiGet(`/api/articles/list?${params.toString()}`, {
           signal: controller.signal
         });
         
@@ -399,32 +258,21 @@ function BookcasePageContent() {
         
         const result = await response.json();
 
-        let allArticles: any[] = [];
+        let articles: any[] = [];
         if (response.ok && result.success) {
-          // 后端已排序，直接使用
-          allArticles = result.articles;
-          console.log('分类目录 - API返回文章数量:', allArticles.length);
+          articles = result.articles;
         } else {
           console.error('获取分类文章失败:', result);
         }
 
-        // 缓存有序的文章ID列表，用于文章切换功能
-        const articleIds = allArticles.map(article => article.id.toString());
-        cacheArticleList(targetCategory, articleIds);
-
-        // 应用分页
-        const startIndex = currentOffset;
-        const endIndex = startIndex + ITEMS_PER_PAGE;
-        const paginatedArticles = allArticles.slice(startIndex, endIndex);
-
         if (append) {
-          setCards(prev => [...prev, ...paginatedArticles]);
+          setCards(prev => [...prev, ...articles]);
         } else {
-          setCards(paginatedArticles);
+          setCards(articles);
         }
 
-        setHasMore(endIndex < allArticles.length);
-        setOffset(endIndex);
+        setHasMore(articles.length === ITEMS_PER_PAGE);
+        setOffset(currentOffset + articles.length);
       }
 
     } catch (error: any) {
@@ -451,11 +299,6 @@ function BookcasePageContent() {
   // 章节管理成功后的刷新函数
   const handleChapterManageSuccess = useCallback(() => {
     console.log('章节管理成功，刷新页面和侧边栏');
-    // 清除当前书籍的文章列表缓存，因为目录结构可能发生变化
-    if (categoryFromUrl) {
-      clearBookCache(categoryFromUrl);
-    }
-    // 刷新当前页面数据
     setOffset(0);
     setHasMore(true);
     loadBookcaseArticles(0, false, categoryFromUrl);
@@ -465,9 +308,6 @@ function BookcasePageContent() {
 
   // --- 监听 URL category 变化 (主触发器，与 archive 一致) ---
   useEffect(() => {
-    const timestampParam = searchParams.get('t');
-    if (timestampParam) return; // 时间戳由下方 effect 处理
-
     setCards([]);
     setOffset(0);
     setHasMore(true);
@@ -475,25 +315,11 @@ function BookcasePageContent() {
     loadBookcaseArticles(0, false, categoryFromUrl);
   }, [categoryFromUrl, loadBookcaseArticles]);
 
-  // 时间戳参数：强制刷新后移除
-  useEffect(() => {
-    const timestampParam = searchParams.get('t');
-    if (!timestampParam) return;
-    setCards([]);
-    setOffset(0);
-    setHasMore(true);
-    loadBookcaseArticles(0, false, categoryFromUrl);
-    const newSearchParams = new URLSearchParams(searchParams.toString());
-    newSearchParams.delete('t');
-    const newUrl = newSearchParams.toString() ? `${pathname}?${newSearchParams.toString()}` : pathname;
-    router.replace(newUrl);
-  }, [searchParams, pathname, router, categoryFromUrl, loadBookcaseArticles]);
-
-  // 获取用户权限等级：登录用 user，游客用本地保存的 access_level（学习模式=1，否则=2）；依赖 filterMode 以便弹窗切换学习模式后重新取 guest
+  // 登录用户使用账户等级，游客固定为 2 级；浏览模式只负责列表过滤。
   const userMaxAccessLevel = useMemo(() => {
     if (isLoggedIn && user) return user.max_access_level ?? 2;
-    return getGuestIdentity()?.access_level ?? 2;
-  }, [isLoggedIn, user, filterMode]);
+    return 2;
+  }, [isLoggedIn, user]);
 
   // 过滤文章
   const filteredCards = useMemo(() => {
@@ -616,8 +442,6 @@ function BookcasePageContent() {
             layout={layout}
             showDeleteIcon={deleteMode}
             onDeleteSuccess={() => {
-              const bookCategoryId = (article as any).categoryId;
-              if (bookCategoryId) clearBookCache(bookCategoryId);
               setOffset(0);
               setHasMore(true);
               loadBookcaseArticles(0, false, categoryFromUrl);

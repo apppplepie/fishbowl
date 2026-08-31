@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, Input, message, Button } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Modal, Input, message, Button } from '@/app/components/ui/compat';
+import { DeleteOutlined, ExclamationCircleOutlined } from '@/app/components/ui/icons';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiDeleteJson } from '@/lib/apiClient';
 

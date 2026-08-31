@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Input, Image as AntImage, Segmented, Space, Modal } from 'antd';
+import { Button, Input, Image as AntImage, Segmented, Space, Modal } from '@/app/components/ui/compat';
 import { getImageSrc } from '@/lib/imageUrl';
-import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, EyeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, EyeOutlined, ExclamationCircleOutlined } from '@/app/components/ui/icons';
 import ImageCardModal from '../ImageCardModal';
 import type { ImageBlock as ImageBlockType } from '@/app/types/block';
 import { ACCESS_LEVELS } from '@/app/types/block';

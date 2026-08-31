@@ -2,14 +2,13 @@
 
 // GlassLoginModal.tsx
 import React, { useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from '@/app/components/ui/motion';
 import {
   X, User, Lock, Mail, ArrowRight, Gamepad2, LogIn, UserPlus, BookOpen, Book, KeyRound, Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
-import { getGuestIdentity, setGuestIdentity, clearGuestIdentity } from '@/lib/guestIdentity';
 import { message } from '@/app/components/ui';
 
 type TabType = 'guest' | 'login' | 'register';
@@ -75,13 +74,6 @@ const GlassLoginContent: React.FC<GlassLoginContentProps> = ({
   useEffect(() => {
     setIsLearningMode(filterMode === 'study');
   }, [filterMode]);
-
-  // Form States（有游客名字时从本地读入）
-  const [guestName, setGuestName] = useState('');
-  useEffect(() => {
-    const g = getGuestIdentity();
-    if (g?.name) setGuestName(g.name);
-  }, []);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -203,11 +195,6 @@ const GlassLoginContent: React.FC<GlassLoginContentProps> = ({
                     const next = !isLearningMode;
                     setIsLearningMode(next);
                     updateFilterMode(next ? 'study' : 'loose');
-                    setGuestIdentity({
-                      name: guestName.trim() || undefined,
-                      access_level: next ? 1 : 2,
-                    });
-                    onClose?.();
                   }}
                   className={`mb-6 p-4 rounded-full border-2 transition-all duration-400 ${isLearningMode ? 'bg-green-500/14 border-green-400' : 'bg-blue-500/12 border-blue-400'}`}
                 >
@@ -218,24 +205,8 @@ const GlassLoginContent: React.FC<GlassLoginContentProps> = ({
                   )}
                 </motion.button>
 
-                <div className="w-full space-y-6">
-                  <BigInput
-                    icon={User}
-                    type="text"
-                    placeholder={isLearningMode ? 'Student Name...' : 'Guest Name...'}
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    iconColor={theme.text}
-                  />
-                  <ActionButton
-                    onClick={() => {
-                      setGuestIdentity({
-                        name: guestName.trim() || undefined,
-                        access_level: filterMode === 'study' ? 1 : 2,
-                      });
-                      onClose?.();
-                    }}
-                  />
+                <div className="w-full max-w-xs">
+                  <ActionButton onClick={onClose} />
                 </div>
               </motion.div>
             )}
@@ -365,7 +336,6 @@ export default function GlassLoginModal({
         const data = await response.json();
         if (response.ok && data.success) {
           message.success('登录成功！');
-          clearGuestIdentity();
           await login(data.user);
           onLoginSuccess?.(data.user?.display_name || data.user?.username || username);
           onClose?.();
@@ -401,7 +371,6 @@ export default function GlassLoginModal({
         const data = await response.json();
         if (response.ok && data.success) {
           message.success('注册成功！');
-          clearGuestIdentity();
           if (data.user) await login(data.user);
           onLoginSuccess?.(data.user?.display_name || data.user?.username || u);
           onClose?.();

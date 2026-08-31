@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Tag, Space, Input } from '@/app/components/ui';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined } from '@/app/components/ui/icons';
 import { apiGetJson, apiPostJson } from '@/lib/apiClient';
 import { message } from '@/app/components/ui';
 
@@ -42,7 +42,7 @@ export default function TagBox1({
     // 加载标签列表 - 使用 useCallback 避免每次渲染都创建新函数
     const loadTags = React.useCallback(async () => {
         try {
-            const data = await apiGetJson<{ success: boolean; tags?: TagOption[] }>('/api/tags', { requiresAuth: false });
+            const data = await apiGetJson<{ success: boolean; tags?: TagOption[] }>('/api/tags');
 
             if (data.success) {
                 setAllTags(data.tags || []);

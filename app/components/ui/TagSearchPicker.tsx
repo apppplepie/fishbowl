@@ -330,7 +330,6 @@ export function TagSearchPickerWithTags({
         (async () => {
             try {
                 const data = await apiGetJson<{ success?: boolean; tags?: TagItem[] }>('/api/tags', {
-                    requiresAuth: false,
                 });
                 if (cancelled) return;
                 if (data?.success && Array.isArray(data.tags)) {

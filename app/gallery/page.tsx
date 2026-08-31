@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, startTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { message } from 'antd';
+import { message } from '@/app/components/ui/compat';
 import { Spin, Empty, LoadEnd } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
 import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
@@ -13,7 +13,6 @@ import GalleryPublishFloat from '../components/float/GalleryPublishFloat';
 import { apiGet } from '@/lib/apiClient';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
-import { getGuestIdentity } from '@/lib/guestIdentity';
 import {
   getContainerWidthFromScreenWidth,
   getColumnWidthFromContainerWidth,
@@ -96,7 +95,6 @@ export default function GalleryPage() {
       }
 
       const res = await apiGet(`/api/articles/drawing?limit=${ITEMS_PER_PAGE}&offset=${currentOffset}`, {
-        requiresAuth: false,
         signal: controller.signal
       });
       
@@ -125,7 +123,7 @@ export default function GalleryPage() {
   useEffect(() => {
     fetchDrawingArticles(0, false);
     return () => abortControllerRef.current?.abort();
-  }, [filterMode, fetchDrawingArticles]);
+  }, [fetchDrawingArticles]);
 
   const sentinelRef = useCallback((node: HTMLDivElement | null) => {
     if (!node || loadingRef.current || !hasMore) return;
@@ -140,7 +138,7 @@ export default function GalleryPage() {
   }, [hasMore, fetchDrawingArticles]);
 
   // 前端过滤：学习模式 = full_access_level===1；未开学习模式 = visible_access_level<=2（即 userLevel>=visibleLevel，游客默认 2）
-  const userLevel = useMemo(() => (isLoggedIn && user) ? (user.max_access_level ?? 2) : (getGuestIdentity()?.access_level ?? 2), [isLoggedIn, user, filterMode]);
+  const userLevel = useMemo(() => (isLoggedIn && user) ? (user.max_access_level ?? 2) : 2, [isLoggedIn, user]);
   const filteredArticles = useMemo(() => {
     return articles.filter(article => {
       const visibleLevel = article.visible_access_level ?? article.max_access_level ?? 1;
@@ -157,7 +155,7 @@ export default function GalleryPage() {
       return;
     }
     try {
-      const res = await apiGet(`/api/articles/${article.id}`, { requiresAuth: false });
+      const res = await apiGet(`/api/articles/${article.id}`);
       const data = await res.json();
       if (data.success) {
         const full = { ...article, blocks: data.article.blocks };

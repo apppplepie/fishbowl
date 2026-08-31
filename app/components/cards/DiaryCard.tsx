@@ -6,7 +6,7 @@ import type { DiaryCard as DiaryCardType, MasonryProps } from '@/app/types/card'
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Card } from '@/app/components/ui';
-import { InsertRowAboveOutlined } from '@ant-design/icons';
+import { InsertRowAboveOutlined } from '@/app/components/ui/icons';
 
 export interface DiaryCardProps {
   card: DiaryCardType | any;

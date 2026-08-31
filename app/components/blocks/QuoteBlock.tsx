@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, Modal, Typography, Divider, Input, Button } from 'antd';
-import { LinkOutlined, PictureOutlined } from '@ant-design/icons';
-import { Image as AntImage } from 'antd';
+import { Card, Modal, Typography, Divider, Input, Button } from '@/app/components/ui/compat';
+import { LinkOutlined, PictureOutlined } from '@/app/components/ui/icons';
+import { Image as AntImage } from '@/app/components/ui/compat';
 import type { QuoteBlock as QuoteBlockType } from '@/app/types/block';
 import { apiGetJson } from '@/lib/apiClient';
 import { Spin } from '@/app/components/ui';

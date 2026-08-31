@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Menu, Button, message } from 'antd';
-import type { MenuProps } from 'antd';
+import { Menu, Button, message } from '@/app/components/ui/compat';
+import type { MenuProps } from '@/app/components/ui/compat';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
-import { IoFishOutline } from 'react-icons/io5';
+import { IoFishOutline } from '@/app/components/ui/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import {
   HomeOutlined,
@@ -14,7 +14,7 @@ import {
   BookOutlined,
   UserOutlined,
   LoginOutlined,
-} from '@ant-design/icons';
+} from '@/app/components/ui/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { theme } from '@/app/config/theme';
 import GlassLoginModal from './GlassLoginModal';

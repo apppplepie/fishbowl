@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Drawer, Menu } from 'antd';
+import { Drawer, Menu } from '@/app/components/ui/compat';
 import { Modal } from '@/app/components/ui';
 import { usePathname, useRouter } from 'next/navigation';
-import type { MenuProps } from 'antd';
+import type { MenuProps } from '@/app/components/ui/compat';
 import {
   HomeOutlined,
   PictureOutlined,
@@ -16,12 +16,12 @@ import {
   UserOutlined,
   LogoutOutlined,
   DashboardOutlined,
-} from '@ant-design/icons';
+} from '@/app/components/ui/icons';
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import UserMenu from './UserMenu';
 import GlassLoginModal from './GlassLoginModal';
-import { IoFishOutline } from 'react-icons/io5';
+import { IoFishOutline } from '@/app/components/ui/icons';
 import '../styles/navigation.css';
 
 interface NavigationDrawerProps {

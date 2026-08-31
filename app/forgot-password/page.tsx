@@ -1,6 +1,6 @@
 'use client';
 
-import { Typography, Button } from 'antd';
+import { Typography, Button } from '@/app/components/ui/compat';
 import { useRouter } from 'next/navigation';
 
 const { Title, Paragraph } = Typography;

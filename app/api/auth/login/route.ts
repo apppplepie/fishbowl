@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { generateTokens, TOKEN_EXPIRATION } from '@/lib/auth';
+import { generateSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -67,8 +67,7 @@ export async function POST(req: NextRequest) {
       [user.id]
     );
 
-    // 6. 生成JWT Tokens
-    const tokens = generateTokens({
+    const session = generateSession({
       id: user.id,
       username: user.username,
       email: user.email,
@@ -76,11 +75,9 @@ export async function POST(req: NextRequest) {
       max_access_level: user.max_access_level || 3,
     });
 
-    // 7. 设置HttpOnly cookie存储access token和refresh token
     const response = NextResponse.json({
       success: true,
       message: '登录成功',
-      // 不再返回 accessToken，因为存储在 HttpOnly cookie 中
       user: {
         id: user.id,
         username: user.username,
@@ -92,21 +89,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 设置 access token cookie（短期，1h +）
-    response.cookies.set('access-token', tokens.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', // 改为 lax 以支持从其他页面跳转
-      maxAge: TOKEN_EXPIRATION.ACCESS_TOKEN_COOKIE,
-      path: '/',
-    });
-
-    // 设置 refresh token cookie（长期，7天 + ）
-    response.cookies.set('refresh-token', tokens.refreshToken, {
+    response.cookies.set(SESSION_COOKIE_NAME, session, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: TOKEN_EXPIRATION.REFRESH_TOKEN_COOKIE,
+      maxAge: SESSION_MAX_AGE,
       path: '/',
     });
 

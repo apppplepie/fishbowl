@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '@/app/components/ui';
-import { PlayCircleOutlined, EyeOutlined } from '@ant-design/icons';
+import { PlayCircleOutlined, EyeOutlined } from '@/app/components/ui/icons';
 import type { VideoCard as VideoCardType } from '@/app/types/card';
 
 interface VideoCardProps {

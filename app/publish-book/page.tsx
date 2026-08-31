@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Form, Input, Upload } from 'antd';
+import { Form, Input, Upload } from '@/app/components/ui/compat';
 import { Card, Tag, message } from '@/app/components/ui';
-import { PlusOutlined } from '@ant-design/icons';
-import type { UploadFile } from 'antd';
+import { PlusOutlined } from '@/app/components/ui/icons';
+import type { UploadFile } from '@/app/components/ui/compat';
 import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
 import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
 import { useResponsive } from '@/app/hooks/useResponsive';

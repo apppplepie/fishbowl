@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from 'antd';
-import { UnorderedListOutlined } from '@ant-design/icons';
+import { Button } from '@/app/components/ui/compat';
+import { UnorderedListOutlined } from '@/app/components/ui/icons';
 import { useResponsive } from '@/app/hooks/useResponsive';
 
 /**

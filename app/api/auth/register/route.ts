@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { generateTokens } from '@/lib/auth';
+import { generateSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
@@ -180,8 +180,7 @@ export async function POST(req: NextRequest) {
       // 头像生成失败不影响注册，继续执行
     }
 
-    // 11. 生成JWT Tokens（access token 和 refresh token）
-    const tokens = generateTokens({
+    const session = generateSession({
       id: userId,
       username,
       email,
@@ -189,11 +188,9 @@ export async function POST(req: NextRequest) {
       max_access_level: 3, // 默认用户权限
     });
 
-    // 12. 设置HttpOnly cookie存储access token和refresh token
     const response = NextResponse.json({
       success: true,
       message: '注册成功',
-      // 不再返回 token，因为存储在 HttpOnly cookie 中
       user: {
         id: userId,
         username,
@@ -204,21 +201,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 设置 access token cookie（短期，15分钟）
-    response.cookies.set('access-token', tokens.accessToken, {
+    response.cookies.set(SESSION_COOKIE_NAME, session, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 15, // 15分钟
-      path: '/',
-    });
-
-    // 设置 refresh token cookie（长期，7天）
-    response.cookies.set('refresh-token', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7天
+      maxAge: SESSION_MAX_AGE,
       path: '/',
     });
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { User } from '../../types';
 import { theme } from '@/app/config/theme';
 import { ShieldCheck, Eye } from 'lucide-react';
-import { Segmented } from 'antd';
+import { Segmented } from '@/app/components/ui/compat';
 import { useAccessFilter, FilterMode } from '@/app/hooks/useAccessFilter';
 import '@/app/styles/profile.css';
 

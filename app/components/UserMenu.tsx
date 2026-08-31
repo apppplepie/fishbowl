@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button, Card } from '@/app/components/ui';
-import { Avatar } from 'antd';
+import { Avatar } from '@/app/components/ui/compat';
 import { User, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useResponsive } from '@/app/hooks/useResponsive';

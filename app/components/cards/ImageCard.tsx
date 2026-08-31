@@ -5,7 +5,7 @@ import './card-blocks.css';
 import Image from 'next/image';
 import type { ImageCard as ImageCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
-import { AreaChartOutlined, PictureOutlined } from '@ant-design/icons';
+import { AreaChartOutlined, PictureOutlined } from '@/app/components/ui/icons';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import { Card } from '@/app/components/ui';
 import { getImageSrc } from '@/lib/imageUrl';

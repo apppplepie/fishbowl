@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, message, Input } from '@/app/components/ui';
-import { Form, Upload, Space, Button } from 'antd';
+import { Form, Upload, Space, Button } from '@/app/components/ui/compat';
 import { Plus, CloudUpload } from 'lucide-react';
-import type { UploadFile, UploadProps } from 'antd';
+import type { UploadFile, UploadProps } from '@/app/components/ui/compat';
 import { useAuth } from '@/app/hooks/useAuth';
 import CategoryTreeSelect from '../CategoryTreeSelect';
 import TagInput from '../TagInput';

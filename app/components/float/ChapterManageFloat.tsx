@@ -382,7 +382,7 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
       setBookRootId(bookcaseId);
 
       // 加载书架的完整树结构
-      const result = await apiGetJson<{ success: boolean; data?: { tree: TreeNode[] } }>(`/api/categories/${bookcaseId}/tree-with-articles`, { requiresAuth: false });
+      const result = await apiGetJson<{ success: boolean; data?: { tree: TreeNode[] } }>(`/api/categories/${bookcaseId}/tree-with-articles`);
 
       console.log('ChapterManageFloat: API响应:', result);
 
@@ -797,14 +797,6 @@ export default function ChapterManageFloat({ categoryId, onSuccess, rootDepth }:
           if (result.success) {
             // 乐观更新成功，确认状态并延迟同步
             confirmOptimisticUpdate();
-
-            // 清除书籍缓存，因为文章顺序发生了变化
-            if (typeof window !== 'undefined' && window.localStorage) {
-              // 这里清除的是书架的缓存，因为我们操作的是整个书架的结构
-              const cacheKey = 'book-articles-cache-cat_bookcase';
-              localStorage.removeItem(cacheKey);
-              console.log('已清除书架缓存，因为章节顺序发生变化');
-            }
 
             message.success('操作成功');
           } else {

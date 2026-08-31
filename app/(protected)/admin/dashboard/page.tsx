@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import type { GetRef, InputRef, TableProps } from 'antd';
-import { Button, Form, Input, Select, Table, Typography, InputNumber, Switch, Modal } from 'antd';
+import type { FormInstance, InputRef, TableProps } from '@/app/components/ui/compat';
+import { Button, Form, Input, Select, Table, Typography, InputNumber, Switch, Modal } from '@/app/components/ui/compat';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiGetJson, apiPostJson, apiPutJson } from '@/lib/apiClient';
@@ -10,8 +10,6 @@ import { Spin } from '@/app/components/ui';
 import { message } from '@/app/components/ui';
 const { Title, Paragraph } = Typography;
 const { Option } = Select;
-
-type FormInstance<T> = GetRef<typeof Form<T>>;
 
 const EditableContext = React.createContext<FormInstance<any> | null>(null);
 

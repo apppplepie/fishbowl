@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Input, Button, Select, Segmented, Space, Modal } from 'antd';
-import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, CodeOutlined, CopyOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { message } from 'antd';
+import { Input, Button, Select, Segmented, Space, Modal } from '@/app/components/ui/compat';
+import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, CodeOutlined, CopyOutlined, ExclamationCircleOutlined } from '@/app/components/ui/icons';
+import { message } from '@/app/components/ui/compat';
 import type { CodeBlock as CodeBlockType } from '@/app/types/block';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { useResponsive } from '@/app/hooks/useResponsive';

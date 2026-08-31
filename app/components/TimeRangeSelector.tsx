@@ -1,5 +1,5 @@
 import React from 'react';
-import { Segmented } from 'antd';
+import { Segmented } from '@/app/components/ui/compat';
 
 const TimeRangeSelector: React.FC = () => (
   <Segmented<string>

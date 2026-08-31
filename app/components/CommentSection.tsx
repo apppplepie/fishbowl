@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Space, Modal } from '@/app/components/ui';
-import { message } from 'antd';
-import { Avatar } from 'antd';
-import { Tooltip } from 'antd'; 
+import { message } from '@/app/components/ui/compat';
+import { Avatar } from '@/app/components/ui/compat';
+import { Tooltip } from '@/app/components/ui/compat';
 import { MessageCircle, User, Trash2, Heart, AlertCircle } from 'lucide-react';
 import { formatTimeToMinute } from '@/app/utils/timeFormat';
 import { apiPostJson, apiDeleteJson, apiGetJson } from '@/lib/apiClient';
@@ -451,4 +451,3 @@ export default function CommentSection({ articleId, currentUser, isLoggedIn, onC
     </div>
   );
 }
-

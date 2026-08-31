@@ -6,7 +6,7 @@ import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { UnifiedNavigatorButton, UnifiedNavigatorProps } from '@/app/components/sidebar/UnifiedNavigator';
 import { useRouter } from 'next/navigation';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined } from '@/app/components/ui/icons';
 import dynamic from 'next/dynamic';
 
 // Lazy load UnifiedNavigator to reduce initial bundle size

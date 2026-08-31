@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Input, Button, Space, Dropdown, message, Modal, Segmented } from 'antd';
-import type { MenuProps } from 'antd';
+import { Input, Button, Space, Dropdown, message, Modal, Segmented } from '@/app/components/ui/compat';
+import type { MenuProps } from '@/app/components/ui/compat';
 import {
   DeleteOutlined,
   MenuOutlined,
@@ -17,7 +17,7 @@ import {
   UndoOutlined,
   SearchOutlined,
   ExclamationCircleOutlined,
-} from '@ant-design/icons';
+} from '@/app/components/ui/icons';
 import type { TextBlock as TextBlockType } from '@/app/types/block';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { applyFormat, type FormatOption, findReplace } from '@/app/utils/textFormatter';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { message } from 'antd';
+import { message } from '@/app/components/ui/compat';
 
 /**
  * 全局 Message 配置组件

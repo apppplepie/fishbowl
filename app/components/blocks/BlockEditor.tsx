@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Upload, Dropdown } from 'antd';
+import { Upload, Dropdown } from '@/app/components/ui/compat';
 import { Button, Space, Modal, Input, message } from '@/app/components/ui';
-import type { MenuProps } from 'antd';
+import type { MenuProps } from '@/app/components/ui/compat';
 import {
   PlusOutlined,
   FileTextOutlined,
@@ -12,8 +12,8 @@ import {
   ThunderboltOutlined,
   FormatPainterOutlined,
   LinkOutlined,
-} from '@ant-design/icons';
-import type { UploadFile } from 'antd';
+} from '@/app/components/ui/icons';
+import type { UploadFile } from '@/app/components/ui/compat';
 import {
   DndContext,
   closestCorners,

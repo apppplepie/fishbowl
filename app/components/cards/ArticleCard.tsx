@@ -2,7 +2,7 @@
 
 import React from 'react';
 import './card-blocks.css';
-import { ClockCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, EditOutlined } from '@/app/components/ui/icons';
 import type { ArticleCard as ArticleCardType, MasonryProps } from '@/app/types/card';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { Tag, Card } from '@/app/components/ui';

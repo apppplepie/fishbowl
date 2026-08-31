@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Drawer } from 'antd';
+import { Drawer } from '@/app/components/ui/compat';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import Controls from './Controls';
 import { PlantSettings, PlantType } from '../../types/garden';

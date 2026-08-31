@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
 import MessageConfig from "./message-config";
 import Providers from "./providers";
 import { theme } from "./config/theme";
@@ -31,17 +30,15 @@ export default function RootLayout({
     <html lang="en">
       <AppThemeProvider>
         <AppThemeBody>
-          <AntdRegistry>
-            <Providers>
-              <MessageConfig />
-              <ConfirmModalProvider>
-                <MessageContainer />
-                <GlobalLayout>
-                  {children}
-                </GlobalLayout>
-              </ConfirmModalProvider>
-            </Providers>
-          </AntdRegistry>
+          <Providers>
+            <MessageConfig />
+            <ConfirmModalProvider>
+              <MessageContainer />
+              <GlobalLayout>
+                {children}
+              </GlobalLayout>
+            </ConfirmModalProvider>
+          </Providers>
         </AppThemeBody>
       </AppThemeProvider>
     </html>

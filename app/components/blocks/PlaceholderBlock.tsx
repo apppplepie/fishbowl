@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card, Alert } from 'antd';
+import { Card, Alert } from '@/app/components/ui/compat';
 import type { PlaceholderBlock as PlaceholderBlockType } from '@/app/types/block';
 import PlaceholderDisplay from './PlaceholderDisplay';
 

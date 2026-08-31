@@ -7,9 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useAppTheme } from './contexts/AppThemeContext';
 import { useAuth } from './hooks/useAuth';
 import { apiGetJson } from '@/lib/apiClient';
-import PermissionSystemDemo from './components/PermissionSystemDemo';
 import WaveSeparator from './components/background/WaveSeparator';
-import BaselinePlantViewer from './components/garden/BaselinePlantViewer';
 import RootSystem from './components/garden/RootSystem';
 import Header from './components/Header';
 import { theme } from './config/theme';
@@ -34,6 +32,9 @@ const HERO_SLOGANS = [
   '想跟我聊天吗？双击试试',
 ];
 
+const CROW_FOOT_POSITION_RATIO = 902 / 1400;
+const TARGET_FOOT_VH = 80;
+
 // 根系数据类型
 interface RootData {
   id: string;
@@ -43,10 +44,9 @@ interface RootData {
 
 export default function Home() {
   const { currentFishbowlTheme } = useAppTheme();
-  const { user, isLoggedIn, isLoading: authLoading } = useAuth();
+  const { isLoggedIn, isLoading: authLoading } = useAuth();
   const [showNavBar, setShowNavBar] = useState(false);
   const [baselineY, setBaselineY] = useState<number | null>(null);
-  const [baselinePlants, setBaselinePlants] = useState<BaselinePlant[]>([]);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [rootSystems, setRootSystems] = useState<RootData[]>([]); // 根系数据
 
@@ -99,13 +99,6 @@ export default function Home() {
     },
     [handleCrowDoubleTap]
   );
-  // Crow SVG 的 viewBox 是 "0 0 1300 1400"，脚部 y 坐标是 902
-  // 脚部在 SVG 中的相对位置：902 / 1400 ≈ 0.644 (64.4%)
-  const CROW_FOOT_POSITION_RATIO = 902 / 1400; // 脚部在 SVG 中的相对位置
-  // 目标：让脚部站在指定视口高度的位置（单位：vh）
-  // 例如：80 表示脚部站在 80vh 的位置，可以根据需要调整这个值
-  const TARGET_FOOT_VH = 80;
-
   // 植物系统引用
   const engineRef = useRef<PlantGrowthEngine>(new PlantGrowthEngine());
   const growthAnimationRef = useRef<number | null>(null); // 生长动画帧 ID
@@ -190,7 +183,6 @@ export default function Home() {
     const getThreshold = () => window.innerHeight * 0.79; // 导航栏显示阈值
 
     let lastScrollTop = container.scrollTop;
-    let lastScrollTime = Date.now();
     let isScrolling = false;
 
     const snapTo = (target: number) => {
@@ -246,14 +238,11 @@ export default function Home() {
       if (isAutoScrolling.current) return;
 
       const currentScrollTop = container.scrollTop;
-      const currentTime = Date.now();
-
       const scrollDelta = Math.abs(currentScrollTop - lastScrollTop);
 
       if (scrollDelta > 0) {
         isScrolling = true;
         lastScrollTop = currentScrollTop;
-        lastScrollTime = currentTime;
       }
 
       if (snapRafIdRef.current) cancelAnimationFrame(snapRafIdRef.current);
@@ -270,14 +259,6 @@ export default function Home() {
       }, 30);
     };
 
-    let touchStartY = 0;
-    let touchStartTime = 0;
-
-    const onTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
-      touchStartTime = Date.now();
-    };
-
     const onTouchEnd = () => {
       if (touchEndTimerRef.current) {
         clearTimeout(touchEndTimerRef.current);
@@ -292,7 +273,6 @@ export default function Home() {
     updateNavBar(container.scrollTop, getThreshold());
 
     container.addEventListener('scroll', onScroll, { passive: true });
-    container.addEventListener('touchstart', onTouchStart, { passive: true });
     container.addEventListener('touchend', onTouchEnd, { passive: true });
 
     const handleResize = () => {
@@ -303,7 +283,6 @@ export default function Home() {
 
     return () => {
       container.removeEventListener('scroll', onScroll);
-      container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('resize', handleResize);
       
@@ -455,17 +434,11 @@ export default function Home() {
     // 等待认证状态加载完成
     if (authLoading) return;
     
-    const abortController = new AbortController();
-    
     const loadFishConfig = async () => {
       try {
         const data = await apiGetJson<{ success: boolean; config: FishConfig }>(
-          '/api/fish/config',
-          { requiresAuth: false } // 允许未登录用户访问
+          '/api/fish/config' // 允许未登录用户访问
         );
-        
-        // 检查是否已取消
-        if (abortController.signal.aborted) return;
         
         if (data.success && data.config) {
           setFishConfig(data.config);
@@ -473,23 +446,16 @@ export default function Home() {
           // 如果API返回失败，使用默认配置
           setFishConfig(DEFAULT_FISH_CONFIG);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // 忽略取消错误
-        if (error.name === 'AbortError') return;
+        if (error instanceof Error && error.name === 'AbortError') return;
         
         console.error('加载鱼配置失败:', error);
-        // 出错时使用默认配置
-        if (!abortController.signal.aborted) {
-          setFishConfig(DEFAULT_FISH_CONFIG);
-        }
+        setFishConfig(DEFAULT_FISH_CONFIG);
       }
     };
 
     loadFishConfig();
-    
-    return () => {
-      abortController.abort();
-    };
   }, [authLoading]); // 等待认证状态加载完成
 
   // 获取渐变背景 CSS
@@ -671,9 +637,9 @@ export default function Home() {
           // 没有保存的植物，设置为空数组
           setLoadedPlants([]);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // 忽略取消错误
-        if (error.name === 'AbortError') return;
+        if (error instanceof Error && error.name === 'AbortError') return;
         
         console.error('加载植物配置失败:', error);
         // 加载失败时设置为空数组，使用默认逻辑
@@ -752,9 +718,6 @@ export default function Home() {
           if (ctx) {
             ctx.clearRect(0, 0, plant.canvas.width, plant.canvas.height);
           }
-          // 移除 canvas 引用（让 GC 回收）
-          plant.canvas = null as any;
-          plant.ctx = null as any;
         }
       });
       
@@ -832,32 +795,6 @@ export default function Home() {
           zIndex: -1,
         }}
       />
-
-      {/* 基线植物查看器 - 全屏覆盖整个页面 */}
-      {baselinePlants.length > 0 && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            pointerEvents: 'none',
-            zIndex: 5, // 在所有内容之上
-          }}
-        >
-        <BaselinePlantViewer
-          plants={baselinePlants}
-          width={window.innerWidth}
-          height={window.innerHeight}
-        />
-        <style>{`
-          .baseline-plant-viewer {
-            mix-blend-mode: screen;
-          }
-        `}</style>
-        </div>
-      )}
 
       <div
         ref={scrollContainerRef}
@@ -1122,17 +1059,6 @@ export default function Home() {
 
             {/* 内容区 */}
             <div className="text-center text-white" style={{ padding: '0 24px 40px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', position: 'relative', zIndex: 5, minHeight: '100%' }}>
-              {/* <Title level={2} className="!text-white mb-6" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                权限系统
-              </Title>
-              <Paragraph className="!text-white text-lg mb-6" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-                体验渐进式内容浏览
-              </Paragraph>
-
-              <div className="max-w-5xl mx-auto" style={{ flex: 1 }}>
-                <PermissionSystemDemo />
-              </div> */}
-
               <div style={{ textAlign: 'center', marginTop: '400px', paddingBottom: '20px' }}>
                 <Button
                   type="default"

@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { FloatButton, message, Modal } from '@/app/components/ui';
 import { Menu, Check, Eye, Trash2 } from 'lucide-react';
-import type { FormInstance } from 'antd/es/form';
+import type { FormInstance } from '@/app/components/ui/compat';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 

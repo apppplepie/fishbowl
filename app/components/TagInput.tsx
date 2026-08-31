@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AutoComplete } from 'antd';
+import { AutoComplete } from '@/app/components/ui/compat';
 import { Plus } from 'lucide-react';
 import { Input, Space, message } from '@/app/components/ui';
 import { apiGetJson, apiPostJson } from '@/lib/apiClient';
@@ -47,7 +47,7 @@ export default function TagInput({
   // 加载标签列表
   const loadTags = async () => {
     try {
-      const data = await apiGetJson<{ success: boolean; tags?: TagOption[] }>('/api/tags', { requiresAuth: false });
+      const data = await apiGetJson<{ success: boolean; tags?: TagOption[] }>('/api/tags');
       
       if (data.success) {
         setAllTags(data.tags || []);

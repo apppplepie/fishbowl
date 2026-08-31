@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '@/app/components/ui';
-import { LinkOutlined } from '@ant-design/icons';
+import { LinkOutlined } from '@/app/components/ui/icons';
 import type { LinkCard as LinkCardType } from '@/app/types/card';
 
 interface LinkCardProps {

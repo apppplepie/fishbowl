@@ -1,16 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, useTransition, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { apiGet } from '@/lib/apiClient';
 import { Empty, LoadEnd, Spin, TagSearchPickerWithTags, TransparentSearchInput } from '@/app/components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { useAccessFilter } from '@/app/hooks/useAccessFilter';
 import { useAuth } from '@/app/hooks/useAuth';
-import { getGuestIdentity } from '@/lib/guestIdentity';
 import { getSpanForCard, getLayoutForCard } from '@/lib/masonry-server-utils';
 
 import MasonryGrid from '@/app/components/layout/MasonryGrid';
@@ -70,15 +69,7 @@ const UnifiedNavigatorButton = dynamic(
 ) as React.ComponentType<{ onClick?: () => void; expanded?: boolean; onToggle?: () => void }>;
 const ArchiveActionFloat = dynamic(() => import('@/app/components/float/ArchiveActionFloat'), { ssr: false });
 
-interface ArchivePageProps {
-  initialArticles?: any[];
-  initialHasMore?: boolean;
-}
-
-function ArchivePageContent(props?: ArchivePageProps) {
-  // 仅服务端渲染首屏使用，后续切换 Category 由客户端接管
-  const { initialArticles = [], initialHasMore = true } = props ?? {};
-
+function ArchivePageContent() {
   const { isMobile } = useResponsive();
   const { setConfig } = usePageShell();
   const router = useRouter();
@@ -90,11 +81,10 @@ function ArchivePageContent(props?: ArchivePageProps) {
   const categoryParam = searchParams.get('category');
   
   // --- 核心状态 ---
-  const [cards, setCards] = useState<any[]>(initialArticles);
-  // 如果有初始数据，就不显示 Loading；否则显示
-  const [loading, setLoading] = useState(initialArticles.length === 0);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [offset, setOffset] = useState(initialArticles.length);
+  const [cards, setCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // 标签筛选，与 bookcase 一致
 
@@ -105,8 +95,6 @@ function ArchivePageContent(props?: ArchivePageProps) {
   // UI 状态
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false); // 电脑上侧边栏默认收起
-  const [isPending, startTransition] = useTransition();
-
   const { setLeftContent } = useHeader();
 
   // --- 瀑布流布局计算 (优化版：初始不给0，减少闪烁) ---
@@ -201,7 +189,6 @@ function ArchivePageContent(props?: ArchivePageProps) {
       if (keyword) params.append('search', keyword);
 
       const res = await apiGet(`/api/articles/list?${params.toString()}`, {
-        requiresAuth: false,
         signal: controller.signal
       });
       const data = await res.json();
@@ -235,8 +222,6 @@ function ArchivePageContent(props?: ArchivePageProps) {
     // 只有当参数真正变化时才重置并加载
     // 这里使用防抖处理搜索，但分类切换是立即的
     const timer = setTimeout(() => {
-      // 重置状态
-      setCards([]); 
       setOffset(0);
       setHasMore(true);
       window.scrollTo({ top: Math.round(window.innerHeight * 0.15), behavior: 'auto' });
@@ -264,11 +249,11 @@ function ArchivePageContent(props?: ArchivePageProps) {
   }, [hasMore, offset, categoryParam, searchKeyword, fetchData]);
 
 
-  // 用户权限等级：登录用 user，游客用本地 getGuestIdentity().access_level（学习模式=1，否则=2）；依赖 filterMode 以便弹窗切换后重新取 guest
+  // 登录用户使用账户等级，游客固定为 2 级；浏览模式只负责列表过滤。
   const userMaxAccessLevel = useMemo(() => {
     if (isLoggedIn && user) return user.max_access_level ?? 2;
-    return getGuestIdentity()?.access_level ?? 2;
-  }, [isLoggedIn, user, filterMode]);
+    return 2;
+  }, [isLoggedIn, user]);
 
   // 前端过滤：权限 + 标签（与 bookcase 一致）
   const filteredCards = useMemo(() => {
@@ -421,10 +406,10 @@ function ArchivePageContent(props?: ArchivePageProps) {
   );
 }
 
-export default function ArchivePage(props?: ArchivePageProps) {
+export default function ArchivePage() {
   return (
     <Suspense fallback={<div style={{height: '100vh'}}><Spin size="middle"/></div>}>
-      <ArchivePageContent {...props} />
+      <ArchivePageContent />
     </Suspense>
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense, useMemo } from 'react';
-import { Form, Input, Upload, Select, Dropdown } from 'antd';
-import type { MenuProps } from 'antd';
+import { Form, Input, Upload, Select, Dropdown } from '@/app/components/ui/compat';
+import type { MenuProps } from '@/app/components/ui/compat';
 import { Button, Card, Space, Divider, Tag, message } from '@/app/components/ui';
-import { SaveOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { SaveOutlined, ThunderboltOutlined } from '@/app/components/ui/icons';
 import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
 import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
@@ -196,13 +196,6 @@ function PublishChapterContent() {
 
       if (result.success) {
         message.success('章节发布成功！');
-
-        // 清除相关书籍的缓存，因为新增了文章
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const { clearBookCache } = await import('@/app/utils/bookCache');
-          clearBookCache(categoryFromUrl);
-          console.log('已清除新文章所属书籍的缓存:', categoryFromUrl);
-        }
 
         // 清空表单和块
         form.resetFields();

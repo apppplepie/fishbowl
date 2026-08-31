@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Form, Input, Upload, Select, Dropdown } from 'antd';
-import type { MenuProps } from 'antd';
-import type { UploadFile } from 'antd';
+import { Form, Input, Upload, Select, Dropdown } from '@/app/components/ui/compat';
+import type { MenuProps } from '@/app/components/ui/compat';
+import type { UploadFile } from '@/app/components/ui/compat';
 import { Button, Card, Space, Divider, Tag, message } from '@/app/components/ui';
-import { SaveOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { SaveOutlined, ThunderboltOutlined } from '@/app/components/ui/icons';
 import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
 import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';
 import BlockEditor from '@/app/components/blocks/BlockEditor';

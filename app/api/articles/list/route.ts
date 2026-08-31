@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 在前面添加封面权限参数
-    queryParams.unshift(userAccessLevel, userAccessLevel);
+    queryParams.unshift(userAccessLevel, userAccessLevel, userAccessLevel);
 
     // 如果 orderByPath=true，需要获取所有文章（不分页），然后排序
     const shouldOrderByPath = orderByPath && categoryId;
@@ -297,7 +297,9 @@ export async function GET(request: NextRequest) {
             SELECT JSON_UNQUOTE(JSON_EXTRACT(b.content, '$.code'))
             FROM blocks b
             JOIN article_blocks ab ON b.id = ab.block_id
-            WHERE ab.article_id = a.id AND b.type = 'code'
+            WHERE ab.article_id = a.id
+              AND b.type = 'code'
+              AND COALESCE(b.access_level, 1) <= ?
             ORDER BY ab.\`order\` ASC
             LIMIT 1
           )

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import './card-blocks.css';
-import { CodeOutlined } from '@ant-design/icons';
+import { CodeOutlined } from '@/app/components/ui/icons';
 import { formatRelativeTime } from '@/app/utils/timeFormat';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';
 import type { MasonryProps } from '@/app/types/card';

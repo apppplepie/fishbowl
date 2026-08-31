@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import './card-blocks.css';
-import { UserOutlined, DeleteOutlined, ReadOutlined } from '@ant-design/icons';
+import { UserOutlined, DeleteOutlined, ReadOutlined } from '@/app/components/ui/icons';
 import type { BookCard as BookCardType, MasonryProps } from '@/app/types/card';
 import DeleteBookModal from '@/app/components/modal/DeleteBookModal';
 import { useCardBackground } from '@/app/components/ui/useCardBackground';

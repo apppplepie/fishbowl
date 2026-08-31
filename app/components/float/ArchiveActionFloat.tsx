@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, message } from '@/app/components/ui';
-import { Form, Input, Select, Button } from 'antd'; // 暂时保留，后续实现
+import { Form, Input, Select, Button } from '@/app/components/ui/compat'; // 暂时保留，后续实现
 import { Plus, Book } from 'lucide-react';
-import { EditOutlined, InsertRowAboveOutlined } from '@ant-design/icons';
+import { EditOutlined, InsertRowAboveOutlined } from '@/app/components/ui/icons';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiPostJson } from '@/lib/apiClient';

@@ -1,7 +1,7 @@
 'use client';
 
-import { Button, Modal, message, Segmented, Card, Row, Col, Tag, Alert, Space, Divider } from 'antd';
-import { LockOutlined, EyeOutlined, UserOutlined, CrownOutlined, MailOutlined } from '@ant-design/icons';
+import { Button, Modal, message, Segmented, Card, Row, Col, Tag, Alert, Space, Divider } from '@/app/components/ui/compat';
+import { LockOutlined, EyeOutlined, UserOutlined, CrownOutlined, MailOutlined } from '@/app/components/ui/icons';
 import { useState } from 'react';
 import { ACCESS_LEVELS } from '../types/block';
 import { theme } from '../config/theme';

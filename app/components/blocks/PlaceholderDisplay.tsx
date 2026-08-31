@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Typography } from 'antd';
-import { LockOutlined } from '@ant-design/icons';
+import { Typography } from '@/app/components/ui/compat';
+import { LockOutlined } from '@/app/components/ui/icons';
 import type { PlaceholderBlock as PlaceholderBlockType } from '@/app/types/block';
 import { ACCESS_LEVELS } from '@/app/types/block';
 

@@ -78,7 +78,7 @@ export default function ClientArticleShell({
     setLoading(true);
     setLoadError(null);
 
-    apiGet(`/api/articles/${articleId}`, { requiresAuth: false, signal: controller.signal })
+    apiGet(`/api/articles/${articleId}`, { signal: controller.signal })
       .then(async (res) => {
         const result = await res.json();
         if (!res.ok || !result?.success || !result?.article) {
@@ -92,7 +92,6 @@ export default function ClientArticleShell({
 
         if (fetchedArticle.category_id) {
           return apiGet(`/api/categories/${fetchedArticle.category_id}/path`, {
-            requiresAuth: false,
             signal: controller.signal,
           });
         }

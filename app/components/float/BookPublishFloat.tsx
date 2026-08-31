@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, message } from '@/app/components/ui';
-import { Input, Button } from 'antd'; // 暂时保留，后续实现
+import { Input, Button } from '@/app/components/ui/compat'; // 暂时保留，后续实现
 import { Spin } from '@/app/components/ui';
 import { Plus, FileText, Trash2, Book } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -65,7 +65,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
 
     try {
       // 获取书籍信息
-      const result = await apiGetJson<{ success: boolean; category?: { name: string } }>(`/api/categories/${categoryFromUrl}`, { requiresAuth: false });
+      const result = await apiGetJson<{ success: boolean; category?: { name: string } }>(`/api/categories/${categoryFromUrl}`);
 
       if (result.success && result.category) {
         setDeletingBookId(categoryFromUrl);
@@ -84,7 +84,7 @@ export default function BookPublishFloat({ onChapterManageSuccess }: BookPublish
   const loadBooksList = async () => {
     setSelectBookLoading(true);
     try {
-      const result = await apiGetJson<{ success: boolean; books?: any[] }>('/api/categories/book-previews?parentId=cat_bookcase', { requiresAuth: false });
+      const result = await apiGetJson<{ success: boolean; books?: any[] }>('/api/categories/book-previews?parentId=cat_bookcase');
 
       if (result.success && result.books) {
         const books = result.books.map((book: any) => ({
