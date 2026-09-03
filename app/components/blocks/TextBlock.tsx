@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Input, Button, Space, Dropdown, message, Modal, Segmented } from '@/app/components/ui/compat';
+import { Input, Button, Space, message, Modal } from '@/app/components/ui';
+import { Dropdown, Segmented } from '@/app/components/ui/compat';
 import type { MenuProps } from '@/app/components/ui/compat';
 import {
   DeleteOutlined,
@@ -758,7 +759,6 @@ export default function TextBlock({
             key={level.value}
             size="small"
             type={(block.access_level || 1) === level.value ? 'primary' : 'default'}
-            variant={(block.access_level || 1) === level.value ? 'solid' : 'filled'}
             style={{
               backgroundColor: (block.access_level || 1) === level.value ? level.color : undefined,
               borderColor: level.color,

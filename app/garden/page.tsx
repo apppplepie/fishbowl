@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { useHeader } from '../contexts/HeaderContext';
-import PageLayout from '../components/PageLayout';
 import GardenCanvas from '../components/garden/GardenCanvas';
 import GardenSidebar from '../components/garden/GardenSidebar';
 import { GardenDrawerButton } from '../components/garden/GardenDrawerButton';
@@ -306,18 +305,28 @@ export default function GardenPage() {
 
       {/* 内容区域 - 根据侧边栏状态调整 margin */}
       <div style={{ marginLeft: isMobile ? 0 : (sidebarExpanded ? '320px' : '0'), transition: 'margin-left 0.3s ease' }}>
-        <PageLayout
-          box2BgColor="transparent"
-          hideBox1={true}
-          box2Style={{
-            padding: 0,
-            position: 'relative',
+        <div
+          className="fishbowl-layout"
+          style={{
+            padding: isMobile ? 0 : '0 6px 6px',
+            boxSizing: 'border-box',
             display: 'flex',
-            minHeight: 'calc(100vh - 45px - 6px)',
-            overflow: 'auto',
-            background: '#fdfbf7',
+            flexDirection: 'column',
+            minHeight: '100vh',
           }}
         >
+          <div
+            className="water-section"
+            style={{
+              position: 'relative',
+              display: 'flex',
+              flex: '1 0 auto',
+              width: '100%',
+              minHeight: 'calc(100vh - 45px - 6px)',
+              overflow: 'auto',
+              background: '#fdfbf7',
+            }}
+          >
           {/* 画布区域 */}
           <div ref={containerRef} style={{ flex: 1, position: 'relative', minHeight: '140vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {/* Paper Grain Texture (Subtle) */}
@@ -411,7 +420,8 @@ export default function GardenPage() {
               </div>
             </div>
           </div>
-        </PageLayout>
+          </div>
+        </div>
       </div>
 
       {/* Toast Notification */}

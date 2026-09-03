@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, Input, message, Button } from '@/app/components/ui/compat';
+import { Modal, Input, message, Button } from '@/app/components/ui';
 import { DeleteOutlined, ExclamationCircleOutlined } from '@/app/components/ui/icons';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiDeleteJson } from '@/lib/apiClient';

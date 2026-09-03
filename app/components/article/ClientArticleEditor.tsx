@@ -10,12 +10,12 @@ import React, {
   useMemo,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { message, Modal, Input, Tag } from '@/app/components/ui';
+import { message, Modal, Input, Tag, Divider, Space } from '@/app/components/ui';
 import { ExclamationCircleOutlined } from '@/app/components/ui/icons';
 import BlockEditor from '@/app/components/blocks/BlockEditor';
 import CategoryTreeSelect from '@/app/components/CategoryTreeSelect';
 import TagInput from '@/app/components/TagInput';
-import { Select, Divider, Space } from '@/app/components/ui/compat';
+import { Select } from '@/app/components/ui/compat';
 // 权限信息现在从props传入，不再需要内部hooks
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { apiPutJson, apiDeleteJson, apiGetJson } from '@/lib/apiClient';

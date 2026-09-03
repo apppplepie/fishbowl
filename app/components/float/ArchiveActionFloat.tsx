@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, message } from '@/app/components/ui';
-import { Form, Input, Select, Button } from '@/app/components/ui/compat'; // 暂时保留，后续实现
+import { FloatButton, Modal, message, Input, Button } from '@/app/components/ui';
+import { Form, Select } from '@/app/components/ui/compat';
 import { Plus, Book } from 'lucide-react';
 import { EditOutlined, InsertRowAboveOutlined } from '@/app/components/ui/icons';
 import { useRouter } from 'next/navigation';

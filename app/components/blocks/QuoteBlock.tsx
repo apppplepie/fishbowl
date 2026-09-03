@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, Modal, Typography, Divider, Input, Button } from '@/app/components/ui/compat';
+import { Card, Typography } from '@/app/components/ui/compat';
 import { LinkOutlined, PictureOutlined } from '@/app/components/ui/icons';
 import { Image as AntImage } from '@/app/components/ui/compat';
 import type { QuoteBlock as QuoteBlockType } from '@/app/types/block';
 import { apiGetJson } from '@/lib/apiClient';
-import { Spin } from '@/app/components/ui';
+import { Spin, Modal, Divider, Input, Button } from '@/app/components/ui';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -478,7 +478,6 @@ const QuoteBlock: React.FC<QuoteBlockProps> = ({
         onCancel={handleModalClose}
         footer={null}
         width="80%"
-        style={{ maxWidth: '100hv' }}
         styles={{ body: { maxHeight: '70vh', overflow: 'auto' } }}
       >
         {loading ? (

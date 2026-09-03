@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Input, Image as AntImage, Segmented, Space, Modal } from '@/app/components/ui/compat';
+import { Button, Input, Space, Modal } from '@/app/components/ui';
+import { Image as AntImage, Segmented } from '@/app/components/ui/compat';
 import { getImageSrc } from '@/lib/imageUrl';
 import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, EyeOutlined, ExclamationCircleOutlined } from '@/app/components/ui/icons';
 import ImageCardModal from '../ImageCardModal';
@@ -373,7 +374,6 @@ export default function ImageBlock({
               key={level.value}
               size="small"
               type={(block.access_level || 1) === level.value ? 'primary' : 'default'}
-              variant={(block.access_level || 1) === level.value ? 'solid' : 'filled'}
               style={{
                 backgroundColor: (block.access_level || 1) === level.value ? level.color : undefined,
                 borderColor: level.color,

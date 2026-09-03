@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Menu, Button, message } from '@/app/components/ui/compat';
+import { Button, message } from '@/app/components/ui';
+import { Menu } from '@/app/components/ui/compat';
 import type { MenuProps } from '@/app/components/ui/compat';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';

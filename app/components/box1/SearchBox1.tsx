@@ -1,7 +1,8 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { Input, Select, Space } from '@/app/components/ui/compat';
+import { Input, Space } from '@/app/components/ui';
+import { Select } from '@/app/components/ui/compat';
 import { SearchOutlined } from '@/app/components/ui/icons';
 
 const { Option } = Select;

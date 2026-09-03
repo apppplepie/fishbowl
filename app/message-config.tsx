@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { message } from '@/app/components/ui/compat';
+import { message } from '@/app/components/ui';
 
 /**
  * 全局 Message 配置组件

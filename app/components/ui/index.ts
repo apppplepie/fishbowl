@@ -12,6 +12,12 @@ export { ConfirmModalProvider } from './ConfirmModalProvider';
 export { default as Tag } from './Tag';
 export type { TagProps } from './Tag';
 
+export { default as Checkbox } from './Checkbox';
+export type { CheckboxProps } from './Checkbox';
+
+export { default as Tooltip } from './Tooltip';
+export type { TooltipProps } from './Tooltip';
+
 export { default as Divider } from './Divider';
 export type { DividerProps } from './Divider';
 

@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, startTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { message } from '@/app/components/ui/compat';
-import { Spin, Empty, LoadEnd } from '@/app/components/ui';
+import { Spin, Empty, LoadEnd, message } from '@/app/components/ui';
 import { useRouter } from 'next/navigation';
 import { usePageShell, DEFAULT_SCROLL_SNAP_VH } from '@/app/contexts/PageShellContext';
 import { useScrollSnapAtTop } from '@/app/hooks/useScrollSnapAtTop';

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FloatButton, Modal, message, Input } from '@/app/components/ui';
-import { Form, Upload, Space, Button } from '@/app/components/ui/compat';
+import { FloatButton, Modal, message, Input, Space, Button } from '@/app/components/ui';
+import { Form, Upload } from '@/app/components/ui/compat';
 import { Plus, CloudUpload } from 'lucide-react';
 import type { UploadFile, UploadProps } from '@/app/components/ui/compat';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -239,7 +239,6 @@ export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatPr
                     key={level.value}
                     size="small"
                     type={accessLevel === level.value ? 'primary' : 'default'}
-                    variant={accessLevel === level.value ? 'solid' : 'filled'}
                     style={{
                       backgroundColor: accessLevel === level.value ? level.color : undefined,
                       borderColor: level.color,

@@ -93,5 +93,18 @@ const Space: React.FC<SpaceProps> = ({
   );
 };
 
-export default Space;
+/**
+ * Space.Compact - 紧凑排列容器（子元素紧贴、等高拉伸）
+ */
+const Compact: React.FC<{
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+}> = ({ children, style, className = '' }) => (
+  <div className={className} style={{ display: 'flex', alignItems: 'stretch', ...style }}>
+    {children}
+  </div>
+);
+
+export default Object.assign(Space, { Compact });
 

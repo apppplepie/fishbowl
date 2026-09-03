@@ -12,18 +12,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import BaseButton from './Button';
-import type { ButtonProps as BaseButtonProps } from './Button';
-import BaseInput from './Input';
-import BaseModal from './Modal';
-import BaseCheckbox from './Checkbox';
-import BaseTooltip from './Tooltip';
-import BaseDivider from './Divider';
-import BaseSpace from './Space';
-import BaseTag from './Tag';
-import { message } from './message';
 
-export { message };
 export type UploadFile = {
   uid: string;
   name: string;
@@ -61,24 +50,7 @@ export type MenuProps = {
   [key: string]: any;
 };
 
-type CompatButtonProps = BaseButtonProps & { shape?: string; ghost?: boolean; [key: string]: any };
-export const Button: React.FC<CompatButtonProps> = ({ children, shape: _shape, ghost: _ghost, ...props }) => (
-  <BaseButton {...props}>{children}</BaseButton>
-);
-export const Input = BaseInput;
-export const Modal: any = BaseModal;
-export const Checkbox: any = BaseCheckbox;
-export const Tooltip: any = BaseTooltip;
-export const Divider: any = BaseDivider;
-export const Tag: any = BaseTag;
 
-const Compact: React.FC<any> = ({ children, style, className = '' }) => (
-  <div className={className} style={{ display: 'flex', alignItems: 'stretch', ...style }}>{children}</div>
-);
-export const Space: any = Object.assign(
-  (props: any) => <BaseSpace {...props} />,
-  { Compact },
-);
 
 type FormRule = {
   required?: boolean;
@@ -376,11 +348,6 @@ export const Card: React.FC<CompatCardProps> = ({ children, title, extra, cover,
   </section>
 );
 
-export const Row: React.FC<any> = ({ children, gutter = 0, style, ...props }) => {
-  const gap = Array.isArray(gutter) ? gutter[0] : gutter;
-  return <div {...props} style={{ display: 'flex', flexWrap: 'wrap', gap, ...style }}>{children}</div>;
-};
-export const Col: React.FC<any> = ({ children, xs = 24, style, ...props }) => <div {...props} style={{ flex: `1 1 ${Math.min(100, (xs / 24) * 100)}%`, ...style }}>{children}</div>;
 
 export const InputNumber = forwardRef<HTMLInputElement, any>(({ onChange, ...props }, ref) => <input ref={ref} type="number" {...props} onChange={(event) => onChange?.(event.target.value === '' ? null : Number(event.target.value))} style={{ minHeight: 34, border: '1px solid rgba(0,0,0,.18)', borderRadius: 8, padding: '6px 10px', ...props.style }} />);
 InputNumber.displayName = 'InputNumber';

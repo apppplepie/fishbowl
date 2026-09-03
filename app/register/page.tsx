@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, message } from '@/app/components/ui/compat';
+import { Input, Button, message } from '@/app/components/ui';
+import { Form, Card } from '@/app/components/ui/compat';
 import { UserOutlined, LockOutlined, MailOutlined } from '@/app/components/ui/icons';
 import { useRouter } from 'next/navigation';
 import { usePageShell } from '@/app/contexts/PageShellContext';

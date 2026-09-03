@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Input, Button, Select, Segmented, Space, Modal } from '@/app/components/ui/compat';
+import { Input, Button, Space, Modal, message } from '@/app/components/ui';
+import { Select, Segmented } from '@/app/components/ui/compat';
 import { DeleteOutlined, MenuOutlined, ArrowUpOutlined, ArrowDownOutlined, CodeOutlined, CopyOutlined, ExclamationCircleOutlined } from '@/app/components/ui/icons';
-import { message } from '@/app/components/ui/compat';
 import type { CodeBlock as CodeBlockType } from '@/app/types/block';
 import { ACCESS_LEVELS } from '@/app/types/block';
 import { useResponsive } from '@/app/hooks/useResponsive';
@@ -397,7 +397,6 @@ export default function CodeBlock({
             key={level.value}
             size="small"
             type={(block.access_level || 1) === level.value ? 'primary' : 'default'}
-            variant={(block.access_level || 1) === level.value ? 'solid' : 'filled'}
             style={{
               backgroundColor: (block.access_level || 1) === level.value ? level.color : undefined,
               borderColor: level.color,
