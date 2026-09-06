@@ -1,0 +1,89 @@
+task: fishbowl-chatgpt-content-tools
+status: complete
+base_branch: light
+base_commit: 17027a53fb0452e262f97948b9b7970ec74a6ea5
+branch: codex/chatgpt-content-tools
+reset_policy:
+  max_resets: 1
+  remaining_percent_must_be_below: 3
+  resets_used: 1
+  reset_attempted: true
+  reset_idempotency_key: 52d480e1-45ea-4f70-ab4f-d7b569d01423
+  reset_trigger_remaining:
+    five_hour: 0
+    weekly: 4
+  reset_outcome: reset
+  initial_remaining:
+    five_hour: 52
+    weekly: 12
+completed:
+- Read project structure, legacy GPT routes, auth, block types, publishing, media and garden storage.
+- Created codex/chatgpt-content-tools from latest light commit 17027a5.
+- Implemented curateArticle, saveRatedArticle and attachArticleImages with compact helper operations.
+- Reused existing creation/tag/media code; preserved legacy POST publishing routes.
+- Added transactional writes, request replay journal, revision checks, actor/access validation and summary metadata
+  storage.
+- Added generated full and standalone OpenAPI schemas, current Instructions and deployment/design docs.
+- Added and passed isolated MySQL integration tests and contract tests.
+- Passed TypeScript, targeted ESLint, production build and git diff whitespace checks.
+- Published implementation commit on GitHub development branch; verified identical Git tree hash.
+decisions:
+- Actual frontend rating enum is P/G/M/A/R (1-5); the 1-10 comment is stale. GPT judges semantics; backend enforces
+  enums and aggregates.
+- Curation does not change title/category/type/ratings/cover; tags append by default, optional replace is explicit.
+- Reordering uses block IDs; splitting validates exact original substrings and uses copy-on-write for shared blocks.
+- New content defaults to draft; the same publishing tool transitions existing article status without duplicating
+  content.
+- Images are generated externally then registered and attached using media_id plus an existing block anchor.
+- Added small article detail side table rather than changing legacy frontend summary fields.
+- New management endpoints use active database admin/moderator identity and max_access_level; no implicit admin
+  elevation.
+- GET GPT article/list contracts move to v4 pagination and permissions; old POST routes remain compatible.
+- Image generation provider integration and garden write tool deferred; garden design reuses existing DNA tables.
+- Remote images require configured exact HTTPS hosts, validated/pinned public DNS, no redirects and bounded downloads.
+next:
+- Deploy branch after checking production schema and running additive migration.
+- Configure GPT identity, GPT_SITE_URL and permitted image provider hosts.
+- Import v4 schema and Instructions into GPT Builder and connect actual image generation/upload bridge.
+tests:
+- command: ./scripts/test-gpt.ps1
+  result: passed
+  tests: 16
+  skipped: 0
+  database: isolated Docker mysql:8.4, random loopback port
+- command: npx tsc --noEmit --pretty false
+  result: passed
+- command: targeted npx eslint on new services/routes/schema generator
+  result: passed, zero errors/warnings from source; existing Browserslist age notice
+- command: npm run build
+  result: passed; 42 static pages plus all API routes compiled
+  warnings:
+  - Existing parent-workspace multiple lockfile root inference warning
+- command: git diff --check
+  result: passed
+- command: standalone production-server HTTP smoke
+  result: not run
+  reason: Automatic approval rejected starting local Next server with test configuration (blocked by policy; no
+    more specific reason). Service and route tests passed.
+limitations:
+- No production database or server deployment performed; run additive migration against existing light schema before
+  deploying.
+- No external image model credentials/attachment bridge supplied; tested generated raster registration and association,
+  not a production image provider.
+- Raw upload URLs remain public in existing architecture; block rating is not private blob authorization.
+- Legacy browser PUT is not transactional; simultaneous browser/GPT edit guarantees require future shared service
+  migration.
+- Standalone HTTP smoke launch was blocked by automatic approval; not represented as passed.
+updated_at: '2026-09-06T15:07:34+00:00'
+resolved_test_issues:
+- Initial fixture used MySQL default collation, unlike repository baseline; aligned fixture with utf8mb4_unicode_ci
+  and documented migration prerequisite.
+- Docker readiness initially detected temporary socket-only init server; now waits for authenticated TCP SELECT
+  1. Quoted PowerShell host argument to avoid parsing 127.0.0.1 as 127.
+implementation_commit: 06153c4daea37a8ef0ebc95079de449acea08e91
+delivery:
+  repository: https://github.com/apppplepie/fishbowl
+  branch: codex/chatgpt-content-tools
+  method: GitHub connector Git Data API (local git push credentials were invalid)
+  code_tree: e9d5e51f20bd880e60f9d5323f7f229ba99aaf81
+  verification: Remote code tree SHA exactly matches the tested local Git tree.

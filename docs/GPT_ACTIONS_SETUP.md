@@ -1,3 +1,5 @@
+> v4 内容管理工具请先阅读 [当前接入说明](gpt/README.md) 和 [设计](gpt/DESIGN.md)。下文保留旧版配置参考，OpenAPI/Instructions 以 docs/gpt 当前文件为准。
+
 # GPT Actions 集成指南
 
 允许 ChatGPT 通过 API 直接发布文章和图片到你的 Fishbowl 博客。

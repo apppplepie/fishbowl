@@ -1,185 +1,86 @@
-# GPT Actions 集成说明
+# Fishbowl + ChatGPT tools v4
 
-允许 ChatGPT 通过 API 直接发布文章到 Fishbowl 博客。
+实现三个内容操作：GPT 判断语义，Fishbowl 执行有权限、有版本检查的数据库写入。不在服务端自动调用模型，不需要新增 OpenAI API key。
 
----
+| 核心 tool | 接口 | 作用 |
+|---|---|---|
+| curateArticle | POST /api/gpt/curate | tags、summary、excerpt、有限 metadata、block 重排/无损拆段 |
+| saveRatedArticle | POST /api/gpt/save-rated | 按 block 分级新建草稿/发布；已有文章发布/撤回 |
+| attachArticleImages | POST /api/gpt/illustrate | 在指定 block 后关联已有 media，可选择封面 |
 
-## 📋 功能清单
+辅助操作复用/扩展已有 API：getArticle、searchArticles、getCategories；新增 getEditorialContext（tags、评级、身份能力）、registerImage（HTTPS 图片登记）。旧 upload 保留。
 
-| 功能 | 接口 | 说明 |
-|------|------|------|
-| 获取分类 | `GET /api/gpt/categories` | 获取所有分类，GPT 智能选择发布位置 |
-| 发布文章 | `POST /api/gpt/publish` | AI 一键发文，自动下载图片、处理块、标签 |
+## 部署
 
----
+1. 在目标 **light 已有数据库**执行 [增量迁移](../../scripts/migrations/20260906-gpt-content-tools.sql)。只新增 gpt_article_details 和 gpt_requests，不改旧文章。
+   - 仓库 db:init 是早期结构，不包含完整 users/tags/media/访问等级，不能当作当前项目全量迁移。
+   - 外键要求 articles.id 为 VARCHAR(36)、utf8mb4_unicode_ci，与仓库基础结构一致。先 SHOW FULL COLUMNS FROM articles；若线上使用其他字符集/排序规则，使迁移中的 article_id 与其一致后执行。不要因此批量修改线上文章表。
+2. 沿用 Bearer key：GPT_API_KEYS=key:userId，或 GPT_PUBLISH_TOKEN + GPT_AUTHOR_USER_ID。用户必须真实存在、status=active，角色 admin/moderator。
+   - admin 可管理其他作者旧文；moderator 只管理自己的文章，沿用 canEditArticle。
+   - 都受 max_access_level 限制。整理全站 A/R 文章需显式绑定合适用户；不会自动升级 GPT 用户。
+3. 设置 GPT_SITE_URL=https://creepender.top（代理后的公开地址）。远程图片需设置 GPT_IMAGE_ALLOWED_HOSTS=实际生成服务图片域名,实际CDN域名，不支持通配符。为空时禁止远程导入，仍可关联已上传 media。
+4. 安装依赖、构建，按现有方式部署分支。本任务没有部署服务器或修改生产文章。
+5. 更新 Actions OpenAPI 和 [Instructions](instructions.md)。导入完整 /api/gpt/openapi（JSON OpenAPI），或独立版本：
 
-## 🔐 认证方式
+| 用途 | YAML | 动态地址 |
+|---|---|---|
+| 整理 | [curate-tool.yaml](curate-tool.yaml) | /api/gpt/openapi?tool=curate |
+| 分级发布 | [publish-tool.yaml](publish-tool.yaml) | /api/gpt/openapi?tool=publish |
+| 配图 | [illustrate-tool.yaml](illustrate-tool.yaml) | /api/gpt/openapi?tool=illustrate |
+| 全部 | [openapi.yaml](openapi.yaml) | /api/gpt/openapi |
 
-**API Key (Bearer Token)**
+每份独立 YAML 包含一个核心写操作和必要 helper；重复 helper 不必在同一 GPT 中重复导入。静态模板使用 creepender.top，其他部署请替换 servers.url 或用动态导入。
 
-在 `.env.local` 中配置：
-```env
-# GPT Actions 专用发布 Token（必填）
-GPT_PUBLISH_TOKEN=你的密钥（长随机字符串）
+## 最短调用例子
 
-# GPT 发布文章时使用的作者 ID（必填，chatgpt 用户的数据库 ID）
-GPT_AUTHOR_USER_ID=uuid-chatgpt-user-1234567890abcdef
+先 GET /api/gpt/articles/文章ID，获取 revision、block IDs、tags、status；按 next 读完正文。
+
+整理（tags 默认追加）：
+
+```json
+{"article_ref":"文章ID","expected_revision":"读取到的revision","request_id":"curate-unique-001","tags":["Docker","后端"],"summary":"中性简介"}
 ```
 
-生成 Token 建议（可选）：
-```bash
-# 生成一个 40 位随机字符串作为 Token
-openssl rand -hex 20
+分级保存（省略 status 创建 draft）：
+
+```json
+{"request_id":"publish-unique-001","title":"一篇文章","summary":"公开可展示的简介","rating_reason":"第一段一般内容，第二段需要成人访问权限。","tags":["故事"],"blocks":[{"type":"text","content":"引言","access_level":1},{"type":"text","content":"需要分级的原文内容","access_level":4}]}
 ```
 
----
+发布已有草稿，不新建第二篇：
 
-## 📊 数据库初始化
-
-创建 chatgpt 用户（执行以下 SQL）：
-
-```sql
-USE fishbowlserver;
-
-INSERT INTO users (id, username, email, password_hash, display_name, role, status, email_verified, max_access_level)
-VALUES (
-  'uuid-chatgpt-user-1234567890abcdef',
-  'chatgpt',
-  'chatgpt@fishbowl.local',
-  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
-  'ChatGPT 助手',
-  'moderator',
-  'active',
-  1,
-  5
-);
+```json
+{"article_ref":"草稿ID","expected_revision":"最新revision","request_id":"status-unique-001","status":"published"}
 ```
 
-⚠️ **重要**：把上面这个 ID 填到 `.env.local` 的 `GPT_AUTHOR_USER_ID` 里。
+图片生成服务返回真实 URL，POST /api/gpt/media {"url":"https://已配置域名/image.png"} 得到 media_id，然后：
 
----
-
-## 🧩 OpenAPI Schema
-
-### 方式一：动态导入（推荐）
-```
-https://你的域名/api/gpt/openapi
-```
-一次导入包含所有接口
-
-### 方式二：分别导入（更清晰）
-GPT 支持导入多个独立的 Action，可以分别导入：
-
-- 获取分类：[get-categories.yaml](./get-categories.yaml)
-- 发布文章：[publish-article.yaml](./publish-article.yaml)
-
-动态地址：
-- `https://你的域名/api/gpt/openapi` （全部）
-- 静态文件都在 `docs/gpt/` 目录下
-
----
-
-## 💬 GPT 提示词（Instructions）
-
-完整提示词复制到 GPT Builder：
-
-```
-你是 Fishbowl 博客的 AI 作者助手。
-
-## 你的工作流程
-1. 如果用户没指定分类，先调用 getCategories 获取所有可用分类列表
-2. 根据用户的想法，写一篇中文文章
-3. 选择一个最合适的分类（如果不确定，就不传 category_id，自动发杂物间）
-4. 如果需要配图，先调用 DALL-E 生成图片，拿到图片 URL
-5. 调用 publishArticle 接口发布文章
-6. 发布成功后把文章链接返回给用户
-
-## ⚠️ publishArticle 接口使用规则
-- category_id: 从 getCategories 里选合适的 id，不填就自动去杂物间
-- content: 纯文本 Markdown，绝对不要用 ![](url) 插入图片
-- images: 所有图片放这里，格式 [{ url: "图片链接", name: "图片标题" }]
-- tags: 3-5 个相关标签
-
-## 注意
-- content 里永远不要出现 ![...] 这种图片语法！
-- 服务器会自动下载 images 里的所有图片，插入到段落之间
-- 分类选不准就不要传 category_id，默认去杂物间是安全的
-- 调用完接口直接给用户链接，不要让用户等
+```json
+{"article_ref":"文章ID","expected_revision":"最新revision","request_id":"image-unique-001","images":[{"media_id":"登记返回的ID","after_block_id":"已有block的ID","description":"这幅图说明什么","prompt":"实际生成描述","access_level":4}]}
 ```
 
----
+新文章图片块也传 media_id、type=image、access_level。生成属于外部能力；Actions 不能凭空取得 ChatGPT 附件字节或稳定公网 URL。旧 upload 支持 data URL，但大图 base64 往往超过 Actions 请求限制，不能让模型手写 base64。
 
-## 📁 相关文件位置
+## 兼容性变化
 
-```
-app/api/gpt/
-├── openapi/route.ts       # OpenAPI Schema 动态生成
-├── categories/route.ts    # 获取分类列表
-└── publish/route.ts       # 发布文章（核心）
+- 保留 POST /moments、/publish、/articles、/upload。旧发布未指定评级仍为 1，保持原发布行为；新 GPT 应用明确评级、默认 draft 的 saveRatedArticle。
+- GET /articles 和 /articles/{id} 复用路径，升级为 v4：角色/作者/等级检查、精简结果、分页和 revision。旧 limit/category/sort 不属 v4 列表契约；详情改为原始 JSON 分页。旧消费者需更新，不能把切片当全文。
+- 原 /articles/today、评论接口仍在，没有纳入新 schema；本次未重做评论系统。
+- 旧远程图片发布同样受 HTTPS、域名和 5 MB 限制。站内完整 URL 由 GPT_SITE_URL 识别，不下载自己。旧 upload 的 filename 不作为磁盘路径。
+- summary 在旁表独立保存，前端仍用 excerpt。旧文初次读取 summary 可为 null。
+- 静态/动态 schema 源是 lib/gptOpenapi.ts；npm run gpt:schema 生成文件。publish-article.yaml 是旧协议参考，不是新发布 tool。
 
-lib/
-└── gptAuth.ts             # API Key 认证
+## 测试
 
-docs/gpt/
-├── README.md              # 本文件
-└── openapi.yaml           # Schema 静态备份
-```
-
----
-
-## 🔄 工作流程
-
-```
-GPT 调用 getCategories → 获取分类列表
-        ↓
-用户说"写一篇关于XX的文章"
-        ↓
-GPT 构思内容，决定分类
-        ↓
-需要配图 → DALL-E 生成图片
-        ↓
-GPT 调用 publishArticle
-        ├── title
-        ├── content (纯文本 Markdown)
-        ├── category_id (可选)
-        ├── images: [{ url, name }]
-        └── tags
-        ↓
-🌐 服务器接收请求
-        ├── 认证 API Key
-        ├── 解析内容为文本块
-        ├── 并行下载所有图片
-        ├── 智能插入图片到段落之间
-        ├── 处理分类（没有就创建杂物间）
-        ├── 处理标签（复用或新建）
-        └── 写入数据库发布
-        ↓
-✅ 返回文章链接
+```powershell
+npm ci
+npm run gpt:schema
+npm run test:gpt          # 无测试库时只运行契约测试，明确 skip 集成测试
+.\scripts\test-gpt.ps1   # Docker MySQL 8.4，随机本机端口，独立测试库，自动清理容器
+npx tsc --noEmit
+npm run build
 ```
 
----
+Linux/CI 可启动独立 MySQL，把 FISHBOWL_TEST_DB=1、DB_HOST=127.0.0.1、DB_NAME=fishbowl_tools_test 和测试凭据/端口传给 npm run test:gpt。测试拒绝其他库名和远程主机。fixture 仅供测试，**不是生产 schema**。
 
-## 🎛️ 配置清单
-
-| 步骤 | 状态 | 说明 |
-|------|------|------|
-| 1. 执行 SQL 创建 chatgpt 用户 | ⬜ | |
-| 2. 配置 `.env.local` API Key | ⬜ | |
-| 3. 重启 Next.js | ⬜ | |
-| 4. GPT Builder 导入 Schema | ⬜ | `https://你的域名/api/gpt/openapi` |
-| 5. GPT Builder 配置 Bearer Token | ⬜ | |
-| 6. 粘贴 Instructions 提示词 | ⬜ | |
-| 7. 测试发布 | ⬜ | |
-
----
-
-## 🐛 常见问题
-
-### Q: 图片下载失败？
-A: 检查 DALL-E 生成的 URL 是否可以公网访问，有些链接有过期时间。
-
-### Q: 分类不对？
-A: GPT 会根据内容智能选择，选不准就自动去杂物间，你可以手动在后台调整。
-
-### Q: 想加其他功能？
-A: 可以扩展：编辑文章、删除文章、获取文章列表、评论等。
+边界和花园方向见 [设计文档](DESIGN.md)，进度见 [YAML](../tasks/chatgpt-content-tools.yaml)。
