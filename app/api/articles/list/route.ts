@@ -210,6 +210,16 @@ export async function GET(request: NextRequest) {
     // 构建查询条件
     let whereClause = 'a.status = ?';
     const queryParams: any[] = [status];
+    if (status !== 'published') {
+      if (!currentUser || !['admin', 'moderator'].includes(currentUser.role)) {
+        return NextResponse.json({success: false, error: 'Authentication with editor permission required'}, {status: 403});
+      }
+      if (currentUser.role !== 'admin') {
+        whereClause += ' AND (a.author_id = ? OR a.author = ?)';
+        queryParams.push(currentUser.id, currentUser.username);
+      }
+    }
+
 
     if (categoryId) {
       // 获取该分类及其所有子分类的ID

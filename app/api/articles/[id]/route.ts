@@ -441,7 +441,7 @@ export async function GET(
     // 2. 获取文章基本信息
     const articles = await query<any[]>(
       `SELECT 
-        id, title, author, published_at, created_at, updated_at,
+        id, title, author, author_id, published_at, created_at, updated_at,
         excerpt, type, category_id, status, likes, shares, comments
        FROM articles 
        WHERE id = ?`,
@@ -456,6 +456,10 @@ export async function GET(
     }
 
     const article = articles[0];
+    if (article.status !== 'published' && !canEditArticle(currentUser, article.author, article.author_id)) {
+      return NextResponse.json({error: 'Article not found'}, {status: 404});
+    }
+
 
     // 2. 获取文章的所有块（按 order 排序），并 JOIN media 以返回图片块的 width/height/blur 供前端占位与优化
     const blocks = await query<any[]>(

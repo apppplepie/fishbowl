@@ -105,8 +105,6 @@ export function verifyGptToken(req: NextRequest): {
   // 2. 优先支持多 Key 配置
   const apiKeys = parseGptApiKeys();
   if (apiKeys.length > 0) {
-    console.log('[GPT Auth] Configured keys:', apiKeys.map((k) => `${k.token.slice(0, 8)}... -> ${k.authorId}`));
-    console.log('[GPT Auth] Incoming token:', token.slice(0, 8), '...');
 
     for (const entry of apiKeys) {
       if (timingSafeEqual(token, entry.token)) {

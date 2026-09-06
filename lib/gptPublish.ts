@@ -1,11 +1,8 @@
 import { query } from '@/lib/db';
+import { transaction, type Sql } from './gptDb';
+import { level, GptError } from './gptContracts';
+import { downloadRemoteImage, storeImage } from './gptMedia';
 import { cleanMarkdownForExcerpt } from '@/lib/articleUtils';
-import { generateBlurDataURL } from '@/lib/blur';
-import crypto from 'crypto';
-import fs from 'fs/promises';
-import { existsSync } from 'fs';
-import sizeOf from 'image-size';
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
 export type ArticleType = 'default' | 'text' | 'image' | 'code' | 'diary' | 'drawing';
@@ -21,6 +18,8 @@ export type MomentType =
 
 export interface GptBlockInput {
   type: 'text' | 'code' | 'image';
+  access_level?: number;
+  media_id?: string;
   content?: string | null;
   language?: string | null;
   image?: {
@@ -44,6 +43,7 @@ export interface CreateGptArticleInput {
   blocks: GptBlockInput[];
   articleType?: ArticleType;
   momentType?: MomentType;
+  status?: 'draft' | 'published';
 }
 
 export interface CreateGptArticleResult {
@@ -54,6 +54,8 @@ export interface CreateGptArticleResult {
   imageCount: number;
   tags: string[];
 }
+
+const defaultQuery: Sql = query;
 
 const ARTICLE_TYPES = new Set<ArticleType>(['default', 'text', 'image', 'code', 'diary', 'drawing']);
 
@@ -106,17 +108,17 @@ export function validateMomentType(momentType?: string): MomentType | undefined 
   throw new Error(`moment_type must be one of: ${Object.keys(MOMENT_TYPE_TO_ARTICLE_TYPE).join(', ')}`);
 }
 
-export async function getGptAuthorName(authorId: string): Promise<string> {
+export async function getGptAuthorName(authorId: string, query: Sql = defaultQuery): Promise<string> {
   const users = await query<any[]>(
-    'SELECT username, name, display_name FROM users WHERE id = ? LIMIT 1',
+    'SELECT username, display_name FROM users WHERE id = ? LIMIT 1',
     [authorId]
   ).catch(() => []);
 
   const user = users[0];
-  return cleanString(user?.username) || cleanString(user?.name) || cleanString(user?.display_name) || 'chatgpt';
+  return cleanString(user?.username) || cleanString(user?.display_name) || 'chatgpt';
 }
 
-async function getNextOrderIndex(categoryId: string): Promise<number> {
+async function getNextOrderIndex(categoryId: string, query: Sql): Promise<number> {
   const rows = await query<any[]>(
     'SELECT COALESCE(MAX(order_index), 0) + 1 AS next_order FROM articles WHERE category_id = ?',
     [categoryId]
@@ -124,7 +126,7 @@ async function getNextOrderIndex(categoryId: string): Promise<number> {
   return Number(rows[0]?.next_order || 1);
 }
 
-async function getDefaultCategoryId(): Promise<string> {
+async function getDefaultCategoryId(query: Sql): Promise<string> {
   const existing = await query<any[]>(
     "SELECT id FROM categories WHERE id = 'cat_uncategorized' OR name = '杂物间' LIMIT 1"
   );
@@ -142,101 +144,29 @@ async function getDefaultCategoryId(): Promise<string> {
   return 'cat_uncategorized';
 }
 
-export async function resolveCategoryId(categoryId?: string | null): Promise<string> {
+export async function resolveCategoryId(categoryId?: string | null, query: Sql = defaultQuery): Promise<string> {
   const cleaned = cleanString(categoryId);
   if (cleaned) {
     const existing = await query<any[]>('SELECT id FROM categories WHERE id = ? LIMIT 1', [cleaned]);
     if (existing.length > 0) return existing[0].id;
   }
 
-  return getDefaultCategoryId();
+  return getDefaultCategoryId(query);
 }
 
-async function downloadImage(imageUrl: string): Promise<{
-  url: string;
-  mediaId: string | null;
-}> {
-  // /api/gpt/upload 返回的主字段 url 是站内相对路径（/uploads/...）。
-  // 这种地址不该再让服务端 HTTP 自己抓自己，直接查 media 表取回已有记录。
-  if (imageUrl.startsWith('/')) {
-    const rows = await query<any[]>(
-      'SELECT id, url FROM media WHERE url = ? LIMIT 1',
-      [imageUrl]
-    ).catch(() => []);
-    if (rows.length > 0) {
-      return { url: rows[0].url, mediaId: rows[0].id };
-    }
-    throw new Error(
-      `image.url "${imageUrl}" is not a known uploaded file; it must be uploaded via /upload first, or must be an absolute http(s) URL`
-    );
+async function downloadImage(imageUrl: string): Promise<{url: string; mediaId: string | null}> {
+  let localUrl = imageUrl;
+  if (process.env.GPT_SITE_URL && imageUrl.startsWith('https://')) {
+    const parsed = new URL(imageUrl);
+    if (parsed.origin === new URL(process.env.GPT_SITE_URL).origin) localUrl = parsed.pathname;
   }
-
-  const parsed = new URL(imageUrl);
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
-    throw new Error('image.url must be an http(s) URL');
+  if (localUrl.startsWith('/') && !localUrl.startsWith('//')) {
+    const rows = await query<Array<{id: string; url: string}>>('SELECT id, url FROM media WHERE url = ? LIMIT 1', [localUrl]);
+    if (!rows.length) throw new GptError(400, 'Unknown uploaded image URL');
+    return {url: rows[0].url, mediaId: rows[0].id};
   }
-
-  const response = await fetch(parsed.toString(), {
-    headers: { 'User-Agent': 'Fishbowl-GPT-Actions/1.0' },
-  });
-  if (!response.ok) {
-    throw new Error(`image download failed: HTTP ${response.status}`);
-  }
-
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType && !contentType.startsWith('image/')) {
-    throw new Error(`image URL did not return an image: ${contentType}`);
-  }
-
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length > 15 * 1024 * 1024) {
-    throw new Error('image is too large; max 15MB');
-  }
-
-  const dimensions = sizeOf(buffer);
-  const ext = dimensions.type ? `.${dimensions.type}` : path.extname(parsed.pathname) || '.jpg';
-  const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
-
-  const existing = await query<any[]>('SELECT id, url FROM media WHERE sha256 = ? LIMIT 1', [sha256]).catch(() => []);
-  if (existing.length > 0) {
-    return { url: existing[0].url, mediaId: existing[0].id };
-  }
-
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', String(year), month);
-  if (!existsSync(uploadDir)) {
-    await fs.mkdir(uploadDir, { recursive: true });
-  }
-
-  const filename = `${sha256.slice(0, 20)}${ext}`;
-  await fs.writeFile(path.join(uploadDir, filename), buffer);
-
-  const mediaId = uuidv4();
-  const localUrl = `/uploads/${year}/${month}/${filename}`;
-  const width = dimensions.width ?? null;
-  const height = dimensions.height ?? null;
-  const blurDataUrl = await generateBlurDataURL(buffer).catch(() => null);
-
-  await query(
-    `INSERT INTO media (id, url, mime, width, height, aspect_ratio, size_bytes, sha256, source, blur_data_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      mediaId,
-      localUrl,
-      dimensions.type ? `image/${dimensions.type}` : contentType || 'image/jpeg',
-      width,
-      height,
-      width && height ? Number((width / height).toFixed(6)) : null,
-      buffer.length,
-      sha256,
-      'chatgpt_action',
-      blurDataUrl,
-    ]
-  );
-
-  return { url: localUrl, mediaId };
+  const media = await storeImage(await downloadRemoteImage(imageUrl));
+  return {url: media.url, mediaId: media.media_id};
 }
 
 function buildExcerpt(summary: string | undefined, excerpt: string | null | undefined, blocks: GptBlockInput[]): string {
@@ -249,7 +179,7 @@ function buildExcerpt(summary: string | undefined, excerpt: string | null | unde
   return plain.length > 150 ? `${plain.slice(0, 150)}...` : plain;
 }
 
-async function insertTags(articleId: string, tags: string[]): Promise<void> {
+export async function insertTags(articleId: string, tags: string[], query: Sql = defaultQuery): Promise<void> {
   for (const tagName of tags) {
     let tagId: string;
     const existing = await query<any[]>('SELECT id FROM tags WHERE name = ? LIMIT 1', [tagName]);
@@ -258,7 +188,9 @@ async function insertTags(articleId: string, tags: string[]): Promise<void> {
       tagId = existing[0].id;
     } else {
       tagId = uuidv4();
-      await query('INSERT INTO tags (id, name) VALUES (?, ?)', [tagId, tagName]);
+      await query('INSERT INTO tags (id, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE name = name', [tagId, tagName]);
+      const canonical = await query<Array<{id: string}>>('SELECT id FROM tags WHERE name = ? LIMIT 1', [tagName]);
+      tagId = canonical[0].id;
     }
 
     await query('INSERT IGNORE INTO article_tags (article_id, tag_id) VALUES (?, ?)', [articleId, tagId]);
@@ -275,6 +207,7 @@ function validateBlocks(blocks: GptBlockInput[]): void {
   }
 
   blocks.forEach((block, index) => {
+    if (block?.access_level !== undefined) level(block.access_level);
     if (!block || !['text', 'code', 'image'].includes(block.type)) {
       throw new Error(`blocks[${index}].type must be text, code, or image`);
     }
@@ -283,23 +216,35 @@ function validateBlocks(blocks: GptBlockInput[]): void {
     }
     if (block.type === 'image') {
       const url = cleanString(block.image?.url) || cleanString(block.imageUrl);
-      if (!url) throw new Error(`blocks[${index}].image.url is required for image blocks`);
+      if (!url && !block.media_id) throw new Error(`blocks[${index}].image.url is required for image blocks`);
     }
   });
 }
 
-export async function createGptArticle(input: CreateGptArticleInput): Promise<CreateGptArticleResult> {
+export async function createGptArticle(input: CreateGptArticleInput, execute?: Sql): Promise<CreateGptArticleResult> {
   const title = cleanString(input.title);
   if (!title) throw new Error('title is required');
-
+  if (title.length > 255) throw new GptError(400, 'title is too long; max 255 characters');
   validateBlocks(input.blocks);
+  if (!execute) {
+    // Register network/file resources before acquiring a transaction connection.
+    const blocks: GptBlockInput[] = [];
+    for (const block of input.blocks) {
+      if (block.type === 'image' && !block.media_id) {
+        const media = await downloadImage(cleanString(block.image?.url) || cleanString(block.imageUrl));
+        blocks.push({...block, media_id: media.mediaId!});
+      } else blocks.push(block);
+    }
+    return transaction(sql => createGptArticle({...input, blocks}, sql));
+  }
+  const query = execute;
 
   const articleId = uuidv4();
-  const authorName = cleanString(input.authorName) || await getGptAuthorName(input.authorId);
+  const authorName = cleanString(input.authorName) || await getGptAuthorName(input.authorId, query);
   const momentType = input.momentType ? validateMomentType(input.momentType) : undefined;
   const articleType = resolveArticleType(input.articleType, momentType);
-  const categoryId = await resolveCategoryId(input.categoryId);
-  const orderIndex = await getNextOrderIndex(categoryId);
+  const categoryId = await resolveCategoryId(input.categoryId, query);
+  const orderIndex = await getNextOrderIndex(categoryId, query);
   const now = new Date();
   const excerpt = buildExcerpt(input.summary, input.excerpt, input.blocks);
   const tags = uniqueCleanTags([...(input.tags || []), ...(momentType ? [`moment:${momentType}`] : [])]);
@@ -308,30 +253,37 @@ export async function createGptArticle(input: CreateGptArticleInput): Promise<Cr
     type: 'text' | 'code' | 'image';
     content: Record<string, unknown>;
     mediaId: string | null;
+    accessLevel: number;
   }> = [];
 
   for (const block of input.blocks) {
     if (block.type === 'text') {
       materializedBlocks.push({
         type: 'text',
-        content: { content: cleanString(block.content) },
+        accessLevel: block.access_level ?? 1,
+        content: { content: block.content },
         mediaId: null,
       });
     } else if (block.type === 'code') {
       materializedBlocks.push({
         type: 'code',
+        accessLevel: block.access_level ?? 1,
         content: {
-          code: cleanString(block.content),
+          code: block.content,
           language: cleanString(block.language) || 'text',
           title: cleanString(block.title),
         },
         mediaId: null,
       });
     } else {
-      const remoteUrl = cleanString(block.image?.url) || cleanString(block.imageUrl);
-      const image = await downloadImage(remoteUrl);
+      const registered = block.media_id
+        ? await query<Array<{id: string; url: string}>>('SELECT id, url FROM media WHERE id = ?', [block.media_id])
+        : [];
+      if (!registered.length) throw new GptError(400, 'Invalid media_id; register images before a transaction');
+      const image = { url: registered[0].url, mediaId: registered[0].id };
       materializedBlocks.push({
         type: 'image',
+        accessLevel: block.access_level ?? 1,
         content: {
           url: image.url,
           title: cleanString(block.image?.name) || cleanString(block.title),
@@ -357,16 +309,16 @@ export async function createGptArticle(input: CreateGptArticleInput): Promise<Cr
       title,
       authorName,
       input.authorId,
-      now,
+      input.status === 'draft' ? null : now,
       excerpt,
       articleType,
       categoryId,
       orderIndex,
-      'published',
-      1,
-      1,
+      input.status ?? 'published',
+      Math.min(...materializedBlocks.map(b => b.accessLevel)),
+      Math.max(...materializedBlocks.map(b => b.accessLevel)),
       coverImage,
-      1,
+      firstImage?.accessLevel ?? 1,
     ]
   );
 
@@ -377,7 +329,7 @@ export async function createGptArticle(input: CreateGptArticleInput): Promise<Cr
     await query(
       `INSERT INTO blocks (id, type, content, author, access_level, media_id)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [blockId, block.type, JSON.stringify(block.content), authorName, 1, block.mediaId]
+      [blockId, block.type, JSON.stringify(block.content), authorName, block.accessLevel, block.mediaId]
     );
 
     await query(
@@ -386,7 +338,7 @@ export async function createGptArticle(input: CreateGptArticleInput): Promise<Cr
     );
   }
 
-  await insertTags(articleId, tags);
+  await insertTags(articleId, tags, query);
 
   return {
     articleId,

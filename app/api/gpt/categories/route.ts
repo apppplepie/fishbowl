@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
   console.log("[GPT ping] /categories", {
     time: new Date().toISOString(),
     ua: request.headers.get("user-agent"),
-    authPrefix: request.headers.get("authorization")?.slice(0, 25),
     ip: request.headers.get("x-forwarded-for") || (request as any).ip || "unknown",
   });
 

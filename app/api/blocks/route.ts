@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
 
     // 构建搜索条件
-    let whereConditions = ['COALESCE(b.access_level, 1) <= ?'];
+    let whereConditions = ['COALESCE(b.access_level, 1) <= ?', "a.status = 'published'"];
     let queryParams: any[] = [userAccessLevel];
 
     if (search) {
