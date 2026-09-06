@@ -156,6 +156,21 @@ async function downloadImage(imageUrl: string): Promise<{
   url: string;
   mediaId: string | null;
 }> {
+  // /api/gpt/upload 返回的主字段 url 是站内相对路径（/uploads/...）。
+  // 这种地址不该再让服务端 HTTP 自己抓自己，直接查 media 表取回已有记录。
+  if (imageUrl.startsWith('/')) {
+    const rows = await query<any[]>(
+      'SELECT id, url FROM media WHERE url = ? LIMIT 1',
+      [imageUrl]
+    ).catch(() => []);
+    if (rows.length > 0) {
+      return { url: rows[0].url, mediaId: rows[0].id };
+    }
+    throw new Error(
+      `image.url "${imageUrl}" is not a known uploaded file; it must be uploaded via /upload first, or must be an absolute http(s) URL`
+    );
+  }
+
   const parsed = new URL(imageUrl);
   if (!['http:', 'https:'].includes(parsed.protocol)) {
     throw new Error('image.url must be an http(s) URL');

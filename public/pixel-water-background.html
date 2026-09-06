@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eef8f7">
+  <title>伪像素鱼缸背景</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17384b;
+      --ink-soft: #557281;
+      --paper: #f7fbfa;
+      --line: #9fc7ce;
+      --frame: #173d57;
+      --frame-dark: #0b273a;
+      --frame-light: #8ed9e6;
+      background: #eef8f7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      overflow: hidden;
+      background: #eef8f7;
+      color: var(--ink);
+      font-family: "Courier New", ui-monospace, monospace;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .viewport {
+      width: 100%;
+      height: 100dvh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      scroll-behavior: smooth;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+    }
+
+    .viewport::-webkit-scrollbar {
+      display: none;
+    }
+
+    .scene {
+      position: relative;
+      width: 100%;
+      height: 180dvh;
+      isolation: isolate;
+    }
+
+    #pixelWater {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      touch-action: pan-y;
+    }
+
+    .panel {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      pointer-events: none;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+    }
+
+    .sky-panel {
+      display: grid;
+      height: 80dvh;
+      padding-top: 16dvh;
+      place-items: start center;
+      text-align: center;
+    }
+
+    .hero {
+      position: relative;
+      width: min(620px, calc(100% - 48px));
+      padding: clamp(24px, 4vw, 38px);
+      border: 3px solid var(--frame);
+      background: #f7fbfae8;
+      box-shadow:
+        6px 6px 0 #9fc7ce,
+        inset 0 0 0 2px #fff;
+      pointer-events: auto;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      background: var(--frame);
+    }
+
+    .hero::before {
+      top: 7px;
+      left: 7px;
+    }
+
+    .hero::after {
+      right: 7px;
+      bottom: 7px;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: #2f7f8c;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 8vw, 88px);
+      font-weight: 900;
+      letter-spacing: -0.08em;
+      line-height: 0.9;
+    }
+
+    .subtitle {
+      max-width: 480px;
+      margin: 22px auto 0;
+      color: var(--ink-soft);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.75;
+    }
+
+    .jump,
+    .back {
+      border: 3px solid var(--frame);
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 3px 3px 0 #79b8c4;
+      cursor: pointer;
+    }
+
+    .jump {
+      width: 42px;
+      height: 38px;
+      margin-top: 25px;
+    }
+
+    .jump:active,
+    .back:active {
+      translate: 2px 2px;
+      box-shadow: 1px 1px 0 #79b8c4;
+    }
+
+    .water-panel {
+      height: 100dvh;
+      padding:
+        calc(18px + 7dvh + clamp(34px, 7dvh, 72px))
+        clamp(24px, 7vw, 96px)
+        40px;
+      border-right: 5px solid var(--frame);
+      border-bottom: 5px solid var(--frame);
+      border-left: 5px solid var(--frame);
+      box-shadow:
+        inset 3px 0 0 var(--frame-light),
+        inset -3px 0 0 var(--frame-dark),
+        inset 0 -3px 0 var(--frame-dark);
+    }
+
+    .tank-rim {
+      position: absolute;
+      top: 0;
+      right: -5px;
+      left: -5px;
+      height: 18px;
+      border-top: 4px solid var(--frame-dark);
+      border-bottom: 4px solid var(--frame-dark);
+      background:
+        linear-gradient(
+          to bottom,
+          #9ee0e8 0 4px,
+          #397d99 4px 10px,
+          #21536f 10px 100%
+        );
+      box-shadow: inset 0 3px 0 #d9fbff;
+    }
+
+    .air-gap {
+      position: absolute;
+      top: 18px;
+      right: 0;
+      left: 0;
+      height: 7dvh;
+      background: transparent;
+    }
+
+    .content-card {
+      position: relative;
+      width: min(660px, 100%);
+      margin: 0 auto;
+      padding: clamp(24px, 4vw, 38px);
+      border: 3px solid #d9f3f5;
+      outline: 3px solid var(--frame);
+      background: #f7fbfae8;
+      color: var(--ink);
+      box-shadow: 7px 7px 0 #17465c99;
+      pointer-events: auto;
+    }
+
+    .content-card::before {
+      content: "";
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 34px;
+      height: 5px;
+      background: #79bec9;
+      box-shadow: 0 9px 0 #b6e3e6;
+    }
+
+    .content-card h2 {
+      margin: 0 0 14px;
+      font-size: clamp(22px, 4vw, 36px);
+      letter-spacing: -0.05em;
+    }
+
+    .content-card p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .back {
+      margin-top: 24px;
+      padding: 9px 14px;
+    }
+
+    .pixel-note {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      padding: 7px 9px;
+      border: 2px solid #315d70;
+      background: #f7fbfad9;
+      color: #315d70;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      pointer-events: none;
+    }
+
+    @media (max-width: 560px) {
+      .hero {
+        width: calc(100% - 34px);
+      }
+
+      .pixel-note {
+        right: 10px;
+        bottom: 10px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .viewport {
+        scroll-behavior: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport" id="viewport">
+    <main class="scene">
+      <canvas id="pixelWater" aria-hidden="true"></canvas>
+
+      <section class="panel sky-panel" aria-label="天空区域">
+        <div class="hero">
+          <p class="eyebrow">Pixel aquarium prototype</p>
+          <h1>FISHBOWL</h1>
+          <p class="subtitle">低分辨率绘制、有限色阶和硬边框。保留原来的上下两层结构，但换成更像游戏场景的视觉语言。</p>
+          <button class="jump" id="goDown" type="button" aria-label="进入鱼缸">▼</button>
+        </div>
+      </section>
+
+      <section class="panel water-panel" aria-label="水下内容区域">
+        <div class="tank-rim" aria-hidden="true"></div>
+        <div class="air-gap" aria-hidden="true"></div>
+        <article class="content-card">
+          <h2>水下内容区域</h2>
+          <p>这里暂时没有鱼、植物和沙地，先观察鱼缸本体、水面运动、像素颗粒以及页面吸附是否符合整体方向。</p>
+          <button class="back" id="goUp" type="button">▲ 返回上层</button>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="pixel-note">4× PIXEL CANVAS</div>
+
+  <script>
+    (() => {
+      const SCALE = 4;
+      const POINTS = 129;
+      const SPRING = 24;
+      const COUPLING = 84;
+      const DRAG = 1.8;
+      const MAX_SPEED = 145;
+      const RIM_HEIGHT = 18;
+      const AIR_GAP_RATIO = 0.07;
+      const MAX_DROPS = 42;
+
+      const canvas = document.querySelector("#pixelWater");
+      const viewport = document.querySelector("#viewport");
+      const goDown = document.querySelector("#goDown");
+      const goUp = document.querySelector("#goUp");
+      const ctx = canvas.getContext("2d", { alpha: false });
+      const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+      const y = new Float32Array(POINTS);
+      const velocity = new Float32Array(POINTS);
+      const acceleration = new Float32Array(POINTS);
+      const droplets = [];
+
+      let width = 1;
+      let height = 1;
+      let viewportHeight = 1;
+      let level = 1;
+      let spacing = 1;
+      let lastTime = performance.now();
+      let lastScroll = 0;
+      let pointerDown = false;
+      let dropBudget = 0;
+      let frameId = 0;
+
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+      const smoothstep = (value) => {
+        const x = clamp(value, 0, 1);
+        return x * x * (3 - 2 * x);
+      };
+
+      function resize() {
+        const oldViewportHeight = viewportHeight;
+        width = Math.max(1, Math.ceil(innerWidth / SCALE));
+        viewportHeight = Math.max(1, Math.ceil(innerHeight / SCALE));
+        height = Math.ceil(viewportHeight * 1.8);
+        level =
+          viewportHeight * (0.8 + AIR_GAP_RATIO) + RIM_HEIGHT / SCALE;
+        spacing = width / (POINTS - 1);
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.imageSmoothingEnabled = false;
+
+        if (oldViewportHeight > 1 && oldViewportHeight !== viewportHeight) {
+          const ratio = viewportHeight / oldViewportHeight;
+          for (let i = 0; i < POINTS; i++) y[i] *= ratio;
+        }
+
+        draw();
+      }
+
+      function scrollImpulse(deltaPixels) {
+        if (reducedMotion.matches || deltaPixels <= 0) return;
+        const impulse = clamp((deltaPixels / SCALE) * 1.9, 0, 105);
+
+        for (let i = 0; i < POINTS; i++) {
+          const nx = i / (POINTS - 1);
+          const center =
+            smoothstep(nx / 0.22) * smoothstep((1 - nx) / 0.22);
+          const weight = 0.24 + center * 0.76;
+          velocity[i] = clamp(
+            velocity[i] - impulse * weight,
+            -MAX_SPEED,
+            MAX_SPEED
+          );
+        }
+        dropBudget = Math.max(dropBudget, 5);
+      }
+
+      function disturb(clientX, clientY, movementY = 0) {
+        if (reducedMotion.matches) return;
+        const rect = canvas.getBoundingClientRect();
+        const localX = (clientX - rect.left) * (canvas.width / rect.width);
+        const localY = (clientY - rect.top) * (canvas.height / rect.height);
+        const center = clamp(Math.round(localX / spacing), 0, POINTS - 1);
+        if (Math.abs(localY - (level + y[center])) > 20) return;
+
+        const impulse = clamp((movementY || 36) * 0.75, -70, 70);
+        for (let offset = -5; offset <= 5; offset++) {
+          const index = center + offset;
+          if (index < 0 || index >= POINTS) continue;
+          velocity[index] += impulse * Math.exp(-(offset * offset) / 9);
+        }
+        dropBudget = 6;
+      }
+
+      function addDrop(index) {
+        if (dropBudget <= 0 || droplets.length >= MAX_DROPS) return;
+        dropBudget--;
+        const direction = Math.random() < 0.5 ? -1 : 1;
+        droplets.push({
+          x: index * spacing,
+          y: level + y[index] - 1,
+          vx: direction * (5 + Math.random() * 15),
+          vy: -17 - Math.random() * 18,
+          gravity: 38 + Math.random() * 18,
+          size: Math.random() < 0.72 ? 1 : 2,
+          age: 0
+        });
+        velocity[index] *= 0.82;
+      }
+
+      function update(deltaTime) {
+        const dt = Math.min(deltaTime, 1 / 30);
+        const steps = Math.max(1, Math.ceil(dt / (1 / 90)));
+        const step = dt / steps;
+        const maxHeight = viewportHeight * 0.12;
+
+        for (let pass = 0; pass < steps; pass++) {
+          for (let i = 0; i < POINTS; i++) {
+            const left = i > 0 ? y[i - 1] : y[i];
+            const right = i < POINTS - 1 ? y[i + 1] : y[i];
+            acceleration[i] =
+              -SPRING * y[i] +
+              COUPLING * (left + right - 2 * y[i]) -
+              DRAG * velocity[i];
+          }
+
+          for (let i = 0; i < POINTS; i++) {
+            velocity[i] = clamp(
+              velocity[i] + acceleration[i] * step,
+              -MAX_SPEED,
+              MAX_SPEED
+            );
+            y[i] = clamp(y[i] + velocity[i] * step, -maxHeight, maxHeight);
+
+            const crest =
+              i > 0 &&
+              i < POINTS - 1 &&
+              y[i] < y[i - 1] &&
+              y[i] <= y[i + 1];
+            if (crest && y[i] < -3.5 && velocity[i] < -16 && Math.random() < 0.08) {
+              addDrop(i);
+            }
+          }
+        }
+
+        for (let i = droplets.length - 1; i >= 0; i--) {
+          const drop = droplets[i];
+          drop.age += dt;
+          drop.vy += drop.gravity * dt;
+          drop.x += drop.vx * dt;
+          drop.y += drop.vy * dt;
+
+          const index = clamp(Math.round(drop.x / spacing), 0, POINTS - 1);
+          const surface = level + y[index];
+          if (
+            (drop.age > 0.06 && drop.vy > 0 && drop.y >= surface) ||
+            drop.x < -3 ||
+            drop.x > width + 3
+          ) {
+            if (index > 0 && index < POINTS - 1) velocity[index] += 0.6;
+            droplets.splice(i, 1);
+          }
+        }
+      }
+
+      function traceWater() {
+        ctx.beginPath();
+        ctx.moveTo(0, Math.round(level + y[0]));
+        for (let i = 1; i < POINTS; i++) {
+          ctx.lineTo(
+            Math.round(i * spacing),
+            Math.round(level + y[i])
+          );
+        }
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.closePath();
+      }
+
+      function drawSky() {
+        ctx.fillStyle = "#eef8f7";
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = "#e4f4f3";
+        ctx.fillRect(0, Math.round(viewportHeight * 0.26), width, 1);
+        ctx.fillStyle = "#f8fcf9";
+        ctx.fillRect(0, Math.round(viewportHeight * 0.54), width, 5);
+
+        const sunX = Math.round(width * 0.76);
+        const sunY = Math.round(viewportHeight * 0.12);
+        ctx.fillStyle = "#fff7c7";
+        ctx.fillRect(sunX - 6, sunY - 4, 12, 8);
+        ctx.fillRect(sunX - 4, sunY - 6, 8, 12);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(sunX - 3, sunY - 3, 6, 6);
+      }
+
+      function drawWater() {
+        traceWater();
+        ctx.save();
+        ctx.clip();
+
+        const waterTop = Math.round(level - viewportHeight * 0.13);
+        const waterRange = height - waterTop;
+        ctx.fillStyle = "#a9e5eb";
+        ctx.fillRect(0, waterTop, width, waterRange);
+        ctx.fillStyle = "#75cfdd";
+        ctx.fillRect(0, Math.round(level + waterRange * 0.18), width, waterRange);
+        ctx.fillStyle = "#3ca2b6";
+        ctx.fillRect(0, Math.round(level + waterRange * 0.48), width, waterRange);
+        ctx.fillStyle = "#176a87";
+        ctx.fillRect(0, Math.round(level + waterRange * 0.78), width, waterRange);
+
+        for (let row = Math.round(level + 8); row < height; row += 13) {
+          for (let column = (row * 7) % 17; column < width; column += 23) {
+            const depth = (row - level) / Math.max(1, height - level);
+            ctx.fillStyle = depth < 0.55 ? "#d8f5f2" : "#65b9c6";
+            ctx.fillRect(column, row, 1, 1);
+          }
+        }
+        ctx.restore();
+
+        ctx.strokeStyle = "#f8ffff";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, Math.round(level + y[0]));
+        for (let i = 1; i < POINTS; i++) {
+          ctx.lineTo(Math.round(i * spacing), Math.round(level + y[i]));
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = "#d9fbff";
+        for (let i = 6; i < POINTS - 6; i += 11) {
+          const px = Math.round(i * spacing);
+          const py = Math.round(level + y[i] + 2);
+          ctx.fillRect(px, py, i % 3 === 0 ? 3 : 2, 1);
+        }
+
+        for (const drop of droplets) {
+          ctx.fillStyle = drop.size === 1 ? "#efffff" : "#87dce8";
+          ctx.fillRect(
+            Math.round(drop.x),
+            Math.round(drop.y),
+            drop.size,
+            drop.size
+          );
+        }
+      }
+
+      function draw() {
+        drawSky();
+        drawWater();
+      }
+
+      function frame(now) {
+        update((now - lastTime) / 1000);
+        lastTime = now;
+        draw();
+        frameId = requestAnimationFrame(frame);
+      }
+
+      function start() {
+        cancelAnimationFrame(frameId);
+        lastTime = performance.now();
+        if (document.hidden || reducedMotion.matches) {
+          draw();
+          return;
+        }
+        frameId = requestAnimationFrame(frame);
+      }
+
+      canvas.addEventListener("pointerdown", (event) => {
+        pointerDown = true;
+        canvas.setPointerCapture(event.pointerId);
+        disturb(event.clientX, event.clientY);
+      });
+
+      canvas.addEventListener("pointermove", (event) => {
+        if (pointerDown) {
+          disturb(event.clientX, event.clientY, event.movementY);
+        }
+      });
+
+      canvas.addEventListener("pointerup", () => {
+        pointerDown = false;
+      });
+
+      canvas.addEventListener("pointercancel", () => {
+        pointerDown = false;
+      });
+
+      viewport.addEventListener(
+        "scroll",
+        () => {
+          const next = viewport.scrollTop;
+          scrollImpulse(next - lastScroll);
+          lastScroll = next;
+        },
+        { passive: true }
+      );
+
+      goDown.addEventListener("click", () => {
+        viewport.scrollTo({ top: innerHeight * 0.8, behavior: "smooth" });
+      });
+
+      goUp.addEventListener("click", () => {
+        viewport.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      addEventListener("resize", resize, { passive: true });
+      document.addEventListener("visibilitychange", start);
+      reducedMotion.addEventListener("change", start);
+
+      resize();
+      start();
+    })();
+  </script>
+</body>
+</html>

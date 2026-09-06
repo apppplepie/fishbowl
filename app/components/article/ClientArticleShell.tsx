@@ -155,7 +155,7 @@ export default function ClientArticleShell({
               articleId={articleId}
               categoryPath={categoryPathState}
             />
-            <TitleBox1 title={article.title} />
+            <TitleBox1 title={article.title} author={article.author} />
             {article.tags && article.tags.length > 0 && (
               <TagBox1 tags={article.tags} editMode={false} maxTags={10} />
             )}
@@ -189,7 +189,7 @@ export default function ClientArticleShell({
     apiDeleteJson(`/api/articles/${articleId}`)
       .then(() => {
         message.success('文章已删除');
-        router.push('/archive');
+        router.push('/library?view=doc');
       })
       .catch((e: any) => {
         message.error('删除失败: ' + (e?.message || '未知错误'));

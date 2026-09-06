@@ -31,6 +31,7 @@ export default function DiaryCard({
 }: DiaryCardProps & MasonryProps) {
   const excerptLines = Math.min(4, Math.max(1, layout?.excerptLines ?? 4));
   const hasEmoji = (layout?.emojiWeatherSpan ?? 0) > 0;
+  const titleLines = Math.max(1, layout?.titleLines ?? 1);
   // 从 excerpt 或 content 中提取日志内容和元信息
   const extractDiaryData = () => {
     const rawContent = card.content || card.excerpt || '';
@@ -130,7 +131,7 @@ export default function DiaryCard({
       dataCardType="DIARY_CARD"
     >
       <div className="card-block--pad-top" aria-hidden />
-      <div className="card-block-title card-block--title">
+      <div className="card-block-title card-block--title" style={{ ['--title-lines' as any]: titleLines }}>
         {/* <InsertRowAboveOutlined style={{ fontSize: '20px' }} /> */}
         <h3 className="card-block-title__text" style={{ color: colors.textColor }}>
           {formattedDate}

@@ -22,6 +22,7 @@ import { apiPutJson, apiDeleteJson, apiGetJson } from '@/lib/apiClient';
 import { generateExcerptFromBlocks } from '@/app/utils/bookUtils';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
 import ArticleContentClient from './ArticleContent.client';
+import { CONTENT_AREA_MAX_WIDTH } from '@/app/styles/contentArea';
 
 const { Option } = Select;
 
@@ -58,7 +59,7 @@ const ArticleEditMetaSection = React.memo(function ArticleEditMetaSection(props:
       borderRadius: '8px',
       marginBottom: '24px',
       boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-      maxWidth: 800,
+      maxWidth: CONTENT_AREA_MAX_WIDTH,
       margin: '0 auto 24px',
     }}>
       <div style={{ marginBottom: 24 }}>
@@ -291,7 +292,7 @@ const ClientArticleEditor = forwardRef<ArticleEditorHandle, Props>(function Clie
           await apiDeleteJson(`/api/articles/${articleId}`);
           message.success('文章已删除');
           // navigate away
-          router.push('/archive');
+          router.push('/library?view=doc');
         } catch (e: any) {
           console.error(e);
           message.error('删除失败: ' + (e.message || '未知错误'));

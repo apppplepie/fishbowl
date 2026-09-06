@@ -1,13 +1,12 @@
 import React from 'react';
-import { User } from '../../types';
 import { theme } from '@/app/config/theme';
-import { ShieldCheck, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { Segmented } from '@/app/components/ui/compat';
 import { useAccessFilter, FilterMode } from '@/app/hooks/useAccessFilter';
 import '@/app/styles/profile.css';
 
 interface PermissionsContentProps {
-  user: User;
+  user: { role?: string };
 }
 
 // 三种过滤模式配置
@@ -26,7 +25,7 @@ const FILTER_MODES: Array<{ value: FilterMode; label: string; description: strin
   },
 ];
 
-export const PermissionsContent: React.FC<PermissionsContentProps> = ({ user }) => {
+export const PermissionsContent: React.FC<PermissionsContentProps> = () => {
   const { filterMode, updateFilterMode } = useAccessFilter();
 
   // 处理过滤模式变化
@@ -41,17 +40,17 @@ export const PermissionsContent: React.FC<PermissionsContentProps> = ({ user }) 
       {/* <div
         className="p-6 rounded-2xl flex items-center justify-between"
         style={{
-          backgroundColor: theme.background.selectedWarning,
+          backgroundColor: 'var(--profile-surface-warn, #fff7e6)',
           border: `1px solid ${theme.colors.warning}20`
         }}
       >
         <div>
-          <h3 className="font-medium mb-1" style={{ color: '#000000' }}>当前计划</h3>
-          <p className="text-sm" style={{ color: '#000000' }}>
-            您是<span className="font-serif italic" style={{ color: '#000000' }}>{user.role}</span>用户。
+          <h3 className="font-medium mb-1" style={{ color: 'var(--profile-fg, #000000)' }}>当前计划</h3>
+          <p className="text-sm" style={{ color: 'var(--profile-fg, #000000)' }}>
+            您是<span className="font-serif italic" style={{ color: 'var(--profile-fg, #000000)' }}>{user.role}</span>用户。
           </p>
         </div>
-        <ShieldCheck size={24} style={{ color: '#000000' }} />
+        <ShieldCheck size={24} style={{ color: 'var(--profile-fg, #000000)' }} />
       </div> */}
 
       {/* 文章权限过滤器 */}
@@ -59,12 +58,12 @@ export const PermissionsContent: React.FC<PermissionsContentProps> = ({ user }) 
         className="p-6 rounded-2xl"
         style={{
           backgroundColor: theme.background.whiteOverlayLight,
-          border: `1px solid ${theme.border.light}`
+          border: `1px solid ${'var(--profile-border, #e6e6e6)'}`
         }}
       >
         <div className="flex items-center gap-3 mb-4">
-          <Eye size={20} style={{ color: '#000000' }} />
-          <h3 className="font-medium" style={{ color: '#000000' }}>文章显示设置</h3>
+          <Eye size={20} style={{ color: 'var(--profile-fg, #000000)' }} />
+          <h3 className="font-medium" style={{ color: 'var(--profile-fg, #000000)' }}>文章显示设置</h3>
         </div>
 
         <div className="space-y-3">
@@ -84,7 +83,7 @@ export const PermissionsContent: React.FC<PermissionsContentProps> = ({ user }) 
               value={filterMode}
               onChange={handleFilterChange}
               style={{
-                backgroundColor: 'transparent',
+                backgroundColor: 'var(--segmented-track-bg, rgba(0,0,0,.06))',
                 padding: '8px',
                 borderRadius: '12px'
               }}
@@ -92,36 +91,10 @@ export const PermissionsContent: React.FC<PermissionsContentProps> = ({ user }) 
           </div>
 
           <div className="text-center">
-            <p className="text-xs" style={{ color: '#888' }}>
+            <p className="text-xs" style={{ color: 'var(--profile-fg-dim, #888)' }}>
               {FILTER_MODES.find(m => m.value === filterMode)?.description}
             </p>
           </div>
-        </div>
-      </div>
-
-      <div
-        className="p-6 rounded-2xl shadow-lg"
-        style={{
-          background: theme.gradients.dark,
-          color: '#000000',
-          boxShadow: theme.shadow.md
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-serif text-lg mb-1" style={{ color: '#000000' }}>培养者</h3>
-            <p className="text-xs font-light" style={{ color: '#000000' }}>解锁私人圣地。</p>
-          </div>
-          <button
-            className="px-5 py-2 rounded-full text-xs font-medium transition-colors border hover:opacity-80"
-            style={{
-              backgroundColor: theme.background.whiteOverlayLight,
-              borderColor: theme.border.dashed,
-              color: '#000000',
-            }}
-          >
-            升级
-          </button>
         </div>
       </div>
     </div>

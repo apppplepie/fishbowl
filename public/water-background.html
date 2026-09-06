@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#c9efff">
+  <title>流动水面背景</title>
+  <style>
+    :root {
+      color-scheme: light;
+      background: #F4FAFC;
+      --sky-text: #20343A;
+      --sky-muted: #71878C;
+      --sky-accent: #2F7F8C;
+      --water-text: #ffffff;
+      --water-muted: #EAF6F8;
+      --glass-bg: #ffffff17;
+      --glass-border: #CFE2E5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-width: 100%;
+      height: 100%;
+    }
+
+    body {
+      overflow: hidden;
+      background: #F4FAFC;
+      color: var(--sky-text);
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .viewport {
+      width: 100%;
+      height: 100dvh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      scroll-behavior: smooth;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+    }
+
+    .viewport::-webkit-scrollbar {
+      display: none;
+    }
+
+    .scene {
+      position: relative;
+      width: 100%;
+      height: 180dvh;
+      isolation: isolate;
+    }
+
+    #water {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(circle at 72% 16%, #fff9 0 4%, transparent 22%),
+        linear-gradient(#F4FAFC, #FFFFFF 50%, #8FD6E8 50%, #4FAFC7);
+      touch-action: pan-y;
+    }
+
+    .panel {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      pointer-events: none;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+    }
+
+    .sky-panel {
+      height: 80dvh;
+      display: grid;
+      place-items: start center;
+      padding-top: 17dvh;
+      text-align: center;
+    }
+
+    .hero {
+      padding: 0 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--sky-accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--sky-text);
+      font-size: clamp(52px, 9vw, 112px);
+      font-weight: 750;
+      letter-spacing: -0.065em;
+      line-height: 0.95;
+      text-shadow: 0 12px 34px #2c789326;
+    }
+
+    .subtitle {
+      max-width: 520px;
+      margin: 22px auto 0;
+      color: var(--sky-muted);
+      font-size: clamp(14px, 1.6vw, 18px);
+      line-height: 1.7;
+    }
+
+    .jump {
+      width: 42px;
+      height: 42px;
+      margin-top: 32px;
+      border: 1px solid #fff9;
+      border-radius: 50%;
+      background: #ffffff70;
+      color: var(--sky-text);
+      box-shadow: 0 8px 26px #296f8b24;
+      cursor: pointer;
+      pointer-events: auto;
+      backdrop-filter: blur(12px);
+    }
+
+    .water-panel {
+      height: 100dvh;
+      padding:
+        calc(45px + 7dvh + clamp(28px, 5dvh, 56px))
+        clamp(20px, 6vw, 80px)
+        40px;
+      border-right: 6px solid #111;
+      border-bottom: 6px solid #111;
+      border-left: 6px solid #111;
+    }
+
+    .water-panel::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 45px;
+      background: #111;
+      pointer-events: none;
+    }
+
+    .air-gap {
+      position: absolute;
+      top: 45px;
+      right: 0;
+      left: 0;
+      height: 7dvh;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .content-card {
+      width: min(680px, 100%);
+      margin: 0 auto;
+      padding: clamp(24px, 4vw, 42px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      background: var(--glass-bg);
+      color: var(--water-text);
+      box-shadow: 0 24px 70px #03446b33;
+      pointer-events: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .content-card h2 {
+      margin: 0 0 12px;
+      font-size: clamp(26px, 4vw, 42px);
+      letter-spacing: -0.035em;
+    }
+
+    .content-card p {
+      margin: 0;
+      color: var(--water-muted);
+      line-height: 1.8;
+    }
+
+    .back {
+      margin-top: 24px;
+      padding: 9px 15px;
+      border: 1px solid #ffffff5c;
+      border-radius: 999px;
+      background: #ffffff17;
+      color: white;
+      cursor: pointer;
+    }
+
+    .theme-hud {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 100;
+      width: 196px;
+      padding: 12px;
+      border: 1px solid #ffffff70;
+      border-radius: 16px;
+      background: #ffffffa8;
+      box-shadow: 0 12px 36px #0f355528;
+      backdrop-filter: blur(16px);
+    }
+
+    .theme-hud-title {
+      display: block;
+      margin-bottom: 9px;
+      color: #111827;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.12em;
+    }
+
+    .theme-options {
+      display: grid;
+      grid-template-columns: repeat(3, 27px);
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .theme-swatch {
+      position: relative;
+      width: 27px;
+      height: 27px;
+      padding: 0;
+      border: 2px solid #ffffffc9;
+      border-radius: 50%;
+      box-shadow: 0 2px 7px #0f172a24;
+      cursor: pointer;
+      transition: scale 120ms ease, box-shadow 120ms ease;
+    }
+
+    .theme-swatch:hover {
+      scale: 1.1;
+    }
+
+    .theme-swatch[aria-pressed="true"] {
+      box-shadow: 0 0 0 2px #111827, 0 3px 9px #0f172a35;
+    }
+
+    .theme-swatch:focus-visible {
+      outline: 3px solid #ffffff;
+      outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .viewport {
+        scroll-behavior: auto;
+      }
+
+      .theme-swatch {
+        transition: none;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .theme-hud {
+        top: 14px;
+        right: 14px;
+        width: 176px;
+        padding: 10px;
+      }
+
+      .theme-options {
+        gap: 6px;
+      }
+
+      .theme-swatch {
+        width: 25px;
+        height: 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport" id="viewport">
+    <main class="scene">
+      <canvas id="water" aria-hidden="true"></canvas>
+
+      <section class="panel sky-panel" aria-label="天空区域">
+        <div class="hero">
+          <p class="eyebrow">A quiet digital garden</p>
+          <h1>Fishbowl</h1>
+          <p class="subtitle">固定的双层页面。向下进入水面之下，松手后会自动吸附到完整的下层空间。</p>
+          <button class="jump" id="goDown" type="button" aria-label="进入下层">↓</button>
+        </div>
+      </section>
+
+      <section class="panel water-panel" aria-label="水下内容区域">
+        <div class="air-gap" aria-hidden="true"></div>
+        <article class="content-card">
+          <h2>下层内容区域</h2>
+          <p>这里以后可以放入文章、归档或其他单页内容。整个场景始终保持 180dvh，不会因为内容增长而改变背景尺寸。</p>
+          <button class="back" id="goUp" type="button">返回上层</button>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <aside class="theme-hud" aria-label="鱼缸配色选择">
+    <span class="theme-hud-title">配色方案</span>
+    <div class="theme-options" id="themeOptions"></div>
+  </aside>
+
+  <script>
+    (() => {
+      const canvas = document.querySelector("#water");
+      const viewport = document.querySelector("#viewport");
+      const goDown = document.querySelector("#goDown");
+      const goUp = document.querySelector("#goUp");
+      const themeOptions = document.querySelector("#themeOptions");
+      const ctx = canvas.getContext("2d", { alpha: false });
+      const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+      const PRESET_PALETTES = {
+        "clear-aquarium": {
+          sky: ["#F4FAFC", "#EAF6F8", "#FFFFFF"],
+          water: ["#EAF6F8", "#8FD6E8", "#4FAFC7"],
+          wave: ["rgba(255,255,255,.92)", "rgba(255,255,255,.72)"],
+          sun: "rgba(255,255,255,.82)",
+          primary: "#2F7F8C",
+          text: "#20343A",
+          textSoft: "#71878C",
+          border: "#CFE2E5",
+          surface: "#FFFFFF"
+        },
+        "rain-world": {
+          sky: ["#E8F0EF", "#DCE8E5", "#F5FAF8"],
+          water: ["#DCE8E5", "#789EA5", "#486F78"],
+          wave: ["rgba(249,252,251,.82)", "rgba(220,232,229,.68)"],
+          sun: "rgba(249,252,251,.5)",
+          primary: "#527A78",
+          text: "#293A39",
+          textSoft: "#697D79",
+          border: "#BBCDCA",
+          surface: "#F5FAF8"
+        },
+        "jelly-tank": {
+          sky: ["#F2FBFF", "#E1F5FC", "#FFFFFF"],
+          water: ["#E1F5FC", "#71CEF0", "#2CA6D5"],
+          wave: ["rgba(255,255,255,.94)", "rgba(225,245,252,.76)"],
+          sun: "rgba(255,255,255,.86)",
+          primary: "#378FBD",
+          text: "#17415A",
+          textSoft: "#7190A0",
+          border: "#C8E6F1",
+          surface: "#FFFFFF"
+        },
+        "deep-night": {
+          sky: ["#101C28", "#1D3344", "#172838"],
+          water: ["#1D3344", "#246B85", "#16485E"],
+          wave: ["rgba(191,239,247,.72)", "rgba(102,198,216,.48)"],
+          sun: "rgba(102,198,216,.24)",
+          primary: "#66C6D8",
+          text: "#E7F3F5",
+          textSoft: "#8FAAB2",
+          border: "#294655",
+          surface: "#172838",
+          dark: true
+        },
+        "nordic-glass": {
+          sky: ["#F1F3F0", "#E7ECE8", "#FAFBF9"],
+          water: ["#E7ECE8", "#A3C8CE", "#719DA5"],
+          wave: ["rgba(250,251,249,.88)", "rgba(231,236,232,.72)"],
+          sun: "rgba(255,255,255,.62)",
+          primary: "#536E69",
+          text: "#2F3835",
+          textSoft: "#7B8581",
+          border: "#D2D9D5",
+          surface: "#FAFBF9"
+        },
+        "cream-retro": {
+          sky: ["#F7F1E7", "#EEE4D4", "#FFFDF8"],
+          water: ["#EEE4D4", "#85BAC0", "#568D97"],
+          wave: ["rgba(255,253,248,.9)", "rgba(238,228,212,.72)"],
+          sun: "rgba(255,235,190,.6)",
+          primary: "#3C7771",
+          text: "#413C34",
+          textSoft: "#81796D",
+          border: "#DED2BF",
+          surface: "#FFFDF8"
+        }
+      };
+      const THEME_NAMES = {
+        "clear-aquarium": "清透水族馆",
+        "rain-world": "雨世界感",
+        "jelly-tank": "果冻鱼缸",
+        "deep-night": "深海夜间",
+        "nordic-glass": "北欧玻璃房",
+        "cream-retro": "奶油复古"
+      };
+
+      const POINTS = 121;
+      const SPRING = 29;
+      const COUPLING = 115;
+      const BASE_DRAG = 1.65;
+      const MAX_SPEED = 620;
+      const MAX_IMPULSE = 220;
+      const MAX_DROPS = 90;
+      const GRAVITY = 760;
+      const SPLASH_Y = -14;
+      const SPLASH_V = -70;
+      const RIM_HEIGHT = 45;
+      const AIR_GAP_RATIO = 0.07;
+
+      const y = new Float32Array(POINTS);
+      const velocity = new Float32Array(POINTS);
+      const acceleration = new Float32Array(POINTS);
+      const cooldown = new Float32Array(POINTS);
+      const droplets = [];
+
+      let width = innerWidth;
+      let viewportHeight = innerHeight;
+      let height = viewportHeight * 1.8;
+      let level =
+        viewportHeight * (0.8 + AIR_GAP_RATIO) + RIM_HEIGHT;
+      let spacing = width / (POINTS - 1);
+      let maxHeight = viewportHeight * 0.2;
+      let softLimit = viewportHeight * 0.105;
+      let lastTime = performance.now();
+      let lastScrollY = viewport.scrollTop;
+      let pointerDown = false;
+      let splashBudget = 0;
+      let frameId = 0;
+      let palette = getSavedPalette();
+
+      const clamp = (number, min, max) => Math.max(min, Math.min(max, number));
+      const smoothstep = (number) => {
+        const value = clamp(number, 0, 1);
+        return value * value * (3 - 2 * value);
+      };
+
+      function getSavedPaletteId() {
+        try {
+          const paletteId =
+            localStorage.getItem("water_background_palette") || "clear-aquarium";
+          return PRESET_PALETTES[paletteId] ? paletteId : "clear-aquarium";
+        } catch {
+          return "clear-aquarium";
+        }
+      }
+
+      function getSavedPalette() {
+        return PRESET_PALETTES[getSavedPaletteId()];
+      }
+
+      function applyTheme() {
+        palette = getSavedPalette();
+        const root = document.documentElement;
+        const dark = Boolean(palette.dark);
+        root.style.setProperty("--sky-text", palette.text);
+        root.style.setProperty("--sky-muted", palette.textSoft);
+        root.style.setProperty("--sky-accent", palette.primary);
+        root.style.setProperty("--water-text", "#ffffff");
+        root.style.setProperty(
+          "--water-muted",
+          dark ? palette.textSoft : palette.sky[1]
+        );
+        root.style.setProperty(
+          "--glass-bg",
+          `${palette.surface}${dark ? "66" : "24"}`
+        );
+        root.style.setProperty("--glass-border", palette.border);
+        root.style.background = palette.sky[0];
+        document
+          .querySelector('meta[name="theme-color"]')
+          .setAttribute("content", palette.sky[0]);
+        const activeTheme = getSavedPaletteId();
+        document.querySelectorAll(".theme-swatch").forEach((button) => {
+          button.setAttribute(
+            "aria-pressed",
+            String(button.dataset.themeId === activeTheme)
+          );
+        });
+        draw();
+      }
+
+      function buildThemeHud() {
+        Object.entries(PRESET_PALETTES).forEach(([themeId, colors]) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "theme-swatch";
+          button.dataset.themeId = themeId;
+          button.title = THEME_NAMES[themeId];
+          button.setAttribute("aria-label", THEME_NAMES[themeId]);
+          button.setAttribute("aria-pressed", "false");
+          button.style.background =
+            `linear-gradient(135deg, ${colors.sky[1]} 0 48%, ` +
+            `${colors.water[Math.min(1, colors.water.length - 1)]} 52% 100%)`;
+          button.addEventListener("click", () => {
+            try {
+              localStorage.setItem("water_background_palette", themeId);
+            } catch {}
+            applyTheme();
+          });
+          themeOptions.append(button);
+        });
+      }
+
+      function resize() {
+        const previousViewportHeight = viewportHeight;
+        const pixelRatio = Math.min(devicePixelRatio || 1, 1.5);
+
+        width = Math.max(1, innerWidth);
+        viewportHeight = Math.max(1, innerHeight);
+        height = viewportHeight * 1.8;
+        level =
+          viewportHeight * (0.8 + AIR_GAP_RATIO) + RIM_HEIGHT;
+        spacing = width / (POINTS - 1);
+        maxHeight = viewportHeight * 0.2;
+        softLimit = viewportHeight * 0.105;
+
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+        if (previousViewportHeight > 0 && previousViewportHeight !== viewportHeight) {
+          const scale = viewportHeight / previousViewportHeight;
+          for (let i = 0; i < POINTS; i++) y[i] *= scale;
+        }
+
+        draw();
+      }
+
+      function addScrollImpulse(delta) {
+        if (reducedMotion.matches) return;
+
+        const impulse = clamp(delta * 5.2, 0, MAX_SPEED * 0.92);
+        if (impulse < 1) return;
+
+        for (let i = 0; i < POINTS; i++) {
+          const normalizedX = i / (POINTS - 1);
+          const centerWeight =
+            smoothstep(normalizedX / 0.24) *
+            smoothstep((1 - normalizedX) / 0.24);
+          const arch = 0.22 + centerWeight * 0.78;
+          velocity[i] = clamp(
+            velocity[i] - impulse * arch,
+            -MAX_SPEED,
+            MAX_SPEED
+          );
+        }
+
+        splashBudget = Math.max(splashBudget, 4);
+      }
+
+      function waveDirection(index) {
+        const velocitySkew = velocity[index - 1] - velocity[index + 1];
+        if (Math.abs(velocitySkew) > 5) return Math.sign(velocitySkew);
+
+        const shapeSkew = y[index - 1] - y[index + 1];
+        return Math.abs(shapeSkew) > 1 ? Math.sign(shapeSkew) : 0;
+      }
+
+      function spawnSplash(index, direction, energy) {
+        if (
+          splashBudget <= 0 ||
+          droplets.length >= MAX_DROPS ||
+          cooldown[index] > 0
+        ) {
+          return;
+        }
+
+        splashBudget--;
+        const horizontalDirection =
+          direction || (Math.random() < 0.5 ? -1 : 1);
+        const horizontalJitter = (Math.random() - 0.5) * 54;
+        const launchJitter = 0.72 + Math.random() * 0.55;
+        droplets.push({
+          x: index * spacing + (Math.random() - 0.5) * spacing * 0.8,
+          y: level + y[index] - 4 - Math.random() * 4,
+          vx:
+            horizontalDirection * (40 + energy * (35 + Math.random() * 72)) +
+            horizontalJitter,
+          vy:
+            Math.min(-66, velocity[index] * (0.46 + Math.random() * 0.24)) -
+            24 * energy * launchJitter,
+          gravity: GRAVITY * (0.86 + Math.random() * 0.3),
+          radius: 1.8 + Math.random() * 1.9,
+          age: 0
+        });
+        velocity[index] *= 0.78;
+        cooldown[index] = 0.9;
+      }
+
+      function disturb(clientX, clientY, movementY = 0) {
+        if (reducedMotion.matches) return;
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const localX = clientX - canvasRect.left;
+        const localY = clientY - canvasRect.top;
+        const surfaceIndex = clamp(
+          Math.round(localX / spacing),
+          0,
+          POINTS - 1
+        );
+        if (Math.abs(localY - (level + y[surfaceIndex])) > 90) return;
+
+        const impulse = clamp((movementY || 55) * 4, -MAX_IMPULSE, MAX_IMPULSE);
+        for (let offset = -5; offset <= 5; offset++) {
+          const index = surfaceIndex + offset;
+          if (index < 1 || index >= POINTS - 1) continue;
+
+          const falloff = Math.exp(-(offset * offset) / 8);
+          velocity[index] = clamp(
+            velocity[index] + impulse * falloff,
+            -MAX_SPEED,
+            MAX_SPEED
+          );
+        }
+      }
+
+      function impactWater(index, speed) {
+        const impulse = clamp(speed * 0.0025, 0.25, 1.4);
+        for (let offset = -2; offset <= 2; offset++) {
+          const point = index + offset;
+          if (point < 1 || point >= POINTS - 1) continue;
+
+          velocity[point] = clamp(
+            velocity[point] +
+              impulse * Math.exp(-(offset * offset) / 1.8),
+            -MAX_SPEED,
+            MAX_SPEED
+          );
+          cooldown[point] = Math.max(cooldown[point], 1.4);
+        }
+      }
+
+      function update(deltaTime) {
+        const safeDelta = Math.min(deltaTime, 1 / 30);
+        const steps = Math.max(1, Math.ceil(safeDelta / (1 / 120)));
+        const step = safeDelta / steps;
+
+        for (let pass = 0; pass < steps; pass++) {
+          for (let i = 0; i < POINTS; i++) {
+            cooldown[i] = Math.max(0, cooldown[i] - step);
+          }
+
+          for (let i = 0; i < POINTS; i++) {
+            const left = i > 0 ? y[i - 1] : y[i];
+            const right = i < POINTS - 1 ? y[i + 1] : y[i];
+            const laplacian = left + right - 2 * y[i];
+            const limitRatio = Math.max(
+              0,
+              (Math.abs(y[i]) - softLimit) / (maxHeight - softLimit)
+            );
+            const drag = BASE_DRAG + limitRatio * 10;
+
+            acceleration[i] =
+              -SPRING * y[i] + COUPLING * laplacian - drag * velocity[i];
+          }
+
+          for (let i = 0; i < POINTS; i++) {
+            velocity[i] = clamp(
+              velocity[i] + acceleration[i] * step,
+              -MAX_SPEED,
+              MAX_SPEED
+            );
+            y[i] += velocity[i] * step;
+
+            if (Math.abs(y[i]) > softLimit) {
+              const limit = clamp(
+                (Math.abs(y[i]) - softLimit) / (maxHeight - softLimit),
+                0,
+                1
+              );
+              velocity[i] *= 1 - limit * 0.24;
+              y[i] -= Math.sign(y[i]) * limit * limit * 900 * step;
+            }
+            y[i] = clamp(y[i], -maxHeight, maxHeight);
+
+            const isCrest =
+              i > 0 &&
+              i < POINTS - 1 &&
+              y[i] < y[i - 1] &&
+              y[i] <= y[i + 1];
+            if (isCrest && y[i] < SPLASH_Y && velocity[i] < SPLASH_V) {
+              const energy = clamp((-velocity[i] - SPLASH_V) / 110 + 0.65, 0.65, 2);
+              spawnSplash(i, waveDirection(i), energy);
+            }
+          }
+        }
+
+        for (let i = droplets.length - 1; i >= 0; i--) {
+          const drop = droplets[i];
+          drop.age += safeDelta;
+          drop.vy += drop.gravity * safeDelta;
+          drop.x += drop.vx * safeDelta;
+          drop.y += drop.vy * safeDelta;
+
+          const floatIndex = clamp(drop.x / spacing, 0, POINTS - 1);
+          const low = Math.floor(floatIndex);
+          const high = Math.min(POINTS - 1, low + 1);
+          const mix = floatIndex - low;
+          const surface = level + y[low] * (1 - mix) + y[high] * mix;
+          const hitSurface = drop.age > 0.045 && drop.vy > 0 && drop.y >= surface;
+          const outOfView =
+            drop.x < -15 || drop.x > width + 15 || drop.y > height + 15;
+
+          if (hitSurface || outOfView) {
+            if (drop.x >= 0 && drop.x <= width && drop.y <= height + 15) {
+              impactWater(clamp(Math.round(floatIndex), 1, POINTS - 2), drop.vy);
+            }
+            droplets.splice(i, 1);
+          }
+        }
+      }
+
+      function traceSurface() {
+        ctx.beginPath();
+        ctx.moveTo(0, level + y[0]);
+        for (let i = 1; i < POINTS; i++) {
+          ctx.lineTo(i * spacing, level + y[i]);
+        }
+      }
+
+      function draw() {
+        const sky = ctx.createLinearGradient(0, 0, 0, level);
+        palette.sky.forEach((color, index) => {
+          sky.addColorStop(index / (palette.sky.length - 1), color);
+        });
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+
+        const glow = ctx.createRadialGradient(
+          width * 0.72,
+          viewportHeight * 0.14,
+          0,
+          width * 0.72,
+          viewportHeight * 0.14,
+          Math.max(width, viewportHeight) * 0.42
+        );
+        glow.addColorStop(0, palette.sun);
+        glow.addColorStop(0.28, "#ffffff45");
+        glow.addColorStop(1, "#ffffff00");
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, width, level);
+
+        const water = ctx.createLinearGradient(0, level, 0, height);
+        const waterColors = palette.water.slice(1);
+        waterColors.forEach((color, index) => {
+          water.addColorStop(index / (waterColors.length - 1), color);
+        });
+
+        traceSurface();
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.closePath();
+        ctx.fillStyle = water;
+        ctx.fill();
+
+        const waterShading = ctx.createLinearGradient(0, level, 0, height);
+        waterShading.addColorStop(0, "rgba(255,255,255,.20)");
+        waterShading.addColorStop(0.24, "rgba(255,255,255,.06)");
+        waterShading.addColorStop(0.58, "rgba(4,45,72,.05)");
+        waterShading.addColorStop(1, "rgba(2,24,48,.22)");
+        ctx.fillStyle = waterShading;
+        ctx.fill();
+
+        const underwaterGlow = ctx.createRadialGradient(
+          width * 0.24,
+          level + viewportHeight * 0.08,
+          0,
+          width * 0.24,
+          level + viewportHeight * 0.08,
+          Math.max(width, viewportHeight) * 0.55
+        );
+        underwaterGlow.addColorStop(0, "rgba(255,255,255,.12)");
+        underwaterGlow.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = underwaterGlow;
+        ctx.fill();
+
+        traceSurface();
+        const crestFade = ctx.createLinearGradient(0, 0, width, 0);
+        crestFade.addColorStop(0, "rgba(255,255,255,0)");
+        crestFade.addColorStop(0.1, palette.wave[0]);
+        crestFade.addColorStop(0.9, palette.wave[0]);
+        crestFade.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = crestFade;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = palette.wave[1];
+        for (let i = 4; i < POINTS; i += 8) {
+          const edgeDistance = Math.min(i, POINTS - 1 - i) / (POINTS * 0.1);
+          ctx.globalAlpha = smoothstep(edgeDistance);
+          ctx.beginPath();
+          ctx.ellipse(i * spacing, level + y[i] + 3, 2.4, 1.3, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.fillStyle = palette.water[Math.min(1, palette.water.length - 1)];
+        for (const drop of droplets) {
+          ctx.beginPath();
+          ctx.arc(drop.x, drop.y, drop.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function frame(now) {
+        const deltaTime = (now - lastTime) / 1000;
+        lastTime = now;
+        update(deltaTime);
+        draw();
+        frameId = requestAnimationFrame(frame);
+      }
+
+      function startAnimation() {
+        cancelAnimationFrame(frameId);
+        lastTime = performance.now();
+        if (reducedMotion.matches || document.hidden) {
+          draw();
+          return;
+        }
+        frameId = requestAnimationFrame(frame);
+      }
+
+      canvas.addEventListener("pointerdown", (event) => {
+        pointerDown = true;
+        splashBudget = 7;
+        canvas.setPointerCapture(event.pointerId);
+        disturb(event.clientX, event.clientY);
+      });
+
+      canvas.addEventListener("pointermove", (event) => {
+        if (pointerDown) disturb(event.clientX, event.clientY, event.movementY);
+      });
+
+      canvas.addEventListener("pointerup", () => {
+        pointerDown = false;
+      });
+
+      canvas.addEventListener("pointercancel", () => {
+        pointerDown = false;
+      });
+
+      viewport.addEventListener(
+        "scroll",
+        () => {
+          const nextScrollY = viewport.scrollTop;
+          addScrollImpulse(nextScrollY - lastScrollY);
+          lastScrollY = nextScrollY;
+        },
+        { passive: true }
+      );
+
+      goDown.addEventListener("click", () => {
+        viewport.scrollTo({ top: viewportHeight * 0.8, behavior: "smooth" });
+      });
+
+      goUp.addEventListener("click", () => {
+        viewport.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      addEventListener("resize", resize, { passive: true });
+      document.addEventListener("visibilitychange", startAnimation);
+      reducedMotion.addEventListener("change", startAnimation);
+      addEventListener("storage", (event) => {
+        if (event.key === "water_background_palette") applyTheme();
+      });
+
+      buildThemeHud();
+      resize();
+      applyTheme();
+      startAnimation();
+    })();
+  </script>
+</body>
+</html>

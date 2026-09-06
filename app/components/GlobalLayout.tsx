@@ -11,7 +11,7 @@ import PageShell from './PageShell';
  * 包含 Header，永驻不随路由卸载
  */
 function GlobalLayout({ children }: { children: React.ReactNode }) {
-  const { leftContent } = useHeader();
+  const { leftContent, activeNavKey } = useHeader();
   const pathname = usePathname();
   
   // 首页使用自定义导航栏，不显示全局 Header
@@ -22,14 +22,12 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
 
   // PageShell 功能开关：仅在需要的路由启用，避免全站渲染开销
   const ENABLE_PAGE_SHELL = [
-    '/gallery',
+    '/library',
     '/register',
     '/publish-article',
     '/publish-book',
     '/publish-chapter',
     '/profile',
-    '/archive',
-    '/bookcase',
     '/article',
     '/book',
     '/fishbowl',
@@ -39,7 +37,7 @@ function GlobalLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* Header 永驻，不随路由卸载（首页除外） */}
-      {!isHomePage && <Header leftContent={leftContent} />}
+      {!isHomePage && <Header leftContent={leftContent} activeNavKey={activeNavKey} />}
       
       {/* 固定黑框 - 全局挂载，首页除外 */}
       {!isHomePage && (

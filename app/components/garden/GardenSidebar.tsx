@@ -6,6 +6,9 @@ import { useResponsive } from '@/app/hooks/useResponsive';
 import Controls from './Controls';
 import { PlantSettings, PlantType } from '../../types/garden';
 
+// 复用书房侧边栏那套黑色主题变量，两边保持一个样
+import '@/app/components/sidebar/sidebar.css';
+
 interface GardenSidebarProps {
   settings: PlantSettings;
   updateSettings: (newSettings: Partial<PlantSettings>) => void;
@@ -15,6 +18,8 @@ interface GardenSidebarProps {
   onClose?: () => void; // 移动端：关闭抽屉
   expanded?: boolean; // 桌面端：侧边栏是否展开
 }
+
+const SIDEBAR_WIDTH = 320;
 
 function GardenSidebar({
   settings,
@@ -37,27 +42,22 @@ function GardenSidebar({
   );
 
   if (isMobile) {
-    // 移动端：抽屉
+    // 移动端：抽屉（点遮罩关闭，不要那条白色标题栏）
     return (
       <Drawer
         title={null}
+        closable={false}
         placement="left"
         onClose={onClose || (() => {})}
         open={visible}
-        size={320}
+        width={SIDEBAR_WIDTH}
+        className="garden-sidebar"
         styles={{
+          wrapper: { background: 'var(--sidebar-bg, #000000)' },
           body: { padding: 0 },
-          header: { display: 'none' },
         }}
       >
         {controlsContent}
-        
-        {/* 去掉drawer默认间距 */}
-        <style>{`
-          .ant-drawer-body {
-            padding: 0 !important;
-          }
-        `}</style>
       </Drawer>
     );
   }
@@ -65,14 +65,15 @@ function GardenSidebar({
   // 桌面端：固定侧边栏（支持展开/收起）
   return (
     <div
+      className="garden-sidebar"
       style={{
         position: 'fixed',
         left: 0,
         top: '45px', // header 的高度
         bottom: 0,
-        width: expanded ? '320px' : '0',
-        background: 'white',
-        borderRight: expanded ? '1px solid #e8e8e8' : 'none',
+        width: expanded ? `${SIDEBAR_WIDTH}px` : '0',
+        background: 'var(--sidebar-bg, #000000)',
+        borderRight: expanded ? '1px solid var(--sidebar-border, rgba(38, 38, 38, 0.8))' : 'none',
         zIndex: 999,
         overflowY: 'auto',
         overflowX: 'hidden',
@@ -80,7 +81,7 @@ function GardenSidebar({
       }}
     >
       {expanded && (
-        <div style={{ width: '320px', height: '100%' }}>
+        <div style={{ width: `${SIDEBAR_WIDTH}px`, height: '100%' }}>
           {controlsContent}
         </div>
       )}

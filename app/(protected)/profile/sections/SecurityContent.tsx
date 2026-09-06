@@ -2,14 +2,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { theme } from '@/app/config/theme';
-import { Key, User, ArrowRight, LogOut, Check, X } from 'lucide-react';
+import { Key, User, ArrowRight, LogOut } from 'lucide-react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { message, Input } from '@/app/components/ui';
 import '@/app/styles/profile.css';
 
 export const SecurityContent: React.FC = () => {
   const { logout, user, refreshUser } = useAuth();
-  const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [displayNameValue, setDisplayNameValue] = useState(user?.display_name || user?.username || '');
@@ -24,13 +23,14 @@ export const SecurityContent: React.FC = () => {
     confirmPassword: '',
   });
   const passwordEditRef = useRef<HTMLDivElement>(null);
+  const displayNameSavingRef = useRef(false);
 
   // 当用户信息更新时，同步更新显示名
   useEffect(() => {
-    if (user && !isEditingDisplayName) {
+    if (user && !displayNameSavingRef.current) {
       setDisplayNameValue(user.display_name || user.username || '');
     }
-  }, [user, isEditingDisplayName]);
+  }, [user]);
 
   // 点击框外自动取消密码编辑
   useEffect(() => {
@@ -57,41 +57,56 @@ export const SecurityContent: React.FC = () => {
     }
   };
 
-  // 处理修改显示名
-  const handleUpdateDisplayName = async () => {
-    if (!displayNameValue.trim()) {
-      message.error('显示名不能为空');
-      return;
-    }
-    if (displayNameValue.length > 15) {
-      message.error('显示名长度不能超过15个字符');
-      return;
-    }
+  const getCurrentDisplayName = () => user?.display_name || user?.username || '';
 
+  // 失焦时：与当前值比对，有变化再自动保存
+  const handleDisplayNameBlur = async () => {
+    const next = displayNameValue.trim();
+    const prev = getCurrentDisplayName();
+
+    if (next === prev) {
+      setDisplayNameValue(prev);
+      return;
+    }
+    if (!next) {
+      message.error('显示名不能为空');
+      setDisplayNameValue(prev);
+      return;
+    }
+    if (next.length > 15) {
+      message.error('显示名长度不能超过15个字符');
+      setDisplayNameValue(prev);
+      return;
+    }
+    if (displayNameSavingRef.current) return;
+
+    displayNameSavingRef.current = true;
     setLoading(true);
     try {
       const response = await fetch('/api/auth/update-display-name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ displayName: displayNameValue.trim() }),
+        body: JSON.stringify({ displayName: next }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
         message.success('显示名更新成功！');
-        setIsEditingDisplayName(false);
-        // 仅刷新用户信息（拉 /api/auth/me 更新 Context），无需整页刷新
+        setDisplayNameValue(next);
         await refreshUser();
       } else {
         message.error(data.error || '更新失败');
+        setDisplayNameValue(prev);
       }
     } catch (error) {
       console.error('更新显示名失败:', error);
       message.error('更新失败，请稍后重试');
+      setDisplayNameValue(prev);
     } finally {
       setLoading(false);
+      displayNameSavingRef.current = false;
     }
   };
 
@@ -210,11 +225,6 @@ export const SecurityContent: React.FC = () => {
     }
   };
 
-  const handleCancelDisplayName = () => {
-    setDisplayNameValue(user?.display_name || user?.username || '');
-    setIsEditingDisplayName(false);
-  };
-
   const handleCancelPassword = () => {
     setIsEditingPassword(false);
     setPasswordValues({ oldPassword: '', newPassword: '', confirmPassword: '' });
@@ -228,53 +238,24 @@ export const SecurityContent: React.FC = () => {
         className="w-full p-4 rounded-2xl"
         style={{
           backgroundColor: theme.background.whiteOverlayLight,
-          border: `1px solid ${theme.border.light}`,
+          border: `1px solid ${'var(--profile-border, #e6e6e6)'}`,
         }}
       >
         <div className="flex items-center gap-3 mb-3">
-          <User size={18} style={{ color: '#000000' }} />
-          <span className="text-sm font-medium" style={{ color: '#000000' }}>显示名</span>
+          <User size={18} style={{ color: 'var(--profile-fg, #000000)' }} />
+          <span className="text-sm font-medium" style={{ color: 'var(--profile-fg, #000000)' }}>显示名</span>
         </div>
-        {isEditingDisplayName ? (
-          <div className="flex items-center gap-2">
-            <Input
-              value={displayNameValue}
-              onChange={(e) => setDisplayNameValue(e.target.value)}
-              placeholder="请输入显示名"
-              maxLength={15}
-              className="security-inline-input"
-              autoFocus
-              onPressEnter={handleUpdateDisplayName}
-              size="middle"
-            />
-            <button
-              onClick={handleUpdateDisplayName}
-              disabled={loading}
-              className="security-inline-button security-inline-button-submit"
-              title="保存"
-            >
-              <Check size={18} />
-            </button>
-            <button
-              onClick={handleCancelDisplayName}
-              disabled={loading}
-              className="security-inline-button security-inline-button-cancel"
-              title="取消"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        ) : (
-          <div
-            className="flex items-center justify-between cursor-pointer group"
-            onClick={() => setIsEditingDisplayName(true)}
-          >
-            <span className="text-sm" style={{ color: '#000000' }}>
-              {displayNameValue || '未设置'}
-            </span>
-            <ArrowRight size={16} style={{ color: '#000000' }} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        )}
+        <Input
+          value={displayNameValue}
+          onChange={(e) => setDisplayNameValue(e.target.value)}
+          onBlur={handleDisplayNameBlur}
+          onPressEnter={(e) => (e.target as HTMLInputElement).blur()}
+          placeholder="请输入显示名"
+          maxLength={15}
+          className="security-inline-input"
+          disabled={loading}
+          size="middle"
+        />
       </div>
 
       {/* 修改密码 */}
@@ -282,7 +263,7 @@ export const SecurityContent: React.FC = () => {
         className="w-full rounded-2xl"
         style={{
           backgroundColor: theme.background.whiteOverlayLight,
-          border: `1px solid ${theme.border.light}`,
+          border: `1px solid ${'var(--profile-border, #e6e6e6)'}`,
         }}
       >
         {!isEditingPassword ? (
@@ -291,19 +272,19 @@ export const SecurityContent: React.FC = () => {
             className="w-full p-4 flex items-center justify-between transition-colors group hover:opacity-90"
           >
             <div className="flex items-center gap-3">
-              <Key size={18} style={{ color: '#000000' }} className="group-hover:opacity-80" />
+              <Key size={18} style={{ color: 'var(--profile-fg, #000000)' }} className="group-hover:opacity-80" />
               <div className="text-left">
-                <span className="block text-sm font-medium" style={{ color: '#000000' }}>密码</span>
-                <span className="block text-[10px] uppercase tracking-wide" style={{ color: '#000000' }}>点击修改密码</span>
+                <span className="block text-sm font-medium" style={{ color: 'var(--profile-fg, #000000)' }}>密码</span>
+                <span className="block text-[10px] uppercase tracking-wide" style={{ color: 'var(--profile-fg, #000000)' }}>点击修改密码</span>
               </div>
             </div>
-            <ArrowRight size={16} style={{ color: '#000000' }} />
+            <ArrowRight size={16} style={{ color: 'var(--profile-fg, #000000)' }} />
           </button>
         ) : (
           <div className="p-4" ref={passwordEditRef}>
             <div className="flex items-center gap-3 mb-4">
-              <Key size={18} style={{ color: '#000000' }} />
-              <span className="text-sm font-medium" style={{ color: '#000000' }}>修改密码</span>
+              <Key size={18} style={{ color: 'var(--profile-fg, #000000)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--profile-fg, #000000)' }}>修改密码</span>
             </div>
             <div className="security-inline-form">
               <div className="security-inline-form-item">
@@ -367,7 +348,7 @@ export const SecurityContent: React.FC = () => {
       </div>
 
       {/* 退出登录按钮 */}
-      <div className="pt-4 mt-4 border-t" style={{ borderColor: theme.border.light }}>
+      <div className="pt-4 mt-4 border-t" style={{ borderColor: 'var(--profile-border, #e6e6e6)' }}>
         <button
           onClick={handleLogout}
           className="w-full p-4 rounded-2xl flex items-center justify-center gap-3 transition-colors group hover:opacity-90"

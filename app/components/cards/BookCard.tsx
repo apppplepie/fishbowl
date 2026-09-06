@@ -33,10 +33,14 @@ export default function BookCard({
   className = '',
   masonry,
   span,
+  layout,
 }: BookCardProps & MasonryProps) {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
+
+  // 标题行数由 layout 决定（getLayoutForCard 已把 TITLE×行数 算进 span），这里只负责撑盒子和 clamp
+  const titleLines = Math.max(1, layout?.titleLines ?? 1);
   
   // 使用卡片背景颜色 Hook，基于书籍 ID 生成独特的渐变色
   const colors = useCardBackground(card.id?.toString() || (card as any)._id?.toString() || '');
@@ -185,7 +189,10 @@ export default function BookCard({
       }
     >
       <div className="card-block--pad-top" aria-hidden />
-      <div className="card-block-title card-block--title" style={{ margin: 0 }}>
+      <div
+        className="card-block-title card-block--title"
+        style={{ margin: 0, ['--title-lines' as any]: titleLines }}
+      >
         {/* <ReadOutlined style={{ fontSize: '20px' }} /> */}
         <h3 className="card-block-title__text" style={{ color: colors.textColor, margin: 0 }}>
           {card.title}

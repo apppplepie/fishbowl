@@ -21,7 +21,9 @@
     "lint": "eslint",
     "db:init": "ts-node --project tsconfig.node.json scripts/init-db.ts",
     "db:seed": "ts-node --project tsconfig.node.json scripts/seed-data.ts",
-    "gpt:init": "ts-node --project tsconfig.node.json scripts/init-gpt-user.ts"
+    "gpt:init": "ts-node --project tsconfig.node.json scripts/init-gpt-user.ts",
+    "db:seed-test": "ts-node --project tsconfig.node.json scripts/seed-test-articles.ts",
+    "db:seed-test:clean": "ts-node --project tsconfig.node.json scripts/seed-test-articles.ts --clean"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

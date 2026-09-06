@@ -16,6 +16,14 @@ const nextConfig: NextConfig = withBundleAnalyzer({
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+  // 旧地址统一收进书房；query 会被 Next 自动带过去，所以 ?category=xxx 不会丢
+  async redirects() {
+    return [
+      { source: '/archive', destination: '/library?view=doc', permanent: false },
+      { source: '/bookcase', destination: '/library?view=book', permanent: false },
+      { source: '/gallery', destination: '/library?view=art', permanent: false },
+    ];
+  },
   async rewrites() {
     return [
       { source: '/uploads/:path*', destination: '/api/uploads/:path*' },

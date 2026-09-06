@@ -43,8 +43,8 @@ function PublishChapterContent() {
     <BlockComposer
       noun="章节"
       draftKey="chapter-draft"
-      successRedirect={`/bookcase?category=${categoryFromUrl}`}
-      exitPath="/bookcase"
+      successRedirect={`/library?view=book&category=${categoryFromUrl}&refresh=1`}
+      exitPath="/library?view=book"
       headerTitle="📝 章节信息"
       mobileInfoPadding="0"
       mobileEditorPadding="0"

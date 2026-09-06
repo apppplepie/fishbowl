@@ -231,7 +231,7 @@ export default function BookPage() {
           await fetchCategoryPath('cat_bookcase');
         } else {
           message.error('书籍不存在');
-          router.push('/bookcase');
+          router.push('/library?view=book');
         }
       }
     } catch (error) {
@@ -248,7 +248,7 @@ export default function BookPage() {
         await fetchCategoryPath('cat_bookcase');
       } else {
         message.error('加载书籍失败');
-        router.push('/bookcase');
+        router.push('/library?view=book');
       }
     }
   };
@@ -475,7 +475,7 @@ export default function BookPage() {
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
                     onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                    onClick={() => router.push('/bookcase')}
+                    onClick={() => router.push('/library?view=book')}
                   >
                     书橱
                   </a>
@@ -503,7 +503,7 @@ export default function BookPage() {
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = '#1890ff')}
                         onMouseLeave={(e) => (e.currentTarget.style.color = '#000')}
-                        onClick={() => router.push(`/bookcase?category=${category.id}`)}
+                        onClick={() => router.push(`/library?view=book&category=${category.id}`)}
                       >
                         {displayName}
                       </a>
@@ -584,7 +584,7 @@ export default function BookPage() {
             startCategoryId: 'cat_bookcase',
             emptyText: '暂无内容',
             forceOpenRootKeys: false,
-            categoryNavigationPattern: '/bookcase?category={categoryId}',
+            categoryNavigationPattern: '/library?view=book&category={categoryId}',
             articleNavigationPattern: '/book/{articleId}',
             stylePrefix: 'chapter-index-sidebar',
             showArticleCount: false,

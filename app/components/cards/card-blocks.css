@@ -37,9 +37,9 @@
   /* 留白块，无可见内容 */
 }
 
-/* N span = N×8px */
+/* N span = N×8px；标题按 --title-lines 行成倍长高（默认 1 行） */
 .card-block--title {
-  height: calc(var(--title-span) * var(--card-row));
+  height: calc(var(--title-lines, 1) * var(--title-span) * var(--card-row));
 }
 .card-block--divider {
   height: calc(var(--divider-span) * var(--card-row));
@@ -57,18 +57,25 @@
   flex-shrink: 0;
 }
 .card-block--tags {
-  height: calc(var(--tags-span) * var(--card-row));
+  /* N 行标签：每行 --tags-span，行与行之间一个 --gap-span，与 blocks 里 tags 的 span 算法一致 */
+  height: calc(
+    var(--tags-rows, 1) * var(--tags-span) * var(--card-row) +
+    (var(--tags-rows, 1) - 1) * var(--gap-span) * var(--card-row)
+  );
+  overflow: hidden;
 }
 .card-block--emoji-weather {
   height: calc(var(--emoji-weather-span) * var(--card-row));
 }
 
-/* 标签行：标签垂直居中，不受行高影响 */
+/* 标签行：标签垂直居中，不受行高影响；多行时行距用一个 GAP，跟 span 对得上 */
 .card-block-tags {
   display: flex;
   align-items: center;
+  align-content: center;
   flex-wrap: wrap;
-  gap: 6px;
+  column-gap: 6px;
+  row-gap: calc(var(--gap-span) * var(--card-row));
   box-sizing: border-box;
 }
 .card-block--code {
@@ -135,9 +142,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: var(--title-lines, 1);
   -webkit-box-orient: vertical;
 }
+
+/* 多行标题：盒高和 clamp 都按 --title-lines 成倍长，才跟 span 里 TITLE×行数 对得上。
+   行数来源：文章卡取后端 blocks 的 title.lines，其余卡取 layout.titleLines（estimateTitleLines 按列宽估的），
+   卡片以内联 style 把它设在 .card-block--title 上；前端不自己决定行数。 */
 
 /* 简介内层：行高与盒一致，不限定行数，由外层盒高 + overflow 裁切 */
 .card-block-excerpt {

@@ -13,7 +13,7 @@ import { apiPostJson } from '@/lib/apiClient';
 import { uploadFileWithProgress } from '@/lib/uploadClient';
 import { getNextOrderIndex } from '@/app/utils/orderIndex';
 
-interface GalleryPublishFloatProps {
+interface ArtPublishFloatProps {
   onSuccess?: () => void;
 }
 
@@ -21,7 +21,7 @@ interface GalleryPublishFloatProps {
  * 照片墙发布悬浮按钮
  * 点击后弹出表单，创建绘画类型文章和图组
  */
-export default function GalleryPublishFloat({ onSuccess }: GalleryPublishFloatProps) {
+export default function ArtPublishFloat({ onSuccess }: ArtPublishFloatProps) {
   const { user, canModerate } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);

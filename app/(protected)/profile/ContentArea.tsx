@@ -1,7 +1,6 @@
 import React from 'react';
 import { Tab, User } from '../types';
 import { FakeGlassCard } from '@/app/components/ui';
-import { theme } from '@/app/config/theme';
 import {
   ShieldCheck,
   Key,
@@ -16,7 +15,7 @@ import { SecurityContent } from './sections/SecurityContent';
 import '@/app/styles/profile.css';
 
 // Profile 页面统一黑色文字样式
-const profileTextStyle = { color: '#000000' } as const;
+const profileTextStyle = { color: 'var(--profile-fg, #000000)' } as const;
 
 interface ContentAreaProps {
   activeTab: Tab | null;
@@ -99,8 +98,8 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
               profile-glass-effect
               overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
               ${isProfile ? 'md:col-span-2' : 'col-span-1'}
-              ${!isProfile && isOpen ? 'ring-1 ring-white/60 shadow-lg' : ''}
-              ${!isProfile && !isNotificationsEmpty ? 'hover:bg-white/60' : ''}
+              ${!isProfile && isOpen ? 'profile-section-open' : ''}
+              ${!isProfile && !isNotificationsEmpty ? 'profile-section-interactive' : ''}
             `}
           >
             {/* Header */}
@@ -115,8 +114,12 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                 <div
                   className="p-3 rounded-xl transition-colors duration-300"
                   style={{
-                    backgroundColor: isOpen && !isProfile ? theme.colors.black : theme.background.whiteOverlayLight,
-                    color: isOpen && !isProfile ? theme.colors.white : '#000000'
+                    backgroundColor: isOpen && !isProfile
+                      ? 'var(--profile-icon-active-bg, #000000)'
+                      : 'var(--profile-surface-accent, rgba(255,255,255,0.1))',
+                    color: isOpen && !isProfile
+                      ? 'var(--profile-icon-active-fg, #ffffff)'
+                      : 'var(--profile-fg, #000000)',
                   }}
                 >
                   <section.icon size={20} />
@@ -124,14 +127,14 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                 <div className="text-left">
                   <span
                     className="block text-lg font-medium transition-colors"
-                    style={{ ...profileTextStyle, color: '#000000' }}
+                    style={{ ...profileTextStyle, color: 'var(--profile-fg, #000000)' }}
                   >
                     {section.label}
                   </span>
                   {!isOpen && !isProfile && (
                     <span
                       className="block text-xs font-light animate-fade-in md:hidden"
-                      style={{ ...profileTextStyle, color: '#000000' }}
+                      style={{ ...profileTextStyle, color: 'var(--profile-fg, #000000)' }}
                     >
                       {section.summary}
                     </span>
@@ -144,7 +147,7 @@ export const ContentArea: React.FC<ContentAreaProps> = ({ activeTab, onTabChange
                 <ChevronDown
                   className="transition-transform duration-500 md:hidden"
                   style={{
-                    color: isOpen ? '#000000' : '#000000',
+                    color: isOpen ? 'var(--profile-fg, #000000)' : 'var(--profile-fg, #000000)',
                   }}
                   size={20}
                 />

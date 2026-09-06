@@ -12,7 +12,7 @@ interface ControlsProps {
 
 const ControlGroup: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="mb-6 last:mb-0">
-    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{title}</h3>
+    <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3">{title}</h3>
     <div className="space-y-4">
       {children}
     </div>
@@ -28,7 +28,7 @@ const Slider: React.FC<{
   onChange: (val: number) => void 
 }> = ({ label, value, min, max, step, onChange }) => (
   <div className="flex flex-col">
-    <div className="flex justify-between text-xs text-slate-500 mb-1 font-medium">
+    <div className="flex justify-between text-xs text-neutral-400 mb-1 font-medium">
       <span>{label}</span>
       <span>{value.toFixed(step < 0.1 ? 2 : 1)}</span>
     </div>
@@ -39,16 +39,16 @@ const Slider: React.FC<{
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600"
+      className="w-full h-1 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-neutral-300"
     />
   </div>
 );
 
 const DualColorPicker: React.FC<{ label: string; start: string; end: string; onStartChange: (v: string) => void; onEndChange: (v: string) => void }> = ({ label, start, end, onStartChange, onEndChange }) => (
     <div className="flex flex-col gap-2">
-        <span className="text-xs text-slate-500 font-medium">{label} (渐变)</span>
+        <span className="text-xs text-neutral-400 font-medium">{label} (渐变)</span>
         <div className="flex items-center gap-2">
-            <div className="relative overflow-hidden w-8 h-8 rounded-full border border-slate-200 shadow-sm transition-transform hover:scale-110">
+            <div className="relative overflow-hidden w-8 h-8 rounded-full border border-neutral-700 shadow-sm transition-transform hover:scale-110">
                 <input 
                     type="color" 
                     value={start} 
@@ -56,8 +56,8 @@ const DualColorPicker: React.FC<{ label: string; start: string; end: string; onS
                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] p-0 border-0 cursor-pointer"
                 />
             </div>
-            <span className="text-slate-300">→</span>
-            <div className="relative overflow-hidden w-8 h-8 rounded-full border border-slate-200 shadow-sm transition-transform hover:scale-110">
+            <span className="text-neutral-600">→</span>
+            <div className="relative overflow-hidden w-8 h-8 rounded-full border border-neutral-700 shadow-sm transition-transform hover:scale-110">
                 <input 
                     type="color" 
                     value={end} 
@@ -72,18 +72,18 @@ const DualColorPicker: React.FC<{ label: string; start: string; end: string; onS
 const Controls: React.FC<ControlsProps> = ({ settings, updateSettings, applyPreset, onClear }) => {
   const plantTypes = getAllPlantTypes();
   return (
-    <div className="w-80 h-full bg-white/90 border-r border-slate-200 p-6 overflow-y-auto scrollbar-hide shadow-lg flex flex-col z-20">
-      <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-        <h2 className="text-slate-700 font-serif text-lg tracking-wide">花园工具</h2>
+    <div className="w-80 h-full bg-black border-r border-neutral-800 p-6 overflow-y-auto scrollbar-hide shadow-lg flex flex-col z-20">
+      <div className="flex justify-between items-center mb-6 border-b border-neutral-800 pb-4">
+        <h2 className="text-neutral-100 font-serif text-lg tracking-wide">花园工具</h2>
       </div>
 
-      <div className="mb-6 bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1">
+      <div className="mb-6 bg-neutral-900 p-1 rounded-xl flex flex-wrap gap-1">
         {plantTypes.map((t) => (
             <button
                 key={t}
                 onClick={() => applyPreset(t)}
                 className={`flex-1 py-2 text-[10px] md:text-xs font-bold rounded-lg transition-all uppercase tracking-wide min-w-[30%]
-                    ${settings.type === t ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+                    ${settings.type === t ? 'bg-neutral-800 shadow-sm text-white' : 'text-neutral-500 hover:text-neutral-200'}`}
             >
                 {translatePlantType(t)}
             </button>
@@ -129,7 +129,7 @@ const Controls: React.FC<ControlsProps> = ({ settings, updateSettings, applyPres
         <Slider label="数量" value={settings.petalCount} min={3} max={16} step={1} onChange={(v) => updateSettings({ petalCount: v })} />
       </ControlGroup>
 
-      {/* <div className="pt-4 mt-6 border-t border-slate-100">
+      {/* <div className="pt-4 mt-6 border-t border-neutral-800">
         <button
             onClick={onClear}
             className="w-full bg-rose-50 hover:bg-rose-100 text-rose-500 py-3 rounded-xl text-sm font-medium transition-colors border border-rose-100 shadow-sm"

@@ -275,8 +275,31 @@ export const Segmented = <T extends OptionValue>({ options = [], value, defaultV
   const normalized = options.map((option: any) => typeof option === 'object' ? option : { label: option, value: option });
   const [internal, setInternal] = useState(defaultValue ?? normalized[0]?.value);
   const selected = value ?? internal;
-  return <div className={className} style={{ display: 'flex', width: block ? '100%' : undefined, padding: 3, gap: 3, borderRadius: 9, background: 'rgba(0,0,0,.06)', ...style }}>
-    {normalized.map((option: any) => <button key={String(option.value)} type="button" disabled={option.disabled} onClick={() => { setInternal(option.value); onChange?.(option.value as T); }} style={{ flex: block ? 1 : undefined, border: 0, borderRadius: 7, padding: '6px 10px', cursor: 'pointer', background: selected === option.value ? '#fff' : 'transparent', boxShadow: selected === option.value ? '0 1px 4px rgba(0,0,0,.14)' : 'none' }}>{option.label}</button>)}
+  return <div className={`lite-segmented ${className}`} style={{ display: 'flex', width: block ? '100%' : undefined, padding: 3, gap: 3, borderRadius: 9, background: 'var(--segmented-track-bg, rgba(0,0,0,.06))', ...style }}>
+    {normalized.map((option: any) => {
+      const isSelected = selected === option.value;
+      return (
+        <button
+          key={String(option.value)}
+          type="button"
+          disabled={option.disabled}
+          onClick={() => { setInternal(option.value); onChange?.(option.value as T); }}
+          className={isSelected ? 'lite-segmented-item is-selected' : 'lite-segmented-item'}
+          style={{
+            flex: block ? 1 : undefined,
+            border: 0,
+            borderRadius: 7,
+            padding: '6px 10px',
+            cursor: 'pointer',
+            color: isSelected ? 'var(--segmented-item-selected-fg, inherit)' : 'inherit',
+            background: isSelected ? 'var(--segmented-item-selected-bg, #fff)' : 'transparent',
+            boxShadow: isSelected ? 'var(--segmented-item-selected-shadow, 0 1px 4px rgba(0,0,0,.14))' : 'none',
+          }}
+        >
+          {option.label}
+        </button>
+      );
+    })}
   </div>;
 };
 
@@ -298,7 +321,11 @@ export const Dropdown: React.FC<any> = ({ children, menu, placement }) => {
 
 export const Menu: React.FC<MenuProps> = ({ items = [], onClick, mode = 'vertical', selectedKeys = [], style, className = '' }: MenuProps) => (
   <nav className={className} style={{ display: 'flex', flexDirection: mode === 'horizontal' ? 'row' : 'column', gap: 4, ...style }}>
-    {items.map((item: MenuItem, index) => item.type === 'divider' ? <hr key={index} /> : <button key={String(item.key ?? index)} type="button" disabled={item.disabled} onClick={(event) => { const info = { key: String(item.key ?? index), domEvent: event }; item.onClick?.(info); onClick?.(info); }} style={{ display: 'flex', alignItems: 'center', gap: 7, border: 0, borderRadius: 8, padding: '8px 10px', color: item.danger ? '#d4380d' : 'inherit', background: selectedKeys.includes(String(item.key)) ? 'rgba(22,119,255,.12)' : 'transparent', cursor: 'pointer' }}>{item.icon}{item.label}</button>)}
+    {items.map((item: MenuItem, index) => {
+      if (item.type === 'divider') return <hr key={index} />;
+      const selected = selectedKeys.includes(String(item.key));
+      return <button key={String(item.key ?? index)} type="button" disabled={item.disabled} className={`ui-menu-item${selected ? ' ui-menu-item-selected' : ''}`} onClick={(event) => { const info = { key: String(item.key ?? index), domEvent: event }; item.onClick?.(info); onClick?.(info); }} style={{ display: 'flex', alignItems: 'center', gap: 7, border: 0, borderRadius: 8, padding: '8px 10px', color: item.danger ? '#d4380d' : 'inherit', background: selected ? 'rgba(22,119,255,.12)' : 'transparent', cursor: 'pointer' }}>{item.icon}{item.label}</button>;
+    })}
   </nav>
 );
 

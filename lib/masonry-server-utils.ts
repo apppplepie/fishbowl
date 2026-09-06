@@ -12,7 +12,11 @@ import {
   DEFAULT_IMAGE_HEIGHT_PX,
   CARD_BOTTOM_GAP_SPAN,
 } from '@/lib/lib-card-layout/constants';
-import { computeSpanFromBlocks } from '@/lib/lib-card-layout';
+import {
+  computeSpanFromBlocks,
+  estimateTitleLines,
+  type TitleCardKind,
+} from '@/lib/lib-card-layout';
 
 /** 屏幕宽度推算容器宽度时的左右占位（与前端 padding 一致） */
 export const CONTAINER_WIDTH_OFFSET_PX = 48;
@@ -45,6 +49,8 @@ export function getColumnWidthFromContainerWidth(containerWidth: number): number
 
 export type LayoutHint = {
   titleSpan?: number;
+  /** 标题允许的行数；卡片据此设 --title-lines，titleSpan 必须是 TITLE × 它 */
+  titleLines?: number;
   excerptLines?: number;
   dividerSpan?: number;
   dateSpan?: number;
@@ -199,6 +205,37 @@ function computeSpanFromLayout(layout: LayoutHint): number {
   return Math.max(1, span);
 }
 
+/**
+ * 标题行数：优先用卡片自带的 layoutHint.titleLines（服务端按请求头列宽算好下发的），
+ * 拿不到才按当前列宽现估。span 和 clamp 必须来自同一个值，所以只在这一处决定。
+ */
+export function getTitleLinesForCard(
+  article: ArticleLike,
+  columnWidth?: number,
+  kind: TitleCardKind = 'article'
+): number {
+  const hinted = article.layoutHint?.titleLines;
+  if (hinted != null && Number.isFinite(hinted) && hinted > 0) return Math.floor(hinted);
+  return estimateTitleLines((article as any).title, columnWidth, kind);
+}
+
+/** 把标题行数写进 layout：titleLines 给卡片 clamp，titleSpan 给网格算高 */
+function withTitleLines(
+  layout: LayoutHint,
+  article: ArticleLike,
+  columnWidth: number,
+  kind: TitleCardKind
+): LayoutHint {
+  // 标题块本来就不占位的卡（如代码卡的 titleSpan 被显式置 0）不掺和
+  if ((layout.titleSpan ?? 0) === 0) return layout;
+  const titleLines = getTitleLinesForCard(article, columnWidth, kind);
+  layout.titleLines = titleLines;
+  if (article.layoutHint?.titleSpan == null) {
+    layout.titleSpan = BLOCK_SPANS.TITLE * titleLines;
+  }
+  return layout;
+}
+
 /** 非文章卡：preset + layoutHint → LayoutHint */
 export function getLayoutForCard(
   article: ArticleLike,
@@ -210,10 +247,10 @@ export function getLayoutForCard(
   if (article.type === 'image' || article.type === 'drawing') {
     const aspect = parseAspectRatio(article, 3 / 2);
     const imageHeightPx = hint.imageHeightPx ?? colW / aspect;
-    return { ...IMAGE_PRESET, ...hint, imageHeightPx };
+    return withTitleLines({ ...IMAGE_PRESET, ...hint, imageHeightPx }, article, colW, 'image');
   }
   if (article.type === 'code' || (article as any).codePreview) {
-    return { ...CODE_PRESET, ...hint };
+    return withTitleLines({ ...CODE_PRESET, ...hint }, article, colW, 'code');
   }
   if (article.type === 'text' || article.type === 'article' || (article as any).content) {
     const layout = { ...ARTICLE_PRESET, ...hint };
@@ -222,19 +259,19 @@ export function getLayoutForCard(
       (article as any).published_at != null ||
       (article as any).created_at != null;
     if (hasDate && (layout.dateSpan ?? 0) === 0) layout.dateSpan = BLOCK_SPANS.DATE;
-    return layout;
+    return withTitleLines(layout, article, colW, 'article');
   }
   if (article.type === 'diary' || (article as any).excerpt) {
     const layout = { ...DIARY_PRESET, ...hint };
     // 日记 3 span 只给地点用；有地点才占这块，没有就不渲染
     const hasLocation = !!(article as any).location;
     if (!hasLocation) layout.emojiWeatherSpan = 0;
-    return layout;
+    return withTitleLines(layout, article, colW, 'diary');
   }
   if (article.type === 'book' || (article as any).coverImage) {
-    return { ...BOOK_PRESET, ...hint };
+    return withTitleLines({ ...BOOK_PRESET, ...hint }, article, colW, 'book');
   }
-  return { ...ARTICLE_PRESET, ...hint };
+  return withTitleLines({ ...ARTICLE_PRESET, ...hint }, article, colW, 'article');
 }
 
 /** 仅内容 span（不含卡片底部间隔），供服务端存 precomputedSpan 用 */

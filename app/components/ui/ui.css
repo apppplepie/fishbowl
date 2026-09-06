@@ -1079,7 +1079,9 @@
   width: 100%;
   height: 100%;
   position: relative;
-  transform: translateZ(0) scale(1);
+  /* 点的位移是按 200px 容器硬编码的，容器变小时必须整层等比缩放，
+     否则右侧的点会被 .ui-spinner 的 overflow:hidden 裁掉 */
+  transform: translateZ(0) scale(var(--s, 1));
   backface-visibility: hidden;
   transform-origin: 0 0;
 }
@@ -1145,22 +1147,26 @@
 .ui-spin-small .ui-spinner {
   width: 100px;
   height: 100px;
+  --s: 0.5;
 }
 
 /* 侧边栏内的小型 spin 进一步缩小 */
 .generic-index-tree-container .ui-spin-small .ui-spinner {
   width: 40px;
   height: 40px;
+  --s: 0.2;
 }
 
 .ui-spin-middle .ui-spinner {
   width: 150px;
   height: 150px;
+  --s: 0.75;
 }
 
 .ui-spin-large .ui-spinner {
   width: 200px;
   height: 200px;
+  --s: 1;
 }
 
 .ui-spin-tip {

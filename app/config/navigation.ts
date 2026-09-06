@@ -14,6 +14,10 @@ export interface NavigationItem {
 
 /**
  * 公共导航菜单（所有用户可见）
+ *
+ * 「书房」的三个视角（文章 / 书籍 / 画作）在导航里长得跟别的入口一模一样，
+ * 但它们指向同一个 /library 路由、只差一个 ?view=，
+ * 所以点它们是页面内换视角，不会真的换页。
  */
 export const publicNavigationItems: NavigationItem[] = [
   {
@@ -23,28 +27,22 @@ export const publicNavigationItems: NavigationItem[] = [
     path: '/',
   },
   {
-    key: 'gallery',
-    label: '图片墙',
-    icon: 'PictureOutlined',
-    path: '/gallery',
-  },
-  {
-    key: 'archive',
-    label: '文章归档',
+    key: 'library-doc',
+    label: '文章',
     icon: 'FileTextOutlined',
-    path: '/archive',
+    path: '/library?view=doc',
   },
-  // {
-  //   key: 'publish-article',
-  //   label: '创作文章',
-  //   icon: 'FormOutlined',
-  //   path: '/publish-article',
-  // },
   {
-    key: 'bookcase',
-    label: '书橱',
+    key: 'library-book',
+    label: '书籍',
     icon: 'BookOutlined',
-    path: '/bookcase',
+    path: '/library?view=book',
+  },
+  {
+    key: 'library-art',
+    label: '画作',
+    icon: 'PictureOutlined',
+    path: '/library?view=art',
   },
   {
     key: 'fishbowl',

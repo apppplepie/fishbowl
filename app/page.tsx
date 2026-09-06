@@ -1064,7 +1064,7 @@ export default function Home() {
                   type="default"
                   size="large"
                   className="glass-cta-btn"
-                  onClick={() => router.push('/archive')}
+                  onClick={() => router.push('/library?view=doc')}
                   style={{
                     height: '50px',
                     fontSize: '16px',

@@ -4,3 +4,5 @@
 export * from './constants';
 export { computeSpanFromBlocks, type BlockLike } from './computeSpanFromBlocks';
 export * from './buildBlocksFromArticle';
+export * from './estimateTitleLines';
+export * from './estimateTagRows';

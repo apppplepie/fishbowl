@@ -3,26 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import { FloatButton, Modal, message, Input, Button } from '@/app/components/ui';
 import { Form, Select } from '@/app/components/ui/compat';
-import { Plus, Book } from 'lucide-react';
-import { EditOutlined, InsertRowAboveOutlined } from '@/app/components/ui/icons';
-import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { apiPostJson } from '@/lib/apiClient';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
-interface ArchiveActionFloatProps {
+interface DocActionFloatProps {
   onDiarySuccess?: () => void;
 }
 
 /**
- * 归档页面操作悬浮按钮组
- * 集成发布文章、写日志、查看归档等功能
+ * 书房「文章」视角右下角的加号：写日志
+ *
+ * 「写文章」已经外包给 GPT（POST /api/gpt/publish），所以这里只剩一个动作，
+ * 不用再摊开成一组按钮。
  */
-export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloatProps) {
-  const router = useRouter();
-  const { user, canModerate } = useAuth();
+export default function DocActionFloat({ onDiarySuccess }: DocActionFloatProps) {
+  const { canModerate } = useAuth();
   const [diaryModalOpen, setDiaryModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [diaryForm] = Form.useForm();
@@ -53,11 +52,6 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
     const minute = String(now.getMinutes()).padStart(2, '0');
 
     return `${year}年${month}月${day}日 ${hour}:${minute}`;
-  };
-
-  // 跳转到发布文章页面
-  const handlePublishArticle = () => {
-    router.push('/publish-article');
   };
 
   // 提交日志表单
@@ -124,31 +118,13 @@ export default function ArchiveActionFloat({ onDiarySuccess }: ArchiveActionFloa
 
   return (
     <>
-      <FloatButton.Group
-        trigger="click"
+      <FloatButton
+        icon={<Plus size={20} />}
         type="primary"
         style={{ right: 24, bottom: 40 }}
-        icon={<Plus size={20} />}
-        tooltip={tooltipProp("操作菜单")}
-        backTop={{
-          visibilityHeight: 100,
-          tooltip: tooltipProp("返回顶部"),
-        }}
-      >
-        {/* 写文章按钮 */}
-        <FloatButton
-          icon={<EditOutlined />}
-          tooltip={tooltipProp("写文章")}
-          onClick={handlePublishArticle}
-        />
-
-        {/* 写日志按钮 */}
-        <FloatButton
-          icon={<InsertRowAboveOutlined />}
-          tooltip={tooltipProp("写日志")}
-          onClick={() => setDiaryModalOpen(true)}
-        />
-      </FloatButton.Group>
+        onClick={() => setDiaryModalOpen(true)}
+        tooltip={tooltipProp("写日志")}
+      />
 
       {/* 日志发布弹窗 */}
       <Modal

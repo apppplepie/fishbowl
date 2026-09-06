@@ -1,0 +1,397 @@
+/* 登录弹窗：极简黑色半透明磨玻璃。
+   刻意不接主题强调色 —— 整个面板只有黑、白和透明度三档，唯一的实心色块是主按钮。
+   注意 ProfileModal.css 复用了本文件底部的 keyframes。 */
+
+.glogin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.glogin-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: glogin-fade-in 220ms ease-out both;
+}
+
+.glogin-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 20px;
+  padding: 26px 24px 24px;
+  background: rgba(20, 20, 22, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  backdrop-filter: blur(28px) saturate(140%);
+  animation: glogin-panel-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* 极轻的顶部高光，交代玻璃的厚度，不做成装饰 */
+.glogin-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.08),
+    transparent 45%
+  );
+}
+
+.glogin-closing .glogin-panel {
+  animation: glogin-panel-out 180ms ease-in both;
+}
+
+.glogin-closing .glogin-scrim {
+  animation: glogin-fade-out 180ms ease-in both;
+}
+
+/* ---------- 头部 ---------- */
+
+.glogin-head {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 18px;
+}
+
+.glogin-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.glogin-sub {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.glogin-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.glogin-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ---------- 分段式 Tab ---------- */
+
+.glogin-tabs {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 4px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glogin-tab-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / 3);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.13);
+  transition: transform 320ms cubic-bezier(0.3, 0.9, 0.3, 1);
+  pointer-events: none;
+}
+
+.glogin-tab {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  transition: color 240ms ease;
+}
+
+.glogin-tab:hover {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.glogin-tab[data-active='true'] {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ---------- 表单 ---------- */
+
+.glogin-body {
+  position: relative;
+  z-index: 1;
+  min-height: 226px;
+  display: flex;
+  flex-direction: column;
+}
+
+.glogin-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 10px;
+  animation: glogin-pane-in 300ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.glogin-pane[data-dir='-1'] {
+  animation-name: glogin-pane-in-rev;
+}
+
+.glogin-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 220ms ease, background 220ms ease;
+}
+
+.glogin-field:focus-within {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.glogin-field svg {
+  flex: none;
+  color: rgba(255, 255, 255, 0.32);
+  transition: color 220ms ease;
+}
+
+.glogin-field:focus-within svg {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.glogin-field input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.glogin-field input::placeholder {
+  color: rgba(255, 255, 255, 0.28);
+}
+
+/* 自动填充时保持黑底，不要被浏览器刷成白色 */
+.glogin-field input:-webkit-autofill,
+.glogin-field input:-webkit-autofill:hover,
+.glogin-field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.92);
+  -webkit-box-shadow: 0 0 0 1000px rgba(28, 28, 30, 0.98) inset;
+  caret-color: #fff;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* ---------- 主按钮：整个面板唯一的实心色块 ---------- */
+
+.glogin-submit {
+  width: 100%;
+  height: 48px;
+  margin-top: auto;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #111113;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background 200ms ease, transform 200ms ease, opacity 200ms ease;
+}
+
+.glogin-submit:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.glogin-submit:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.glogin-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.glogin-submit-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.glogin-spin {
+  animation: glogin-spin 900ms linear infinite;
+}
+
+/* ---------- 游客页：阅读模式开关 ---------- */
+
+.glogin-mode {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 240ms ease, border-color 240ms ease;
+}
+
+.glogin-mode:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* 学习/自由两态靠边框亮度和图标区分，不靠颜色 */
+.glogin-mode[data-study='true'] {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.glogin-mode-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.55);
+  transition: background 240ms ease, color 240ms ease;
+}
+
+.glogin-mode[data-study='true'] .glogin-mode-icon {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.glogin-mode-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.glogin-mode-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.glogin-mode-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.glogin-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.32);
+}
+
+/* ---------- 动画 ---------- */
+
+@keyframes glogin-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes glogin-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes glogin-panel-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes glogin-panel-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+@keyframes glogin-pane-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glogin-pane-in-rev {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glogin-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .glogin-panel {
+    padding: 22px 18px 20px;
+    border-radius: 18px;
+  }
+  .glogin-panel::before { border-radius: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glogin-scrim,
+  .glogin-panel,
+  .glogin-pane,
+  .glogin-closing .glogin-panel,
+  .glogin-closing .glogin-scrim {
+    animation: none !important;
+  }
+  .glogin-tab-indicator,
+  .glogin-submit {
+    transition: none !important;
+  }
+}

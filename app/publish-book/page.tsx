@@ -330,7 +330,7 @@ function PublishBookPage() {
         }
         // 跳转到bookcase页面
         setTimeout(() => {
-          router.push('/bookcase');
+          router.push('/library?view=book&refresh=1');
         }, 1000);
       } else {
         console.error('发布书籍失败: API返回成功但文章数据缺失', {
@@ -665,7 +665,7 @@ function PublishBookPage() {
         blocks={blocks}
         isPreviewMode={isPreviewMode}
         setIsPreviewMode={setIsPreviewMode}
-        exitPath="/bookcase"
+        exitPath="/library?view=book"
       />
     </>
   );

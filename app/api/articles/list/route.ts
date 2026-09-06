@@ -11,7 +11,7 @@ import {
   charCountToLinesForDiary,
   getColumnWidthFromContainerWidth,
 } from '@/lib/masonry-server-utils';
-import { buildBlocksFromArticle } from '@/lib/lib-card-layout';
+import { buildBlocksFromArticle, estimateTitleLines } from '@/lib/lib-card-layout';
 import type { ArticleBlock } from '@/lib/lib-card-layout';
 
 // 类型定义
@@ -72,8 +72,8 @@ interface ProcessedArticle {
   precomputedSpan?: number; // 服务端预计算的 masonry span
   /** 文章卡 blocks 驱动：仅 type 为 text 时存在 */
   blocks?: ArticleBlock[];
-  /** 日记卡：后端按正文字符数算好的行数，用于 span 与 line-clamp */
-  layoutHint?: { excerptLines?: number };
+  /** 后端按列宽/字符数算好的行数（标题、日记正文），用于 span 与 line-clamp */
+  layoutHint?: { excerptLines?: number; titleLines?: number };
 }
 
 /**
@@ -171,6 +171,14 @@ export async function GET(request: NextRequest) {
       Number.isFinite(containerWidth) && containerWidth > 0
         ? getColumnWidthFromContainerWidth(containerWidth)
         : undefined;
+
+    // 断点由容器宽度反推：apiClient 发的是 min(1400, innerWidth - 48)，
+    // 而 useResponsive 的手机断点是 innerWidth < 768，对应容器宽 < 720。
+    // 拿不到请求头时按桌面处理（保持既有行为）。
+    const breakpoint: 'mobile' | 'desktop' =
+      Number.isFinite(containerWidth) && containerWidth > 0 && containerWidth < 720
+        ? 'mobile'
+        : 'desktop';
 
     // 获取当前用户权限
     const currentUser = getCurrentUser(request);
@@ -379,18 +387,23 @@ export async function GET(request: NextRequest) {
             title: article.title,
             excerpt: article.excerpt ?? undefined,
             tags,
+            author: article.author ?? undefined,
             updatedAt: article.updated_at?.toISOString?.(),
             publishedAt: article.published_at?.toISOString?.(),
             createdAt: article.created_at?.toISOString?.(),
           },
-          'desktop'
+          breakpoint,
+          columnWidth
         );
         return { ...base, blocks, precomputedSpan };
       }
       if (article.type === 'diary') {
         const contentChars = (article.excerpt ?? '').trim().length;
         const excerptLines = charCountToLinesForDiary(contentChars);
-        const layoutHint = { excerptLines };
+        const layoutHint = {
+          excerptLines,
+          titleLines: estimateTitleLines(article.title, columnWidth, 'diary'),
+        };
         return {
           ...base,
           layoutHint,
@@ -409,12 +422,26 @@ export async function GET(request: NextRequest) {
           ),
         };
       }
+      // 标题行数在这里算好随卡片下发：前端照着 clamp，才和 precomputedSpan 对得上
+      const layoutHint = {
+        titleLines: estimateTitleLines(
+          article.title,
+          columnWidth,
+          article.type === 'image' || article.type === 'drawing'
+            ? 'image'
+            : article.type === 'code'
+              ? 'code'
+              : 'article'
+        ),
+      };
       return {
         ...base,
+        layoutHint,
         precomputedSpan: calculateServerSpan(
           {
             ...base,
             type: article.type,
+            layoutHint,
             coverImage,
             cover_image: coverImage,
             imageWidth: coverImage?.width,

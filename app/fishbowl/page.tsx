@@ -10,6 +10,7 @@ import GardenCanvas from '../components/garden/GardenCanvas';
 import GardenSidebar from '../components/garden/GardenSidebar';
 import { GardenDrawerButton } from '../components/garden/GardenDrawerButton';
 import FloatButton from '../components/ui/FloatButton';
+import { SlidersHorizontal, Undo2, Save, RotateCcw } from 'lucide-react';
 import RootSystem from '../components/garden/RootSystem';
 import BaselinePlantViewer from '../components/garden/BaselinePlantViewer';
 import Goldfish from '../components/fish/Goldfish';
@@ -716,41 +717,29 @@ export default function FishbowlPage() {
         expanded={sidebarExpanded}
       />
 
-      {/* Control Buttons - Floating Action Button Group */}
+      {/* 右下角控制按钮：这里不是「新建」，是「调这一缸的设置」，
+          所以主按钮用推杆图标，别再跟书房那三个加号撞脸 */}
       <FloatButton.Group
-        icon={
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        }
+        icon={<SlidersHorizontal size={20} />}
         trigger="click"
         style={{ right: 32, bottom: 32 }}
+        tooltip={{ title: '鱼缸设置', placement: 'left' }}
         backTop={false}
       >
         <FloatButton
-          icon={
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-            </svg>
-          }
+          icon={<Undo2 size={20} />}
+          tooltip={{ title: '撤销上一株', placement: 'left' }}
           onClick={handleUndo}
         />
         <FloatButton
-          icon={
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V7a1 1 0 10-2 0v4.586l-1.293-1.293z"/>
-              <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/>
-            </svg>
-          }
+          icon={<Save size={20} />}
           type="primary"
+          tooltip={{ title: '保存鱼缸', placement: 'left' }}
           onClick={handleSave}
         />
         <FloatButton
-          icon={
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-            </svg>
-          }
+          icon={<RotateCcw size={20} />}
+          tooltip={{ title: '重置鱼缸', placement: 'left' }}
           onClick={handleReset}
         />
       </FloatButton.Group>

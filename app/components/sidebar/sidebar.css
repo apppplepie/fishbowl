@@ -17,6 +17,21 @@
   --scrollbar-thumb-hover: #404040;
 }
 
+/* ========== 鱼缸「花园工具」侧边栏 ==========
+   跟上面那套用同一批变量，滚动条一样藏起来 */
+.garden-sidebar,
+.garden-sidebar .scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.garden-sidebar::-webkit-scrollbar,
+.garden-sidebar .scrollbar-hide::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 /* ========== 移动端抽屉（无 antd） ========== */
 .sidebar-backdrop {
   position: fixed;
@@ -98,13 +113,13 @@
 
 /* 手机端抽屉内：让树容器占满剩余高度并可滚动 */
 .unified-navigator-drawer-wrap .generic-index-tree-container,
-.unified-navigator-drawer-wrap .archive-category-container {
+.unified-navigator-drawer-wrap .library-category-container {
   flex: 1;
   min-height: 0;
 }
 
 /* 确保手机端 flex 布局生效（archive 分类容器） */
-.unified-navigator-drawer-wrap .archive-category-container {
+.unified-navigator-drawer-wrap .library-category-container {
   height: auto !important;
 }
 
@@ -138,7 +153,7 @@
 
 /* ========== 树/菜单容器（通用树 + 归档分类容器共用） ========== */
 .generic-index-tree-container,
-.archive-category-container {
+.library-category-container {
   flex: 1;
   min-height: 0;
   height: 100%; /* 桌面端 */
@@ -154,7 +169,7 @@
 }
 
 .generic-index-tree-container::-webkit-scrollbar,
-.archive-category-container::-webkit-scrollbar {
+.library-category-container::-webkit-scrollbar {
   width: 0;
   height: 0;
   display: none;
@@ -321,8 +336,8 @@
 /* 空状态（项目 ui/Empty）在侧边栏内的文字颜色 */
 .generic-index-tree-container [class*="empty"],
 .generic-index-tree-container [class*="Empty"],
-.archive-category-container [class*="empty"],
-.archive-category-container [class*="Empty"] {
+.library-category-container [class*="empty"],
+.library-category-container [class*="Empty"] {
   color: var(--menu-text-default) !important;
 }
 

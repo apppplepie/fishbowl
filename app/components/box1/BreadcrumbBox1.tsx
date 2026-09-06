@@ -45,7 +45,7 @@ export default function BreadcrumbBox1({
   }, [router]);
 
   const handleBookcaseClick = useCallback(() => {
-    router.push('/bookcase', { scroll: false });
+    router.push('/library?view=book', { scroll: false });
   }, [router]);
 
   // 使用 useMemo 缓存 breadcrumbItems，避免不必要的重新创建
@@ -105,7 +105,7 @@ export default function BreadcrumbBox1({
               }}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
-              onClick={() => router.push(`/archive?category=${category.id}`, { scroll: false })}
+              onClick={() => router.push(`/library?view=doc&category=${category.id}`, { scroll: false })}
             >
               {category.name}
             </a>
@@ -147,7 +147,7 @@ export default function BreadcrumbBox1({
               }}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
-              onClick={() => router.push(`/bookcase?category=${category.id}`, { scroll: false })}
+              onClick={() => router.push(`/library?view=book&category=${category.id}`, { scroll: false })}
             >
               {category.name}
             </a>

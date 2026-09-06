@@ -91,10 +91,10 @@ export default function ArticleEditFloat({
     router.push(`/publish-chapter${query}`);
   };
 
-  // 复用 ArchiveActionFloat 写文章按钮逻辑
-  const handlePublishArticle = () => {
-    router.push('/publish-article');
-  };
+  // 写文章已外包给 GPT（POST /api/gpt/publish），前端入口停用
+  // const handlePublishArticle = () => {
+  //   router.push('/publish-article');
+  // };
 
   // 删除确认
   const handleDelete = () => {
@@ -143,6 +143,7 @@ export default function ArticleEditFloat({
               onSuccess={onChapterManageSuccess}
             />
           )} */}
+          {/* 写文章 —— 已停用，改由 GPT Actions 发布
           {isArticlePage && (
             <FloatButton
               icon={<FileText size={20} />}
@@ -150,6 +151,7 @@ export default function ArticleEditFloat({
               onClick={handlePublishArticle}
             />
           )}
+          */}
           {showEditButton && canEditArticle && onDelete && (
             <FloatButton
               icon={<Trash2 size={20} />}

@@ -5,8 +5,8 @@
 
 import type { CSSProperties } from 'react';
 
-/** 主题内容区最大宽度（与文章页一致） */
-export const CONTENT_AREA_MAX_WIDTH = 800;
+/** 主题内容区最大宽度（与文章页一致；桌面端略宽以缩小两侧页边距） */
+export const CONTENT_AREA_MAX_WIDTH = 1000;
 
 /**
  * 主题内容区外层容器样式（宽度、居中）

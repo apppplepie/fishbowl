@@ -5,8 +5,17 @@
  */
 
 import { BLOCK_SPANS } from './constants';
+import { estimateTitleLines } from './estimateTitleLines';
+import { estimateTagRows } from './estimateTagRows';
 
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
+
+/** 拿不到真实列宽时按断点兜底（手机 2 列、平板 3 列、桌面 4 列的常见列宽） */
+const FALLBACK_COL_WIDTH_PX: Record<Breakpoint, number> = {
+  mobile: 164,
+  tablet: 250,
+  desktop: 310,
+};
 
 const THRESHOLDS: Record<Breakpoint, number[]> = {
   mobile: [12, 24, 48],
@@ -26,6 +35,7 @@ export type ArticleForBlocks = {
   title: string;
   excerpt?: string;
   tags?: string[];
+  author?: string;
   updatedAt?: string;
   publishedAt?: string;
   createdAt?: string;
@@ -33,11 +43,20 @@ export type ArticleForBlocks = {
 
 export type BlockPad = { type: 'pad-top' | 'pad-bottom'; span: number };
 export type BlockGap = { type: 'gap' };
-export type BlockTitle = { type: 'title'; span: number; text: string };
-export type BlockTags = { type: 'tags'; span: number; tags: string[] };
+/** lines：标题允许的行数，由 estimateTitleLines 按列宽估出来，前端照着 clamp */
+export type BlockTitle = { type: 'title'; span: number; text: string; lines: number };
+/** rows：标签排几行；visibleCount：前几个完整显示，其余用「+N」收尾 */
+export type BlockTags = {
+  type: 'tags';
+  span: number;
+  tags: string[];
+  rows: number;
+  visibleCount: number;
+};
 export type BlockExcerpt = { type: 'excerpt'; lines: number; span: number; text: string };
 export type BlockDivider = { type: 'divider'; span: number };
-export type BlockDate = { type: 'date'; span: number; value: string };
+/** author：手机端在同一行右侧显示作者，不额外占 span */
+export type BlockDate = { type: 'date'; span: number; value: string; author?: string };
 
 export type ArticleBlock =
   | BlockPad
@@ -50,19 +69,40 @@ export type ArticleBlock =
 
 export function buildBlocksFromArticle(
   article: ArticleForBlocks,
-  bp: Breakpoint = 'desktop'
+  bp: Breakpoint = 'desktop',
+  columnWidth?: number
 ): { blocks: ArticleBlock[]; precomputedSpan: number } {
   const blocks: ArticleBlock[] = [];
+  const isMobile = bp === 'mobile';
+
+  const colW = columnWidth ?? FALLBACK_COL_WIDTH_PX[bp];
+  // 标题按列宽估行数：窄列（手机、多列）下长标题会换行撑高，不再被一行 clamp 截掉
+  const titleLines = estimateTitleLines(article.title, colW, 'article');
 
   blocks.push({ type: 'pad-top', span: BLOCK_SPANS.PAD_TOP });
-  blocks.push({ type: 'title', span: BLOCK_SPANS.TITLE, text: article.title });
+  blocks.push({
+    type: 'title',
+    span: BLOCK_SPANS.TITLE * titleLines,
+    text: article.title,
+    lines: titleLines,
+  });
 
   if (article.tags && article.tags.length > 0) {
     blocks.push({ type: 'gap' });
-    blocks.push({ type: 'tags', span: BLOCK_SPANS.TAGS, tags: article.tags });
+    // 标签按列宽排行：窄列（手机）下多排几行，把标签显示全，而不是只留一个 +N
+    const { rows, visibleCount } = estimateTagRows(article.tags, colW, 'article');
+    blocks.push({
+      type: 'tags',
+      // 行与行之间留一个 GAP，跟 card-blocks.css 的 row-gap 对齐
+      span: rows * BLOCK_SPANS.TAGS + (rows - 1) * BLOCK_SPANS.GAP,
+      tags: article.tags,
+      rows,
+      visibleCount,
+    });
   }
 
-  if (article.excerpt && article.excerpt.trim()) {
+  // 手机端不放简介：窄列里它会把标题挤没，标题 + 时间 + 标签 + 作者已经够用
+  if (!isMobile && article.excerpt && article.excerpt.trim()) {
     blocks.push({ type: 'gap' });
     const chars = article.excerpt.trim().length;
     const lines = Math.min(4, charCountToLines(chars, bp));
@@ -83,6 +123,8 @@ export function buildBlocksFromArticle(
       type: 'date',
       span: BLOCK_SPANS.DATE,
       value: article.updatedAt || article.publishedAt || article.createdAt!,
+      // 作者和时间共用这一行，所以不需要额外的 span
+      ...(isMobile && article.author ? { author: article.author } : {}),
     });
   }
 

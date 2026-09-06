@@ -11,8 +11,8 @@ export default function PublishArticlePage() {
     <BlockComposer
       noun="文章"
       draftKey="article-draft"
-      successRedirect="/archive?refresh=1"
-      exitPath="/archive"
+      successRedirect="/library?view=doc&refresh=1"
+      exitPath="/library?view=doc"
     />
   );
 }

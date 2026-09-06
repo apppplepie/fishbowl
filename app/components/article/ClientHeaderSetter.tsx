@@ -130,7 +130,7 @@ export default function ClientHeaderSetter({ articleId, editMode = 'view' }: Cli
             apiEndpoint: '/api/categories/tree-with-articles',
             emptyText: '暂无文章',
             forceOpenRootKeys: true,
-            categoryNavigationPattern: '/archive?category={categoryId}',
+            categoryNavigationPattern: '/library?view=doc&category={categoryId}',
             articleNavigationPattern: '/article/{articleId}',
             stylePrefix: 'article-index-sidebar',
             showArticleCount: true,

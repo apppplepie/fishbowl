@@ -46,6 +46,8 @@ export default function CodeCard({
   layout,
 }: CodeCardProps & MasonryProps) {
   const colors = useCardBackground(card.id || '');
+  // 标题行数由 layout 决定（span 里已按 TITLE×行数 留好高度），这里只负责撑盒子和 clamp
+  const titleLines = Math.max(1, layout?.titleLines ?? 1);
   const CODE_LINE_COUNT = 4;
   const codeBlockHeightPx = spanToHeightPx(BLOCK_SPANS.CODE_BLOCK);
   const codeWrapPaddingVertical = 32;
@@ -72,7 +74,10 @@ export default function CodeCard({
       dataCardType="CODE_CARD"
     >
       <div className="card-block--pad-top" aria-hidden />
-      <div className="card-block-title card-block-title--code card-block--title">
+      <div
+        className="card-block-title card-block-title--code card-block--title"
+        style={{ ['--title-lines' as any]: titleLines }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
           {/* <CodeOutlined style={{ fontSize: '20px' }} /> */}
           <h3 className="card-block-title__text" style={{ color: colors.textColor }}>

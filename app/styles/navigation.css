@@ -6,6 +6,39 @@
   background: transparent !important;
 }
 
+/* ---------- 兼容层 Menu（原生 button）的黑底导航样式 ----------
+   书房的「文章 / 书籍 / 画作」跟首页、鱼缸长得一模一样，
+   区别只有点下去是页面内换视角而已，所以样式必须完全一致。 */
+.header-nav-menu .ui-menu-item {
+  height: 32px;
+  padding: 4px 12px !important;
+  border-radius: 4px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  background: transparent !important;
+  font-size: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.header-nav-menu .ui-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.header-nav-menu .ui-menu-item-selected,
+.header-nav-menu .ui-menu-item-selected:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .header-nav-menu .ui-menu-item {
+    padding: 4px 8px !important;
+  }
+}
+
 .header-nav-menu .ant-menu-item {
   border-radius: 4px !important;
   margin: 0 4px !important;

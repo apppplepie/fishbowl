@@ -18,7 +18,7 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({ user }) => {
           <div
             className="w-32 h-32 rounded-full overflow-hidden border-4 shadow-lg"
             style={{
-              borderColor: theme.border.light,
+              borderColor: 'var(--profile-border, #e6e6e6)',
               backgroundColor: theme.background.whiteOverlayLight
             }}
           >
@@ -31,9 +31,9 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({ user }) => {
             ) : (
               <div
                 className="w-full h-full flex items-center justify-center"
-                style={{ backgroundColor: theme.background.selected }}
+                style={{ backgroundColor: 'var(--profile-surface-accent, #e6f7ff)' }}
               >
-                <UserIcon size={48} style={{ color: '#000000' }} />
+                <UserIcon size={48} style={{ color: 'var(--profile-fg, #000000)' }} />
               </div>
             )}
           </div>
@@ -46,8 +46,8 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({ user }) => {
 
         {/* User Info */}
         <div className="text-center">
-          <h2 className="text-2xl font-serif" style={{ color: '#000000' }}>{user.name}</h2>
-          <p className="text-sm uppercase tracking-wider mt-1" style={{ color: '#000000' }}>{user.role}</p>
+          <h2 className="text-2xl font-serif" style={{ color: 'var(--profile-fg, #000000)' }}>{user.name}</h2>
+          <p className="text-sm uppercase tracking-wider mt-1" style={{ color: 'var(--profile-fg, #000000)' }}>{user.role}</p>
         </div>
       </div>
     </div>

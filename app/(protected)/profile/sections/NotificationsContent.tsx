@@ -119,11 +119,11 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
       <div className="pt-4 h-full flex flex-col items-center justify-center">
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-          style={{ backgroundColor: theme.background.selected, color: '#000000' }}
+          style={{ backgroundColor: 'var(--profile-surface-accent, #e6f7ff)', color: 'var(--profile-fg, #000000)' }}
         >
           <MessageCircle size={24} />
         </div>
-        <div style={{ color: '#000000', fontSize: '14px', textAlign: 'center' }}>
+        <div style={{ color: 'var(--profile-fg, #000000)', fontSize: '14px', textAlign: 'center' }}>
           {/* 加载中... */}
         </div>
       </div>
@@ -133,7 +133,7 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
   if (notifications.length === 0) {
     return (
       <div className="pt-4 h-full flex flex-col items-center justify-center">
-        <div style={{ color: '#000000', fontSize: '14px', textAlign: 'center' }}>
+        <div style={{ color: 'var(--profile-fg, #000000)', fontSize: '14px', textAlign: 'center' }}>
           暂无未读通知
         </div>
       </div>
@@ -150,26 +150,26 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
             className="w-full text-left"
             style={{
               backgroundColor: theme.background.whiteOverlayLight,
-              border: `1px solid ${theme.border.light}`,
+              border: `1px solid ${'var(--profile-border, #e6e6e6)'}`,
               borderRadius: '12px',
               padding: '16px',
               transition: 'all 0.2s',
               cursor: 'pointer',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.background.selected;
+              e.currentTarget.style.backgroundColor = 'var(--profile-surface-accent, #e6f7ff)';
               e.currentTarget.style.borderColor = theme.colors.primary;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = theme.background.whiteOverlayLight;
-              e.currentTarget.style.borderColor = theme.border.light;
+              e.currentTarget.style.borderColor = 'var(--profile-border, #e6e6e6)';
             }}
           >
             <div className="flex gap-4 items-start">
               {/* 头像 */}
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden"
-                style={{ backgroundColor: theme.background.selected }}
+                style={{ backgroundColor: 'var(--profile-surface-accent, #e6f7ff)' }}
               >
                 {notification.commenter.avatar_base64 ? (
                   <img
@@ -178,7 +178,7 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div style={{ color: '#000000', fontSize: '18px' }}>
+                  <div style={{ color: 'var(--profile-fg, #000000)', fontSize: '18px' }}>
                     {(notification.commenter.display_name || notification.commenter.username).charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -187,10 +187,10 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
               {/* 内容 */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium" style={{ color: '#000000', fontSize: '14px' }}>
+                  <span className="font-medium" style={{ color: 'var(--profile-fg, #000000)', fontSize: '14px' }}>
                     {notification.commenter.display_name || notification.commenter.username}
                   </span>
-                  <span className="text-xs" style={{ color: '#000000' }}>
+                  <span className="text-xs" style={{ color: 'var(--profile-fg, #000000)' }}>
                     {notification.is_reply ? '回复了' : '评论了'}
                   </span>
                 </div>
@@ -198,7 +198,7 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
                 <p
                   className="mb-2 text-sm leading-relaxed"
                   style={{
-                    color: '#000000',
+                    color: 'var(--profile-fg, #000000)',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
@@ -208,7 +208,7 @@ export const NotificationsContent: React.FC<NotificationsContentProps> = ({ onNo
                   {truncateContent(notification.comment_content)}
                 </p>
 
-                <div className="flex items-center gap-2 text-xs" style={{ color: '#000000' }}>
+                <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--profile-fg, #000000)' }}>
                   <span
                     className="truncate"
                     style={{ maxWidth: '200px' }}

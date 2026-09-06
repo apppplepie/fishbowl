@@ -36,6 +36,9 @@ export default function ImageCard({
   const [imgLoaded, setImgLoaded] = useState(false);
   const colors = useCardBackground(card.id?.toString() || card._id?.toString() || '');
 
+  // 标题行数由 layout 决定（span 里已按 TITLE×行数 留好高度），这里只负责撑盒子和 clamp
+  const titleLines = Math.max(1, layout?.titleLines ?? 1);
+
   // 兼容 camelCase（list API）与 snake_case（部分 API 原始返回）
   const media = card.coverImage ?? card.cover_image ?? null;
   const imageWidth = media?.width ?? card.imageWidth;
@@ -102,7 +105,10 @@ export default function ImageCard({
       </div>
       <div className="card-block--gap" aria-hidden />
       {card.title ? (
-        <div className="card-block-title card-block-title--image card-block--title" style={{ padding: '0 20px' }}>
+        <div
+          className="card-block-title card-block-title--image card-block--title"
+          style={{ padding: '0 20px', ['--title-lines' as any]: titleLines }}
+        >
           <PictureOutlined style={{ fontSize: '20px' }} />
           <h3 className="card-block-title__text" style={{ color: colors.textColor }}>
             {card.title}

@@ -32,6 +32,15 @@
   color: #000000 !important;
 }
 
+/* 可展开区块：浅色页 hover / 展开态（深色弹窗由 ProfileModal.css 覆盖） */
+.profile-section-interactive:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+.profile-section-open {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
 /* ==================== Security Modal 弹窗样式 ==================== */
 /* 深色遮罩层 */
 .security-modal-overlay {

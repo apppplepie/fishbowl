@@ -19,6 +19,7 @@ import {
 import { publicNavigationItems, protectedNavigationItems } from '@/app/config/navigation';
 import { theme } from '@/app/config/theme';
 import GlassLoginModal from './GlassLoginModal';
+import ProfileModal from './ProfileModal';
 import { apiGetJson } from '@/lib/apiClient';
 import '../styles/navigation.css';
 
@@ -26,10 +27,13 @@ interface HeaderProps {
   isVisible?: boolean;
   leftContent?: React.ReactNode;
   embedded?: boolean;
+  /** 页面自报的高亮项；给书房那种「同一个路由、多个导航入口」的场景用 */
+  activeNavKey?: string | null;
 }
 
-function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps) {
+function Header({ isVisible = true, leftContent, embedded = false, activeNavKey = null }: HeaderProps) {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const { isLoggedIn, username, logout } = useAuth();
   const { isMobile, mounted } = useResponsive();
@@ -137,20 +141,18 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
 
   // ---------- CRITICAL FIXES ----------
   // 1) 把 selectedKeys memoize，避免每次传入新数组字面量
-  const selectedKeys = useMemo(() => [pathname], [pathname]);
+  //    书房三项共用 /library，光看 pathname 分不出来，所以优先信页面报上来的 key
+  const activeKey = activeNavKey ?? pathname;
+  const selectedKeys = useMemo(() => [activeKey], [activeKey]);
 
   // 2) 将路由跳转集中到 Menu 的 onClick（避免为每个 item 创建新的 onClick closure）
   const handleMenuClick = useCallback((info: { key: string }) => {
     const key = info?.key;
-    if (key && key !== pathname) {
-      const shouldDisableAutoScroll = key === '/bookcase' || key === '/archive';
-      if (shouldDisableAutoScroll) {
-        router.push(key, { scroll: false });
-      } else {
-        router.push(key);
-      }
-    }
-  }, [router, pathname]);
+    if (!key || key === activeKey) return;
+    // 书房内部换视角是同一个页面，别让路由把滚动位置冲掉
+    const isLibrary = key === '/library' || key.startsWith('/library?');
+    router.push(key, { scroll: !isLibrary });
+  }, [router, activeKey]);
 
   // 3) 生成 menuItems：只创建 label（因 pathname 会影响字体粗细，此处允许依赖 pathname）
   const menuItems = useMemo((): MenuProps['items'] => {
@@ -187,7 +189,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     const protectedItems = build(protectedNavigationItems);
     if (protectedItems.length === 0) return publicItems;
     return [...publicItems, ...protectedItems];
-  }, [isMobile, pathname, isLoggedIn, getIcon]);
+  }, [isMobile, isLoggedIn, getIcon]);
 
   // memo style objects to avoid new object refs each render
   const containerStyle = useMemo(() => ({
@@ -247,10 +249,9 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
     logout();
   }, [logout]);
 
-  // profile nav
-  const goProfile = useCallback(() => {
-    if (pathname !== '/profile') router.push('/profile');
-  }, [router, pathname]);
+  // 个人设置：改成弹窗，不再跳 /profile（/profile 路由本身仍可直接访问）
+  const openProfileModal = useCallback(() => setProfileModalOpen(true), []);
+  const closeProfileModal = useCallback(() => setProfileModalOpen(false), []);
 
   // ---------- JSX ----------
   return (
@@ -300,7 +301,7 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
                 onMouseLeave={(e) => {
                   if (!isMobile) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
                 }}
-                onClick={goProfile}
+                onClick={openProfileModal}
               >
                 <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                   <UserOutlined style={{ fontSize: 16 }} />
@@ -349,6 +350,8 @@ function Header({ isVisible = true, leftContent, embedded = false }: HeaderProps
           </div>
         </header>
       </div>
+
+      <ProfileModal open={profileModalOpen} onClose={closeProfileModal} />
 
       <GlassLoginModal
         open={loginModalOpen}
