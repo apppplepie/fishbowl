@@ -163,18 +163,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // 容器宽度（请求头）：用于与前端一致地算列宽，再算 precomputedSpan
+    // 容器宽度：优先 query `cw`（进 URL，避免 GET 缓存串台），其次请求头
+    const cwParam = searchParams.get('cw');
     const containerWidthHeader = request.headers.get('X-Container-Width');
+    const containerWidthRaw = cwParam ?? containerWidthHeader;
     const containerWidth =
-      containerWidthHeader != null ? parseInt(containerWidthHeader, 10) : NaN;
+      containerWidthRaw != null ? parseInt(containerWidthRaw, 10) : NaN;
     const columnWidth =
       Number.isFinite(containerWidth) && containerWidth > 0
         ? getColumnWidthFromContainerWidth(containerWidth)
         : undefined;
 
-    // 断点由容器宽度反推：apiClient 发的是 min(1400, innerWidth - 48)，
+    // 断点由容器宽度反推：前端发的是 min(1400, innerWidth - 48)，
     // 而 useResponsive 的手机断点是 innerWidth < 768，对应容器宽 < 720。
-    // 拿不到请求头时按桌面处理（保持既有行为）。
+    // 拿不到宽度时按桌面处理（保持既有行为）。
     const breakpoint: 'mobile' | 'desktop' =
       Number.isFinite(containerWidth) && containerWidth > 0 && containerWidth < 720
         ? 'mobile'
@@ -464,11 +466,20 @@ export async function GET(request: NextRequest) {
       processedArticles = processedArticles.slice(offset, offset + limit);
     }
 
-    return NextResponse.json({
-      success: true,
-      articles: processedArticles,
-      count: processedArticles.length,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        articles: processedArticles,
+        count: processedArticles.length,
+      },
+      {
+        headers: {
+          // 列表布局随视口变（梗概有无），禁止中间层/浏览器复用另一端的响应
+          'Cache-Control': 'private, no-store',
+          Vary: 'X-Container-Width',
+        },
+      }
+    );
 
   } catch (error: any) {
     console.error('获取文章列表失败:', error);

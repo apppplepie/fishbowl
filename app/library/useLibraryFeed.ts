@@ -19,8 +19,13 @@ interface FeedState {
   cachedScrollTop: number;
 }
 
-function initState(view: LibraryView, categoryId: string | null, keyword: string): FeedState {
-  const key = feedKey(view.key, categoryId, keyword);
+function initState(
+  view: LibraryView,
+  categoryId: string | null,
+  keyword: string,
+  viewport: 'mobile' | 'desktop'
+): FeedState {
+  const key = feedKey(view.key, categoryId, keyword, viewport);
   const cached = readFeed(key);
   if (cached) {
     return {
@@ -57,15 +62,20 @@ function mergeCards(prev: any[], incoming: any[]): any[] {
  * 书房列表的数据引擎：分页、无限滚动、请求取消、内存缓存。
  * 视角/分类/关键词构成 key，key 一变就整体换一份状态；命中缓存则直接复原，不发请求。
  */
-export function useLibraryFeed(view: LibraryView, categoryId: string | null, keyword: string) {
-  const key = feedKey(view.key, categoryId, keyword);
+export function useLibraryFeed(
+  view: LibraryView,
+  categoryId: string | null,
+  keyword: string,
+  viewport: 'mobile' | 'desktop' = 'desktop'
+) {
+  const key = feedKey(view.key, categoryId, keyword, viewport);
 
-  const [state, setState] = useState<FeedState>(() => initState(view, categoryId, keyword));
+  const [state, setState] = useState<FeedState>(() => initState(view, categoryId, keyword, viewport));
 
   // key 变了就在渲染期直接换掉，避免先闪一帧上一个列表
   let current = state;
   if (state.key !== key) {
-    current = initState(view, categoryId, keyword);
+    current = initState(view, categoryId, keyword, viewport);
     setState(current);
   }
 
