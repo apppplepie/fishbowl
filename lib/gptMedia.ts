@@ -28,8 +28,46 @@ export function remoteImageUrl(value: unknown): URL {
   }
   return url;
 }
-export async function downloadRemoteImage(value: unknown): Promise<Buffer> {
-  const url = remoteImageUrl(value);
+
+/** Custom GPT Actions file bridge: runtime fills openaiFileIdRefs with objects (or URLs). */
+export function actionFileDownloadLinks(refs: unknown): string[] {
+  if (!Array.isArray(refs) || refs.length === 0) {
+    throw new GptError(400, 'openaiFileIdRefs must be a non-empty array of conversation files');
+  }
+  if (refs.length > 10) throw new GptError(400, 'openaiFileIdRefs allows at most 10 files');
+  const links: string[] = [];
+  for (const item of refs) {
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      if (/^https:\/\//i.test(trimmed)) {
+        links.push(trimmed);
+        continue;
+      }
+      throw new GptError(
+        400,
+        'openaiFileIdRefs still looks like a local path or file id. Pass conversation image files so Actions can bridge them to download_link HTTPS URLs.'
+      );
+    }
+    if (item && typeof item === 'object') {
+      const row = item as Record<string, unknown>;
+      const link = typeof row.download_link === 'string' ? row.download_link.trim()
+        : typeof row.url === 'string' ? row.url.trim()
+        : '';
+      if (/^https:\/\//i.test(link)) {
+        links.push(link);
+        continue;
+      }
+      throw new GptError(
+        400,
+        'openaiFileIdRefs entry missing https download_link (Actions file bridge did not convert the file)'
+      );
+    }
+    throw new GptError(400, 'Invalid openaiFileIdRefs entry');
+  }
+  return links;
+}
+
+async function downloadHttpsPublicImage(url: URL): Promise<Buffer> {
   const addresses = await Promise.race([
     lookup(url.hostname, {all: true}),
     new Promise<never>((_, reject) => { const timer = setTimeout(() => reject(new GptError(504, 'Image DNS lookup timed out')), 3000); timer.unref(); }),
@@ -56,6 +94,20 @@ export async function downloadRemoteImage(value: unknown): Promise<Buffer> {
     req.on('close', () => clearTimeout(timer));
     req.on('error', reject); req.end();
   });
+}
+
+export async function downloadRemoteImage(value: unknown): Promise<Buffer> {
+  return downloadHttpsPublicImage(remoteImageUrl(value));
+}
+
+/** Download a short-lived Actions file URL (openaiFileIdRefs). Host allowlist is not used; SSRF checks still apply. */
+export async function downloadActionFile(value: unknown): Promise<Buffer> {
+  let url: URL;
+  try { url = new URL(string(value, 'download_link', 4000)); } catch { throw new GptError(400, 'Invalid action file download_link'); }
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) {
+    throw new GptError(400, 'Action file download_link must be HTTPS on port 443');
+  }
+  return downloadHttpsPublicImage(url);
 }
 
 export async function storeImage(buffer: Buffer) {

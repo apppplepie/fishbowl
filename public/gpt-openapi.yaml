@@ -198,10 +198,10 @@ paths:
   /illustrate:
     post:
       operationId: attachArticleImages
-      summary: Attach registered images after existing blocks (null=start). Generate
-        externally, then uploadImage (preferred) or registerImage to get
-        media_id. Include description, prompt and level. Cover stays unless
-        set_cover=true.
+      summary: Attach registered images after existing blocks (null=start). Get
+        media_id via uploadImage(openaiFileIdRefs) for chat files, or
+        registerImage for allowlisted HTTPS URLs. Include description, prompt
+        and level.
       responses:
         "200":
           description: OK
@@ -226,9 +226,9 @@ paths:
   /media:
     post:
       operationId: registerImage
-      summary: Import a generated image URL from an allowed HTTPS host into media
-        storage. No redirects; max 5 MB. Prefer uploadImage when there is no
-        public HTTPS URL.
+      summary: Import an image URL from an allowed HTTPS host into media storage. No
+        redirects; max 5 MB. For ChatGPT uploads/generated files use uploadImage
+        with openaiFileIdRefs instead.
       responses:
         "200":
           description: OK
@@ -260,9 +260,9 @@ paths:
   /upload:
     post:
       operationId: uploadImage
-      summary: Upload a generated or attached image as base64 data URL and return
-        media_id. Prefer this when the image has no public HTTPS URL
-        (local/generated file). Then call attachArticleImages with media_id.
+      summary: Register a conversation image into media and return media_id. Prefer
+        openaiFileIdRefs (user uploads or generated images; Actions bridges to
+        HTTPS). base64 is fallback only. Then call attachArticleImages.
       responses:
         "200":
           description: OK
@@ -782,20 +782,26 @@ components:
       type: object
       additionalProperties: false
       properties:
+        openaiFileIdRefs:
+          type: array
+          description: Conversation image files (user uploads or ChatGPT-generated). Pass
+            the files here; Actions converts paths to short-lived HTTPS download
+            links. Prefer this over base64.
+          items:
+            type: string
+          maxItems: 10
         base64:
           type: string
-          description: "Image as a data URL: data:image/png;base64,<payload>. Supported:
-            image/jpeg, image/png, image/webp, image/gif. Max 5MB after
-            decoding."
+          description: "Fallback only: data:image/png;base64,<payload>. Prefer
+            openaiFileIdRefs for uploaded/generated files."
         filename:
           type: string
           maxLength: 255
-          description: Optional file name. Server generates one when omitted.
+          description: Optional file name when using base64. Server generates one when
+            omitted.
         title:
           type: string
           maxLength: 255
         description:
           type: string
           maxLength: 2000
-      required:
-        - base64

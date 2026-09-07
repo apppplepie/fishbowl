@@ -33,11 +33,16 @@
 
 - 先读全文，判断哪些段落受益于图片，避免装饰性堆图。选已有 after_block_id 和清楚的生成描述。
 - 调用实际可用的图片生成能力。Fishbowl 不调用图片模型；没有生成能力时给配图计划并说明暂未生成，不声称完成。
-- 已有 Fishbowl media_id 可直接使用；否则把真实可下载的 HTTPS 地址交给 registerImage，再用其 media_id。
-- 只允许 getEditorialContext 返回的图片域名，链接不能重定向。sandbox:、file:、附件 ID、仅会话可见图片不等于可下载 URL，需要生成能力的上传桥接或既有上传器。
+- 拿到图之后必须先变成站内 media_id，再插文：
+  1. 优先 uploadImage + openaiFileIdRefs：把用户上传或对话里生成的图片文件放进该参数（参数名必须是 openaiFileIdRefs）。Actions 会桥成短时 HTTPS，站点下载入库。不要手写 base64。
+  2. 备选 registerImage：仅当有真实可下载的 HTTPS URL，且域名在 getEditorialContext.image_allowed_hosts 里。不允许重定向。不要把 /mnt/data 或 file_id 塞进 url。
+  3. base64 仅作无文件桥时的兜底。
+  4. 已有 Fishbowl media_id 可直接用。
+- sandbox:、file:、附件 ID、仅会话可见且未走 openaiFileIdRefs 的路径都不是可下载 URL。大图 base64 可能超过 Actions 请求限制，失败就改走文件桥或缩小后重试，不谎称已插入。
 - 每次最多 5 张，after_block_id=null 放开头，同一锚点按输入顺序。提供 description、实际 prompt 和 access_level。
 - 图片评级不能低于锚点，还需依据画面本身判断。不通过 null 锚点绕过应有评级。
 - 默认保留封面；要换时只有一张图设 set_cover=true。
+- 没成功拿到 media_id 前，不要说“已经配好图”。
 
 ## 写入与重试
 

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { articleId, digest, level, tags } from '../lib/gptContracts';
 import { buildGptOpenapi } from '../lib/gptOpenapi';
-import { publicAddress, remoteImageUrl } from '../lib/gptMedia';
+import { publicAddress, remoteImageUrl, actionFileDownloadLinks } from '../lib/gptMedia';
 import { jsonBody } from '../lib/gptHttp';
 import { NextRequest } from 'next/server';
 
@@ -27,6 +27,15 @@ test('remote media rejects private, loopback, mapped IPv6, unapproved hosts and 
   assert.equal(remoteImageUrl('https://images.example.com/a.png').hostname,'images.example.com');
   for (const url of ['http://images.example.com/a','https://images.example.com.evil/a','https://u:p@images.example.com/a','https://images.example.com:8080/a']) assert.throws(()=>remoteImageUrl(url));
   delete process.env.GPT_IMAGE_ALLOWED_HOSTS;
+});
+test('openaiFileIdRefs accepts bridged HTTPS objects/URLs and rejects sandbox paths', () => {
+  assert.deepEqual(
+    actionFileDownloadLinks([{name:'cat.png',id:'file-1',mime_type:'image/png',download_link:'https://files.oaiusercontent.com/file-1'}]),
+    ['https://files.oaiusercontent.com/file-1']
+  );
+  assert.deepEqual(actionFileDownloadLinks(['https://files.oaiusercontent.com/file-2']),['https://files.oaiusercontent.com/file-2']);
+  assert.throws(()=>actionFileDownloadLinks(['/mnt/data/cat.png']));
+  assert.throws(()=>actionFileDownloadLinks([{id:'file-1'}]));
 });
 test('bounded JSON transport rejects malformed, scalar and oversized requests', async () => {
   for (const body of ['null','{',JSON.stringify({value:'a'.repeat(90000)})]) {
