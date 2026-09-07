@@ -5,6 +5,7 @@ import TextBlock from '@/app/components/blocks/TextBlock';
 import ImageBlock from '@/app/components/blocks/ImageBlock';
 import CodeBlock from '@/app/components/blocks/CodeBlock';
 import PlaceholderBlock from '@/app/components/blocks/PlaceholderBlock';
+import { Tag } from '@/app/components/ui';
 import { useResponsive } from '@/app/hooks/useResponsive';
 import { getContentCardStyle, contentCardTypography } from '@/app/styles/contentArea';
 
@@ -25,11 +26,31 @@ export default function ArticleContentClient({ article, noCard = false }: Articl
     ? { ...contentCardTypography, width: '100%' as const, boxSizing: 'border-box' as const }
     : { ...getContentCardStyle(isMobile), ...contentCardTypography };
 
+  // 文章页正文卡顶部展示全部标签（box1 只有两行截断，放不下）
+  const tags: string[] = Array.isArray(article.tags) ? article.tags.filter(Boolean) : [];
+  const showTags = !noCard && tags.length > 0;
+
   return (
     <div
       style={wrapperStyle}
       data-content-area
     >
+      {showTags && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginBottom: isMobile ? 16 : 24,
+          }}
+        >
+          {tags.map((tag) => (
+            <Tag key={tag} id={tag} style={{ padding: '2px 8px', fontWeight: 500, fontSize: 12 }}>
+              {tag}
+            </Tag>
+          ))}
+        </div>
+      )}
       {/* 查看模式：显示静态内容，块间距与统一布局一致 */}
       {(article.blocks || []).map((block: any) => (
         <div key={block.id} className="book-content-block" style={{ marginBottom: CONTENT_BLOCK_MARGIN_BOTTOM }}>

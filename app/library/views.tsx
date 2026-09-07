@@ -40,6 +40,12 @@ async function readJson(res: Response): Promise<any> {
   return res.json();
 }
 
+/** 与 apiClient 的 X-Container-Width 同源，再塞进 query，避免 GET 缓存把手机布局响应塞给电脑 */
+function containerWidthQuery(): string {
+  if (typeof window === 'undefined') return '1400';
+  return String(Math.min(1400, Math.max(0, window.innerWidth - 48)));
+}
+
 /* ------------------------------------------------------------------ 文 */
 
 async function fetchDocs({ offset, limit, categoryId, keyword, signal }: FeedFetchArgs): Promise<FeedPage> {
@@ -47,6 +53,7 @@ async function fetchDocs({ offset, limit, categoryId, keyword, signal }: FeedFet
     status: 'published',
     limit: String(limit),
     offset: String(offset),
+    cw: containerWidthQuery(),
   });
   if (categoryId) params.set('categoryId', categoryId);
   if (keyword) params.set('search', keyword);
@@ -149,6 +156,7 @@ async function fetchBooks({ offset, limit, categoryId, keyword, signal }: FeedFe
     offset: String(offset),
     categoryId,
     orderByPath: 'true',
+    cw: containerWidthQuery(),
   });
   if (keyword) params.set('search', keyword);
 

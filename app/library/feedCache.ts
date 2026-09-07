@@ -15,8 +15,14 @@ export interface FeedSnapshot {
 const MAX_ENTRIES = 12;
 const store = new Map<string, FeedSnapshot>();
 
-export function feedKey(view: LibraryViewKey, categoryId: string | null, keyword: string): string {
-  return `${view}|${categoryId ?? ''}|${keyword}`;
+/** viewport：手机/电脑布局不同（电脑有梗概块），必须拆开缓存，不然会串台 */
+export function feedKey(
+  view: LibraryViewKey,
+  categoryId: string | null,
+  keyword: string,
+  viewport: 'mobile' | 'desktop' = 'desktop'
+): string {
+  return `${view}|${categoryId ?? ''}|${keyword}|${viewport}`;
 }
 
 export function readFeed(key: string): FeedSnapshot | undefined {

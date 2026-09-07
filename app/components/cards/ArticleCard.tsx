@@ -53,7 +53,8 @@ export default function ArticleCard({
   const visibleTags = (card.tags ?? []).slice(0, tagsBlock?.visibleCount ?? 1);
   const hiddenTagCount = (card.tags?.length ?? 0) - visibleTags.length;
   // 手机端后端不再下发 excerpt 块，这里跟着不渲染；没有 blocks 时退回原来的行为
-  const hasExcerpt = blocks ? !!excerptBlock && !!card.excerpt : !!card.excerpt;
+  const excerptText = String(excerptBlock?.text ?? card.excerpt ?? '').trim();
+  const hasExcerpt = blocks ? !!excerptBlock && !!excerptText : !!excerptText;
   const parentName = card.categoryName ?? (card as any).category_name ?? '';
   const hasMeta = !!parentName || card.updatedAt != null || card.publishedAt != null || card.createdAt != null;
   // 手机端 date 块带 author：左边时间、右边作者
@@ -110,7 +111,7 @@ export default function ArticleCard({
               className={`card-block-excerpt card-block--excerpt-lines-${excerptLines}`}
               style={{ color: colors.textColor }}
             >
-              {card.excerpt!.split('\n').map((line: string) => line.replace(/^(  )+/g, '')).join(' ')}
+              {excerptText.split('\n').map((line: string) => line.replace(/^(  )+/g, '')).join(' ')}
             </p>
           </div>
           <div className="card-block--gap" aria-hidden />

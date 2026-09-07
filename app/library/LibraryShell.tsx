@@ -73,8 +73,10 @@ export default function LibraryShell() {
   }, []);
 
   // --- 数据 ---
-  const feed = useLibraryFeed(view, categoryId, activeFilters.keyword);
-  const currentKey = feedKey(viewKey, categoryId, activeFilters.keyword);
+  // 手机/电脑 blocks 不同（梗概），viewport 进缓存键，避免窄屏结果被宽屏复用
+  const viewport = isMobile ? 'mobile' : 'desktop';
+  const feed = useLibraryFeed(view, categoryId, activeFilters.keyword, viewport);
+  const currentKey = feedKey(viewKey, categoryId, activeFilters.keyword, viewport);
 
   const reload = useCallback(() => {
     invalidateFeed(viewKey);

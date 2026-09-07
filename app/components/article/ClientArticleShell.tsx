@@ -11,7 +11,7 @@ import { useAuth } from '@/app/hooks/useAuth';
 import { useCanEditArticle } from '@/app/hooks/useCanEditArticle';
 import { usePageShell } from '@/app/contexts/PageShellContext';
 import { useResponsive } from '@/app/hooks/useResponsive';
-import { BreadcrumbBox1, TitleBox1, TagBox1 } from '@/app/components/box1';
+import { BreadcrumbBox1, TitleBox1 } from '@/app/components/box1';
 import { message } from '@/app/components/ui';
 import { apiGet, apiDeleteJson } from '@/lib/apiClient';
 import { getContentAreaWrapperStyle, getContentCardStyle } from '@/app/styles/contentArea';
@@ -156,9 +156,6 @@ export default function ClientArticleShell({
               categoryPath={categoryPathState}
             />
             <TitleBox1 title={article.title} author={article.author} />
-            {article.tags && article.tags.length > 0 && (
-              <TagBox1 tags={article.tags} editMode={false} maxTags={10} />
-            )}
           </div>
         ),
         box2Style: {
