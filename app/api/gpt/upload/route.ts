@@ -6,7 +6,7 @@ import { query } from '@/lib/db';
 import { siteOrigin } from '@/lib/gptHttp';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-// Legacy base64 transport. New Actions should register a URL or use an existing media_id.
+// Base64 upload bridge for GPT Actions: generated/local images → media_id (no public URL needed).
 export async function POST(request: NextRequest) {
   try {
     const auth = authenticateGptRequest(request);

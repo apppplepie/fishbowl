@@ -199,8 +199,8 @@ paths:
     post:
       operationId: attachArticleImages
       summary: Attach registered images after existing blocks (null=start). Generate
-        images externally, then registerImage or upload first. Include
-        description, prompt and level. Existing cover is preserved unless
+        externally, then uploadImage (preferred) or registerImage to get
+        media_id. Include description, prompt and level. Cover stays unless
         set_cover=true.
       responses:
         "200":
@@ -226,9 +226,9 @@ paths:
   /media:
     post:
       operationId: registerImage
-      summary: Import a generated image URL from an allowed HTTPS host into existing
-        media storage. No redirects; max 5 MB. Use returned media_id in image
-        blocks.
+      summary: Import a generated image URL from an allowed HTTPS host into media
+        storage. No redirects; max 5 MB. Prefer uploadImage when there is no
+        public HTTPS URL.
       responses:
         "200":
           description: OK
@@ -257,6 +257,33 @@ paths:
                   maxLength: 4000
               required:
                 - url
+  /upload:
+    post:
+      operationId: uploadImage
+      summary: Upload a generated or attached image as base64 data URL and return
+        media_id. Prefer this when the image has no public HTTPS URL
+        (local/generated file). Then call attachArticleImages with media_id.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Media"
+        default:
+          description: 400 invalid input; 401/403 authentication/permission; 404 missing;
+            409 revision/request conflict; 413 too large; 500/504
+            server/timeout.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadImage"
 components:
   securitySchemes:
     BearerAuth:
@@ -592,6 +619,9 @@ components:
         url:
           type: string
           maxLength: 4000
+        fullUrl:
+          type: string
+          maxLength: 4000
     Metadata:
       type: object
       additionalProperties: false
@@ -748,3 +778,24 @@ components:
           type:
             - integer
             - "null"
+    UploadImage:
+      type: object
+      additionalProperties: false
+      properties:
+        base64:
+          type: string
+          description: "Image as a data URL: data:image/png;base64,<payload>. Supported:
+            image/jpeg, image/png, image/webp, image/gif. Max 5MB after
+            decoding."
+        filename:
+          type: string
+          maxLength: 255
+          description: Optional file name. Server generates one when omitted.
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+      required:
+        - base64

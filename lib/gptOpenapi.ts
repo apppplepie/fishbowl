@@ -38,7 +38,13 @@ const schemas: Record<string, Schema> = {
     identity:obj({role:text(20),max_access_level:access}),image_allowed_hosts:list(text(255),100),
     rating_policy:obj({version:text(80),levels:list(obj({value:access,label:text(2),meaning:text(100)}),5),guidance:text(1000)})}),
   Categories: obj({success:{type:'boolean'},count:{type:'integer'},hint:text(500),categories:list(obj({id:text(36),name:text(255),parent_id:{type:['string','null']},depth:{type:'integer'},path:text(1000),breadcrumb:text(2000)}),1000)}),
-  Media: obj({success:{type:'boolean'},media_id:text(36),url:text(4000)}),
+  Media: obj({success:{type:'boolean'},media_id:text(36),url:text(4000),fullUrl:text(4000)}),
+  UploadImage: obj({
+    base64:{type:'string',description:'Image as a data URL: data:image/png;base64,<payload>. Supported: image/jpeg, image/png, image/webp, image/gif. Max 5MB after decoding.'},
+    filename:text(255,'Optional file name. Server generates one when omitted.'),
+    title:text(255),
+    description:text(2000),
+  },['base64']),
 };
 function response(name: string) { return {description:'OK',content:{'application/json':{schema:ref(name)}}}; }
 function operation(id: string, description: string, output: string, input?: string): Schema {
@@ -54,13 +60,14 @@ const paths: Record<string, Record<string, Schema>> = {
   '/categories': {get:operation('getCategories','Get existing category breadcrumbs. Preserve category for old articles; omit category_id for new articles if uncertain.','Categories')},
   '/curate': {post:operation('curateArticle','Organize an existing article without rewriting. Tags append by default. Reorder all block IDs or split text into exact original substrings. Category, type, ratings and cover stay unchanged.','Receipt','Curate')},
   '/save-rated': {post:operation('saveRatedArticle','Create: title, summary, blocks with access_level, rating_reason required. Draft by default; status=published publishes. Existing article: send ONLY article_ref, expected_revision, request_id, status to publish/unpublish.','Receipt','SaveRated')},
-  '/illustrate': {post:operation('attachArticleImages','Attach registered images after existing blocks (null=start). Generate images externally, then registerImage or upload first. Include description, prompt and level. Existing cover is preserved unless set_cover=true.','Receipt','Illustrate')},
-  '/media': {post:{...operation('registerImage','Import a generated image URL from an allowed HTTPS host into existing media storage. No redirects; max 5 MB. Use returned media_id in image blocks.','Media'),requestBody:{required:true,content:{'application/json':{schema:obj({url:text(4000)},['url'])}}}}},
+  '/illustrate': {post:operation('attachArticleImages','Attach registered images after existing blocks (null=start). Generate externally, then uploadImage (preferred) or registerImage to get media_id. Include description, prompt and level. Cover stays unless set_cover=true.','Receipt','Illustrate')},
+  '/media': {post:{...operation('registerImage','Import a generated image URL from an allowed HTTPS host into media storage. No redirects; max 5 MB. Prefer uploadImage when there is no public HTTPS URL.','Media'),requestBody:{required:true,content:{'application/json':{schema:obj({url:text(4000)},['url'])}}}}},
+  '/upload': {post:operation('uploadImage','Upload a generated or attached image as base64 data URL and return media_id. Prefer this when the image has no public HTTPS URL (local/generated file). Then call attachArticleImages with media_id.','Media','UploadImage')},
 };
 const bundles: Record<string, string[]> = {
   curate:['/articles/{id}','/articles','/context','/curate'],
-  publish:['/articles/{id}','/context','/categories','/save-rated','/media'],
-  illustrate:['/articles/{id}','/context','/illustrate','/media'],
+  publish:['/articles/{id}','/context','/categories','/save-rated','/media','/upload'],
+  illustrate:['/articles/{id}','/context','/illustrate','/media','/upload'],
 };
 export function buildGptOpenapi(baseUrl = 'https://creepender.top/api/gpt', bundle?: string) {
   const selected = bundle ? bundles[bundle] : Object.keys(paths);

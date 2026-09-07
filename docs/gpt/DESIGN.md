@@ -68,7 +68,7 @@ key 不自动拥有全站权限。新管理读写检查用户 active、角色、
 
 ## 为什么保留几个小 helper
 
-getArticle 提供正文/锚点/版本；searchArticles 找可管理内容；getEditorialContext 提供 tags/真实评级/身份能力；getCategories 延用分类树；registerImage 把生成资源变成 media。没有 action=任意命令的万能参数。
+getArticle 提供正文/锚点/版本；searchArticles 找可管理内容；getEditorialContext 提供 tags/真实评级/身份能力；getCategories 延用分类树；uploadImage（base64）与 registerImage（白名单 HTTPS URL）把生成资源变成 media_id，再由 attachArticleImages 插入。没有 action=任意命令的万能参数。
 
 OpenAPI 单一 TypeScript 源生成独立包/完整包，测试引用和文件一致性。官方 [Actions 生产说明](https://developers.openai.com/api/docs/actions/production) 给出 45 秒超时、请求/响应及 description 长度限制，所以采用分页读块、短响应、生成与写库分开。[Actions 入门](https://developers.openai.com/api/docs/actions/getting-started) 说明 OpenAPI 和接口应分别测试；这里覆盖 schema、服务、真实 MySQL 和路由。
 
